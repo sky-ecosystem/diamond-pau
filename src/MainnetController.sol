@@ -22,6 +22,7 @@ import { ERC4626Lib }                     from "./libraries/ERC4626Lib.sol";
 import { LayerZeroLib }                   from "./libraries/LayerZeroLib.sol";
 import { MapleLib }                       from "./libraries/MapleLib.sol";
 import { IDaiUsdsLike, IPSMLike, PSMLib } from "./libraries/PSMLib.sol";
+import { TransferAssetLib }               from "./libraries/TransferAssetLib.sol";
 import { UniswapV4Lib }                   from "./libraries/UniswapV4Lib.sol";
 import { USDSLib }                        from "./libraries/USDSLib.sol";
 import { WEETHLib }                       from "./libraries/WEETHLib.sol";
@@ -137,7 +138,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_4626_WITHDRAW           = ERC4626Lib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
-    bytes32 public LIMIT_ASSET_TRANSFER          = keccak256("LIMIT_ASSET_TRANSFER");
+    bytes32 public LIMIT_ASSET_TRANSFER          = TransferAssetLib.LIMIT_TRANSFER;
     bytes32 public LIMIT_CURVE_DEPOSIT           = keccak256("LIMIT_CURVE_DEPOSIT");
     bytes32 public LIMIT_CURVE_SWAP              = keccak256("LIMIT_CURVE_SWAP");
     bytes32 public LIMIT_CURVE_WITHDRAW          = keccak256("LIMIT_CURVE_WITHDRAW");
@@ -367,12 +368,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        _rateLimited(
-            RateLimitHelpers.makeAddressAddressKey(LIMIT_ASSET_TRANSFER, asset, destination),
-            amount
-        );
-
-        _transfer(asset, destination, amount);
+        TransferAssetLib.transfer(address(proxy), address(rateLimits), asset, destination, amount);
     }
 
     /**********************************************************************************************/
