@@ -16,21 +16,37 @@ import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { ApproveLib }                     from "./libraries/ApproveLib.sol";
-import { AaveLib }                        from "./libraries/AaveLib.sol";
-import { CCTPLib }                        from "./libraries/CCTPLib.sol";
-import { CurveLib }                       from "./libraries/CurveLib.sol";
-import { ERC4626Lib }                     from "./libraries/ERC4626Lib.sol";
-import { LayerZeroLib }                   from "./libraries/LayerZeroLib.sol";
-import { IDaiUsdsLike, IPSMLike, PSMLib } from "./libraries/PSMLib.sol";
-import { UniswapV4Lib }                   from "./libraries/UniswapV4Lib.sol";
-import { WEETHLib }                       from "./libraries/WEETHLib.sol";
+import { AaveLib }      from "./libraries/AaveLib.sol";
+import { ApproveLib }   from "./libraries/ApproveLib.sol";
+import { CCTPLib }      from "./libraries/CCTPLib.sol";
+import { CurveLib }     from "./libraries/CurveLib.sol";
+import { ERC4626Lib }   from "./libraries/ERC4626Lib.sol";
+import { LayerZeroLib } from "./libraries/LayerZeroLib.sol";
+import { PSMLib }       from "./libraries/PSMLib.sol";
+import { UniswapV4Lib } from "./libraries/UniswapV4Lib.sol";
+import { WEETHLib }     from "./libraries/WEETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
 interface IATokenWithPool is IAToken {
 
     function POOL() external view returns(address);
+
+}
+
+interface IDaiUsdsLike {
+
+    function dai() external view returns (address);
+
+    function daiToUsds(address usr, uint256 wad) external;
+
+    function usdsToDai(address usr, uint256 wad) external;
+
+}
+
+interface IPSMLike {
+
+    function gem() external view returns (address);
 
 }
 
@@ -206,7 +222,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_USDE_BURN               = keccak256("LIMIT_USDE_BURN");
     bytes32 public LIMIT_USDE_MINT               = keccak256("LIMIT_USDE_MINT");
     bytes32 public LIMIT_USDS_MINT               = keccak256("LIMIT_USDS_MINT");
-    bytes32 public LIMIT_USDS_TO_USDC            = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_WEETH_DEPOSIT;
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_WEETH_REQUEST_WITHDRAW;
     bytes32 public LIMIT_WSTETH_DEPOSIT          = keccak256("LIMIT_WSTETH_DEPOSIT");
@@ -216,20 +232,18 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     IALMProxy         public proxy;
     ICCTPLike         public cctp;
-    IDaiUsdsLike      public daiUsds;
+    address           public daiUsds;
     IEthenaMinterLike public ethenaMinter;
-    IPSMLike          public psm;
+    address           public psm;
     IRateLimits       public rateLimits;
     IVaultLike        public vault;
 
-    IERC20     public dai;
+    address    public dai;
     IERC20     public usds;
     address    public usde;
     IERC20     public usdc;
     IUSTBLike  public ustb;
     ISUSDELike public susde;
-
-    uint256 public psmTo18ConversionFactor;
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
@@ -266,20 +280,18 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         rateLimits = IRateLimits(rateLimits_);
         vault      = IVaultLike(vault_);
         buffer     = IVaultLike(vault_).buffer();
-        psm        = IPSMLike(psm_);
-        daiUsds    = IDaiUsdsLike(daiUsds_);
+        psm        = psm_;
+        daiUsds    = daiUsds_;
         cctp       = ICCTPLike(cctp_);
 
         ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
 
         susde = ISUSDELike(Ethereum.SUSDE);
         ustb  = IUSTBLike(Ethereum.USTB);
-        dai   = IERC20(daiUsds.dai());
-        usdc  = IERC20(psm.gem());
+        dai   = IDaiUsdsLike(daiUsds).dai();
+        usdc  = IERC20(IPSMLike(psm).gem());
         usds  = IERC20(Ethereum.USDS);
         usde  = Ethereum.USDE;
-
-        psmTo18ConversionFactor = psm.to18ConversionFactor();
     }
 
     /**********************************************************************************************/
@@ -983,23 +995,23 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function swapUSDSToDAI(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
-        ApproveLib.approve(address(usds), address(proxy), address(daiUsds), usdsAmount);
+        ApproveLib.approve(address(usds), address(proxy), daiUsds, usdsAmount);
 
         // Swap USDS to DAI 1:1
         proxy.doCall(
-            address(daiUsds),
-            abi.encodeCall(daiUsds.usdsToDai, (address(proxy), usdsAmount))
+            daiUsds,
+            abi.encodeCall(IDaiUsdsLike.usdsToDai, (address(proxy), usdsAmount))
         );
     }
 
     function swapDAIToUSDS(uint256 daiAmount) external nonReentrant onlyRole(RELAYER) {
         // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
-        ApproveLib.approve(address(dai), address(proxy), address(daiUsds), daiAmount);
+        ApproveLib.approve(dai, address(proxy), daiUsds, daiAmount);
 
         // Swap DAI to USDS 1:1
         proxy.doCall(
-            address(daiUsds),
-            abi.encodeCall(daiUsds.daiToUsds, (address(proxy), daiAmount))
+            daiUsds,
+            abi.encodeCall(IDaiUsdsLike.daiToUsds, (address(proxy), daiAmount))
         );
     }
 
@@ -1010,31 +1022,31 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
     //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
     function swapUSDSToUSDC(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        PSMLib.swapUSDSToUSDC(PSMLib.SwapUSDSToUSDCParams({
-            proxy                   : proxy,
-            rateLimits              : rateLimits,
-            daiUsds                 : daiUsds,
-            psm                     : psm,
-            usds                    : usds,
-            dai                     : dai,
-            rateLimitId             : LIMIT_USDS_TO_USDC,
-            usdcAmount              : usdcAmount,
-            psmTo18ConversionFactor : psmTo18ConversionFactor
-        }));
+        PSMLib.swapUSDSToUSDC({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            daiUSDS    : daiUsds,
+            psm        : psm,
+            usds       : address(usds),
+            dai        : dai,
+            usdcAmount : usdcAmount
+        });
     }
 
     function swapUSDCToUSDS(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        PSMLib.swapUSDCToUSDS(PSMLib.SwapUSDCToUSDSParams({
-            proxy                   : proxy,
-            rateLimits              : rateLimits,
-            daiUsds                 : daiUsds,
-            psm                     : psm,
-            dai                     : dai,
-            usdc                    : usdc,
-            rateLimitId             : LIMIT_USDS_TO_USDC,
-            usdcAmount              : usdcAmount,
-            psmTo18ConversionFactor : psmTo18ConversionFactor
-        }));
+        PSMLib.swapUSDCToUSDS({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            daiUSDS    : daiUsds,
+            psm        : psm,
+            dai        : dai,
+            usdc       : address(usdc),
+            usdcAmount : usdcAmount
+        });
+    }
+
+    function psmTo18ConversionFactor() external view returns (uint256) {
+        return PSMLib.to18ConversionFactor(psm);
     }
 
     // NOTE: !!! This function was deployed without integration testing !!!

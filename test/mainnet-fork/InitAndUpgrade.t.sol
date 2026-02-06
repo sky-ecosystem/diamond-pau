@@ -13,7 +13,13 @@ import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
-import { ForkTestBase, IPSMLike } from "./ForkTestBase.t.sol";
+import { ForkTestBase } from "./ForkTestBase.t.sol";
+
+interface IPSMLike {
+
+    function bud(address) external view returns (uint256);
+
+}
 
 interface IVaultLike {
 
