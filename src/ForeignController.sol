@@ -4,8 +4,6 @@ pragma solidity ^0.8.21;
 import { IAToken }            from "../lib/aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
 import { IPool as IAavePool } from "../lib/aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
 
-import { OptionsBuilder } from "../lib/layerzero-v2/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol";
-
 import { AccessControlEnumerable } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 import { ReentrancyGuard }         from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
@@ -36,8 +34,6 @@ interface ISparkVaultLike {
 
 contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
-    using OptionsBuilder for bytes;
-
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
@@ -49,8 +45,6 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         bytes32 indexed mintRecipient,
         uint256         usdcAmount
     );
-
-    event LayerZeroRecipientSet(uint32 indexed destinationEndpointId, bytes32 layerZeroRecipient);
 
     event MaxExchangeRateSet(address indexed token, uint256 maxExchangeRate);
 
@@ -74,7 +68,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public constant LIMIT_AAVE_DEPOSIT       = keccak256("LIMIT_AAVE_DEPOSIT");
     bytes32 public constant LIMIT_AAVE_WITHDRAW      = keccak256("LIMIT_AAVE_WITHDRAW");
     bytes32 public constant LIMIT_ASSET_TRANSFER     = keccak256("LIMIT_ASSET_TRANSFER");
-    bytes32 public constant LIMIT_LAYERZERO_TRANSFER = LayerZeroLib.LIMIT_LAYERZERO_TRANSFER;
+    bytes32 public constant LIMIT_LAYERZERO_TRANSFER = LayerZeroLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_PSM_DEPOSIT        = keccak256("LIMIT_PSM_DEPOSIT");
     bytes32 public constant LIMIT_PSM_WITHDRAW       = keccak256("LIMIT_PSM_WITHDRAW");
     bytes32 public constant LIMIT_SPARK_VAULT_TAKE   = keccak256("LIMIT_SPARK_VAULT_TAKE");
@@ -155,13 +149,12 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         emit MintRecipientSet(destinationDomain, mintRecipient);
     }
 
-    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 layerZeroRecipient)
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        layerZeroRecipients[destinationEndpointId] = layerZeroRecipient;
-        emit LayerZeroRecipientSet(destinationEndpointId, layerZeroRecipient);
+        LayerZeroLib.setRecipient(layerZeroRecipients, destinationEndpointId, recipient);
     }
 
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets)
@@ -308,13 +301,13 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        LayerZeroLib.transferTokenLayerZero({
-            proxy                 : proxy,
-            rateLimits            : rateLimits,
+        LayerZeroLib.transfer({
+            proxy                 : address(proxy),
+            rateLimits            : address(rateLimits),
             oftAddress            : oftAddress,
             amount                : amount,
             destinationEndpointId : destinationEndpointId,
-            layerZeroRecipient    : layerZeroRecipients[destinationEndpointId]
+            layerZeroRecipients   : layerZeroRecipients
         });
     }
 
