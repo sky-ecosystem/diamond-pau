@@ -10,10 +10,11 @@ import { IERC20 }   from "../lib/openzeppelin-contracts/contracts/token/ERC20/IE
 
 import { IPSM3 } from "../lib/spark-psm/src/interfaces/IPSM3.sol";
 
-import { AaveLib }      from "./libraries/AaveLib.sol";
-import { ApproveLib }   from "./libraries/ApproveLib.sol";
-import { ERC4626Lib }   from "./libraries/ERC4626Lib.sol";
-import { LayerZeroLib } from "./libraries/LayerZeroLib.sol";
+import { AaveLib }          from "./libraries/AaveLib.sol";
+import { ApproveLib }       from "./libraries/ApproveLib.sol";
+import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
+import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
+import { TransferAssetLib } from "./libraries/TransferAssetLib.sol";
 
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
@@ -62,7 +63,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public constant LIMIT_4626_WITHDRAW      = ERC4626Lib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_AAVE_DEPOSIT       = AaveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_AAVE_WITHDRAW      = AaveLib.LIMIT_WITHDRAW;
-    bytes32 public constant LIMIT_ASSET_TRANSFER     = keccak256("LIMIT_ASSET_TRANSFER");
+    bytes32 public constant LIMIT_ASSET_TRANSFER     = TransferAssetLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER = LayerZeroLib.LIMIT_LAYERZERO_TRANSFER;
     bytes32 public constant LIMIT_PSM_DEPOSIT        = keccak256("LIMIT_PSM_DEPOSIT");
     bytes32 public constant LIMIT_PSM_WITHDRAW       = keccak256("LIMIT_PSM_WITHDRAW");
@@ -178,20 +179,8 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         external
         nonReentrant
         onlyRole(RELAYER)
-        rateLimited(
-            RateLimitHelpers.makeAddressAddressKey(LIMIT_ASSET_TRANSFER, asset, destination),
-            amount
-        )
     {
-        bytes memory returnData = proxy.doCall(
-            asset,
-            abi.encodeCall(IERC20(asset).transfer, (destination, amount))
-        );
-
-        require(
-            returnData.length == 0 || (returnData.length == 32 && abi.decode(returnData, (bool))),
-            "FC/transfer-failed"
-        );
+        TransferAssetLib.transfer(address(proxy), address(rateLimits), asset, destination, amount);
     }
 
     /**********************************************************************************************/
