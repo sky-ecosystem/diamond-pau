@@ -25,6 +25,7 @@ import { IDaiUsdsLike, IPSMLike, PSMLib } from "./libraries/PSMLib.sol";
 import { UniswapV4Lib }                   from "./libraries/UniswapV4Lib.sol";
 import { USDSLib }                        from "./libraries/USDSLib.sol";
 import { WEETHLib }                       from "./libraries/WEETHLib.sol";
+import { WrapProxyETHLib }                from "./libraries/WrapProxyETHLib.sol";
 import { WSTETHLib }                      from "./libraries/WSTETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
@@ -464,15 +465,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
-        uint256 proxyBalance = address(proxy).balance;
-
-        if (proxyBalance == 0) return;
-
-        proxy.doCallWithValue(
-            Ethereum.WETH,
-            "",
-            proxyBalance
-        );
+        WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
     }
 
     /**********************************************************************************************/
