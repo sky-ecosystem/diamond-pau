@@ -17,7 +17,7 @@ import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-abstract contract AaveV3_Market_TestBase is ForkTestBase {
+abstract contract AaveV3_TestBase is ForkTestBase {
 
     address constant ATOKEN_USDS = 0x32a6268f9Ba3642Dda7892aDd74f1D34469A4259;
     address constant ATOKEN_USDC = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
@@ -84,7 +84,7 @@ abstract contract AaveV3_Market_TestBase is ForkTestBase {
 
 // NOTE: Only testing USDS for non-rate limit failures as it doesn't matter which asset is used
 
-contract MainnetController_AaveV3_MarketDeposit_FailureTests is AaveV3_Market_TestBase {
+contract MainnetController_AaveV3_Deposit_FailureTests is AaveV3_TestBase {
 
     function test_depositAave_reentrancy() external {
         _setControllerEntered();
@@ -178,7 +178,7 @@ contract MainnetController_AaveV3_MarketDeposit_FailureTests is AaveV3_Market_Te
 
 }
 
-contract MainnetController_AaveV3_MarketDeposit_SuccessTests is AaveV3_Market_TestBase {
+contract MainnetController_AaveV3_Deposit_SuccessTests is AaveV3_TestBase {
 
     function test_depositAave_usds() public {
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
@@ -228,7 +228,7 @@ contract MainnetController_AaveV3_MarketDeposit_SuccessTests is AaveV3_Market_Te
 
 }
 
-contract MainnetController_AaveV3_MarketWithdraw_FailureTests is AaveV3_Market_TestBase {
+contract MainnetController_AaveV3_Withdraw_FailureTests is AaveV3_TestBase {
 
     function test_withdrawAave_reentrancy() external {
         _setControllerEntered();
@@ -300,7 +300,7 @@ contract MainnetController_AaveV3_MarketWithdraw_FailureTests is AaveV3_Market_T
 
 }
 
-contract MainnetController_AaveV3_MarketWithdraw_SuccessTests is AaveV3_Market_TestBase {
+contract MainnetController_AaveV3_Withdraw_SuccessTests is AaveV3_TestBase {
 
     function test_withdrawAave_usds() public {
         bytes32 depositKey = RateLimitHelpers.makeAddressKey(
@@ -514,7 +514,7 @@ contract MainnetController_AaveV3_MarketWithdraw_SuccessTests is AaveV3_Market_T
 
 }
 
-abstract contract AaveV3_MarketAttack_TestBase is ForkTestBase {
+abstract contract AaveV3_Attack_TestBase is ForkTestBase {
 
     IAToken apyusd = IAToken(SparkLend.PYUSD_SPTOKEN);
     IERC20  pyusd  = IERC20(Ethereum.PYUSD);
@@ -557,7 +557,7 @@ abstract contract AaveV3_MarketAttack_TestBase is ForkTestBase {
 
 }
 
-contract MainnetController_AaveV3_MarketLiquidityIndexInflationAttack_Test is AaveV3_MarketAttack_TestBase {
+contract MainnetController_AaveV3_LiquidityIndexInflationAttack_Test is AaveV3_Attack_TestBase {
 
     function test_depositAave_liquidityIndexInflationAttackFailure() public {
         vm.prank(Ethereum.SPARK_PROXY);

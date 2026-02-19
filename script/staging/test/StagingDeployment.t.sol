@@ -11,7 +11,8 @@ import { IERC4626 } from "../../../lib/forge-std/src/interfaces/IERC4626.sol";
 
 import { Base }     from "../../../lib/spark-address-registry/src/Base.sol";
 import { Ethereum } from "../../../lib/spark-address-registry/src/Ethereum.sol";
-import { PSM3 }     from "../../../lib/spark-psm/src/PSM3.sol";
+
+import { PSM3 } from "../../../lib/spark-psm/src/PSM3.sol";
 
 import { Bridge }                from "../../../lib/xchain-helpers/src/testing/Bridge.sol";
 import { Domain, DomainHelpers } from "../../../lib/xchain-helpers/src/testing/Domain.sol";

@@ -11,7 +11,7 @@ import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-abstract contract AaveV3_Market_TestBase is ForkTestBase {
+abstract contract AaveV3_TestBase is ForkTestBase {
 
     address constant ATOKEN_USDC = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
     address constant POOL        = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
@@ -56,7 +56,7 @@ abstract contract AaveV3_Market_TestBase is ForkTestBase {
 
 }
 
-contract ForeignController_AaveV3_MarketDeposit_FailureTests is AaveV3_Market_TestBase {
+contract ForeignController_AaveV3_Deposit_FailureTests is AaveV3_TestBase {
 
     function test_depositAave_reentrancy() external {
         _setControllerEntered();
@@ -121,7 +121,7 @@ contract ForeignController_AaveV3_MarketDeposit_FailureTests is AaveV3_Market_Te
 
 }
 
-contract ForeignController_AaveV3_MarketDeposit_SuccessTests is AaveV3_Market_TestBase {
+contract ForeignController_AaveV3_Deposit_SuccessTests is AaveV3_TestBase {
 
     function test_depositAave_usdc() public {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
@@ -148,7 +148,7 @@ contract ForeignController_AaveV3_MarketDeposit_SuccessTests is AaveV3_Market_Te
 
 }
 
-contract ForeignController_AaveV3_MarketWithdraw_FailureTests is AaveV3_Market_TestBase {
+contract ForeignController_AaveV3_Withdraw_FailureTests is AaveV3_TestBase {
 
     function test_withdrawAave_reentrancy() external {
         _setControllerEntered();
@@ -211,7 +211,7 @@ contract ForeignController_AaveV3_MarketWithdraw_FailureTests is AaveV3_Market_T
 
 }
 
-contract ForeignController_AaveV3_MarketWithdraw_SuccessTests is AaveV3_Market_TestBase {
+contract ForeignController_AaveV3_Withdraw_SuccessTests is AaveV3_TestBase {
 
     function test_withdrawAave_usdc() public {
         bytes32 depositKey = RateLimitHelpers.makeAddressKey(
