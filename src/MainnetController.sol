@@ -22,6 +22,7 @@ import { ERC4626Lib }   from "./libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "./libraries/LayerZeroLib.sol";
 import { PSMLib }       from "./libraries/PSMLib.sol";
 import { UniswapV4Lib } from "./libraries/UniswapV4Lib.sol";
+import { USDSLib }      from "./libraries/USDSLib.sol";
 import { WEETHLib }     from "./libraries/WEETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
@@ -93,11 +94,6 @@ interface IUSTBLike is IERC20 {
 interface IVaultLike {
 
     function buffer() external view returns (address);
-
-    function draw(uint256 usdsAmount) external;
-
-    function wipe(uint256 usdsAmount) external;
-
 }
 
 interface IWETH {
@@ -213,7 +209,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_USDC_TO_DOMAIN          = keccak256("LIMIT_USDC_TO_DOMAIN");
     bytes32 public LIMIT_USDE_BURN               = keccak256("LIMIT_USDE_BURN");
     bytes32 public LIMIT_USDE_MINT               = keccak256("LIMIT_USDE_MINT");
-    bytes32 public LIMIT_USDS_MINT               = keccak256("LIMIT_USDS_MINT");
+    bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_WEETH_DEPOSIT;
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_WEETH_REQUEST_WITHDRAW;
@@ -228,7 +224,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     IEthenaMinterLike public ethenaMinter;
     address           public psm;
     IRateLimits       public rateLimits;
-    IVaultLike        public vault;
+    address           public vault;
 
     address    public dai;
     IERC20     public usds;
@@ -270,7 +266,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
         proxy      = IALMProxy(proxy_);
         rateLimits = IRateLimits(rateLimits_);
-        vault      = IVaultLike(vault_);
+        vault      = vault_;
         buffer     = IVaultLike(vault_).buffer();
         psm        = psm_;
         daiUsds    = daiUsds_;
@@ -415,35 +411,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function mintUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        _rateLimited(LIMIT_USDS_MINT, usdsAmount);
-
-        // Mint USDS into the buffer
-        proxy.doCall(
-            address(vault),
-            abi.encodeCall(vault.draw, (usdsAmount))
-        );
-
-        // Transfer USDS from the buffer to the proxy
-        proxy.doCall(
-            address(usds),
-            abi.encodeCall(usds.transferFrom, (buffer, address(proxy), usdsAmount))
-        );
+        USDSLib.mint(address(proxy), address(rateLimits), vault, address(usds), usdsAmount);
     }
 
     function burnUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        _cancelRateLimit(LIMIT_USDS_MINT, usdsAmount);
-
-        // Transfer USDS from the proxy to the buffer
-        proxy.doCall(
-            address(usds),
-            abi.encodeCall(usds.transfer, (buffer, usdsAmount))
-        );
-
-        // Burn USDS from the buffer
-        proxy.doCall(
-            address(vault),
-            abi.encodeCall(vault.wipe, (usdsAmount))
-        );
+        USDSLib.burn(address(proxy), address(rateLimits), vault, address(usds), usdsAmount);
     }
 
     /**********************************************************************************************/
@@ -1260,10 +1232,6 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function _rateLimitedAddress(bytes32 key, address asset, uint256 amount) internal {
         rateLimits.triggerRateLimitDecrease(RateLimitHelpers.makeAddressKey(key, asset), amount);
-    }
-
-    function _cancelRateLimit(bytes32 key, uint256 amount) internal {
-        rateLimits.triggerRateLimitIncrease(key, amount);
     }
 
     function _rateLimitExists(bytes32 key) internal view {
