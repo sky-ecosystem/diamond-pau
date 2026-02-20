@@ -278,7 +278,7 @@ library UniswapV4Lib {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _approveWithPermit2(address proxy,address token,address spender,uint128 amount)
+    function _approveWithPermit2(address proxy, address token, address spender, uint128 amount)
         internal
     {
         // Approve the Permit2 contract to spend none of the token (success is optional).
