@@ -80,7 +80,7 @@ contract WEETHModule is AccessControlEnumerableUpgradeable, UUPSUpgradeable {
 
     function initialize(address admin_, address almProxy_) external initializer {
         require(almProxy_ != address(0), "WEETHModule/invalid-alm-proxy");
-        require(admin_     != address(0), "WEETHModule/invalid-admin");
+        require(admin_    != address(0), "WEETHModule/invalid-admin");
 
         __AccessControlEnumerable_init();
         __UUPSUpgradeable_init();

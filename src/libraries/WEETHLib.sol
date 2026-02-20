@@ -61,7 +61,7 @@ library WEETHLib {
     /**********************************************************************************************/
 
     function deposit(address proxy, address rateLimits, uint256 amount, uint256 minSharesOut)
-        internal
+        external
         returns (uint256 shares)
     {
         IRateLimits(rateLimits).triggerRateLimitDecrease(LIMIT_DEPOSIT, amount);
