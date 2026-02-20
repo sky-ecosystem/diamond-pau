@@ -29,6 +29,7 @@ interface IAavePoolLike {
     function withdraw(address asset, uint256 amount, address to) external;
 
     function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory);
+
 }
 
 interface IERC20Like {
@@ -55,7 +56,7 @@ abstract contract AaveV3_TestBase is ForkTestBase {
     address internal constant ATOKEN_USDC = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
     address internal constant POOL        = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
 
-    IERC20Like internal constant AUSUS = IERC20Like(ATOKEN_USDS);
+    IERC20Like internal constant AUSDS = IERC20Like(ATOKEN_USDS);
     IERC20Like internal constant AUSDC = IERC20Like(ATOKEN_USDC);
 
     uint256 internal startingAUSDSBalance;
@@ -204,7 +205,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
 
         assertEq(usds.allowance(address(almProxy), POOL), 0);
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), 0);
+        assertEq(AUSDS.balanceOf(address(almProxy)), 0);
         assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance);
 
@@ -217,7 +218,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
 
         assertEq(usds.allowance(address(almProxy), POOL), 0);
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(AUSDS.balanceOf(address(almProxy)), 1_000_000e18);
         assertEq(usds.balanceOf(address(almProxy)),  0);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
     }
@@ -324,11 +325,11 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         skip(1 hours);
 
-        uint256 aTokenBalance = AUSUS.balanceOf(address(almProxy));
+        uint256 aTokenBalance = AUSDS.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 1_000_008.690632523560813345e18);
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), aTokenBalance);
+        assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance);
         assertEq(usds.balanceOf(address(almProxy)),  0);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
 
@@ -347,7 +348,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), aTokenBalance - 400_000e18);
+        assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance - 400_000e18);
         assertEq(usds.balanceOf(address(almProxy)),  400_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 600_000e18);  // 1m - 400k
 
@@ -361,7 +362,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  25_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 10_000_000e18 - aTokenBalance);
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), 0);
+        assertEq(AUSDS.balanceOf(address(almProxy)), 0);
         assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18 - aTokenBalance);
 
@@ -382,7 +383,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         skip(1 hours);
 
-        uint256 aTokenBalance = AUSUS.balanceOf(address(almProxy));
+        uint256 aTokenBalance = AUSDS.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 1_000_008.690632523560813345e18);
 
@@ -393,7 +394,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  startingDepositRateLimit);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), aTokenBalance);
+        assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance);
         assertEq(usds.balanceOf(address(almProxy)),  0);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
 
@@ -404,7 +405,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  25_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);  // No change
 
-        assertEq(AUSUS.balanceOf(address(almProxy)), 0);
+        assertEq(AUSDS.balanceOf(address(almProxy)), 0);
         assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18 - aTokenBalance);
     }
