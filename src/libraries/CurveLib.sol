@@ -78,11 +78,9 @@ library CurveLib {
         require(inputIndex != outputIndex, "CurveLib/invalid-indices");
         require(maxSlippages[pool] != 0,   "CurveLib/max-slippage-not-set");
 
-        require(
-            inputIndex < ICurvePoolLike(pool).N_COINS() &&
-            outputIndex < ICurvePoolLike(pool).N_COINS(),
-            "CurveLib/index-too-high"
-        );
+        uint256 numCoins = ICurvePoolLike(pool).N_COINS();
+
+        require(inputIndex < numCoins &&outputIndex < numCoins,"CurveLib/index-too-high");
 
         // Normalized to provide 36 decimal precision when multiplied by asset amount.
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
@@ -108,16 +106,7 @@ library CurveLib {
             amountIn
         );
 
-        bytes memory callData = abi.encodeCall(
-            ICurvePoolLike.exchange,
-            (
-                int128(int256(inputIndex)),   // safe cast because of 8 token max
-                int128(int256(outputIndex)),  // safe cast because of 8 token max
-                amountIn,
-                minAmountOut,
-                proxy
-            )
-        );
+        bytes memory callData = _getExchangeCalldata(proxy, inputIndex, outputIndex, amountIn, minAmountOut);
 
         return abi.decode(IALMProxy(proxy).doCall(pool, callData), (uint256));
     }
@@ -128,7 +117,7 @@ library CurveLib {
         address            pool,
         uint256            minLpAmount,
         uint256[] calldata depositAmounts,
-        mapping (address => uint256) storage  maxSlippages
+        mapping (address => uint256) storage maxSlippages
     )
         external
         returns (uint256 shares)
@@ -267,6 +256,29 @@ library CurveLib {
 
     function _absSubtraction(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a - b : b - a;
+    }
+
+    function _getExchangeCalldata(
+        address proxy,
+        uint256 inputIndex,
+        uint256 outputIndex,
+        uint256 amountIn,
+        uint256 minAmountOut
+    )
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeCall(
+            ICurvePoolLike.exchange,
+            (
+                int128(int256(inputIndex)),   // safe cast because of 8 token max
+                int128(int256(outputIndex)),  // safe cast because of 8 token max
+                amountIn,
+                minAmountOut,
+                proxy
+            )
+        );
     }
 
     function _fromNormalizedAmount(uint256 value, uint256 rate) internal pure returns (uint256) {
