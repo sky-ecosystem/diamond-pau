@@ -27,7 +27,7 @@ library LayerZeroLib {
 
     event LayerZeroRecipientSet(uint32 indexed destinationEndpointId, bytes32 layerZeroRecipient);
 
-    bytes32 public constant LIMIT_TRANSFER = keccak256("LIMIT_TRANSFER");
+    bytes32 public constant LIMIT_TRANSFER = keccak256("LIMIT_LAYERZERO_TRANSFER");
 
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
