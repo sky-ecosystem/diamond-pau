@@ -42,11 +42,11 @@ library AaveLib {
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_AAVE_WITHDRAW");
 
     function deposit(
-        address                             proxy,
-        address                             rateLimits,
-        address                             aToken,
-        uint256                             amount,
-        mapping(address => uint256) storage maxSlippages
+        address proxy,
+        address rateLimits,
+        address aToken,
+        uint256 amount,
+        mapping (address => uint256) storage maxSlippages
     )
         external
     {
