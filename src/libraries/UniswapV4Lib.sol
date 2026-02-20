@@ -46,11 +46,11 @@ library UniswapV4Lib {
     /**********************************************************************************************/
 
     function setTickLimits(
-        bytes32                                poolId,
-        int24                                  tickLowerMin,
-        int24                                  tickUpperMax,
-        uint24                                 maxTickSpacing,
-        mapping(bytes32 => TickLimits) storage tickLimits
+        bytes32 poolId,
+        int24   tickLowerMin,
+        int24   tickUpperMax,
+        uint24  maxTickSpacing,
+        mapping (bytes32 => TickLimits) storage tickLimits
     )
         external
     {
@@ -66,15 +66,15 @@ library UniswapV4Lib {
     }
 
     function mintPosition(
-        address                                proxy,
-        address                                rateLimits,
-        bytes32                                poolId,
-        int24                                  tickLower,
-        int24                                  tickUpper,
-        uint128                                liquidity,
-        uint128                                amount0Max,
-        uint128                                amount1Max,
-        mapping(bytes32 => TickLimits) storage tickLimits
+        address proxy,
+        address rateLimits,
+        bytes32 poolId,
+        int24   tickLower,
+        int24   tickUpper,
+        uint128 liquidity,
+        uint128 amount0Max,
+        uint128 amount1Max,
+        mapping (bytes32 => TickLimits) storage tickLimits
     )
         external
     {
@@ -107,14 +107,14 @@ library UniswapV4Lib {
     }
 
     function increasePosition(
-        address                                proxy,
-        address                                rateLimits,
-        bytes32                                poolId,
-        uint256                                tokenId,
-        uint128                                liquidityIncrease,
-        uint128                                amount0Max,
-        uint128                                amount1Max,
-        mapping(bytes32 => TickLimits) storage tickLimits
+        address proxy,
+        address rateLimits,
+        bytes32 poolId,
+        uint256 tokenId,
+        uint128 liquidityIncrease,
+        uint128 amount0Max,
+        uint128 amount1Max,
+        mapping (bytes32 => TickLimits) storage tickLimits
     )
         external
     {
@@ -191,13 +191,13 @@ library UniswapV4Lib {
     }
 
     function swap(
-        address                             proxy,
-        address                             rateLimits,
-        bytes32                             poolId,
-        address                             tokenIn,
-        uint128                             amountIn,
-        uint128                             amountOutMin,
-        mapping(address => uint256) storage maxSlippages
+        address proxy,
+        address rateLimits,
+        bytes32 poolId,
+        address tokenIn,
+        uint128 amountIn,
+        uint128 amountOutMin,
+        mapping (address => uint256) storage maxSlippages
     )
         external
     {
