@@ -113,7 +113,7 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     }
 
     function test_depositERC4626_maple_rateLimitBoundary() external {
-        deal(Ethereum .USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
@@ -124,7 +124,7 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     }
 
     function test_depositERC4626_maple_exchangeRateTooHigh() external {
-        deal(Ethereum .USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         mainnetController.setMaxExchangeRate(address(SYRUP), SYRUP.convertToShares(1_000_000e6), 1_000_000e6 - 1);
@@ -143,7 +143,7 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     }
 
     function test_depositERC4626_maple_zeroExchangeRate() external {
-        deal(Ethereum .USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setMaxExchangeRate(address(SYRUP), 0, 0);
@@ -154,7 +154,7 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     }
 
     function test_depositERC4626_maple_minSharesOutNotMetBoundary() external {
-        deal(Ethereum .USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         uint256 overBoundaryShares = SYRUP.convertToShares(1_000_000e6 + 1);
         uint256 atBoundaryShares   = SYRUP.convertToShares(1_000_000e6);
@@ -167,7 +167,7 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     }
 
     function test_depositERC4626_maple() external {
-        deal(Ethereum .USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         assertEq(USDC.balanceOf(address(almProxy)),          1_000_000e6);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
