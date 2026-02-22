@@ -6,7 +6,6 @@ import { ReentrancyGuard }         from "../lib/openzeppelin-contracts/contracts
 
 import { IERC20 }         from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { IERC4626 }       from "../lib/openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 
 import { Ethereum } from "../lib/spark-address-registry/src/Ethereum.sol";
 
@@ -20,10 +19,12 @@ import { CCTPLib }                        from "./libraries/CCTPLib.sol";
 import { CurveLib }                       from "./libraries/CurveLib.sol";
 import { ERC4626Lib }                     from "./libraries/ERC4626Lib.sol";
 import { LayerZeroLib }                   from "./libraries/LayerZeroLib.sol";
+import { MapleLib }                       from "./libraries/MapleLib.sol";
 import { IDaiUsdsLike, IPSMLike, PSMLib } from "./libraries/PSMLib.sol";
 import { UniswapV4Lib }                   from "./libraries/UniswapV4Lib.sol";
 import { USDSLib }                        from "./libraries/USDSLib.sol";
 import { WEETHLib }                       from "./libraries/WEETHLib.sol";
+import { WSTETHLib }                      from "./libraries/WSTETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
@@ -45,21 +46,13 @@ interface IFarmLike {
 
 }
 
-interface IMapleTokenLike is IERC4626 {
-
-    function requestRedeem(uint256 shares, address receiver) external;
-
-    function removeShares(uint256 shares, address receiver) external;
-
-}
-
 interface ISparkVaultLike {
 
     function take(uint256 assetAmount) external;
 
 }
 
-interface ISUSDELike is IERC4626 {
+interface ISUSDELike {
 
     function cooldownAssets(uint256 usdeAmount) external returns (uint256);
 
@@ -78,28 +71,6 @@ interface IUSTBLike is IERC20 {
 interface IVaultLike {
 
     function buffer() external view returns (address);
-}
-
-interface IWETH {
-
-    function withdraw(uint256 amount) external;
-
-}
-
-interface IWithdrawalQueue {
-
-    function requestWithdrawalsWstETH(uint256[] calldata _amounts, address _owner)
-        external
-        returns (uint256[] memory requestIds);
-
-    function claimWithdrawal(uint256 _requestId) external;
-
-}
-
-interface IWstETHLike {
-
-    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
-
 }
 
 contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
@@ -179,7 +150,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_FARM_DEPOSIT            = keccak256("LIMIT_FARM_DEPOSIT");
     bytes32 public LIMIT_FARM_WITHDRAW           = keccak256("LIMIT_FARM_WITHDRAW");
     bytes32 public LIMIT_LAYERZERO_TRANSFER      = LayerZeroLib.LIMIT_LAYERZERO_TRANSFER;
-    bytes32 public LIMIT_MAPLE_REDEEM            = keccak256("LIMIT_MAPLE_REDEEM");
+    bytes32 public LIMIT_MAPLE_REDEEM            = MapleLib.LIMIT_REDEEM;
     bytes32 public LIMIT_OTC_SWAP                = keccak256("LIMIT_OTC_SWAP");
     bytes32 public LIMIT_SPARK_VAULT_TAKE        = keccak256("LIMIT_SPARK_VAULT_TAKE");
     bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = keccak256("LIMIT_SUPERSTATE_SUBSCRIBE");
@@ -420,74 +391,38 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /*** wstETH Integration                                                                     ***/
     /**********************************************************************************************/
 
-    function depositToWstETH(uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        _rateLimited(LIMIT_WSTETH_DEPOSIT, amount);
-
-        proxy.doCall(
-            Ethereum.WETH,
-            abi.encodeCall((IWETH(Ethereum.WETH)).withdraw, (amount))
-        );
-
-        proxy.doCallWithValue(
-            Ethereum.WSTETH,
-            "",
-            amount
-        );
+    function depositToWSTETH(uint256 amount) external nonReentrant onlyRole(RELAYER) {
+        WSTETHLib.deposit({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            weth       : Ethereum.WETH,
+            wsteth     : Ethereum.WSTETH,
+            amount     : amount
+        });
     }
 
-    function requestWithdrawFromWstETH(uint256 amountToRedeem)
+    function requestWithdrawFromWSTETH(uint256 amountToRedeem)
         external
         nonReentrant
         onlyRole(RELAYER)
         returns (uint256[] memory requestIds)
     {
-        _rateLimited(
-            LIMIT_WSTETH_REQUEST_WITHDRAW,
-            IWstETHLike(Ethereum.WSTETH).getStETHByWstETH(amountToRedeem)
-        );
-
-        proxy.doCall(
-            Ethereum.WSTETH,
-            abi.encodeCall(
-                IERC20(Ethereum.WSTETH).approve,
-                (Ethereum.WSTETH_WITHDRAW_QUEUE, amountToRedeem)
-            )
-        );
-
-        uint256[] memory amountsToRedeem = new uint256[](1);
-        amountsToRedeem[0] = amountToRedeem;
-
-        ( requestIds ) = abi.decode(
-            proxy.doCall(
-                Ethereum.WSTETH_WITHDRAW_QUEUE,
-                abi.encodeCall(
-                    IWithdrawalQueue(Ethereum.WSTETH_WITHDRAW_QUEUE).requestWithdrawalsWstETH,
-                    (amountsToRedeem, address(proxy))
-                )
-            ),
-            (uint256[])
-        );
+        return WSTETHLib.requestWithdraw({
+            proxy          : address(proxy),
+            rateLimits     : address(rateLimits),
+            wsteth         : Ethereum.WSTETH,
+            withdrawQueue  : Ethereum.WSTETH_WITHDRAW_QUEUE,
+            amountToRedeem : amountToRedeem
+        });
     }
 
-    function claimWithdrawalFromWstETH(uint256 requestId) external nonReentrant onlyRole(RELAYER) {
-        uint256 initialEthBalance = address(proxy).balance;
-
-        proxy.doCall(
-            Ethereum.WSTETH_WITHDRAW_QUEUE,
-            abi.encodeCall(
-                IWithdrawalQueue(Ethereum.WSTETH_WITHDRAW_QUEUE).claimWithdrawal,
-                (requestId)
-            )
-        );
-
-        uint256 ethReceived = address(proxy).balance - initialEthBalance;
-
-        // Wrap into WETH
-        proxy.doCallWithValue(
-            Ethereum.WETH,
-            "",
-            ethReceived
-        );
+    function claimWithdrawalFromWSTETH(uint256 requestId) external nonReentrant onlyRole(RELAYER) {
+        WSTETHLib.claimWithdrawal({
+            proxy         : address(proxy),
+            withdrawQueue : Ethereum.WSTETH_WITHDRAW_QUEUE,
+            weth          : Ethereum.WETH,
+            requestId     : requestId
+        });
     }
 
     /**********************************************************************************************/
@@ -854,16 +789,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        _rateLimitedAddress(
-            LIMIT_MAPLE_REDEEM,
-            mapleToken,
-            IMapleTokenLike(mapleToken).convertToAssets(shares)
-        );
-
-        proxy.doCall(
-            mapleToken,
-            abi.encodeCall(IMapleTokenLike(mapleToken).requestRedeem, (shares, address(proxy)))
-        );
+        MapleLib.requestRedemption(address(proxy), address(rateLimits), mapleToken, shares);
     }
 
     function cancelMapleRedemption(address mapleToken, uint256 shares)
@@ -871,12 +797,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        _rateLimitExists(RateLimitHelpers.makeAddressKey(LIMIT_MAPLE_REDEEM, mapleToken));
-
-        proxy.doCall(
-            mapleToken,
-            abi.encodeCall(IMapleTokenLike(mapleToken).removeShares, (shares, address(proxy)))
-        );
+        MapleLib.cancelRedemption(address(proxy), address(rateLimits), mapleToken, shares);
     }
 
     /**********************************************************************************************/
@@ -1187,13 +1108,6 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function _rateLimitedAddress(bytes32 key, address asset, uint256 amount) internal {
         rateLimits.triggerRateLimitDecrease(RateLimitHelpers.makeAddressKey(key, asset), amount);
-    }
-
-    function _rateLimitExists(bytes32 key) internal view {
-        require(
-            rateLimits.getRateLimitData(key).maxAmount > 0,
-            "MC/invalid-action"
-        );
     }
 
 }
