@@ -80,20 +80,17 @@ library CurveLib {
 
         uint256 numCoins = ICurvePoolLike(pool).N_COINS();
 
-        require(inputIndex < numCoins &&outputIndex < numCoins,"CurveLib/index-too-high");
+        require(inputIndex < numCoins && outputIndex < numCoins,"CurveLib/index-too-high");
 
         // Normalized to provide 36 decimal precision when multiplied by asset amount.
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
-        uint256 valueIn = _toNormalizedAmount(amountIn, rates[inputIndex]);
+        // Makes the assumption that value in should equal value out.
+        uint256 valueIn           = _toNormalizedAmount(amountIn,  rates[inputIndex]);
+        uint256 expectedAmountOut = _fromNormalizedAmount(valueIn, rates[outputIndex]);
 
-        // Below code is simplified from the following logic.
-        // `maxSlippage` was multiplied first to avoid precision loss.
-        //   valueIn   = amountIn * rates[inputIndex] / 1e18  // 18 decimal precision, USD
-        //   tokensOut = valueIn * 1e18 / rates[outputIndex]  // Token precision, token amount
-        //   result    = tokensOut * maxSlippage / 1e18
         require(
-            minAmountOut >= valueIn * maxSlippages[pool] / rates[outputIndex],
+            minAmountOut >= expectedAmountOut * maxSlippages[pool] / 1e18,
             "CurveLib/min-amount-not-met"
         );
 
