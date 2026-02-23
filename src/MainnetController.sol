@@ -13,20 +13,21 @@ import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { AaveLib }       from "./libraries/AaveLib.sol";
-import { ApproveLib }    from "./libraries/ApproveLib.sol";
-import { CCTPLib }       from "./libraries/CCTPLib.sol";
-import { CurveLib }      from "./libraries/CurveLib.sol";
-import { DAIUSDSLib }    from "./libraries/DAIUSDSLib.sol";
-import { ERC4626Lib }    from "./libraries/ERC4626Lib.sol";
-import { LayerZeroLib }  from "./libraries/LayerZeroLib.sol";
-import { MapleLib }      from "./libraries/MapleLib.sol";
-import { PSMLib }        from "./libraries/PSMLib.sol";
-import { SuperstateLib } from "./libraries/SuperstateLib.sol";
-import { UniswapV4Lib }  from "./libraries/UniswapV4Lib.sol";
-import { USDSLib }       from "./libraries/USDSLib.sol";
-import { WEETHLib }      from "./libraries/WEETHLib.sol";
-import { WSTETHLib }     from "./libraries/WSTETHLib.sol";
+import { AaveLib }         from "./libraries/AaveLib.sol";
+import { ApproveLib }      from "./libraries/ApproveLib.sol";
+import { CCTPLib }         from "./libraries/CCTPLib.sol";
+import { CurveLib }        from "./libraries/CurveLib.sol";
+import { DAIUSDSLib }      from "./libraries/DAIUSDSLib.sol";
+import { ERC4626Lib }      from "./libraries/ERC4626Lib.sol";
+import { LayerZeroLib }    from "./libraries/LayerZeroLib.sol";
+import { MapleLib }        from "./libraries/MapleLib.sol";
+import { PSMLib }          from "./libraries/PSMLib.sol";
+import { SuperstateLib }   from "./libraries/SuperstateLib.sol";
+import { UniswapV4Lib }    from "./libraries/UniswapV4Lib.sol";
+import { USDSLib }         from "./libraries/USDSLib.sol";
+import { WEETHLib }        from "./libraries/WEETHLib.sol";
+import { WrapProxyETHLib } from "./libraries/WrapProxyETHLib.sol";
+import { WSTETHLib }       from "./libraries/WSTETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
@@ -471,15 +472,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
-        uint256 proxyBalance = address(proxy).balance;
-
-        if (proxyBalance == 0) return;
-
-        proxy.doCallWithValue(
-            Ethereum.WETH,
-            "",
-            proxyBalance
-        );
+        WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
     }
 
     /**********************************************************************************************/
