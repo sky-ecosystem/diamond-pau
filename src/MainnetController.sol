@@ -820,7 +820,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function depositToFarm(address farm, uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        FarmLib.deposit(address(proxy), address(rateLimits), address(usds), farm, amount);
+        FarmLib.deposit(address(proxy), address(rateLimits), farm, amount);
     }
 
     function withdrawFromFarm(address farm, uint256 amount)

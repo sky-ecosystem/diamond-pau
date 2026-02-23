@@ -16,6 +16,8 @@ interface IFarmLike {
 
     function getReward() external;
 
+    function stakingToken() external view returns (address);
+
 }
 
 library FarmLib {
@@ -27,12 +29,10 @@ library FarmLib {
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
 
-    function deposit(address proxy, address rateLimits, address token, address farm, uint256 amount)
-        external
-    {
+    function deposit(address proxy, address rateLimits, address farm, uint256 amount) external {
         _decreaseRateLimit(rateLimits, LIMIT_DEPOSIT, farm, amount);
 
-        ApproveLib.approve(token, proxy, farm, amount);
+        ApproveLib.approve(IFarmLike(farm).stakingToken(), proxy, farm, amount);
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.stake, (amount)));
     }
