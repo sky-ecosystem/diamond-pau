@@ -100,7 +100,7 @@ library OTCLib {
         address asset,
         bool    isWhitelisted,
         mapping (address => mapping (address => bool)) storage whitelistedAssets,
-        mapping (address => OTC)                      storage otcs
+        mapping (address => OTC)                       storage otcs
     )
         external
     {
@@ -120,8 +120,8 @@ library OTCLib {
         address assetToSend,
         uint256 amount,
         mapping (address => mapping (address => bool)) storage whitelistedAssets,
-        mapping (address => OTC)                      storage otcs,
-        mapping (address => uint256)                  storage maxSlippages
+        mapping (address => OTC)                       storage otcs,
+        mapping (address => uint256)                   storage maxSlippages
     )
         external
     {
@@ -156,7 +156,7 @@ library OTCLib {
         address exchange,
         address assetToClaim,
         mapping (address => mapping (address => bool)) storage whitelistedAssets,
-        mapping (address => OTC)                      storage otcs
+        mapping (address => OTC)                       storage otcs
     )
         external
     {
