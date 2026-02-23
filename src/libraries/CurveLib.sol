@@ -86,11 +86,11 @@ library CurveLib {
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
         // Makes the assumption that value in should equal value out.
-        uint256 valueIn           = _toNormalizedAmount(amountIn,  rates[inputIndex]);
-        uint256 expectedAmountOut = _fromNormalizedAmount(valueIn, rates[outputIndex]);
+        uint256 valueIn             = _toNormalizedAmount(amountIn,  rates[inputIndex]);
+        uint256 equivalentAmountOut = _fromNormalizedAmount(valueIn, rates[outputIndex]);
 
         require(
-            minAmountOut >= expectedAmountOut * maxSlippages[pool] / 1e18,
+            minAmountOut >= equivalentAmountOut * maxSlippages[pool] / 1e18,
             "CurveLib/min-amount-not-met"
         );
 
@@ -126,7 +126,7 @@ library CurveLib {
             "CurveLib/invalid-deposit-amounts"
         );
 
-        // Normalized to provide 36 decimal precision when multiplied by asset amount
+        // Normalized to provide 36 decimal precision when multiplied by asset amount.
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
         // Aggregate the value of the deposited assets (e.g. USD).
@@ -165,10 +165,8 @@ library CurveLib {
 
         uint256 totalSupply = ICurvePoolLike(pool).totalSupply();
 
-        // Compute the swap value by taking the difference of the current underlying
-        // asset values from minted shares vs the deposited funds, converting this into an
-        // aggregated swap "amount in" by dividing the total value moved by two and decrease the
-        // swap rate limit by this amount.
+        // Compute the swap value by taking the difference of the current underlying asset values
+        // from minted shares vs the deposited funds.
         uint256 totalSwapped;
         for (uint256 i; i < depositAmounts.length; ++i) {
             totalSwapped += _absSubtraction(
@@ -178,7 +176,8 @@ library CurveLib {
         }
         totalSwapped /= 1e18;
 
-        _decreaseRateLimit(rateLimits, LIMIT_SWAP, pool, totalSwapped / 2); // average swap
+        // Convert the total value moved into an aggregated swap "amount in" by dividing it by 2.
+        _decreaseRateLimit(rateLimits, LIMIT_SWAP, pool, totalSwapped / 2);
     }
 
     function removeLiquidity(
@@ -199,17 +198,17 @@ library CurveLib {
             "CurveLib/invalid-min-withdraw-amounts"
         );
 
-        // Normalized to provide 36 decimal precision when multiplied by asset amount
+        // Normalized to provide 36 decimal precision when multiplied by asset amount.
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
-        // Aggregate the minimum values of the withdrawn assets (e.g. USD)
+        // Aggregate the minimum values of the withdrawn assets (e.g. USD).
         uint256 valueMinWithdrawn;
         for (uint256 i = 0; i < minWithdrawAmounts.length; ++i) {
             valueMinWithdrawn += minWithdrawAmounts[i] * rates[i];
         }
         valueMinWithdrawn /= 1e18;
 
-        // Check that the aggregated minimums are greater than the max slippage amount
+        // Check that the aggregated minimums are greater than the max slippage amount.
         require(
             valueMinWithdrawn >=
             lpBurnAmount * ICurvePoolLike(pool).get_virtual_price() * maxSlippages[pool] / 1e36,
@@ -227,7 +226,7 @@ library CurveLib {
             (uint256[])
         );
 
-        // Aggregate value withdrawn to reduce the rate limit
+        // Aggregate value withdrawn to reduce the rate limit.
         uint256 valueWithdrawn;
         for (uint256 i = 0; i < withdrawnTokens.length; ++i) {
             valueWithdrawn += withdrawnTokens[i] * rates[i];
@@ -269,8 +268,8 @@ library CurveLib {
         return abi.encodeCall(
             ICurvePoolLike.exchange,
             (
-                int128(int256(inputIndex)),   // safe cast because of 8 token max
-                int128(int256(outputIndex)),  // safe cast because of 8 token max
+                int128(int256(inputIndex)),   // Safe cast because of 8 token max.
+                int128(int256(outputIndex)),  // Safe cast because of 8 token max.
                 amountIn,
                 minAmountOut,
                 proxy
