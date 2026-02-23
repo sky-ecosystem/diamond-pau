@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { OptionsBuilder } from "../lib/layerzero-v2/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol";
-
 import { AccessControlEnumerable } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 import { ReentrancyGuard }         from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IERC20 }   from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-import { IPSM3 } from "../lib/spark-psm/src/interfaces/IPSM3.sol";
-
 import { AaveLib }      from "./libraries/AaveLib.sol";
 import { ApproveLib }   from "./libraries/ApproveLib.sol";
 import { ERC4626Lib }   from "./libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "./libraries/LayerZeroLib.sol";
+import { PSM3Lib }      from "./libraries/PSM3Lib.sol";
 
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
@@ -29,8 +26,6 @@ interface ISparkVaultLike {
 
 contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
-    using OptionsBuilder for bytes;
-
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
@@ -42,8 +37,6 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         bytes32 indexed mintRecipient,
         uint256         usdcAmount
     );
-
-    event LayerZeroRecipientSet(uint32 indexed destinationEndpointId, bytes32 layerZeroRecipient);
 
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
@@ -63,16 +56,16 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public constant LIMIT_AAVE_DEPOSIT       = AaveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_AAVE_WITHDRAW      = AaveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_ASSET_TRANSFER     = keccak256("LIMIT_ASSET_TRANSFER");
-    bytes32 public constant LIMIT_LAYERZERO_TRANSFER = LayerZeroLib.LIMIT_LAYERZERO_TRANSFER;
-    bytes32 public constant LIMIT_PSM_DEPOSIT        = keccak256("LIMIT_PSM_DEPOSIT");
-    bytes32 public constant LIMIT_PSM_WITHDRAW       = keccak256("LIMIT_PSM_WITHDRAW");
+    bytes32 public constant LIMIT_LAYERZERO_TRANSFER = LayerZeroLib.LIMIT_TRANSFER;
+    bytes32 public constant LIMIT_PSM_DEPOSIT        = PSM3Lib.LIMIT_DEPOSIT;
+    bytes32 public constant LIMIT_PSM_WITHDRAW       = PSM3Lib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_SPARK_VAULT_TAKE   = keccak256("LIMIT_SPARK_VAULT_TAKE");
     bytes32 public constant LIMIT_USDC_TO_CCTP       = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN     = keccak256("LIMIT_USDC_TO_DOMAIN");
 
     IALMProxy   public immutable proxy;
     ICCTPLike   public immutable cctp;
-    IPSM3       public immutable psm;
+    address     public immutable psm;
     IRateLimits public immutable rateLimits;
 
     IERC20 public immutable usdc;
@@ -101,7 +94,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
         proxy      = IALMProxy(proxy_);
         rateLimits = IRateLimits(rateLimits_);
-        psm        = IPSM3(psm_);
+        psm        = psm_;
         usdc       = IERC20(usdc_);
         cctp       = ICCTPLike(cctp_);
     }
@@ -144,13 +137,12 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         emit MintRecipientSet(destinationDomain, mintRecipient);
     }
 
-    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 layerZeroRecipient)
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        layerZeroRecipients[destinationEndpointId] = layerZeroRecipient;
-        emit LayerZeroRecipientSet(destinationEndpointId, layerZeroRecipient);
+        LayerZeroLib.setRecipient(layerZeroRecipients, destinationEndpointId, recipient);
     }
 
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets)
@@ -202,46 +194,15 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         external
         nonReentrant
         onlyRole(RELAYER)
-        rateLimitedAddress(LIMIT_PSM_DEPOSIT, asset, amount)
         returns (uint256 shares)
     {
-        // Approve `asset` to PSM from the proxy (assumes the proxy has enough `asset`).
-        ApproveLib.approve(asset, address(proxy), address(psm), amount);
-
-        // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
-        return abi.decode(
-            proxy.doCall(
-                address(psm),
-                abi.encodeCall(
-                    psm.deposit,
-                    (asset, address(proxy), amount)
-                )
-            ),
-            (uint256)
-        );
+        return PSM3Lib.deposit(address(proxy), address(rateLimits), psm, asset, amount);
     }
 
-    // NOTE: !!! Rate limited at end of function !!!
     function withdrawPSM(address asset, uint256 maxAmount)
         external nonReentrant onlyRole(RELAYER) returns (uint256 assetsWithdrawn)
     {
-        // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result
-        // to get `assetsWithdrawn` (assumes the proxy has enough PSM shares).
-        assetsWithdrawn = abi.decode(
-            proxy.doCall(
-                address(psm),
-                abi.encodeCall(
-                    psm.withdraw,
-                    (asset, address(proxy), maxAmount)
-                )
-            ),
-            (uint256)
-        );
-
-        rateLimits.triggerRateLimitDecrease(
-            RateLimitHelpers.makeAddressKey(LIMIT_PSM_WITHDRAW, asset),
-            assetsWithdrawn
-        );
+        return PSM3Lib.withdraw(address(proxy), address(rateLimits), psm, asset, maxAmount);
     }
 
     /**********************************************************************************************/
@@ -292,13 +253,13 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        LayerZeroLib.transferTokenLayerZero({
-            proxy                 : proxy,
-            rateLimits            : rateLimits,
+        LayerZeroLib.transfer({
+            proxy                 : address(proxy),
+            rateLimits            : address(rateLimits),
             oftAddress            : oftAddress,
             amount                : amount,
             destinationEndpointId : destinationEndpointId,
-            layerZeroRecipient    : layerZeroRecipients[destinationEndpointId]
+            layerZeroRecipients   : layerZeroRecipients
         });
     }
 
