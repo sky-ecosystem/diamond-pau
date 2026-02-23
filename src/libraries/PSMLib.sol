@@ -58,7 +58,7 @@ library PSMLib {
         uint256 usdsAmount = usdcAmount * IPSMLike(psm).to18ConversionFactor();
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS).
-        _approve(proxy, usds, daiUSDS, usdsAmount);
+        _approve(usds, proxy, daiUSDS, usdsAmount);
 
         // Swap USDS to DAI 1:1
         IALMProxy(proxy).doCall(
@@ -67,7 +67,7 @@ library PSMLib {
         );
 
         // Approve DAI to PSM from the proxy because conversion from USDS to DAI was 1:1.
-        _approve(proxy, dai, psm, usdsAmount);
+        _approve(dai, proxy, psm, usdsAmount);
 
         // Swap DAI to USDC through the PSM.
         IALMProxy(proxy).doCall(psm, abi.encodeCall(IPSMLike.buyGemNoFee, (proxy, usdcAmount)));
@@ -87,42 +87,37 @@ library PSMLib {
         IRateLimits(rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC).
-        _approve(proxy, usdc, psm, usdcAmount);
+        _approve(usdc, proxy, psm, usdcAmount);
 
         uint256 conversionFactor = IPSMLike(psm).to18ConversionFactor();
+        uint256 daiAmount        = usdcAmount * conversionFactor;
 
-        // Max USDC that can be swapped to DAI in one call/
-        uint256 limit = IERC20Like(dai).balanceOf(psm) / conversionFactor;
-
-        if (usdcAmount <= limit) {
+        // Swap all if amount is less than or equal to the max USDC that can be swapped to DAI in
+        // one call, else refill and swap in chunks within the limits.
+        if (usdcAmount <= IERC20Like(dai).balanceOf(psm) / conversionFactor) {
             _swapUSDCToDAI(proxy, psm, usdcAmount);
         } else {
-            uint256 remainingUsdcToSwap = usdcAmount;
-
             // Refill the PSM with DAI as many times as needed to get to the full `usdcAmount`.
-            // If the PSM cannot be filled with the full amount, psm.fill() will revert
-            // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
-            // This is desired behavior because this function should only succeed if the full
-            // `usdcAmount` can be swapped.
-            while (remainingUsdcToSwap > 0) {
+            // If the PSM cannot be filled with the full amount, psm.fill() will revert with
+            // `DssLitePsm/nothing-to-fill` since rush() will return 0. This is desired behavior
+            // because this function should only succeed if the full `usdcAmount` can be swapped.
+            while (usdcAmount > 0) {
                 IPSMLike(psm).fill();
 
-                limit = IERC20Like(dai).balanceOf(psm) / conversionFactor;
-
-                uint256 swapAmount = remainingUsdcToSwap < limit ? remainingUsdcToSwap : limit;
+                // Max USDC that can be swapped to DAI in one call/fill.
+                uint256 limit      = IERC20Like(dai).balanceOf(psm) / conversionFactor;
+                uint256 swapAmount = usdcAmount <= limit ? usdcAmount : limit;
 
                 _swapUSDCToDAI(proxy, psm, swapAmount);
 
-                remainingUsdcToSwap -= swapAmount;
+                usdcAmount -= swapAmount;
             }
         }
 
-        uint256 daiAmount = usdcAmount * conversionFactor;
+        // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI).
+        _approve(dai, proxy, daiUSDS, daiAmount);
 
-        // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
-        _approve(proxy, dai, daiUSDS, daiAmount);
-
-        // Swap DAI to USDS 1:1
+        // Swap DAI to USDS 1:1.
         IALMProxy(proxy).doCall(
             daiUSDS,
             abi.encodeCall(IDAIUSDSLike.daiToUsds, (proxy, daiAmount))
@@ -138,12 +133,12 @@ library PSMLib {
     /**********************************************************************************************/
 
     // NOTE: As swaps are only done between USDC and USDS, no need for `ApproveLib`.
-    function _approve(address proxy, address token, address spender, uint256 amount) internal {
+    function _approve(address token, address proxy, address spender, uint256 amount) internal {
         IALMProxy(proxy).doCall(token, abi.encodeCall(IERC20Like.approve, (spender, amount)));
     }
 
     function _swapUSDCToDAI(address proxy, address psm, uint256 usdcAmount) internal {
-        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used)
+        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used).
         IALMProxy(proxy).doCall(
             psm,
             abi.encodeCall(IPSMLike.sellGemNoFee, (address(proxy), usdcAmount))
