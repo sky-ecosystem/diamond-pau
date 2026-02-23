@@ -35,20 +35,20 @@ library USDELib {
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
 
-    function setDelegatedSigner(address proxy, address ethenaMinter, address delegatedSigner)
+    function setDelegatedSigner(address proxy, address minter, address delegatedSigner)
         external
     {
         IALMProxy(proxy).doCall(
-            ethenaMinter,
+            minter,
             abi.encodeCall(IEthenaMinterLike.setDelegatedSigner, (delegatedSigner))
         );
     }
 
-    function removeDelegatedSigner(address proxy, address ethenaMinter, address delegatedSigner)
+    function removeDelegatedSigner(address proxy, address minter, address delegatedSigner)
         external
     {
         IALMProxy(proxy).doCall(
-            ethenaMinter,
+            minter,
             abi.encodeCall(IEthenaMinterLike.removeDelegatedSigner, (delegatedSigner))
         );
     }
