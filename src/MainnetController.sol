@@ -17,6 +17,7 @@ import { AaveLib }                        from "./libraries/AaveLib.sol";
 import { ApproveLib }                     from "./libraries/ApproveLib.sol";
 import { CCTPLib }                        from "./libraries/CCTPLib.sol";
 import { CurveLib }                       from "./libraries/CurveLib.sol";
+import { DAIUSDSLib }                     from "./libraries/DAIUSDSLib.sol";
 import { ERC4626Lib }                     from "./libraries/ERC4626Lib.sol";
 import { LayerZeroLib }                   from "./libraries/LayerZeroLib.sol";
 import { MapleLib }                       from "./libraries/MapleLib.sol";
@@ -124,13 +125,6 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     );
 
     event RelayerRemoved(address indexed relayer);
-
-    event UniswapV4TickLimitsSet(
-        bytes32 indexed poolId,
-        int24           tickLowerMin,
-        int24           tickUpperMax,
-        uint24          maxTickSpacing
-    );
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
@@ -334,19 +328,13 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            ((tickLowerMin == 0) && (tickUpperMax == 0) && (maxTickSpacing == 0)) ||
-            ((maxTickSpacing > 0) && (tickLowerMin < tickUpperMax)),
-            "MC/invalid-ticks"
+        UniswapV4Lib.setTickLimits(
+            poolId,
+            tickLowerMin,
+            tickUpperMax,
+            maxTickSpacing,
+            uniswapV4TickLimits
         );
-
-        uniswapV4TickLimits[poolId] = UniswapV4Lib.TickLimits({
-            tickLowerMin   : tickLowerMin,
-            tickUpperMax   : tickUpperMax,
-            maxTickSpacing : maxTickSpacing
-        });
-
-        emit UniswapV4TickLimitsSet(poolId, tickLowerMin, tickUpperMax, maxTickSpacing);
     }
 
     /**********************************************************************************************/
@@ -701,7 +689,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             tokenIn      : tokenIn,
             amountIn     : amountIn,
             amountOutMin : amountOutMin,
-            maxSlippage  : maxSlippages[address(uint160(uint256(poolId)))]
+            maxSlippages : maxSlippages
         });
     }
 
@@ -820,25 +808,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function swapUSDSToDAI(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
-        ApproveLib.approve(address(usds), address(proxy), address(daiUsds), usdsAmount);
-
-        // Swap USDS to DAI 1:1
-        proxy.doCall(
-            address(daiUsds),
-            abi.encodeCall(daiUsds.usdsToDai, (address(proxy), usdsAmount))
-        );
+        DAIUSDSLib.swapUSDSToDAI(address(proxy), address(usds), address(daiUsds), usdsAmount);
     }
 
     function swapDAIToUSDS(uint256 daiAmount) external nonReentrant onlyRole(RELAYER) {
-        // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
-        ApproveLib.approve(address(dai), address(proxy), address(daiUsds), daiAmount);
-
-        // Swap DAI to USDS 1:1
-        proxy.doCall(
-            address(daiUsds),
-            abi.encodeCall(daiUsds.daiToUsds, (address(proxy), daiAmount))
-        );
+        DAIUSDSLib.swapDAIToUSDS(address(proxy), address(dai), address(daiUsds), daiAmount);
     }
 
     /**********************************************************************************************/
