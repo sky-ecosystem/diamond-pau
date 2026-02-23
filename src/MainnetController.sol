@@ -13,22 +13,24 @@ import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { AaveLib }         from "./libraries/AaveLib.sol";
-import { ApproveLib }      from "./libraries/ApproveLib.sol";
-import { CCTPLib }         from "./libraries/CCTPLib.sol";
-import { CurveLib }        from "./libraries/CurveLib.sol";
-import { DAIUSDSLib }      from "./libraries/DAIUSDSLib.sol";
-import { ERC4626Lib }      from "./libraries/ERC4626Lib.sol";
-import { LayerZeroLib }    from "./libraries/LayerZeroLib.sol";
-import { MapleLib }        from "./libraries/MapleLib.sol";
-import { PSMLib }          from "./libraries/PSMLib.sol";
-import { SparkVaultLib }   from "./libraries/SparkVaultLib.sol";
-import { SuperstateLib }   from "./libraries/SuperstateLib.sol";
-import { UniswapV4Lib }    from "./libraries/UniswapV4Lib.sol";
-import { USDSLib }         from "./libraries/USDSLib.sol";
-import { WEETHLib }        from "./libraries/WEETHLib.sol";
-import { WrapProxyETHLib } from "./libraries/WrapProxyETHLib.sol";
-import { WSTETHLib }       from "./libraries/WSTETHLib.sol";
+import { AaveLib }          from "./libraries/AaveLib.sol";
+import { ApproveLib }       from "./libraries/ApproveLib.sol";
+import { CCTPLib }          from "./libraries/CCTPLib.sol";
+import { CurveLib }         from "./libraries/CurveLib.sol";
+import { DAIUSDSLib }       from "./libraries/DAIUSDSLib.sol";
+import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
+import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
+import { MapleLib }         from "./libraries/MapleLib.sol";
+import { PSMLib }           from "./libraries/PSMLib.sol";
+import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
+import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
+import { TransferAssetLib } from "./libraries/TransferAssetLib.sol";
+import { UniswapV4Lib }     from "./libraries/UniswapV4Lib.sol";
+import { USDSLib }          from "./libraries/USDSLib.sol";
+import { USDELib }          from "./libraries/USDELib.sol";
+import { WEETHLib }         from "./libraries/WEETHLib.sol";
+import { WrapProxyETHLib }  from "./libraries/WrapProxyETHLib.sol";
+import { WSTETHLib }        from "./libraries/WSTETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
@@ -36,23 +38,11 @@ interface IDaiUsdsLike {
 
     function dai() external view returns (address);
 
-    function daiToUsds(address usr, uint256 wad) external;
-
-    function usdsToDai(address usr, uint256 wad) external;
-
 }
 
 interface IPSMLike {
 
     function gem() external view returns (address);
-
-}
-
-interface IEthenaMinterLike {
-
-    function setDelegatedSigner(address delegateSigner) external;
-
-    function removeDelegatedSigner(address delegateSigner) external;
 
 }
 
@@ -63,16 +53,6 @@ interface IFarmLike {
     function withdraw(uint256 amount) external;
 
     function getReward() external;
-
-}
-
-interface ISUSDELike {
-
-    function cooldownAssets(uint256 usdeAmount) external returns (uint256);
-
-    function cooldownShares(uint256 susdeAmount) external returns (uint256);
-
-    function unstake(address receiver) external;
 
 }
 
@@ -142,7 +122,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_4626_WITHDRAW           = ERC4626Lib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
-    bytes32 public LIMIT_ASSET_TRANSFER          = keccak256("LIMIT_ASSET_TRANSFER");
+    bytes32 public LIMIT_ASSET_TRANSFER          = TransferAssetLib.LIMIT_TRANSFER;
     bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
     bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
@@ -153,14 +133,14 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_OTC_SWAP                = keccak256("LIMIT_OTC_SWAP");
     bytes32 public LIMIT_SPARK_VAULT_TAKE        = SparkVaultLib.LIMIT_TAKE;
     bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = SuperstateLib.LIMIT_SUBSCRIBE;
-    bytes32 public LIMIT_SUSDE_COOLDOWN          = keccak256("LIMIT_SUSDE_COOLDOWN");
+    bytes32 public LIMIT_SUSDE_COOLDOWN          = USDELib.LIMIT_SUSDE_COOLDOWN;
     bytes32 public LIMIT_UNISWAP_V4_DEPOSIT      = UniswapV4Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V4_WITHDRAW     = UniswapV4Lib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_UNISWAP_V4_SWAP         = UniswapV4Lib.LIMIT_SWAP;
     bytes32 public LIMIT_USDC_TO_CCTP            = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public LIMIT_USDC_TO_DOMAIN          = keccak256("LIMIT_USDC_TO_DOMAIN");
-    bytes32 public LIMIT_USDE_BURN               = keccak256("LIMIT_USDE_BURN");
-    bytes32 public LIMIT_USDE_MINT               = keccak256("LIMIT_USDE_MINT");
+    bytes32 public LIMIT_USDE_BURN               = USDELib.LIMIT_USDE_BURN;
+    bytes32 public LIMIT_USDE_MINT               = USDELib.LIMIT_USDE_MINT;
     bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
@@ -170,20 +150,20 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     address public buffer;  // Allocator buffer
 
-    IALMProxy         public proxy;
-    ICCTPLike         public cctp;
-    address           public daiUsds;
-    IEthenaMinterLike public ethenaMinter;
-    address           public psm;
-    IRateLimits       public rateLimits;
-    address           public vault;
+    IALMProxy   public proxy;
+    ICCTPLike   public cctp;
+    address     public daiUsds;
+    address     public ethenaMinter;
+    address     public psm;
+    IRateLimits public rateLimits;
+    address     public vault;
 
-    address    public dai;
-    IERC20     public usds;
-    address    public usde;
-    IERC20     public usdc;
-    address    public ustb;
-    ISUSDELike public susde;
+    address public dai;
+    address public usds;
+    address public usde;
+    IERC20  public usdc;
+    address public ustb;
+    address public susde;
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
@@ -224,13 +204,13 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         daiUsds    = daiUsds_;
         cctp       = ICCTPLike(cctp_);
 
-        ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
+        ethenaMinter = Ethereum.ETHENA_MINTER;
 
-        susde = ISUSDELike(Ethereum.SUSDE);
+        susde = Ethereum.SUSDE;
         ustb  = Ethereum.USTB;
         dai   = IDaiUsdsLike(daiUsds).dai();
         usdc  = IERC20(IPSMLike(psm).gem());
-        usds  = IERC20(Ethereum.USDS);
+        usds  = Ethereum.USDS;
         usde  = Ethereum.USDE;
     }
 
@@ -351,11 +331,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function mintUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.mint(address(proxy), address(rateLimits), vault, address(usds), usdsAmount);
+        USDSLib.mint(address(proxy), address(rateLimits), vault, usds, usdsAmount);
     }
 
     function burnUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.burn(address(proxy), address(rateLimits), vault, address(usds), usdsAmount);
+        USDSLib.burn(address(proxy), address(rateLimits), vault, usds, usdsAmount);
     }
 
     /**********************************************************************************************/
@@ -367,12 +347,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        _rateLimited(
-            RateLimitHelpers.makeAddressAddressKey(LIMIT_ASSET_TRANSFER, asset, destination),
-            amount
-        );
-
-        _transfer(asset, destination, amount);
+        TransferAssetLib.transfer(address(proxy), address(rateLimits), asset, destination, amount);
     }
 
     /**********************************************************************************************/
@@ -690,10 +665,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function setDelegatedSigner(address delegatedSigner) external nonReentrant onlyRole(RELAYER) {
-        proxy.doCall(
-            address(ethenaMinter),
-            abi.encodeCall(ethenaMinter.setDelegatedSigner, (address(delegatedSigner)))
-        );
+        USDELib.setDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
     }
 
     function removeDelegatedSigner(address delegatedSigner)
@@ -701,63 +673,44 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        proxy.doCall(
-            address(ethenaMinter),
-            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegatedSigner)))
-        );
+        USDELib.removeDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
     }
 
-    // Note that Ethena's mint/redeem per-block limits include other users
-    function prepareUSDeMint(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        _rateLimited(LIMIT_USDE_MINT, usdcAmount);
-        ApproveLib.approve(address(usdc), address(proxy), address(ethenaMinter), usdcAmount);
+    // Note that Ethena's mint/redeem per-block limits include other users.
+    function prepareUSDEMint(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
+        USDELib.prepareMint({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            usdc       : address(usdc),
+            minter     : ethenaMinter,
+            usdcAmount : usdcAmount
+        });
     }
 
-    function prepareUSDeBurn(uint256 usdeAmount) external nonReentrant onlyRole(RELAYER) {
-        _rateLimited(LIMIT_USDE_BURN, usdeAmount);
-        ApproveLib.approve(usde, address(proxy), address(ethenaMinter), usdeAmount);
+    function prepareUSDEBurn(uint256 usdeAmount) external nonReentrant onlyRole(RELAYER) {
+        USDELib.prepareBurn(address(proxy), address(rateLimits), usde, ethenaMinter, usdeAmount);
     }
 
-    function cooldownAssetsSUSDe(uint256 usdeAmount)
+    function cooldownAssetsSUSDE(uint256 usdeAmount)
         external
         nonReentrant
         onlyRole(RELAYER)
         returns (uint256 cooldownShares)
     {
-        _rateLimited(LIMIT_SUSDE_COOLDOWN, usdeAmount);
-
-        return abi.decode(
-            proxy.doCall(
-                address(susde),
-                abi.encodeCall(susde.cooldownAssets, (usdeAmount))
-            ),
-            (uint256)
-        );
+        return USDELib.cooldownAssets(address(proxy), address(rateLimits), susde, usdeAmount);
     }
 
-    // NOTE: !!! Rate limited at end of function !!!
-    function cooldownSharesSUSDe(uint256 susdeAmount)
+    function cooldownSharesSUSDE(uint256 susdeAmount)
         external
         nonReentrant
         onlyRole(RELAYER)
         returns (uint256 cooldownAssets)
     {
-        cooldownAssets = abi.decode(
-            proxy.doCall(
-                address(susde),
-                abi.encodeCall(susde.cooldownShares, (susdeAmount))
-            ),
-            (uint256)
-        );
-
-        _rateLimited(LIMIT_SUSDE_COOLDOWN, cooldownAssets);
+        return USDELib.cooldownShares(address(proxy), address(rateLimits), susde, susdeAmount);
     }
 
-    function unstakeSUSDe() external nonReentrant onlyRole(RELAYER) {
-        proxy.doCall(
-            address(susde),
-            abi.encodeCall(susde.unstake, (address(proxy)))
-        );
+    function unstakeSUSDE() external nonReentrant onlyRole(RELAYER) {
+        USDELib.unstakeSUSDE(address(proxy), susde);
     }
 
     /**********************************************************************************************/
@@ -793,11 +746,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function swapUSDSToDAI(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        DAIUSDSLib.swapUSDSToDAI(address(proxy), address(usds), address(daiUsds), usdsAmount);
+        DAIUSDSLib.swapUSDSToDAI(address(proxy), usds, daiUsds, usdsAmount);
     }
 
     function swapDAIToUSDS(uint256 daiAmount) external nonReentrant onlyRole(RELAYER) {
-        DAIUSDSLib.swapDAIToUSDS(address(proxy), dai, address(daiUsds), daiAmount);
+        DAIUSDSLib.swapDAIToUSDS(address(proxy), dai, daiUsds, daiAmount);
     }
 
     /**********************************************************************************************/
@@ -812,7 +765,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             rateLimits : address(rateLimits),
             daiUSDS    : daiUsds,
             psm        : psm,
-            usds       : address(usds),
+            usds       : usds,
             dai        : dai,
             usdcAmount : usdcAmount
         });
@@ -893,7 +846,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             usdsAmount
         );
 
-        ApproveLib.approve(address(usds), address(proxy), farm, usdsAmount);
+        ApproveLib.approve(usds, address(proxy), farm, usdsAmount);
 
         proxy.doCall(
             farm,
