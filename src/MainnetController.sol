@@ -23,9 +23,11 @@ import { FarmLib }                        from "./libraries/FarmLib.sol";
 import { LayerZeroLib }                   from "./libraries/LayerZeroLib.sol";
 import { MapleLib }                       from "./libraries/MapleLib.sol";
 import { IDaiUsdsLike, IPSMLike, PSMLib } from "./libraries/PSMLib.sol";
+import { SuperstateLib }                  from "./libraries/SuperstateLib.sol";
 import { UniswapV4Lib }                   from "./libraries/UniswapV4Lib.sol";
 import { USDSLib }                        from "./libraries/USDSLib.sol";
 import { WEETHLib }                       from "./libraries/WEETHLib.sol";
+import { WrapProxyETHLib }                from "./libraries/WrapProxyETHLib.sol";
 import { WSTETHLib }                      from "./libraries/WSTETHLib.sol";
 
 import { RateLimitHelpers } from "./RateLimitHelpers.sol";
@@ -51,12 +53,6 @@ interface ISUSDELike {
     function cooldownShares(uint256 susdeAmount) external returns (uint256);
 
     function unstake(address receiver) external;
-
-}
-
-interface IUSTBLike is IERC20 {
-
-    function subscribe(uint256 inAmount, address stablecoin) external;
 
 }
 
@@ -129,16 +125,16 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_ASSET_TRANSFER          = keccak256("LIMIT_ASSET_TRANSFER");
-    bytes32 public LIMIT_CURVE_DEPOSIT           = keccak256("LIMIT_CURVE_DEPOSIT");
-    bytes32 public LIMIT_CURVE_SWAP              = keccak256("LIMIT_CURVE_SWAP");
-    bytes32 public LIMIT_CURVE_WITHDRAW          = keccak256("LIMIT_CURVE_WITHDRAW");
+    bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
+    bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
+    bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_FARM_DEPOSIT            = FarmLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_FARM_WITHDRAW           = FarmLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_LAYERZERO_TRANSFER      = LayerZeroLib.LIMIT_LAYERZERO_TRANSFER;
     bytes32 public LIMIT_MAPLE_REDEEM            = MapleLib.LIMIT_REDEEM;
     bytes32 public LIMIT_OTC_SWAP                = keccak256("LIMIT_OTC_SWAP");
     bytes32 public LIMIT_SPARK_VAULT_TAKE        = keccak256("LIMIT_SPARK_VAULT_TAKE");
-    bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = keccak256("LIMIT_SUPERSTATE_SUBSCRIBE");
+    bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = SuperstateLib.LIMIT_SUBSCRIBE;
     bytes32 public LIMIT_SUSDE_COOLDOWN          = keccak256("LIMIT_SUSDE_COOLDOWN");
     bytes32 public LIMIT_UNISWAP_V4_DEPOSIT      = UniswapV4Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V4_WITHDRAW     = UniswapV4Lib.LIMIT_WITHDRAW;
@@ -168,7 +164,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     IERC20     public usds;
     address    public usde;
     IERC20     public usdc;
-    IUSTBLike  public ustb;
+    address    public ustb;
     ISUSDELike public susde;
 
     uint256 public psmTo18ConversionFactor;
@@ -215,7 +211,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
 
         susde = ISUSDELike(Ethereum.SUSDE);
-        ustb  = IUSTBLike(Ethereum.USTB);
+        ustb  = Ethereum.USTB;
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
         usds  = IERC20(Ethereum.USDS);
@@ -455,15 +451,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
-        uint256 proxyBalance = address(proxy).balance;
-
-        if (proxyBalance == 0) return;
-
-        proxy.doCallWithValue(
-            Ethereum.WETH,
-            "",
-            proxyBalance
-        );
+        WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
     }
 
     /**********************************************************************************************/
@@ -541,17 +529,16 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         onlyRole(RELAYER)
         returns (uint256 amountOut)
     {
-        return CurveLib.swap(CurveLib.SwapCurveParams({
-            proxy        : proxy,
-            rateLimits   : rateLimits,
+        return CurveLib.swap({
+            proxy        : address(proxy),
+            rateLimits   : address(rateLimits),
             pool         : pool,
-            rateLimitId  : LIMIT_CURVE_SWAP,
             inputIndex   : inputIndex,
             outputIndex  : outputIndex,
             amountIn     : amountIn,
             minAmountOut : minAmountOut,
-            maxSlippage  : maxSlippages[pool]
-        }));
+            maxSlippages : maxSlippages
+        });
     }
 
     function addLiquidityCurve(address pool, uint256[] memory depositAmounts, uint256 minLpAmount)
@@ -560,37 +547,34 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         onlyRole(RELAYER)
         returns (uint256 shares)
     {
-        return CurveLib.addLiquidity(CurveLib.AddLiquidityParams({
-            proxy                   : proxy,
-            rateLimits              : rateLimits,
-            pool                    : pool,
-            addLiquidityRateLimitId : LIMIT_CURVE_DEPOSIT,
-            swapRateLimitId         : LIMIT_CURVE_SWAP,
-            minLpAmount             : minLpAmount,
-            maxSlippage             : maxSlippages[pool],
-            depositAmounts          : depositAmounts
-        }));
+        return CurveLib.addLiquidity({
+            proxy          : address(proxy),
+            rateLimits     : address(rateLimits),
+            pool           : pool,
+            minLpAmount    : minLpAmount,
+            depositAmounts : depositAmounts,
+            maxSlippages   : maxSlippages
+        });
     }
 
     function removeLiquidityCurve(
-        address          pool,
-        uint256          lpBurnAmount,
-        uint256[] memory minWithdrawAmounts
+        address            pool,
+        uint256            lpBurnAmount,
+        uint256[] calldata minWithdrawAmounts
     )
         external
         nonReentrant
         onlyRole(RELAYER)
         returns (uint256[] memory withdrawnTokens)
     {
-        return CurveLib.removeLiquidity(CurveLib.RemoveLiquidityParams({
-            proxy              : proxy,
-            rateLimits         : rateLimits,
+        return CurveLib.removeLiquidity({
+            proxy              : address(proxy),
+            rateLimits         : address(rateLimits),
             pool               : pool,
-            rateLimitId        : LIMIT_CURVE_WITHDRAW,
             lpBurnAmount       : lpBurnAmount,
             minWithdrawAmounts : minWithdrawAmounts,
-            maxSlippage        : maxSlippages[pool]
-        }));
+            maxSlippages       : maxSlippages
+        });
     }
 
     /**********************************************************************************************/
@@ -788,14 +772,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function subscribeSuperstate(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        _rateLimited(LIMIT_SUPERSTATE_SUBSCRIBE, usdcAmount);
-
-        ApproveLib.approve(address(usdc), address(proxy), address(ustb), usdcAmount);
-
-        proxy.doCall(
-            address(ustb),
-            abi.encodeCall(ustb.subscribe, (usdcAmount, address(usdc)))
-        );
+        SuperstateLib.subscribe(address(proxy), address(rateLimits), address(usdc), ustb, usdcAmount);
     }
 
     /**********************************************************************************************/
