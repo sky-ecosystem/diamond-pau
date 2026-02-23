@@ -279,9 +279,9 @@ contract ForeignController_SparkVault_TakeFrom_E2ETests is SparkVault_TestBase {
 
         assertApproxEqAbs(USDC_BASE.balanceOf(address(almProxy)),   state.usdcAlm,          tolerance, "usdcAlm");
         assertApproxEqAbs(USDC_BASE.balanceOf(address(sparkVault)), state.usdcVault,        tolerance, "usdcVault");
-        assertApproxEqAbs(sparkVault.totalAssets(),                state.vaultTotalAssets, tolerance, "vaultTotalAssets");
-        assertApproxEqAbs(sparkVault.totalSupply(),                state.vaultTotalSupply, tolerance, "vaultTotalSupply");
-        assertApproxEqAbs(sparkVault.assetsOutstanding(),          state.vaultAssetsOut,   tolerance, "vaultAssetsOut");
+        assertApproxEqAbs(sparkVault.totalAssets(),                 state.vaultTotalAssets, tolerance, "vaultTotalAssets");
+        assertApproxEqAbs(sparkVault.totalSupply(),                 state.vaultTotalSupply, tolerance, "vaultTotalSupply");
+        assertApproxEqAbs(sparkVault.assetsOutstanding(),           state.vaultAssetsOut,   tolerance, "vaultAssetsOut");
     }
 
     function _assertE2EState(E2ETestState memory state) internal view {
