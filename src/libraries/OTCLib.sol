@@ -61,10 +61,10 @@ library OTCLib {
     /**********************************************************************************************/
 
     function setBuffer(
-        address                             exchange,
-        address                             otcBuffer,
-        mapping(address => OTC)     storage otcs,
-        mapping(address => uint256) storage maxSlippages
+        address exchange,
+        address otcBuffer,
+        mapping (address => OTC)     storage otcs,
+        mapping (address => uint256) storage maxSlippages
     )
         external
     {
@@ -84,9 +84,9 @@ library OTCLib {
     }
 
     function setRechargeRate(
-        address                         exchange,
-        uint256                         rechargeRate18,
-        mapping(address => OTC) storage otcs
+        address exchange,
+        uint256 rechargeRate18,
+        mapping (address => OTC) storage otcs
     )
         external
     {
@@ -96,11 +96,11 @@ library OTCLib {
     }
 
     function setWhitelistedAsset(
-        address                                              exchange,
-        address                                              asset,
-        bool                                                 isWhitelisted,
-        mapping(address => mapping(address => bool)) storage whitelistedAssets,
-        mapping(address => OTC)                      storage otcs
+        address exchange,
+        address asset,
+        bool    isWhitelisted,
+        mapping (address => mapping (address => bool)) storage whitelistedAssets,
+        mapping (address => OTC)                      storage otcs
     )
         external
     {
@@ -114,14 +114,14 @@ library OTCLib {
     }
 
     function send(
-        address                                              proxy,
-        address                                              rateLimits,
-        address                                              exchange,
-        address                                              assetToSend,
-        uint256                                              amount,
-        mapping(address => mapping(address => bool)) storage whitelistedAssets,
-        mapping(address => OTC)                      storage otcs,
-        mapping(address => uint256)                  storage maxSlippages
+        address proxy,
+        address rateLimits,
+        address exchange,
+        address assetToSend,
+        uint256 amount,
+        mapping (address => mapping (address => bool)) storage whitelistedAssets,
+        mapping (address => OTC)                      storage otcs,
+        mapping (address => uint256)                  storage maxSlippages
     )
         external
     {
@@ -152,11 +152,11 @@ library OTCLib {
     }
 
     function claim(
-        address                                              proxy,
-        address                                              exchange,
-        address                                              assetToClaim,
-        mapping(address => mapping(address => bool)) storage whitelistedAssets,
-        mapping(address => OTC)                      storage otcs
+        address proxy,
+        address exchange,
+        address assetToClaim,
+        mapping (address => mapping (address => bool)) storage whitelistedAssets,
+        mapping (address => OTC)                      storage otcs
     )
         external
     {
@@ -178,8 +178,8 @@ library OTCLib {
     }
 
     function getClaimWithRecharge(
-        address                         exchange,
-        mapping(address => OTC) storage otcs
+        address exchange,
+        mapping (address => OTC) storage otcs
     )
         public
         view
@@ -193,9 +193,9 @@ library OTCLib {
     }
 
     function isSwapReady(
-        address                             exchange,
-        mapping(address => OTC)     storage otcs,
-        mapping(address => uint256) storage maxSlippages
+        address exchange,
+        mapping (address => OTC)     storage otcs,
+        mapping (address => uint256) storage maxSlippages
     )
         public
         view
