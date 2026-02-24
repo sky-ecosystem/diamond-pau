@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { ERC20Mock }       from "../../lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Base }     from "../../lib/spark-address-registry/src/Base.sol";
-
-import { PSM3Deploy }       from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
-import { MockRateProvider } from "../../lib/spark-psm/test/mocks/MockRateProvider.sol";
 
 import { CCTPForwarder }     from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Bridge }            from "../../lib/xchain-helpers/src/testing/Bridge.sol";
@@ -45,19 +41,11 @@ interface ICCTPLike {
 
 interface IERC20Like {
 
-    function approve(address spender, uint256 amount) external returns (bool);
-
     function allowance(address owner, address spender) external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
-
-}
-
-interface IPSM3Like {
-
-    function setPocket(address pocket) external;
 
 }
 
@@ -78,8 +66,8 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
     }
 
-    function test_tranferUSDCToCCTP_zeroMaxAmountDomain() external {
-        vm.startPrank(SPARK_PROXY);
+    function test_transferUSDCToCCTP_zeroMaxAmountDomain() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(
             makeUint32Key(
                 mainnetController.LIMIT_USDC_TO_DOMAIN(),
@@ -95,8 +83,8 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
     }
 
-    function test_tranferUSDCToCCTP_zeroMaxAmountCCTP() external {
-        vm.startPrank(SPARK_PROXY);
+    function test_transferUSDCToCCTP_zeroMaxAmountCCTP() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 0, 0);
         vm.stopPrank();
 
@@ -106,7 +94,7 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
     }
 
     function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
-        vm.startPrank(SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
 
         // Set this so second modifier will be passed in success case
         rateLimits.setUnlimitedRateLimitData(
@@ -138,7 +126,7 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
     }
 
     function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
-        vm.startPrank(SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
 
         // Set this so first modifier will be passed in success case
         rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
@@ -173,7 +161,7 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         // Configure to pass modifiers
-        vm.startPrank(SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
 
         rateLimits.setUnlimitedRateLimitData(
             makeUint32Key(
@@ -200,20 +188,10 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     using CCTPBridgeTesting for Bridge;
 
     /**********************************************************************************************/
-    /*** Base addresses                                                                         ***/
-    /**********************************************************************************************/
-
-    address internal constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
-    address internal constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
-    address internal constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
-
-    /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
     IERC20Like internal constant BASE_USDC = IERC20Like(Base.USDC);
-
-    address internal pocket = makeAddr("pocket");
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -223,46 +201,20 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     RateLimits        internal foreignRateLimits;
     ForeignController internal foreignController;
 
-    /**********************************************************************************************/
-    /*** Casted addresses for testing                                                           ***/
-    /**********************************************************************************************/
-
-    address internal usdsBase;
-    address internal susdsBase;
-
-    MockRateProvider internal rateProvider;
-
     uint256 internal baseUSDCTotalSupply;
 
     function setUp() public override virtual {
         super.setUp();
 
-        /*** Step 1: Set up environment and deploy mocks ***/
-
         destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
-
-        usdsBase  = address(new ERC20Mock());
-        susdsBase = address(new ERC20Mock());
-
-        /*** Step 2: Deploy and configure PSM with a pocket ***/
-
-        deal(usdsBase, address(this), 1e18);  // For seeding PSM during deployment
-
-        address psmBase = PSM3Deploy.deploy(SPARK_EXECUTOR, Base.USDC, usdsBase, susdsBase, SSR_ORACLE);
-
-        vm.prank(SPARK_EXECUTOR);
-        IPSM3Like(psmBase).setPocket(pocket);
-
-        vm.prank(pocket);
-        BASE_USDC.approve(psmBase, type(uint256).max);
 
         /*** Step 3: Deploy and configure ALM system ***/
 
         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull({
-            admin : SPARK_EXECUTOR,
-            psm   : psmBase,
+            admin : Base.SPARK_EXECUTOR,
+            psm   : address(0),
             usdc  : Base.USDC,
-            cctp  : CCTP_MESSENGER_BASE
+            cctp  : Base.CCTP_TOKEN_MESSENGER
         });
 
         foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
@@ -280,11 +232,11 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
             admin : Base.SPARK_EXECUTOR,
-            psm   : psmBase,
+            psm   : address(0),
             cctp  : Base.CCTP_TOKEN_MESSENGER,
             usdc  : Base.USDC,
-            susds : susdsBase,
-            usds  : usdsBase
+            susds : address(0),
+            usds  : address(0)
         });
 
         ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);
@@ -294,19 +246,15 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             mintRecipient : bytes32(uint256(uint160(address(almProxy))))
         });
 
-        ForeignControllerInit.LayerZeroRecipient[] memory layerZeroRecipients = new ForeignControllerInit.LayerZeroRecipient[](0);
-
-        ForeignControllerInit.MaxSlippageParams[] memory maxSlippageParams = new ForeignControllerInit.MaxSlippageParams[](0);
-
-        vm.startPrank(SPARK_EXECUTOR);
+        vm.startPrank(Base.SPARK_EXECUTOR);
         ForeignControllerInit.initAlmSystem(
             controllerInst,
             configAddresses,
             checkAddresses,
             mintRecipients,
-            layerZeroRecipients,
-            maxSlippageParams,
-            true
+            new ForeignControllerInit.LayerZeroRecipient[](0),
+            new ForeignControllerInit.MaxSlippageParams[](0),
+            false
         );
 
         uint256 usdcMaxAmount = 5_000_000e6;
@@ -328,7 +276,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
 
-        vm.prank(SPARK_PROXY);
+        vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
             bytes32(uint256(uint160(address(foreignAlmProxy))))
@@ -365,8 +313,8 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
     }
 
-    function test_tranferUSDCToCCTP_zeroMaxAmountDomain() external {
-        vm.startPrank(SPARK_EXECUTOR);
+    function test_transferUSDCToCCTP_zeroMaxAmountDomain() external {
+        vm.startPrank(Base.SPARK_EXECUTOR);
         foreignRateLimits.setRateLimitData(
             makeUint32Key(
                 foreignController.LIMIT_USDC_TO_DOMAIN(),
@@ -382,8 +330,8 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
     }
 
-    function test_tranferUSDCToCCTP_zeroMaxAmountCCTP() external {
-        vm.startPrank(SPARK_EXECUTOR);
+    function test_transferUSDCToCCTP_zeroMaxAmountCCTP() external {
+        vm.startPrank(Base.SPARK_EXECUTOR);
         foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 0, 0);
         vm.stopPrank();
 
@@ -393,7 +341,7 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
     }
 
     function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
-        vm.startPrank(SPARK_EXECUTOR);
+        vm.startPrank(Base.SPARK_EXECUTOR);
 
         // Set this so second modifier will be passed in success case
         foreignRateLimits.setUnlimitedRateLimitData(
@@ -425,7 +373,7 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
     }
 
     function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
-        vm.startPrank(SPARK_EXECUTOR);
+        vm.startPrank(Base.SPARK_EXECUTOR);
 
         // Set this so first modifier will be passed in success case
         foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
@@ -460,7 +408,7 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         // Configure to pass modifiers
-        vm.startPrank(SPARK_EXECUTOR);
+        vm.startPrank(Base.SPARK_EXECUTOR);
 
         foreignRateLimits.setUnlimitedRateLimitData(
             makeUint32Key(
@@ -604,7 +552,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
 
         _expectBaseCCTPEmit(296_114, 1e6);
 
@@ -619,7 +567,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 1e6);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
 
         source.selectFork();
 
@@ -643,7 +591,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
 
         // Will split into three separate transactions at max 1m each
         _expectBaseCCTPEmit(296_114, 1_000_000e6);
@@ -657,7 +605,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 2_600_000e6);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
 
         source.selectFork();
 
@@ -736,7 +684,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
     function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
         //       for assertions
-        vm.expectEmit(CCTP_MESSENGER_BASE);
+        vm.expectEmit(Base.CCTP_TOKEN_MESSENGER);
         emit ICCTPLike.DepositForBurn(
             nonce,
             Base.USDC,
