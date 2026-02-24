@@ -604,7 +604,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(IERC20Like(usdsBase).allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
 
         _expectBaseCCTPEmit(296_114, 1e6);
 
@@ -619,7 +619,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 1e6);
 
-        assertEq(IERC20Like(usdsBase).allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
 
         source.selectFork();
 
@@ -643,7 +643,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(IERC20Like(usdsBase).allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
 
         // Will split into three separate transactions at max 1m each
         _expectBaseCCTPEmit(296_114, 1_000_000e6);
@@ -657,7 +657,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 2_600_000e6);
 
-        assertEq(IERC20Like(usdsBase).allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE), 0);
 
         source.selectFork();
 
