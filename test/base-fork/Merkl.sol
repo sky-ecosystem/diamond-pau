@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { Base } from "lib/spark-address-registry/src/Base.sol";
+import { Base as GroveBase } from "lib/grove-address-registry/src/Base.sol";
+import { Base as SparkBase } from "lib/spark-address-registry/src/Base.sol";
 
 import "./ForkTestBase.t.sol";
 
@@ -18,15 +19,12 @@ interface IMerklDistributorLike {
 
 contract MerklBaseTest is ForkTestBase {
 
-    // TODO: This should be coming from the address registry
-    address constant MERKL_DISTRIBUTOR = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
-
     event OperatorToggled(address indexed user, address indexed operator, bool isWhitelisted);
 
     address operator1 = makeAddr("operator1");
     address operator2 = makeAddr("operator2");
 
-    IMerklDistributorLike merklDistributor = IMerklDistributorLike(MERKL_DISTRIBUTOR);
+    IMerklDistributorLike merklDistributor = IMerklDistributorLike(GroveBase.MERKL_DISTRIBUTOR);
 }
 
 contract ForeignControllerToggleOperatorMerklFailureTests is MerklBaseTest {
@@ -39,7 +37,7 @@ contract ForeignControllerToggleOperatorMerklFailureTests is MerklBaseTest {
     }
 
     function test_toggleOperatorMerkl_notRelayer() external {
-        vm.prank(Base.SPARK_EXECUTOR);
+        vm.prank(SparkBase.SPARK_EXECUTOR);
         foreignController.setMerklDistributor(address(merklDistributor));
 
         vm.expectRevert(abi.encodeWithSignature(
@@ -57,7 +55,7 @@ contract ForeignControllerToggleOperatorMerklSuccessTests is MerklBaseTest {
     function setUp() public override {
         super.setUp();
 
-        vm.prank(Base.SPARK_EXECUTOR);
+        vm.prank(SparkBase.SPARK_EXECUTOR);
         foreignController.setMerklDistributor(address(merklDistributor));
     }
 

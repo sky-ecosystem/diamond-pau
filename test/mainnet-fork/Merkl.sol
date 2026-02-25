@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
+import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
+import { Ethereum as SparkEthereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import "./ForkTestBase.t.sol";
 
@@ -18,16 +19,14 @@ interface IMerklDistributorLike {
 
 contract MerklBaseTest is ForkTestBase {
 
-    address constant A_ETH_RLUSD       = 0x72eEED8043Dcce2Fe7CdAC950D928F80f472ab80;
-    // TODO: This should be coming from the address registry
-    address constant MERKL_DISTRIBUTOR = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+    address constant A_ETH_RLUSD = 0x72eEED8043Dcce2Fe7CdAC950D928F80f472ab80;
 
     event OperatorToggled(address indexed user, address indexed operator, bool isWhitelisted);
 
     address operator1 = makeAddr("operator1");
     address operator2 = makeAddr("operator2");
 
-    IMerklDistributorLike merklDistributor = IMerklDistributorLike(MERKL_DISTRIBUTOR);
+    IMerklDistributorLike merklDistributor = IMerklDistributorLike(GroveEthereum.MERKL_DISTRIBUTOR);
 
     function _getBlock() internal pure override returns (uint256) {
         return 23827450;  // Nov 18, 2025
@@ -44,7 +43,7 @@ contract MainnetControllerToggleOperatorMerklFailureTests is MerklBaseTest {
     }
 
     function test_toggleOperatorMerkl_notRelayer() external {
-        vm.prank(Ethereum.SPARK_PROXY);
+        vm.prank(SparkEthereum.SPARK_PROXY);
         mainnetController.setMerklDistributor(address(merklDistributor));
 
         vm.expectRevert(abi.encodeWithSignature(
@@ -63,7 +62,7 @@ contract MainnetControllerToggleOperatorMerklSuccessTests is MerklBaseTest {
     function setUp() public override {
         super.setUp();
 
-        vm.prank(Ethereum.SPARK_PROXY);
+        vm.prank(SparkEthereum.SPARK_PROXY);
         mainnetController.setMerklDistributor(address(merklDistributor));
     }
 
