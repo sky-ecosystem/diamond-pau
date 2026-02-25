@@ -4,7 +4,9 @@ pragma solidity ^0.8.21;
 import { IALMProxy } from "../interfaces/IALMProxy.sol";
 
 interface IMerklDistributorLike {
+
     function toggleOperator(address user, address operator) external;
+
 }
 
 library MerklLib {
