@@ -12,7 +12,7 @@
 	url = https://github.com/marsfoundation/spark-psm
 [submodule "lib/xchain-helpers"]
 	path = lib/xchain-helpers
-	url = https://github.com/grove-labs/xchain-helpers
+	url = https://github.com/marsfoundation/xchain-helpers
 [submodule "lib/dss-test"]
 	path = lib/dss-test
 	url = https://github.com/makerdao/dss-test
