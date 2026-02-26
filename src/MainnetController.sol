@@ -12,9 +12,11 @@ import { IRateLimits } from "./interfaces/IRateLimits.sol";
 import { AaveLib }          from "./libraries/AaveLib.sol";
 import { ApproveLib }       from "./libraries/ApproveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
+import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
 import { DAIUSDSLib }       from "./libraries/DAIUSDSLib.sol";
 import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
+import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { MapleLib }         from "./libraries/MapleLib.sol";
@@ -53,6 +55,8 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 recipient);
+
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
@@ -66,9 +70,12 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     bytes32 public LIMIT_4626_DEPOSIT            = ERC4626Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_4626_WITHDRAW           = ERC4626Lib.LIMIT_WITHDRAW;
+    bytes32 public LIMIT_7540_DEPOSIT            = ERC7540Lib.LIMIT_7540_DEPOSIT;
+    bytes32 public LIMIT_7540_REDEEM             = ERC7540Lib.LIMIT_7540_REDEEM;
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_ASSET_TRANSFER          = TransferAssetLib.LIMIT_TRANSFER;
+    bytes32 public LIMIT_CENTRIFUGE_TRANSFER     = CentrifugeLib.LIMIT_CENTRIFUGE_TRANSFER;
     bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
     bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
@@ -111,10 +118,13 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     address public ustb;
     address public susde;
 
+    uint256 public CENTRIFUGE_REQUEST_ID = 0;
+
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
-    mapping(uint32 destinationDomain     => bytes32 mintRecipient)      public mintRecipients;  // CCTP mint recipients
-    mapping(uint32 destinationEndpointId => bytes32 layerZeroRecipient) public layerZeroRecipients;
+    mapping(uint32 destinationDomain       => bytes32 mintRecipient)       public mintRecipients;  // CCTP mint recipients
+    mapping(uint32 destinationEndpointId   => bytes32 layerZeroRecipient)  public layerZeroRecipients;
+    mapping(uint16 destinationCentrifugeId => bytes32 centrifugeRecipient) public centrifugeRecipients;
 
     // OTC swap (also uses maxSlippages)
     mapping(address exchange => OTCLib.OTC otcData) public otcs;
@@ -240,6 +250,15 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             maxTickSpacing,
             uniswapV4TickLimits
         );
+    }
+
+    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        centrifugeRecipients[centrifugeId] = recipient;
+        emit CentrifugeRecipientSet(centrifugeId, recipient);
     }
 
     /**********************************************************************************************/
@@ -824,6 +843,138 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function isOTCSwapReady(address exchange) external view returns (bool) {
         return OTCLib.isSwapReady(exchange, otcs, maxSlippages);
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer ERC7540 functions                                                              ***/
+    /**********************************************************************************************/
+
+    function requestDepositERC7540(address token, uint256 amount) 
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.deposit({
+            proxy            : address(proxy),
+            rateLimits       : address(rateLimits),
+            token            : token,
+            amount           : amount
+        });
+    }
+
+    function claimDepositERC7540(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.claimDeposit({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token
+        });
+    }
+
+    function requestRedeemERC7540(address token, uint256 shares)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.requestRedeem({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token,
+            shares     : shares
+        });
+    }
+
+    function claimRedeemERC7540(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.claimRedeem({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token
+        });
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Centrifuge functions                                                           ***/
+    /**********************************************************************************************/
+
+    // NOTE: These cancelation methods are compatible with ERC-7887
+
+    function cancelCentrifugeDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.cancelCentrifugeDepositRequest({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token,
+            requestId  : CENTRIFUGE_REQUEST_ID
+        });
+    }
+
+    function claimCentrifugeCancelDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.claimCentrifugeCancelDepositRequest({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token,
+            requestId  : CENTRIFUGE_REQUEST_ID
+        });
+    }
+
+    function cancelCentrifugeRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.cancelCentrifugeRedeemRequest({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token,
+            requestId  : CENTRIFUGE_REQUEST_ID
+        });
+    }
+
+    function claimCentrifugeCancelRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.claimCentrifugeCancelRedeemRequest({
+            proxy      : address(proxy),
+            rateLimits : address(rateLimits),
+            token      : token,
+            requestId  : CENTRIFUGE_REQUEST_ID
+        });
+    }
+
+    function transferSharesCentrifuge(
+        address token,
+        uint128 amount,
+        uint16  destinationCentrifugeId
+    )
+        external
+        payable
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.transferSharesCentrifuge({
+            proxy                   : address(proxy),
+            rateLimits              : address(rateLimits),
+            token                   : token,
+            destinationCentrifugeId : destinationCentrifugeId,
+            amount                  : amount,
+            recipient               : centrifugeRecipients[destinationCentrifugeId]
+        });
     }
 
 }
