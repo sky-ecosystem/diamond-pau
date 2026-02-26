@@ -117,7 +117,7 @@ library ERC7540Lib {
     function _rateLimitExists(address rateLimits, bytes32 key) internal view {
         require(
             IRateLimits(rateLimits).getRateLimitData(key).maxAmount > 0,
-            "MC/invalid-action"
+            "ERC7540Lib/invalid-action"
         );
     }
 

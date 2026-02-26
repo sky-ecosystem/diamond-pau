@@ -181,7 +181,7 @@ contract MainnetControllerClaimDepositERC7540FailureTests is CentrifugeTestBase 
 
     function test_claimDepositERC7540_invalidVault() external {
         vm.prank(relayer);
-        vm.expectRevert("MC/invalid-action");
+        vm.expectRevert("ERC7540Lib/invalid-action");
         mainnetController.claimDepositERC7540(makeAddr("fake-vault"));
     }
 
@@ -574,7 +574,7 @@ contract MainnetControllerClaimRedeemERC7540FailureTests is CentrifugeTestBase {
 
     function test_claimRedeemERC7540_invalidVault() external {
         vm.prank(relayer);
-        vm.expectRevert("MC/invalid-action");
+        vm.expectRevert("ERC7540Lib/invalid-action");
         mainnetController.claimRedeemERC7540(makeAddr("fake-vault"));
     }
 
