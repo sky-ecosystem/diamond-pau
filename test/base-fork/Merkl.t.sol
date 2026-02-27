@@ -113,4 +113,30 @@ contract ForeignControllerToggleOperatorMerklSuccessTests is MerklBaseTest {
         assertEq(merklDistributor.operators(address(almProxy), operator2), 1);
     }
 
+    function test_toggleOperatorMerkl_attemptClaim() external {
+        address[]   memory users   = new address[](1);
+        address[]   memory tokens  = new address[](1);
+        uint256[]   memory amounts = new uint256[](1);
+        bytes32[][] memory proofs  = new bytes32[][](1);
+
+        users[0]     = address(almProxy);
+        tokens[0]    = address(0);
+        amounts[0]   = 299_033.458789039331965803e18;
+        proofs[0]    = new bytes32[](1);
+        proofs[0][0] = bytes32(0);
+
+        vm.expectRevert(abi.encodeWithSignature("NotWhitelisted()"));
+        vm.prank(operator1);
+        merklDistributor.claim(users, tokens, amounts, proofs);
+
+        vm.prank(relayer);
+        foreignController.toggleOperatorMerkl(operator1);
+
+        // Hitting the InvalidProof() error proves that we are whitelisted as operator1
+        // (https://github.com/AngleProtocol/merkl-contracts/blob/e4c49c1fbfb274029d31969adf70ca6aeec689f0/contracts/Distributor.sol#L378-L383)
+        vm.expectRevert(abi.encodeWithSignature("InvalidProof()"));
+        vm.prank(operator1);
+        merklDistributor.claim(users, tokens, amounts, proofs);
+    }
+
 }
