@@ -1,22 +1,47 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { IERC20 }          from "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { Ethereum as SparkEthereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 
-import { IPendleMarket, ISY, IYT, PendleLib } from "../../src/libraries/PendleLib.sol";
-
-import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+import { makeAddressKey } from "../../src/RateLimitHelpers.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
+
+interface IERC20Like {
+
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256 balance);
+
+}
+
+interface IPendleMarketLike {
+
+    function expiry() external view returns (uint256);
+
+    function readTokens() external view returns (address sy, address pt, address yt);
+
+}
+
+interface ISYLike {
+
+    function yieldToken() external view returns (address);
+
+}
+
+interface IYTLike {
+
+    function pyIndexCurrent() external returns (uint256);
+
+}
 
 contract PendleTestBase is ForkTestBase {
 
     // sUSDe 25 Sep 2025 market
-    IPendleMarket pendleMarket = IPendleMarket(0xA36b60A14A1A5247912584768C6e53E1a269a9F7);
+    IPendleMarketLike pendleMarket = IPendleMarketLike(0xA36b60A14A1A5247912584768C6e53E1a269a9F7);
 
     address PT_WHALE = 0x8C0824fFccBE9A3CDda4c3d409A0b7447320F364;
 
@@ -28,7 +53,7 @@ contract PendleTestBase is ForkTestBase {
         vm.prank(SparkEthereum.SPARK_PROXY);
         mainnetController.setPendleRouter(GroveEthereum.PENDLE_ROUTER);
 
-        redeemKey = RateLimitHelpers.makeAddressKey(
+        redeemKey = makeAddressKey(
             mainnetController.LIMIT_PENDLE_PT_REDEEM(),
             address(pendleMarket)
         );
@@ -73,7 +98,7 @@ contract MainnetControllerSetPendleRouterSuccessTests is PendleTestBase {
 
     function test_setPendleRouter_success() public {
         assertEq(mainnetController.pendleRouter(), address(0));
-        
+
         vm.prank(SparkEthereum.SPARK_PROXY);
         mainnetController.setPendleRouter(GroveEthereum.PENDLE_ROUTER);
 
@@ -116,7 +141,7 @@ contract MainnetControllerRedeemFailurePendleTests is PendleTestBase {
 
         (, address pt,) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
 
         vm.warp(pendleMarket.expiry());
 
@@ -128,11 +153,11 @@ contract MainnetControllerRedeemFailurePendleTests is PendleTestBase {
     function test_redeemPendlePT_rateLimitsBoundary() public {
         (, address pt, address yt) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
 
         vm.warp(pendleMarket.expiry());
 
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        uint256 pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         uint256 exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
 
         vm.prank(SparkEthereum.SPARK_PROXY);
@@ -146,7 +171,7 @@ contract MainnetControllerRedeemFailurePendleTests is PendleTestBase {
     function test_redeemPendlePT_insufficientBalance() public {
         (, address pt,) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
 
         vm.warp(pendleMarket.expiry());
 
@@ -158,7 +183,7 @@ contract MainnetControllerRedeemFailurePendleTests is PendleTestBase {
     function test_redeemPendlePT_amountTooSmall() public {
         (, address pt,) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
 
         vm.warp(pendleMarket.expiry());
 
@@ -178,11 +203,11 @@ contract MainnetControllerRedeemFailurePendleTests is PendleTestBase {
     function test_redeemPendlePT_minAmountOutNotMet() public {
         (, address pt, address yt) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
 
         vm.warp(pendleMarket.expiry());
 
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        uint256 pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         uint256 exactAmountOut = 1_000_000e18 * 1e18 / pyIndexCurrent; // Exact at this particular point in time
 
         vm.prank(relayer);
@@ -204,41 +229,41 @@ contract MainnetControllerRedeemSuccessPendleTests is PendleTestBase {
         address ptDonor = PT_WHALE;
 
         (address sy, address pt, address yt) = pendleMarket.readTokens();
-        IERC20 yieldToken = IERC20(ISY(sy).yieldToken());
+        IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
         vm.stopPrank();
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)),         1_000_000e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 0);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     0);
 
         vm.warp(pendleMarket.expiry());
 
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        uint256 pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         uint256 exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 500_000e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 500_000e18 * 1e18 / pyIndexCurrent);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 500_000e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     500_000e18 * 1e18 / pyIndexCurrent);
 
         vm.warp(block.timestamp + 14 days);
 
-        pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 0);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 1_000_000e18 * 1e18 / pyIndexCurrent);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 0);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     1_000_000e18 * 1e18 / pyIndexCurrent);
     }
 
     function test_redeemPendlePT_USDe() public {
-        pendleMarket = IPendleMarket(0x6d98a2b6CDbF44939362a3E99793339Ba2016aF4);
-        redeemKey = RateLimitHelpers.makeAddressKey(
+        pendleMarket = IPendleMarketLike(0x6d98a2b6CDbF44939362a3E99793339Ba2016aF4);
+        redeemKey = makeAddressKey(
             mainnetController.LIMIT_PENDLE_PT_REDEEM(),
             address(pendleMarket)
         );
@@ -249,17 +274,17 @@ contract MainnetControllerRedeemSuccessPendleTests is PendleTestBase {
         address ptDonor = 0x925109e0AfFe306c31B55d8181e766D53aF7A778;
 
         (address sy, address pt, address yt) = pendleMarket.readTokens();
-        IERC20 yieldToken = IERC20(ISY(sy).yieldToken());
+        IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);
-        IERC20(pt).transfer((address(almProxy)), 1_000_000e18);
+        IERC20Like(pt).transfer((address(almProxy)), 1_000_000e18);
         vm.stopPrank();
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 1_000_000e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 0);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     0);
 
         vm.warp(pendleMarket.expiry());
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        uint256 pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         uint256 exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
         assertEq(pyIndexCurrent, 1e18);
 
@@ -268,24 +293,24 @@ contract MainnetControllerRedeemSuccessPendleTests is PendleTestBase {
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 500_000e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 500_000e18);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 500_000e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     500_000e18);
 
         vm.warp(block.timestamp + 18 days);
 
-        pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         assertEq(pyIndexCurrent, 1e18);
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 0);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 0);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     1_000_000e18);
     }
 
     function test_redeemPendlePT_stETH() public {
-        pendleMarket = IPendleMarket(0xC374f7eC85F8C7DE3207a10bB1978bA104bdA3B2);
-        redeemKey = RateLimitHelpers.makeAddressKey(
+        pendleMarket = IPendleMarketLike(0xC374f7eC85F8C7DE3207a10bB1978bA104bdA3B2);
+        redeemKey = makeAddressKey(
             mainnetController.LIMIT_PENDLE_PT_REDEEM(),
             address(pendleMarket)
         );
@@ -296,34 +321,34 @@ contract MainnetControllerRedeemSuccessPendleTests is PendleTestBase {
         address ptDonor = 0x2B67d059e41a65C58b02EE1FA99DADa70c55358F;
 
         (address sy, address pt, address yt) = pendleMarket.readTokens();
-        IERC20 yieldToken = IERC20(ISY(sy).yieldToken());
+        IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);
-        IERC20(pt).transfer((address(almProxy)), 10e18);
+        IERC20Like(pt).transfer((address(almProxy)), 10e18);
         vm.stopPrank();
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 10e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 0);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 10e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     0);
 
         vm.warp(pendleMarket.expiry());
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        uint256 pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         uint256 exactAmountOut = 5e18 * 1e18 / pyIndexCurrent;
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 5e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 5e18);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 5e18 * 1e18 / pyIndexCurrent);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 5e18);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     5e18 * 1e18 / pyIndexCurrent);
 
         vm.warp(block.timestamp + 14 days);
-        pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        pyIndexCurrent = IYTLike(yt).pyIndexCurrent();
         exactAmountOut = 5e18 * 1e18 / pyIndexCurrent;
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 5e18, exactAmountOut);
 
-        assertEq(IERC20(pt).balanceOf(address(almProxy)), 0);
-        assertEq(IERC20(yieldToken).balanceOf(address(almProxy)), 10e18 * 1e18 / pyIndexCurrent);
+        assertEq(IERC20Like(pt).balanceOf(address(almProxy)), 0);
+        assertEq(yieldToken.balanceOf(address(almProxy)),     10e18 * 1e18 / pyIndexCurrent);
     }
 
 }

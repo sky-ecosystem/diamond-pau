@@ -681,14 +681,14 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        PendleLib.redeemPendlePT(PendleLib.RedeemPendlePTParams({
+        PendleLib.redeem({
             proxy        : address(proxy),
             rateLimits   : address(rateLimits),
-            pendleMarket : pendleMarket,
-            pendleRouter : pendleRouter,
+            market       : pendleMarket,
+            router       : pendleRouter,
             pyAmountIn   : pyAmountIn,
             minAmountOut : minAmountOut
-        }));
+        });
     }
 
     /**********************************************************************************************/

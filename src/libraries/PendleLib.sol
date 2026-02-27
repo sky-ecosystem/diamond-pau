@@ -12,39 +12,6 @@ import { ApproveLib }  from "./ApproveLib.sol";
 
 interface IPendleRouterLike {
 
-    function redeemPyToToken(
-        address                        receiver,
-        address                        YT,
-        uint256                        netPyIn,
-        PendleLib.TokenOutput calldata output
-    ) external returns (uint256 netTokenOut, uint256 netSyInterm);
-
-}
-
-interface IPendleMarket {
-
-    function readTokens() external view returns (address _SY, address _PT, address _YT);
-
-    function isExpired() external view returns (bool);
-
-    function expiry() external view returns (uint256);
-
-}
-
-interface ISY {
-
-    function yieldToken() external view returns (address);
-
-}
-
-interface IYT {
-
-    function pyIndexCurrent() external returns (uint256);
-
-}
-
-library PendleLib {
-
     enum SwapType {
         NONE,
         KYBERSWAP,
@@ -75,72 +42,103 @@ library PendleLib {
         SwapData swapData;
     }
 
+    function redeemPyToToken(
+        address              receiver,
+        address              yt,
+        uint256              netPyIn,
+        TokenOutput calldata output
+    ) external returns (uint256 netTokenOut, uint256 netSyInterm);
+
+}
+
+interface IPendleMarketLike {
+
+    function readTokens() external view returns (address sy, address pt, address yt);
+
+    function isExpired() external view returns (bool);
+
+}
+
+interface ISYLike {
+
+    function yieldToken() external view returns (address);
+
+}
+
+interface IYTLike {
+
+    function pyIndexCurrent() external returns (uint256);
+
+}
+
+library PendleLib {
+
     bytes32 public constant LIMIT_REDEEM = keccak256("LIMIT_PENDLE_PT_REDEEM");
-
-    struct RedeemPendlePTParams {
-        address proxy;
-        address rateLimits;
-        address pendleMarket;
-        address pendleRouter;
-        uint256 pyAmountIn;
-        uint256 minAmountOut;
-    }
-
-    function createEmptySwapData() internal pure returns (SwapData memory emptySwapData) {}
-
-    function createSimpleTokenOutput(address tokenOut, uint256 minTokenOut) internal pure returns (TokenOutput memory simpleTokenOutput) {
-        simpleTokenOutput = TokenOutput({
-            tokenOut      : tokenOut,
-            minTokenOut   : minTokenOut,
-            tokenRedeemSy : tokenOut,
-            pendleSwap    : address(0),
-            swapData      : createEmptySwapData()
-        });
-    }
 
     // NOTE: DO NOT use for markets with non-standard SYs, without additional testing
     //       targeting each onboarded non-standard SY market.
     //       (Non-standard SYs: ePENDLE, mPENDLE, aTokens (aUSDC, aUSDT))
-    function redeemPendlePT(RedeemPendlePTParams memory params) external {
-        require(params.pendleRouter != address(0),              "PendleLib/pendle-router-not-set");
-        require(IPendleMarket(params.pendleMarket).isExpired(), "PendleLib/market-not-expired");
-        require(params.minAmountOut != 0,                       "PendleLib/min-amount-out-not-set");
+    function redeem(
+        address proxy,
+        address rateLimits,
+        address market,
+        address router,
+        uint256 pyAmountIn,
+        uint256 minAmountOut
+    ) external {
+        require(router != address(0),                  "PendleLib/pendle-router-not-set");
+        require(IPendleMarketLike(market).isExpired(), "PendleLib/market-not-expired");
+        require(minAmountOut != 0,                     "PendleLib/min-amount-out-not-set");
 
-        ( address sy, address pt, address yt ) = IPendleMarket(params.pendleMarket).readTokens();
+        ( address sy, address pt, address yt ) = IPendleMarketLike(market).readTokens();
 
-        address tokenOut = ISY(sy).yieldToken();
-
-        uint256 pyIndexCurrent = IYT(yt).pyIndexCurrent();
+        address tokenOut = ISYLike(sy).yieldToken();
 
         // expected to receive full amount, but the buffer is subtracted
         // to avoid reverts due to potential rounding errors
-        uint256 minTokenOut = params.pyAmountIn * 1e18 / pyIndexCurrent - 5;
+        uint256 minTokenOut = pyAmountIn * 1e18 / IYTLike(yt).pyIndexCurrent() - 5;
 
-        ApproveLib.approve(pt, params.proxy, params.pendleRouter, params.pyAmountIn);
+        ApproveLib.approve(pt, proxy, router, pyAmountIn);
 
-        uint256 tokenOutAmountBefore = IERC20(tokenOut).balanceOf(address(params.proxy));
+        uint256 tokenOutAmountBefore = IERC20(tokenOut).balanceOf(proxy);
 
-        IALMProxy(params.proxy).doCall(
-            params.pendleRouter,
+        IALMProxy(proxy).doCall(
+            router,
             abi.encodeCall(
                 IPendleRouterLike.redeemPyToToken, (
-                    params.proxy,
+                    proxy,
                     yt,
-                    params.pyAmountIn,
-                    createSimpleTokenOutput(tokenOut, minTokenOut)
+                    pyAmountIn,
+                    _createSimpleTokenOutput(tokenOut, minTokenOut)
                 )
             )
         );
 
-        uint256 totalTokenOutAmount = IERC20(tokenOut).balanceOf(params.proxy) - tokenOutAmountBefore;
+        uint256 totalTokenOutAmount = IERC20(tokenOut).balanceOf(proxy) - tokenOutAmountBefore;
 
-        require(totalTokenOutAmount >= params.minAmountOut, "PendleLib/min-amount-not-met");
+        require(totalTokenOutAmount >= minAmountOut, "PendleLib/min-amount-not-met");
 
-        IRateLimits(params.rateLimits).triggerRateLimitDecrease(
-            RateLimitHelpers.makeAddressKey(LIMIT_REDEEM, params.pendleMarket),
+        IRateLimits(rateLimits).triggerRateLimitDecrease(
+            RateLimitHelpers.makeAddressKey(LIMIT_REDEEM, market),
             totalTokenOutAmount
         );
 
+    }
+
+    function _createSimpleTokenOutput(address tokenOut, uint256 minTokenOut)
+        internal
+        pure
+        returns (IPendleRouterLike.TokenOutput memory)
+    {
+        IPendleRouterLike.SwapData memory swapData;
+
+        return IPendleRouterLike.TokenOutput({
+            tokenOut      : tokenOut,
+            minTokenOut   : minTokenOut,
+            tokenRedeemSy : tokenOut,
+            pendleSwap    : address(0),
+            swapData      : swapData
+        });
     }
 
 }
