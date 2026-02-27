@@ -137,12 +137,16 @@ library CentrifugeLib {
     }
 
     /**********************************************************************************************/
-    /*** Internal view/pure functions                                                           ***/
+    /*** Internal interactive functions                                                         ***/
     /**********************************************************************************************/
 
     function _rateLimited(IRateLimits rateLimits, bytes32 key, uint256 amount) internal {
         rateLimits.triggerRateLimitDecrease(key, amount);
     }
+
+    /**********************************************************************************************/
+    /*** Internal view/pure functions                                                           ***/
+    /**********************************************************************************************/
 
     function _rateLimitExists(IRateLimits rateLimits, bytes32 key) internal view {
         require(
