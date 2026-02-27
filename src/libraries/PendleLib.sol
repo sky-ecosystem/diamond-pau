@@ -99,11 +99,14 @@ library PendleLib {
         });
     }
 
+    // NOTE: DO NOT use for markets with non-standard SYs, without additional testing
+    //       targeting each onboarded non-standard SY market.
+    //       (Non-standard SYs: ePENDLE, mPENDLE, aTokens (aUSDC, aUSDT))
     function redeemPendlePT(RedeemPendlePTParams memory params) external {
         require(IPendleMarket(params.pendleMarket).isExpired(), "PendleLib/market-not-expired");
-        require(params.minAmountOut != 0,        "PendleLib/min-amount-out-not-set");
+        require(params.minAmountOut != 0,                       "PendleLib/min-amount-out-not-set");
 
-        (address sy, address pt, address yt) = IPendleMarket(params.pendleMarket).readTokens();
+        ( address sy, address pt, address yt ) = IPendleMarket(params.pendleMarket).readTokens();
 
         address tokenOut = ISY(sy).yieldToken();
 

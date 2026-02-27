@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { Base as SparkBase } from "../../lib/spark-address-registry/src/Base.sol";
 import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
 
@@ -35,6 +37,45 @@ contract PendleTestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 37_589_683;
+    }
+
+}
+
+contract ForeignControllerSetPendleRouterFailureTests is PendleTestBase {
+
+    function test_setPendleRouter_reentrancy() public {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
+    }
+
+    function test_setPendleRouter_notAdmin() public {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
+    }
+
+}
+
+contract ForeignControllerSetPendleRouterSuccessTests is PendleTestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(SparkBase.SPARK_EXECUTOR);
+        foreignController.setPendleRouter(address(0));
+    }
+
+    function test_setPendleRouter_success() public {
+        assertEq(foreignController.pendleRouter(), address(0));
+        
+        vm.prank(SparkBase.SPARK_EXECUTOR);
+        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
+
+        assertEq(foreignController.pendleRouter(), GroveBase.PENDLE_ROUTER);
     }
 
 }

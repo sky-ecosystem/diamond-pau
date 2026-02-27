@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { Ethereum as SparkEthereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 
@@ -35,6 +37,45 @@ contract PendleTestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 23319550;  // 8 Sep 2025
+    }
+
+}
+
+contract MainnetControllerSetPendleRouterFailureTests is PendleTestBase {
+
+    function test_setPendleRouter_reentrancy() public {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setPendleRouter(GroveEthereum.PENDLE_ROUTER);
+    }
+
+    function test_setPendleRouter_notAdmin() public {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        mainnetController.setPendleRouter(GroveEthereum.PENDLE_ROUTER);
+    }
+
+}
+
+contract MainnetControllerSetPendleRouterSuccessTests is PendleTestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(SparkEthereum.SPARK_PROXY);
+        mainnetController.setPendleRouter(address(0));
+    }
+
+    function test_setPendleRouter_success() public {
+        assertEq(mainnetController.pendleRouter(), address(0));
+        
+        vm.prank(SparkEthereum.SPARK_PROXY);
+        mainnetController.setPendleRouter(GroveEthereum.PENDLE_ROUTER);
+
+        assertEq(mainnetController.pendleRouter(), GroveEthereum.PENDLE_ROUTER);
     }
 
 }
