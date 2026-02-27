@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { IERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { Base as SparkBase } from "../../lib/spark-address-registry/src/Base.sol";
@@ -8,7 +10,9 @@ import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol
 
 import { IPendleMarket, ISY, IYT } from "../../src/libraries/PendleLib.sol";
 
-import "./ForkTestBase.t.sol";
+import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+
+import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 contract PendleTestBase is ForkTestBase {
 
@@ -30,9 +34,8 @@ contract PendleTestBase is ForkTestBase {
             address(pendleMarket)
         );
 
-        vm.startPrank(SparkBase.SPARK_EXECUTOR);
+        vm.prank(SparkBase.SPARK_EXECUTOR);
         rateLimits.setRateLimitData(redeemKey, 10_000_000e18, uint256(10_000_000e18) / 1 days);
-        vm.stopPrank();
     }
 
     function _getBlock() internal pure override returns (uint256) {
@@ -87,7 +90,7 @@ contract ForeignControllerRedeemFailurePendleTests is PendleTestBase {
         foreignController.setPendleRouter(address(0));
 
         vm.prank(relayer);
-        vm.expectRevert("FC/pendle-router-not-set");
+        vm.expectRevert("PendleLib/pendle-router-not-set");
         foreignController.redeemPendlePT(address(pendleMarket), 50_000e18, 1);
     }
 

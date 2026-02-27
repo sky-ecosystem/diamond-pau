@@ -96,7 +96,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
     bytes32 public LIMIT_WSTETH_DEPOSIT          = WSTETHLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_WSTETH_REQUEST_WITHDRAW = WSTETHLib.LIMIT_REQUEST_WITHDRAW;
-    bytes32 public LIMIT_PENDLE_PT_REDEEM        = PendleLib.LIMIT_PENDLE_PT_REDEEM;
+    bytes32 public LIMIT_PENDLE_PT_REDEEM        = PendleLib.LIMIT_REDEEM;
 
     address public buffer;  // Allocator buffer
 
@@ -681,12 +681,9 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        require(pendleRouter != address(0), "MC/pendle-router-not-set");
-
         PendleLib.redeemPendlePT(PendleLib.RedeemPendlePTParams({
             proxy        : address(proxy),
             rateLimits   : address(rateLimits),
-            rateLimitId  : LIMIT_PENDLE_PT_REDEEM,
             pendleMarket : pendleMarket,
             pendleRouter : pendleRouter,
             pyAmountIn   : pyAmountIn,

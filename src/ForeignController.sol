@@ -46,7 +46,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public constant LIMIT_SPARK_VAULT_TAKE   = SparkVaultLib.LIMIT_TAKE;
     bytes32 public constant LIMIT_USDC_TO_CCTP       = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public constant LIMIT_USDC_TO_DOMAIN     = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public constant LIMIT_PENDLE_PT_REDEEM   = PendleLib.LIMIT_PENDLE_PT_REDEEM;
+    bytes32 public constant LIMIT_PENDLE_PT_REDEEM   = PendleLib.LIMIT_REDEEM;
 
     IALMProxy   public immutable proxy;
     address     public immutable cctp;
@@ -300,12 +300,9 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        require(pendleRouter != address(0), "FC/pendle-router-not-set");
-
         PendleLib.redeemPendlePT(PendleLib.RedeemPendlePTParams({
             proxy        : address(proxy),
             rateLimits   : address(rateLimits),
-            rateLimitId  : LIMIT_PENDLE_PT_REDEEM,
             pendleMarket : pendleMarket,
             pendleRouter : pendleRouter,
             pyAmountIn   : pyAmountIn,
