@@ -690,6 +690,10 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
+        external    
+        nonReentrant
+        onlyRole(RELAYER)
+    {
         PendleLib.redeem({
             proxy        : address(proxy),
             rateLimits   : address(rateLimits),

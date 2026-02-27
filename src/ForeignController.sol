@@ -130,7 +130,11 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
     }
 
-    function setPendleRouter(address pendleRouter_) {
+    function setPendleRouter(address pendleRouter_)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         pendleRouter = pendleRouter_;
         emit PendleRouterSet(pendleRouter_);
     }
