@@ -6,10 +6,12 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Base }     from "../../lib/spark-address-registry/src/Base.sol";
 
-import { CCTPForwarder }     from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
-import { Bridge }            from "../../lib/xchain-helpers/src/testing/Bridge.sol";
-import { DomainHelpers }     from "../../lib/xchain-helpers/src/testing/Domain.sol";
-import { CCTPBridgeTesting } from "../../lib/xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
+import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
+
+import { Bridge }                                   from "../../lib/grove-xchain-helpers/src/testing/Bridge.sol";
+import { CCTPv2BridgeTesting as CCTPBridgeTesting } from "../../lib/grove-xchain-helpers/src/testing/bridges/CCTPv2BridgeTesting.sol";
+import { CCTPv2Forwarder as CCTPForwarder }         from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
+import { Domain, DomainHelpers }                    from "../../lib/grove-xchain-helpers/src/testing/Domain.sol";
 
 import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
@@ -27,14 +29,16 @@ import { ForkTestBase } from "./ForkTestBase.t.sol";
 interface ICCTPLike {
 
     event DepositForBurn(
-        uint64  indexed nonce,
         address indexed burnToken,
         uint256         amount,
         address indexed depositor,
         bytes32         mintRecipient,
         uint32          destinationDomain,
         bytes32         destinationTokenMessenger,
-        bytes32         destinationCaller
+        bytes32         destinationCaller,
+        uint256         maxFee,
+        uint32  indexed minFinalityThreshold,
+        bytes           hookData
     );
 
 }
@@ -50,6 +54,10 @@ interface IERC20Like {
 }
 
 contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
+
+    function _getBlock() internal override pure returns (uint256) {
+        return 23700802; // November 1, 2025
+    }
 
     function test_transferUSDCToCCTP_reentrancy() external {
         _setControllerEntered();
@@ -193,6 +201,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
     IERC20Like internal constant BASE_USDC = IERC20Like(Base.USDC);
 
+    address internal constant BASE_CCTP_TOKEN_MESSENGER = GroveBase.CCTP_TOKEN_MESSENGER_V2;
+
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
@@ -201,12 +211,26 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     RateLimits        internal foreignRateLimits;
     ForeignController internal foreignController;
 
+    /**********************************************************************************************/
+    /*** Bridging setup                                                                         ***/
+    /**********************************************************************************************/
+
+    Bridge bridgeV2;
+    Domain sourceV2;
+    Domain destinationV2;
+
     uint256 internal baseUSDCTotalSupply;
 
     function setUp() public override virtual {
         super.setUp();
 
-        destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
+        // Reuse the same mainnet fork so contracts from ForkTestBase.setUp() are accessible
+        sourceV2 = Domain({
+            chain:  getChain("mainnet"),
+            forkId: source.forkId
+        });
+
+        destinationV2 = getChain("base").createSelectFork(37589683);  // November 1, 2025
 
         /*** Step 3: Deploy and configure ALM system ***/
 
@@ -214,7 +238,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             admin : Base.SPARK_EXECUTOR,
             psm   : address(0),
             usdc  : Base.USDC,
-            cctp  : Base.CCTP_TOKEN_MESSENGER
+            cctp  : BASE_CCTP_TOKEN_MESSENGER
         });
 
         foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
@@ -233,7 +257,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
             admin : Base.SPARK_EXECUTOR,
             psm   : address(0),
-            cctp  : Base.CCTP_TOKEN_MESSENGER,
+            cctp  : BASE_CCTP_TOKEN_MESSENGER,
             usdc  : Base.USDC,
             susds : address(0),
             usds  : address(0)
@@ -272,15 +296,19 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         baseUSDCTotalSupply = BASE_USDC.totalSupply();
 
-        source.selectFork();
+        sourceV2.selectFork();
 
-        bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
+        bridgeV2 = CCTPBridgeTesting.createCircleBridge(sourceV2, destinationV2);
 
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
             bytes32(uint256(uint160(address(foreignAlmProxy))))
         );
+    }
+
+    function _getBlock() internal override pure returns (uint256) {
+        return 23700802; // November 1, 2025
     }
 
     function _setControllerEntered() internal override {
@@ -295,7 +323,7 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
 
     function setUp( ) public override {
         super.setUp();
-        destination.selectFork();
+        destinationV2.selectFork();
     }
 
     function test_transferUSDCToCCTP_reentrancy() external {
@@ -459,13 +487,13 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
 
         assertEq(USDC.allowance(address(almProxy), CCTP_MESSENGER), 0);
 
-        destination.selectFork();
+        destinationV2.selectFork();
 
         assertEq(BASE_USDC.balanceOf(address(foreignAlmProxy)),   0);
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        bridge.relayMessagesToDestination(true);
+        bridgeV2.relayMessagesToDestination(true);
 
         assertEq(BASE_USDC.balanceOf(address(foreignAlmProxy)),   1e6);
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
@@ -495,13 +523,13 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
 
         assertEq(USDC.allowance(address(almProxy), CCTP_MESSENGER), 0);
 
-        destination.selectFork();
+        destinationV2.selectFork();
 
         assertEq(BASE_USDC.balanceOf(address(foreignAlmProxy)),   0);
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        bridge.relayMessagesToDestination(true);
+        bridgeV2.relayMessagesToDestination(true);
 
         assertEq(BASE_USDC.balanceOf(address(foreignAlmProxy)),   2_900_000e6);
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
@@ -544,7 +572,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
     }
 
     function test_transferUSDCToCCTP_destinationToSource() external {
-        destination.selectFork();
+        destinationV2.selectFork();
 
         deal(Base.USDC, address(foreignAlmProxy), 1e6);
 
@@ -552,7 +580,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), BASE_CCTP_TOKEN_MESSENGER), 0);
 
         _expectBaseCCTPEmit(296_114, 1e6);
 
@@ -567,15 +595,15 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 1e6);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), BASE_CCTP_TOKEN_MESSENGER), 0);
 
-        source.selectFork();
+        sourceV2.selectFork();
 
         assertEq(USDC.balanceOf(address(almProxy)),          0);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
         assertEq(USDC.totalSupply(),                         USDC_SUPPLY);
 
-        bridge.relayMessagesToSource(true);
+        bridgeV2.relayMessagesToSource(true);
 
         assertEq(USDC.balanceOf(address(almProxy)),          1e6);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
@@ -583,7 +611,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
     }
 
     function test_transferUSDCToCCTP_destinationToSource_bigTransfer() external {
-        destination.selectFork();
+        destinationV2.selectFork();
 
         deal(Base.USDC, address(foreignAlmProxy), 2_600_000e6);
 
@@ -591,7 +619,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), BASE_CCTP_TOKEN_MESSENGER), 0);
 
         // Will split into three separate transactions at max 1m each
         _expectBaseCCTPEmit(296_114, 1_000_000e6);
@@ -605,15 +633,15 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         assertEq(BASE_USDC.balanceOf(address(foreignController)), 0);
         assertEq(BASE_USDC.totalSupply(),                         baseUSDCTotalSupply - 2_600_000e6);
 
-        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), Base.CCTP_TOKEN_MESSENGER), 0);
+        assertEq(BASE_USDC.allowance(address(foreignAlmProxy), BASE_CCTP_TOKEN_MESSENGER), 0);
 
-        source.selectFork();
+        sourceV2.selectFork();
 
         assertEq(USDC.balanceOf(address(almProxy)),          0);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
         assertEq(USDC.totalSupply(),                         USDC_SUPPLY);
 
-        bridge.relayMessagesToSource(true);
+        bridgeV2.relayMessagesToSource(true);
 
         assertEq(USDC.balanceOf(address(almProxy)),          2_600_000e6);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
@@ -621,7 +649,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
     }
 
     function test_transferUSDCToCCTP_destinationToSource_rateLimited() external {
-        destination.selectFork();
+        destinationV2.selectFork();
 
         bytes32 key = foreignController.LIMIT_USDC_TO_CCTP();
         deal(Base.USDC, address(foreignAlmProxy), 9_000_000e6);
@@ -662,19 +690,20 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         //       for assertions
         vm.expectEmit(CCTP_MESSENGER);
         emit ICCTPLike.DepositForBurn(
-            nonce,
             Ethereum.USDC,
             amount,
             address(almProxy),
             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
+            0,
+            2_000,
+            ""
         );
 
         vm.expectEmit(address(mainnetController));
         emit CCTPLib.CCTPTransferInitiated(
-            nonce,
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
             amount
@@ -684,21 +713,22 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
     function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
         //       for assertions
-        vm.expectEmit(Base.CCTP_TOKEN_MESSENGER);
+        vm.expectEmit(BASE_CCTP_TOKEN_MESSENGER);
         emit ICCTPLike.DepositForBurn(
-            nonce,
             Base.USDC,
             amount,
             address(foreignAlmProxy),
             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
+            0,
+            2_000,
+            ""
         );
 
         vm.expectEmit(address(foreignController));
         emit CCTPLib.CCTPTransferInitiated(
-            nonce,
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
             amount

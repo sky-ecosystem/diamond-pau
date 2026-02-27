@@ -12,10 +12,11 @@ interface ICCTPLike {
         uint256 amount,
         uint32  destinationDomain,
         bytes32 mintRecipient,
-        address burnToken
-    )
-        external
-        returns (uint64 nonce);
+        address burnToken,
+        bytes32 destinationCaller,
+        uint256 maxFee,
+        uint32  minFinalityThreshold
+    ) external;
 
     function localMinter() external view returns (address);
 
@@ -42,10 +43,9 @@ library CCTPLib {
 
     // NOTE: Used to track individual transfers for off-chain processing of CCTP transactions.
     event CCTPTransferInitiated(
-        uint64  indexed nonce,
         uint32  indexed destinationDomain,
         bytes32 indexed mintRecipient,
-        uint256         usdcAmount
+        uint256 indexed usdcAmount
     );
 
     event MintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
@@ -134,18 +134,23 @@ library CCTPLib {
     )
         internal
     {
-        uint64 nonce = abi.decode(
-            IALMProxy(proxy).doCall(
-                cctp,
-                abi.encodeCall(
-                    ICCTPLike.depositForBurn,
-                    (usdcAmount, destinationDomain, mintRecipient, usdc)
+        IALMProxy(proxy).doCall(
+            cctp,
+            abi.encodeCall(
+                ICCTPLike.depositForBurn,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    usdc,
+                    bytes32(0), // destinationCaller = 0 means anyone can relay
+                    0,          // maxFee = 0 for standard burns (no fast burn fee)
+                    2_000       // minFinalityThreshold = 2000 for standard (finalized) messages
                 )
-            ),
-            (uint64)
+            )
         );
 
-        emit CCTPTransferInitiated(nonce, destinationDomain, mintRecipient, usdcAmount);
+        emit CCTPTransferInitiated(destinationDomain, mintRecipient, usdcAmount);
     }
 
     /**********************************************************************************************/
