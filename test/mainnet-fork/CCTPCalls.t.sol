@@ -6,8 +6,6 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Base }     from "../../lib/spark-address-registry/src/Base.sol";
 
-import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
-
 import { Bridge }                                   from "../../lib/grove-xchain-helpers/src/testing/Bridge.sol";
 import { CCTPv2BridgeTesting as CCTPBridgeTesting } from "../../lib/grove-xchain-helpers/src/testing/bridges/CCTPv2BridgeTesting.sol";
 import { CCTPv2Forwarder as CCTPForwarder }         from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
@@ -201,7 +199,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
     IERC20Like internal constant BASE_USDC = IERC20Like(Base.USDC);
 
-    address internal constant BASE_CCTP_TOKEN_MESSENGER = GroveBase.CCTP_TOKEN_MESSENGER_V2;
+    address internal constant BASE_CCTP_TOKEN_MESSENGER = Base.CCTP_TOKEN_MESSENGER;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
