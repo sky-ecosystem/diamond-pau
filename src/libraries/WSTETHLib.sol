@@ -83,7 +83,12 @@ library WSTETHLib {
         );
     }
 
-    function claimWithdrawal(address proxy, uint256 requestId) external {
+    function claimWithdrawal(address proxy, address rateLimits, uint256 requestId) external {
+        require(
+            IRateLimits(rateLimits).getRateLimitData(LIMIT_REQUEST_WITHDRAW).maxAmount > 0,
+            "WSTETHLib/invalid-action"
+        );
+
         uint256 initialETHBalance = proxy.balance;
 
         IALMProxy(proxy).doCall(

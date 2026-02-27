@@ -77,8 +77,9 @@ abstract contract PSM_TestBase is Vault_TestBase {
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
 
         // NOTE: Using minimal config for test base setup
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    usdsMaxAmount, usdsSlope);
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), usdcMaxAmount, usdcSlope);
+        // rateLimits.setRateLimitData(mainnetController.LIMIT_DAIUSDS_SWAP(),  usdsMaxAmount, usdsSlope);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),     usdsMaxAmount, usdsSlope);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(),  usdcMaxAmount, usdcSlope);
 
         vm.stopPrank();
     }

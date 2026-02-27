@@ -54,6 +54,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public constant LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_ASSET_TRANSFER          = TransferAssetLib.LIMIT_TRANSFER;
+    bytes32 public constant LIMIT_DAIUSDS_SWAP            = DAIUSDSLib.LIMIT_SWAP;
     bytes32 public constant LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
     bytes32 public constant LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
@@ -273,7 +274,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     }
 
     function claimWithdrawalFromWSTETH(uint256 requestId) external nonReentrant onlyRole(RELAYER) {
-        WSTETHLib.claimWithdrawal(proxy, requestId);
+        WSTETHLib.claimWithdrawal(proxy, rateLimits, requestId);
     }
 
     /**********************************************************************************************/
@@ -602,11 +603,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function swapUSDSToDAI(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        DAIUSDSLib.swapUSDSToDAI(proxy, usdsAmount);
+        DAIUSDSLib.swapUSDSToDAI(proxy, rateLimits, usdsAmount);
     }
 
     function swapDAIToUSDS(uint256 daiAmount) external nonReentrant onlyRole(RELAYER) {
-        DAIUSDSLib.swapDAIToUSDS(proxy, daiAmount);
+        DAIUSDSLib.swapDAIToUSDS(proxy, rateLimits, daiAmount);
     }
 
     /**********************************************************************************************/

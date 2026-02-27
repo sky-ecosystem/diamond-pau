@@ -38,6 +38,9 @@
       "rev": "8f1442ad5094d1ddd48c95d390dee6cd6c164133"
     }
   },
+  "lib/uniswap-v4-periphery": {
+    "rev": "3779387e5d296f39df543d23524b050f89a62917"
+  },
   "lib/xchain-helpers": {
     "rev": "07e27b6eebb985b0c1e3376329c02b29d49664f7"
   }

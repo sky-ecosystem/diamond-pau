@@ -170,6 +170,8 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
     function test_depositERC4626_maple() external {
         deal(Ethereum.USDC, almProxy, 1_000_000e6);
 
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6);
+
         assertEq(USDC.balanceOf(almProxy),                   1_000_000e6);
         assertEq(USDC.balanceOf(address(mainnetController)), 0);
         assertEq(USDC.balanceOf(Ethereum.SYRUP_USDC),        usdcBalanceOfSyrupUSDC);
@@ -186,6 +188,8 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
             1_000_000e6,
             syrupConvertedShares
         );
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 0);
 
         assertEq(shares, syrupConvertedShares);
 
@@ -257,8 +261,12 @@ contract MainnetController_Maple_RequestRedemption_Tests is Maple_TestBase {
         vm.prank(RELAYER);
         uint256 proxyShares = mainnetController.depositERC4626(Ethereum.SYRUP_USDC, 1_000_000e6, 0);
 
+        uint256 redeemAssets = SYRUP_USDC.convertToAssets(proxyShares);
+
         address withdrawalManager   = IPoolManagerLike(SYRUP_USDC.manager()).withdrawalManager();
         uint256 totalEscrowedShares = SYRUP_USDC.balanceOf(withdrawalManager);
+
+        assertEq(rateLimits.getCurrentRateLimit(redeemKey), 1_000_000e6);
 
         assertEq(SYRUP_USDC.balanceOf(withdrawalManager),           totalEscrowedShares);
         assertEq(SYRUP_USDC.balanceOf(almProxy),                    proxyShares);
@@ -270,6 +278,8 @@ contract MainnetController_Maple_RequestRedemption_Tests is Maple_TestBase {
         mainnetController.requestMapleRedemption(Ethereum.SYRUP_USDC, proxyShares);
 
         _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(rateLimits.getCurrentRateLimit(redeemKey), 1_000_000e6 - redeemAssets);
 
         assertEq(SYRUP_USDC.balanceOf(withdrawalManager),           totalEscrowedShares + proxyShares);
         assertEq(SYRUP_USDC.balanceOf(almProxy),                    0);
