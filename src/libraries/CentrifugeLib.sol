@@ -14,9 +14,17 @@ import { RateLimitHelpers } from "../RateLimitHelpers.sol";
 
 library CentrifugeLib {
 
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
+
     bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = keccak256("LIMIT_CENTRIFUGE_TRANSFER");
     bytes32 public constant LIMIT_7540_DEPOSIT        = keccak256("LIMIT_7540_DEPOSIT");
     bytes32 public constant LIMIT_7540_REDEEM         = keccak256("LIMIT_7540_REDEEM");
+
+    /**********************************************************************************************/
+    /*** External interactive functions                                                         ***/
+    /**********************************************************************************************/
 
     function cancelCentrifugeDepositRequest(
         address proxy,
@@ -129,7 +137,7 @@ library CentrifugeLib {
     }
 
     /**********************************************************************************************/
-    /*** Rate Limit helper functions                                                            ***/
+    /*** Internal view/pure functions                                                           ***/
     /**********************************************************************************************/
 
     function _rateLimited(IRateLimits rateLimits, bytes32 key, uint256 amount) internal {

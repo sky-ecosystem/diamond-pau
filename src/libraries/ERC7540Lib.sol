@@ -17,8 +17,16 @@ import { ApproveLib } from "./ApproveLib.sol";
 
 library ERC7540Lib {
 
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
+
     bytes32 public constant LIMIT_7540_DEPOSIT = keccak256("LIMIT_7540_DEPOSIT");
     bytes32 public constant LIMIT_7540_REDEEM  = keccak256("LIMIT_7540_REDEEM");
+
+    /**********************************************************************************************/
+    /*** External interactive functions                                                         ***/
+    /**********************************************************************************************/
 
     function deposit(
         address proxy,
@@ -113,6 +121,10 @@ library ERC7540Lib {
             )
         );
     }
+
+    /**********************************************************************************************/
+    /*** Internal view/pure functions                                                           ***/
+    /**********************************************************************************************/
 
     function _rateLimitExists(address rateLimits, bytes32 key) internal view {
         require(
