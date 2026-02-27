@@ -279,17 +279,15 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Relayer Merkl functions                                                                 ***/
+    /*** Relayer Merkl functions                                                                ***/
     /**********************************************************************************************/
 
     function toggleOperatorMerkl(address operator) external nonReentrant onlyRole(RELAYER) {
-        require(address(merklDistributor) != address(0), "FC/merkl-distributor-not-set");
-
-        MerklLib.toggleOperator(MerklLib.MerklToggleOperatorParams({
+        MerklLib.toggleOperator({
             proxy       : address(proxy),
             distributor : merklDistributor,
             operator    : operator
-        }));
+        });
     }
 
     /**********************************************************************************************/

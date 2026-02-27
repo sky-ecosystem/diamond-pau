@@ -680,13 +680,11 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        require(address(merklDistributor) != address(0), "MC/merkl-distributor-not-set");
-
-        MerklLib.toggleOperator(MerklLib.MerklToggleOperatorParams({
+        MerklLib.toggleOperator({
             proxy       : address(proxy),
             distributor : merklDistributor,
             operator    : operator
-        }));
+        });
     }
 
     /**********************************************************************************************/

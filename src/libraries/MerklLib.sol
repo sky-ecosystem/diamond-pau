@@ -11,16 +11,12 @@ interface IMerklDistributorLike {
 
 library MerklLib {
 
-    struct MerklToggleOperatorParams {
-        address proxy;
-        address distributor;
-        address operator;
-    }
+    function toggleOperator(address proxy, address distributor, address operator) external {
+        require(distributor != address(0), "MerklLib/merkl-distributor-not-set");
 
-    function toggleOperator(MerklToggleOperatorParams memory params) external {
-        IALMProxy(params.proxy).doCall(
-            params.distributor,
-            abi.encodeCall(IMerklDistributorLike.toggleOperator, (params.proxy, params.operator))
+        IALMProxy(proxy).doCall(
+            distributor,
+            abi.encodeCall(IMerklDistributorLike.toggleOperator, (proxy, operator))
         );
     }
 

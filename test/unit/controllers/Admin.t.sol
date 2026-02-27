@@ -549,14 +549,16 @@ contract MainnetController_Admin_SetMerklDistributor_Tests is MainnetController_
     }
 
     function test_setMerklDistributor() public {
+        address merklDistributor = makeAddr("merklDistributor");
+
         assertEq(address(mainnetController.merklDistributor()), address(0));
 
         vm.prank(admin);
         vm.expectEmit(address(mainnetController));
-        emit MerklDistributorSet(makeAddr("merklDistributor"));
-        mainnetController.setMerklDistributor(makeAddr("merklDistributor"));
+        emit MerklDistributorSet(merklDistributor);
+        mainnetController.setMerklDistributor(merklDistributor);
 
-        assertEq(address(mainnetController.merklDistributor()), makeAddr("merklDistributor"));
+        assertEq(address(mainnetController.merklDistributor()), merklDistributor);
     }
 
 }
@@ -821,14 +823,16 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     }
 
     function test_setMerklDistributor() public {
+        address merklDistributor = makeAddr("merklDistributor");
+
         assertEq(address(foreignController.merklDistributor()), address(0));
 
         vm.prank(admin);
         vm.expectEmit(address(foreignController));
-        emit MerklDistributorSet(makeAddr("merklDistributor"));
-        foreignController.setMerklDistributor(makeAddr("merklDistributor"));
+        emit MerklDistributorSet(merklDistributor);
+        foreignController.setMerklDistributor(merklDistributor);
 
-        assertEq(address(foreignController.merklDistributor()), makeAddr("merklDistributor"));
+        assertEq(address(foreignController.merklDistributor()), merklDistributor);
     }
 
 }
