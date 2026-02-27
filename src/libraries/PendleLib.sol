@@ -6,7 +6,7 @@ import { IERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/e
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
-import { RateLimitHelpers } from "../RateLimitHelpers.sol";
+import { makeAddressKey } from "../RateLimitHelpers.sol";
 
 import { ApproveLib }  from "./ApproveLib.sol";
 
@@ -119,7 +119,7 @@ library PendleLib {
         require(totalTokenOutAmount >= minAmountOut, "PendleLib/min-amount-not-met");
 
         IRateLimits(rateLimits).triggerRateLimitDecrease(
-            RateLimitHelpers.makeAddressKey(LIMIT_REDEEM, market),
+            makeAddressKey(LIMIT_REDEEM, market),
             totalTokenOutAmount
         );
 
