@@ -6,8 +6,6 @@ import { IERC7540 } from "../../lib/forge-std/src/interfaces/IERC7540.sol";
 import { IERC20 }   from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import { IERC4626 } from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 
-import { ERC20Lib } from "./ERC20Lib.sol";
-
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
@@ -45,7 +43,7 @@ library ERC7540Lib {
         IERC20 asset = IERC20(IERC7540(token).asset());
 
         // Approve asset to vault from the proxy (assumes the proxy has enough of the asset).
-        ERC20Lib.approve(IALMProxy(proxy), address(asset), token, amount);
+        ApproveLib.approve(address(asset), proxy, token, amount);
 
         // Submit deposit request by transferring assets
         IALMProxy(proxy).doCall(
