@@ -18,6 +18,7 @@ import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { MapleLib }         from "./libraries/MapleLib.sol";
+import { MerklLib }         from "./libraries/MerklLib.sol";
 import { OTCLib }           from "./libraries/OTCLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
 import { PSMLib }           from "./libraries/PSMLib.sol";
@@ -59,6 +60,8 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     event RelayerRemoved(address indexed relayer);
 
     event PendleRouterSet(address indexed pendleRouter);
+
+    event MerklDistributorSet(address indexed merklDistributor);
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
@@ -115,6 +118,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     address public ustb;
     address public susde;
     address public pendleRouter;
+    address public merklDistributor;
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
@@ -183,6 +187,15 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         LayerZeroLib.setRecipient(layerZeroRecipients, destinationEndpointId, recipient);
+    }
+
+    function setMerklDistributor(address merklDistributor_)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        merklDistributor = merklDistributor_;
+        emit MerklDistributorSet(merklDistributor_);
     }
 
     function setMaxSlippage(address pool, uint256 maxSlippage)
@@ -677,10 +690,6 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
         PendleLib.redeem({
             proxy        : address(proxy),
             rateLimits   : address(rateLimits),
@@ -688,6 +697,22 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             router       : pendleRouter,
             pyAmountIn   : pyAmountIn,
             minAmountOut : minAmountOut
+        });
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Merkl functions                                                                ***/
+    /**********************************************************************************************/
+
+    function toggleOperatorMerkl(address operator)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        MerklLib.toggleOperator({
+            proxy       : address(proxy),
+            distributor : merklDistributor,
+            operator    : operator
         });
     }
 
