@@ -813,6 +813,12 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.maxExchangeRates(token), 1e48);
     }
 
+    function test_setMerklDistributor_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setMerklDistributor(makeAddr("merklDistributor"));
+    }
+
     function test_setMerklDistributor_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
