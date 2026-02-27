@@ -40,10 +40,10 @@ library ERC7540Lib {
         );
 
         // Note that whitelist is done by rate limits
-        IERC20 asset = IERC20(IERC7540(token).asset());
+        address asset = IERC7540(token).asset();
 
         // Approve asset to vault from the proxy (assumes the proxy has enough of the asset).
-        ApproveLib.approve(address(asset), proxy, token, amount);
+        ApproveLib.approve(asset, proxy, token, amount);
 
         // Submit deposit request by transferring assets
         IALMProxy(proxy).doCall(
@@ -52,8 +52,8 @@ library ERC7540Lib {
                 IERC7540(token).requestDeposit,
                 (
                     amount,
-                    address(proxy),
-                    address(proxy)
+                    proxy,
+                    proxy
                 )
             )
         );
@@ -73,7 +73,7 @@ library ERC7540Lib {
         // Claim shares from the vault to the proxy
         IALMProxy(proxy).doCall(
             token,
-            abi.encodeCall(IERC4626(token).mint, (shares, address(proxy)))
+            abi.encodeCall(IERC4626(token).mint, (shares, proxy))
         );
     }
 
@@ -94,7 +94,7 @@ library ERC7540Lib {
             token,
             abi.encodeCall(
                 IERC7540(token).requestRedeem,
-                (shares, address(proxy), address(proxy))
+                (shares, proxy, proxy)
             )
         );
     }
@@ -115,7 +115,7 @@ library ERC7540Lib {
             token,
             abi.encodeCall(
                 IERC7540(token).withdraw,
-                (assets, address(proxy), address(proxy))
+                (assets, proxy, proxy)
             )
         );
     }

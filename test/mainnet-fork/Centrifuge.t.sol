@@ -5,7 +5,7 @@ import { IERC7540 } from "../../lib/forge-std/src/interfaces/IERC7540.sol";
 
 import { ICentrifugeV3VaultLike } from "../../src/interfaces/CentrifugeInterfaces.sol";
 
-import "./ForkTestBase.t.sol";
+import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IRestrictionManager {
     function updateMember(address token, address user, uint64 validUntil) external;

@@ -10,7 +10,7 @@ import {
     ISpokeLike
 } from "../interfaces/CentrifugeInterfaces.sol";
 
-import { RateLimitHelpers } from "../RateLimitHelpers.sol";
+import { makeAddressKey } from "../RateLimitHelpers.sol";
 
 library CentrifugeLib {
 
@@ -34,7 +34,7 @@ library CentrifugeLib {
     )
         external
     {
-        _rateLimitExists(IRateLimits(rateLimits), RateLimitHelpers.makeAddressKey(LIMIT_7540_DEPOSIT, token));
+        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_7540_DEPOSIT, token));
 
         // NOTE: While the cancelation is pending, no new deposit request can be submitted
         IALMProxy(proxy).doCall(
@@ -52,7 +52,7 @@ library CentrifugeLib {
         address token,
         uint256 requestId
     ) external {
-        _rateLimitExists(IRateLimits(rateLimits), RateLimitHelpers.makeAddressKey(LIMIT_7540_DEPOSIT, token));
+        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_7540_DEPOSIT, token));
 
         IALMProxy(proxy).doCall(
             token,
@@ -69,7 +69,7 @@ library CentrifugeLib {
         address token,
         uint256 requestId
     ) external {
-        _rateLimitExists(IRateLimits(rateLimits), RateLimitHelpers.makeAddressKey(LIMIT_7540_REDEEM, token));
+        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_7540_REDEEM, token));
 
         // NOTE: While the cancelation is pending, no new redeem request can be submitted
         IALMProxy(proxy).doCall(
@@ -87,7 +87,7 @@ library CentrifugeLib {
         address token,
         uint256 requestId
     ) external {
-        _rateLimitExists(IRateLimits(rateLimits), RateLimitHelpers.makeAddressKey(LIMIT_7540_REDEEM, token));
+        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_7540_REDEEM, token));
 
         IALMProxy(proxy).doCall(
             token,
@@ -106,8 +106,7 @@ library CentrifugeLib {
         uint128 amount,
         bytes32 recipient
     ) external {
-        _rateLimited(
-            IRateLimits(rateLimits),
+        IRateLimits(rateLimits).triggerRateLimitDecrease(
             keccak256(abi.encode(LIMIT_CENTRIFUGE_TRANSFER, token, destinationCentrifugeId)),
             amount
         );
@@ -122,7 +121,7 @@ library CentrifugeLib {
         IALMProxy(proxy).doCallWithValue{value: msg.value}(
             spoke,
             abi.encodeCall(
-                ISpokeLike(spoke).crosschainTransferShares,
+                ISpokeLike.crosschainTransferShares,
                 (
                     destinationCentrifugeId,
                     centrifugeVault.poolId(),
@@ -134,14 +133,6 @@ library CentrifugeLib {
             ),
             msg.value
         );
-    }
-
-    /**********************************************************************************************/
-    /*** Internal interactive functions                                                         ***/
-    /**********************************************************************************************/
-
-    function _rateLimited(IRateLimits rateLimits, bytes32 key, uint256 amount) internal {
-        rateLimits.triggerRateLimitDecrease(key, amount);
     }
 
     /**********************************************************************************************/
