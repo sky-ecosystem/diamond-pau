@@ -45,7 +45,7 @@ library CCTPLib {
     event CCTPTransferInitiated(
         uint32  indexed destinationDomain,
         bytes32 indexed mintRecipient,
-        uint256 indexed usdcAmount
+        uint256         usdcAmount
     );
 
     event MintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
