@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
-import { makeAddressKey } from "../RateLimitHelpers.sol";
+import { makeAddressKey, makeAddressUint16Key } from "../RateLimitHelpers.sol";
 
 import { ERC7540Lib } from "./ERC7540Lib.sol";
 
@@ -45,9 +45,7 @@ interface ISpokeLike {
         bytes32 receiver,
         uint128 amount,
         uint128 remoteExtraGasLimit
-    )
-        external
-        payable;
+    ) external payable;
 
 }
 
@@ -135,7 +133,7 @@ library CentrifugeLib {
         mapping (uint16 centrifugeId => bytes32 recipient) storage recipients
     ) external {
         IRateLimits(rateLimits).triggerRateLimitDecrease(
-            keccak256(abi.encode(LIMIT_TRANSFER, token, centrifugeId)),
+            makeAddressUint16Key(LIMIT_TRANSFER, token, centrifugeId),
             amount
         );
 

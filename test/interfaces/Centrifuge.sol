@@ -97,6 +97,15 @@ interface ICentrifugeV3VaultLike {
 
 interface ISpokeLike {
 
+    event InitiateTransferShares(
+        uint16          centrifugeId,
+        uint64  indexed poolId,
+        bytes16 indexed scId,
+        address indexed sender,
+        bytes32         destinationAddress,
+        uint128         amount
+    );
+
     function assetToId(address asset, uint256 tokenId) external view returns (uint128);
 
     function updatePricePoolPerShare(uint64 poolId, bytes16 scId, uint128 price, uint64 computedAt) external;

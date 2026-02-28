@@ -14,7 +14,7 @@ import {
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-contract CentrifugeTestBase is ForkTestBase {
+contract Centrifuge_TestBase is ForkTestBase {
 
     address constant ESCROW                         = 0x0000000005F458Fd6ba9EEb5f365D83b7dA913dD;
     address constant INVESTMENT_MANAGER             = 0x427A1ce127b1775e4Cbd4F58ad468B9F832eA7e9;
@@ -42,49 +42,7 @@ contract CentrifugeTestBase is ForkTestBase {
 
 }
 
-contract MainnetControllerRequestDepositERC7540FailureTests is CentrifugeTestBase {
-
-    function test_requestDepositERC7540_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            RELAYER
-        ));
-        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-
-    function test_requestDepositERC7540_zeroMaxAmount() external {
-        vm.prank(relayer);
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-
-    function test_requestDepositERC7540_rateLimitBoundary() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            makeAddressKey(
-                mainnetController.LIMIT_7540_DEPOSIT(),
-                address(jTreasuryVault)
-            ),
-            1_000_000e6,
-            uint256(1_000_000e6) / 1 days
-        );
-        vm.stopPrank();
-
-        deal(address(usdc), address(almProxy), 1_000_000e6);
-
-        vm.prank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-
-        vm.startPrank(relayer);
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6 + 1);
-
-        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-}
-
-contract MainnetControllerRequestDepositERC7540SuccessTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_RequestDepositERC7540_Tests is Centrifuge_TestBase {
 
     bytes32 key;
 
@@ -101,6 +59,34 @@ contract MainnetControllerRequestDepositERC7540SuccessTests is CentrifugeTestBas
 
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+
+        deal(address(usdc), address(almProxy), 1_000_000e6);
+    }
+
+    function test_requestDepositERC7540_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
+    }
+
+    function test_requestDepositERC7540_zeroMaxAmount() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
+    }
+
+    function test_requestDepositERC7540_rateLimitBoundary() external {
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.startPrank(relayer);
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6 + 1);
+
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
     }
 
     function test_requestDepositERC7540() external {
@@ -132,7 +118,22 @@ contract MainnetControllerRequestDepositERC7540SuccessTests is CentrifugeTestBas
 
 }
 
-contract MainnetControllerClaimDepositERC7540FailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_DEPOSIT(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 1_500_000e6, uint256(1_500_000e6) / 1 days);
+    }
 
     function test_claimDepositERC7540_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -144,30 +145,9 @@ contract MainnetControllerClaimDepositERC7540FailureTests is CentrifugeTestBase 
     }
 
     function test_claimDepositERC7540_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("ERC7540Lib/invalid-action");
+        vm.prank(relayer);
         mainnetController.claimDepositERC7540(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerClaimDepositERC7540SuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.prank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_DEPOSIT(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 1_500_000e6, uint256(1_500_000e6) / 1 days);
     }
 
     function test_claimDepositERC7540_singleRequest() external {
@@ -218,7 +198,6 @@ contract MainnetControllerClaimDepositERC7540SuccessTests is CentrifugeTestBase 
         assertEq(jTreasuryVault.pendingDepositRequest(REQUEST_ID, address(almProxy)),   0);
         assertEq(jTreasuryVault.claimableDepositRequest(REQUEST_ID, address(almProxy)), 0);
     }
-
 
     function test_claimDepositERC7540_multipleRequests() external {
         deal(address(usdc), address(almProxy), 1_500_000e6);
@@ -281,7 +260,22 @@ contract MainnetControllerClaimDepositERC7540SuccessTests is CentrifugeTestBase 
 
 }
 
-contract MainnetControllerCancelCentrifugeDepositFailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_CancelDeposit_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_DEPOSIT(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+    }
 
     function test_cancelCentrifugeDepositRequest_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -293,30 +287,9 @@ contract MainnetControllerCancelCentrifugeDepositFailureTests is CentrifugeTestB
     }
 
     function test_cancelCentrifugeDepositRequest_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("CentrifugeLib/invalid-action");
+        vm.prank(relayer);
         mainnetController.cancelCentrifugeDepositRequest(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerCancelCentrifugeDepositSuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.prank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_DEPOSIT(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
     }
 
     function test_cancelCentrifugeDepositRequest() external {
@@ -337,7 +310,22 @@ contract MainnetControllerCancelCentrifugeDepositSuccessTests is CentrifugeTestB
 
 }
 
-contract MainnetControllerClaimCentrifugeCancelDepositFailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_ClaimCancelDeposit_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_DEPOSIT(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+    }
 
     function test_claimCentrifugeCancelDepositRequest_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -349,30 +337,9 @@ contract MainnetControllerClaimCentrifugeCancelDepositFailureTests is Centrifuge
     }
 
     function test_claimCentrifugeCancelDepositRequest_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("CentrifugeLib/invalid-action");
+        vm.prank(relayer);
         mainnetController.claimCentrifugeCancelDepositRequest(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerClaimCentrifugeCancelDepositSuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.prank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_DEPOSIT(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
     }
 
     function test_claimCentrifugeCancelDepositRequest() external {
@@ -427,55 +394,7 @@ contract MainnetControllerClaimCentrifugeCancelDepositSuccessTests is Centrifuge
 
 }
 
-contract MainnetControllerRequestRedeemERC7540FailureTests is CentrifugeTestBase {
-
-    function test_requestRedeemERC7540_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            RELAYER
-        ));
-        mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-
-    function test_requestRedeemERC7540_zeroMaxAmount() external {
-        vm.prank(relayer);
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-
-    function test_requestRedeemERC7540_rateLimitsBoundary() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            makeAddressKey(
-                mainnetController.LIMIT_7540_REDEEM(),
-                address(jTreasuryVault)
-            ),
-            1_000_000e6,
-            uint256(1_000_000e6) / 1 days
-        );
-        vm.stopPrank();
-
-        vm.startPrank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-        jTreasuryToken.mint(address(almProxy), 1_000_000e6);
-        vm.stopPrank();
-
-        uint256 overBoundaryShares = jTreasuryVault.convertToShares(1_000_000e6 + 3);
-        uint256 atBoundaryShares   = jTreasuryVault.convertToShares(1_000_000e6 + 1);
-
-        assertEq(jTreasuryVault.convertToAssets(overBoundaryShares), 1_000_000e6 + 2);
-        assertEq(jTreasuryVault.convertToAssets(atBoundaryShares),   1_000_000e6);
-
-        vm.startPrank(relayer);
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.requestRedeemERC7540(address(jTreasuryVault), overBoundaryShares);
-
-        mainnetController.requestRedeemERC7540(address(jTreasuryVault), atBoundaryShares);
-    }
-}
-
-contract MainnetControllerRequestRedeemERC7540SuccessTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_RequestRedeemERC7540_Tests is Centrifuge_TestBase {
 
     bytes32 key;
 
@@ -493,6 +412,41 @@ contract MainnetControllerRequestRedeemERC7540SuccessTests is CentrifugeTestBase
 
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+    }
+
+    function test_requestRedeemERC7540_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
+    }
+
+    function test_requestRedeemERC7540_zeroMaxAmount() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
+    }
+
+    function test_requestRedeemERC7540_rateLimitsBoundary() external {
+        vm.prank(ROOT);
+        jTreasuryToken.mint(address(almProxy), 1_000_000e6);
+
+        uint256 overBoundaryShares = jTreasuryVault.convertToShares(1_000_000e6 + 3);
+        uint256 atBoundaryShares   = jTreasuryVault.convertToShares(1_000_000e6 + 1);
+
+        assertEq(jTreasuryVault.convertToAssets(overBoundaryShares), 1_000_000e6 + 2);
+        assertEq(jTreasuryVault.convertToAssets(atBoundaryShares),   1_000_000e6);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.startPrank(relayer);
+        mainnetController.requestRedeemERC7540(address(jTreasuryVault), overBoundaryShares);
+
+        mainnetController.requestRedeemERC7540(address(jTreasuryVault), atBoundaryShares);
     }
 
     function test_requestRedeemERC7540() external {
@@ -525,7 +479,23 @@ contract MainnetControllerRequestRedeemERC7540SuccessTests is CentrifugeTestBase
 
 }
 
-contract MainnetControllerClaimRedeemERC7540FailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+        vm.stopPrank();
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_REDEEM(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 2_000_000e6, uint256(2_000_000e6) / 1 days);
+    }
 
     function test_claimRedeemERC7540_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -537,31 +507,9 @@ contract MainnetControllerClaimRedeemERC7540FailureTests is CentrifugeTestBase {
     }
 
     function test_claimRedeemERC7540_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("ERC7540Lib/invalid-action");
+        vm.prank(relayer);
         mainnetController.claimRedeemERC7540(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerClaimRedeemERC7540SuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.startPrank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-        vm.stopPrank();
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_REDEEM(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 2_000_000e6, uint256(2_000_000e6) / 1 days);
     }
 
     function test_claimRedeemERC7540_singleRequest() external {
@@ -690,7 +638,23 @@ contract MainnetControllerClaimRedeemERC7540SuccessTests is CentrifugeTestBase {
 
 }
 
-contract MainnetControllerCancelCentrifugeRedeemRequestFailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_CancelRedeemRequest_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+        vm.stopPrank();
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_REDEEM(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+    }
 
     function test_cancelCentrifugeRedeemRequest_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -702,31 +666,9 @@ contract MainnetControllerCancelCentrifugeRedeemRequestFailureTests is Centrifug
     }
 
     function test_cancelCentrifugeRedeemRequest_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("CentrifugeLib/invalid-action");
+        vm.prank(relayer);
         mainnetController.cancelCentrifugeRedeemRequest(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerCancelCentrifugeRedeemRequestSuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.startPrank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-        vm.stopPrank();
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_REDEEM(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
     }
 
     function test_cancelCentrifugeRedeemRequest() external {
@@ -750,7 +692,23 @@ contract MainnetControllerCancelCentrifugeRedeemRequestSuccessTests is Centrifug
 
 }
 
-contract MainnetControllerClaimCentrifugeCancelRedeemRequestFailureTests is CentrifugeTestBase {
+contract MainnetController_Centrifuge_ClaimCancelRedeemRequest_Tests is Centrifuge_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+        vm.stopPrank();
+
+        bytes32 key = makeAddressKey(
+            mainnetController.LIMIT_7540_REDEEM(),
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
+    }
 
     function test_claimCentrifugeCancelRedeemRequest_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -762,31 +720,9 @@ contract MainnetControllerClaimCentrifugeCancelRedeemRequestFailureTests is Cent
     }
 
     function test_claimCentrifugeCancelRedeemRequest_invalidVault() external {
-        vm.prank(relayer);
         vm.expectRevert("CentrifugeLib/invalid-action");
+        vm.prank(relayer);
         mainnetController.claimCentrifugeCancelRedeemRequest(makeAddr("fake-vault"));
-    }
-
-}
-
-contract MainnetControllerClaimCentrifugeCancelRedeemRequestSuccessTests is CentrifugeTestBase {
-
-    bytes32 key;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.startPrank(ROOT);
-        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
-        vm.stopPrank();
-
-        key = makeAddressKey(
-            mainnetController.LIMIT_7540_REDEEM(),
-            address(jTreasuryVault)
-        );
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
     }
 
     function test_claimCentrifugeCancelRedeemRequest() external {
