@@ -1,23 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { ICentrifugeV3VaultLike, IAsyncRedeemManagerLike, ISpokeLike } from "../../src/interfaces/CentrifugeInterfaces.sol";
+import { makeAddressKey } from "../../src/RateLimitHelpers.sol";
 
-import "./ForkTestBase.t.sol";
+import {
+    IAsyncRedeemManagerLike,
+    ICentrifugeV3VaultLike,
+    ISpokeLike,
+    ICentrifugeV3ShareLike,
+    IFreelyTransferableHookLike,
+    IBalanceSheetLike,
+} from "../interfaces/Centrifuge.sol";
 
-interface ICentrifugeV3ShareLike is IERC20 {
-    function mint(address to, uint256 value) external;
-    function hook() external view returns (address);
-}
-
-interface IFreelyTransferableHookLike {
-    function updateMember(address token, address user, uint64 validUntil) external;
-}
-
-interface IBalanceSheetLike {
-    function deposit(uint64 poolId, bytes16 scId, address asset, uint256 tokenId, uint128 amount)
-        external;
-}
+import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 contract CentrifugeTestBase is ForkTestBase {
 
@@ -89,7 +84,7 @@ contract ForeignControllerRequestDepositERC7540FailureTests is CentrifugeTestBas
     function test_requestDepositERC7540_rateLimitBoundary() external {
         vm.startPrank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(
-            RateLimitHelpers.makeAddressKey(
+            makeAddressKey(
                 foreignController.LIMIT_7540_DEPOSIT(),
                 address(centrifugeV3Vault)
             ),
@@ -121,7 +116,7 @@ contract ForeignControllerRequestDepositERC7540SuccessTests is CentrifugeTestBas
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_DEPOSIT(),
             address(centrifugeV3Vault)
         );
@@ -188,7 +183,7 @@ contract ForeignControllerClaimDepositERC7540SuccessTests is CentrifugeTestBase 
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_DEPOSIT(),
             address(centrifugeV3Vault)
         );
@@ -359,7 +354,7 @@ contract ForeignControllerCancelCentrifugeDepositSuccessTests is CentrifugeTestB
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_DEPOSIT(),
             address(centrifugeV3Vault)
         );
@@ -415,7 +410,7 @@ contract ForeignControllerClaimCentrifugeCancelDepositSuccessTests is Centrifuge
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_DEPOSIT(),
             address(centrifugeV3Vault)
         );
@@ -502,7 +497,7 @@ contract ForeignControllerRequestRedeemERC7540FailureTests is CentrifugeTestBase
 
         vm.startPrank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(
-            RateLimitHelpers.makeAddressKey(
+            makeAddressKey(
                 foreignController.LIMIT_7540_REDEEM(),
                 address(centrifugeV3Vault)
             ),
@@ -540,7 +535,7 @@ contract ForeignControllerRequestRedeemERC7540SuccessTests is CentrifugeTestBase
         spoke.updatePricePoolPerShare(poolId, scId, 1e18, uint64(block.timestamp));
         vm.stopPrank();
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_REDEEM(),
             address(centrifugeV3Vault)
         );
@@ -609,7 +604,7 @@ contract ForeignControllerClaimRedeemERC7540SuccessTests is CentrifugeTestBase {
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_REDEEM(),
             address(centrifugeV3Vault)
         );
@@ -749,13 +744,13 @@ contract ForeignControllerClaimRedeemERC7540SuccessTests is CentrifugeTestBase {
         // Fulfill both requests at price 2.0
         vm.prank(root);
         manager.fulfillRedeemRequest(
-             poolId,
-             scId,
-             address(almProxy),
-             usdcAssetId,
-             3_000_000e6,
-             1_500_000e6,
-             0
+            poolId,
+            scId,
+            address(almProxy),
+            usdcAssetId,
+            3_000_000e6,
+            1_500_000e6,
+            0
         );
 
         assertEq(vaultToken.totalSupply(), totalSupply - 1_500_000e6);
@@ -812,7 +807,7 @@ contract ForeignControllerCancelCentrifugeRedeemRequestSuccessTests is Centrifug
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_REDEEM(),
             address(centrifugeV3Vault)
         );
@@ -872,7 +867,7 @@ contract ForeignControllerClaimCentrifugeCancelRedeemRequestSuccessTests is Cent
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = RateLimitHelpers.makeAddressKey(
+        key = makeAddressKey(
             foreignController.LIMIT_7540_REDEEM(),
             address(centrifugeV3Vault)
         );

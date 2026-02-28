@@ -23,8 +23,6 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event CentrifugeRecipientSet(uint16 indexed destinationCentrifugeId, bytes32 recipient);
-
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
@@ -38,12 +36,12 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
     bytes32 public constant LIMIT_4626_DEPOSIT        = ERC4626Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_4626_WITHDRAW       = ERC4626Lib.LIMIT_WITHDRAW;
-    bytes32 public constant LIMIT_7540_DEPOSIT        = ERC7540Lib.LIMIT_7540_DEPOSIT;
-    bytes32 public constant LIMIT_7540_REDEEM         = ERC7540Lib.LIMIT_7540_REDEEM;
+    bytes32 public constant LIMIT_7540_DEPOSIT        = ERC7540Lib.LIMIT_DEPOSIT;
+    bytes32 public constant LIMIT_7540_REDEEM         = ERC7540Lib.LIMIT_REDEEM;
     bytes32 public constant LIMIT_AAVE_DEPOSIT        = AaveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_AAVE_WITHDRAW       = AaveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_ASSET_TRANSFER      = TransferAssetLib.LIMIT_TRANSFER;
-    bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = CentrifugeLib.LIMIT_CENTRIFUGE_TRANSFER;
+    bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = CentrifugeLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_PSM_DEPOSIT         = PSM3Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_PSM_WITHDRAW        = PSM3Lib.LIMIT_WITHDRAW;
@@ -129,13 +127,12 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
     }
 
-    function setCentrifugeRecipient(uint16 destinationCentrifugeId, bytes32 recipient)
+    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        centrifugeRecipients[destinationCentrifugeId] = recipient;
-        emit CentrifugeRecipientSet(destinationCentrifugeId, recipient);
+        CentrifugeLib.setCentrifugeRecipient(centrifugeRecipients, centrifugeId, recipient);
     }
 
     /**********************************************************************************************/
@@ -304,24 +301,11 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        ERC7540Lib.deposit({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            amount     : amount
-        });
+        ERC7540Lib.deposit(address(proxy), address(rateLimits), token, amount);
     }
 
-    function claimDepositERC7540(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.claimDeposit({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token
-        });
+    function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {
+        ERC7540Lib.claimDeposit(address(proxy), address(rateLimits), token);
     }
 
     function requestRedeemERC7540(address token, uint256 shares)
@@ -329,24 +313,11 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        ERC7540Lib.requestRedeem({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            shares     : shares
-        });
+        ERC7540Lib.requestRedeem(address(proxy), address(rateLimits), token, shares);
     }
 
-    function claimRedeemERC7540(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.claimRedeem({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token
-        });
+    function claimRedeemERC7540(address token) external nonReentrant onlyRole(RELAYER) {
+        ERC7540Lib.claimRedeem(address(proxy), address(rateLimits), token);
     }
 
     /**********************************************************************************************/
@@ -360,7 +331,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelCentrifugeDepositRequest({
+        CentrifugeLib.cancelDepositRequest({
             proxy      : address(proxy),
             rateLimits : address(rateLimits),
             token      : token,
@@ -373,7 +344,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCentrifugeCancelDepositRequest({
+        CentrifugeLib.claimCancelDepositRequest({
             proxy      : address(proxy),
             rateLimits : address(rateLimits),
             token      : token,
@@ -386,7 +357,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelCentrifugeRedeemRequest({
+        CentrifugeLib.cancelRedeemRequest({
             proxy      : address(proxy),
             rateLimits : address(rateLimits),
             token      : token,
@@ -399,7 +370,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCentrifugeCancelRedeemRequest({
+        CentrifugeLib.claimCancelRedeemRequest({
             proxy      : address(proxy),
             rateLimits : address(rateLimits),
             token      : token,
@@ -407,23 +378,19 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         });
     }
 
-    function transferSharesCentrifuge(
-        address token,
-        uint128 amount,
-        uint16  destinationCentrifugeId
-    )
+    function transferSharesCentrifuge(address token, uint128 amount, uint16 centrifugeId)
         external
         payable
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.transferSharesCentrifuge({
-            proxy                   : address(proxy),
-            rateLimits              : address(rateLimits),
-            token                   : token,
-            destinationCentrifugeId : destinationCentrifugeId,
-            amount                  : amount,
-            recipient               : centrifugeRecipients[destinationCentrifugeId]
+        CentrifugeLib.transferShares({
+            proxy        : address(proxy),
+            rateLimits   : address(rateLimits),
+            token        : token,
+            centrifugeId : centrifugeId,
+            amount       : amount,
+            recipients   : centrifugeRecipients
         });
     }
 

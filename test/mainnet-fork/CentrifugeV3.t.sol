@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { IERC20 } from "../../lib/forge-std/src/interfaces/IERC20.sol";
+import {
+    IAsyncRedeemManagerLike,
+    ICentrifugeV3VaultLike,
+    IERC20Like
+} from "../interfaces/Centrifuge.sol";
 
-import { ICentrifugeV3VaultLike, IAsyncRedeemManagerLike } from "../../src/interfaces/CentrifugeInterfaces.sol";
-
-import "./ForkTestBase.t.sol";
+import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 contract CentrifugeTestBase is ForkTestBase {
 
@@ -170,8 +172,8 @@ contract MainnetControllerTransferSharesCentrifugeSuccessTests is CentrifugeTest
             1e18
         );
 
-        uint256 proxyBalanceBefore     = IERC20(vaultToken).balanceOf(address(almProxy));
-        uint256 shareTotalSupplyBefore = IERC20(vaultToken).totalSupply();
+        uint256 proxyBalanceBefore     = IERC20Like(vaultToken).balanceOf(address(almProxy));
+        uint256 shareTotalSupplyBefore = IERC20Like(vaultToken).totalSupply();
 
         vm.expectEmit(address(spoke));
         emit InitiateTransferShares(
@@ -190,8 +192,8 @@ contract MainnetControllerTransferSharesCentrifugeSuccessTests is CentrifugeTest
             DESTINATION_CENTRIFUGE_ID
         );
 
-        uint256 proxyBalanceAfter     = IERC20(vaultToken).balanceOf(address(almProxy));
-        uint256 shareTotalSupplyAfter = IERC20(vaultToken).totalSupply();
+        uint256 proxyBalanceAfter     = IERC20Like(vaultToken).balanceOf(address(almProxy));
+        uint256 shareTotalSupplyAfter = IERC20Like(vaultToken).totalSupply();
 
         assertEq(proxyBalanceAfter,     proxyBalanceBefore     - 10_000_000e6);
         assertEq(shareTotalSupplyAfter, shareTotalSupplyBefore - 10_000_000e6);
