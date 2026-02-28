@@ -16,11 +16,13 @@ interface IERC4626Like {
         external
         returns (uint256 shares);
 
-    function maxWithdraw(address owner) external view returns (uint256 maxAssets);
-
     function asset() external view returns (address);
 
+    function convertToAssets(uint256 shares) external view returns (uint256 assets);
+
     function maxMint(address receiver) external view returns (uint256 maxShares);
+
+    function maxWithdraw(address owner) external view returns (uint256 maxAssets);
 
 }
 
@@ -75,7 +77,12 @@ library ERC7540Lib {
     function requestRedeem(address proxy, address rateLimits, address token, uint256 shares)
         external
     {
-        _decreaseRateLimit(rateLimits, LIMIT_REDEEM, token, shares);
+        _decreaseRateLimit(
+            rateLimits,
+            LIMIT_REDEEM,
+            token,
+            IERC4626Like(token).convertToAssets(shares)
+        );
 
         IALMProxy(proxy).doCall(
             token,

@@ -67,6 +67,9 @@ library CentrifugeLib {
     bytes32 public constant LIMIT_DEPOSIT  = ERC7540Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_REDEEM   = ERC7540Lib.LIMIT_REDEEM;
 
+    // Requests for Centrifuge pools are non-fungible and all have ID = 0.
+    uint256 public constant REQUEST_ID = 0;
+
     /**********************************************************************************************/
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
@@ -79,68 +82,46 @@ library CentrifugeLib {
         emit CentrifugeRecipientSet(centrifugeId, recipients[centrifugeId] = recipient);
     }
 
-    function cancelDepositRequest(
-        address proxy,
-        address rateLimits,
-        address token,
-        uint256 requestId
-    )
-        external
-    {
+    function cancelDepositRequest(address proxy, address rateLimits, address token) external {
         _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_DEPOSIT, token));
 
         // NOTE: While the cancellation is pending, no new deposit request can be submitted.
         IALMProxy(proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (requestId, proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, proxy))
         );
     }
 
-    function claimCancelDepositRequest(
-        address proxy,
-        address rateLimits,
-        address token,
-        uint256 requestId
-    ) external {
+    function claimCancelDepositRequest(address proxy, address rateLimits, address token) external {
         _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_DEPOSIT, token));
 
         IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelDepositRequest,
-                (requestId, proxy, proxy)
+                (REQUEST_ID, proxy, proxy)
             )
         );
     }
 
-    function cancelRedeemRequest(
-        address proxy,
-        address rateLimits,
-        address token,
-        uint256 requestId
-    ) external {
+    function cancelRedeemRequest(address proxy, address rateLimits, address token) external {
         _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_REDEEM, token));
 
         // NOTE: While the cancellation is pending, no new redeem request can be submitted.
         IALMProxy(proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (requestId, proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, proxy))
         );
     }
 
-    function claimCancelRedeemRequest(
-        address proxy,
-        address rateLimits,
-        address token,
-        uint256 requestId
-    ) external {
+    function claimCancelRedeemRequest(address proxy, address rateLimits, address token) external {
         _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_REDEEM, token));
 
         IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelRedeemRequest,
-                (requestId, proxy, proxy)
+                (REQUEST_ID, proxy, proxy)
             )
         );
     }

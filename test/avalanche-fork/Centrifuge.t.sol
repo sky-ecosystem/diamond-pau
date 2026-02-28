@@ -5,11 +5,11 @@ import { makeAddressKey } from "../../src/RateLimitHelpers.sol";
 
 import {
     IAsyncRedeemManagerLike,
-    ICentrifugeV3VaultLike,
-    ISpokeLike,
-    ICentrifugeV3ShareLike,
-    IFreelyTransferableHookLike,
     IBalanceSheetLike,
+    ICentrifugeV3ShareLike,
+    ICentrifugeV3VaultLike,
+    IFreelyTransferableHookLike,
+    ISpokeLike
 } from "../interfaces/Centrifuge.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";

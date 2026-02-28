@@ -120,8 +120,6 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     address public susde;
     address public merklDistributor;
 
-    uint256 public CENTRIFUGE_REQUEST_ID = 0;
-
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
     mapping(uint32 destinationDomain       => bytes32 mintRecipient)       public mintRecipients;  // CCTP mint recipients
@@ -910,12 +908,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelDepositRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.cancelDepositRequest(address(proxy), address(rateLimits), token);
     }
 
     function claimCentrifugeCancelDepositRequest(address token)
@@ -923,12 +916,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCancelDepositRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.claimCancelDepositRequest(address(proxy), address(rateLimits), token);
     }
 
     function cancelCentrifugeRedeemRequest(address token)
@@ -936,12 +924,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelRedeemRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.cancelRedeemRequest(address(proxy), address(rateLimits), token);
     }
 
     function claimCentrifugeCancelRedeemRequest(address token)
@@ -949,12 +932,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCancelRedeemRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.claimCancelRedeemRequest(address(proxy), address(rateLimits), token);
     }
 
     function transferSharesCentrifuge(

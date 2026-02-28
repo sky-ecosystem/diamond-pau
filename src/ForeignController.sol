@@ -59,8 +59,6 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
     address public immutable usdc;
 
-    uint256 internal CENTRIFUGE_REQUEST_ID = 0;
-
     address public merklDistributor;
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
@@ -357,12 +355,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelDepositRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.cancelDepositRequest(address(proxy), address(rateLimits), token);
     }
 
     function claimCentrifugeCancelDepositRequest(address token)
@@ -370,12 +363,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCancelDepositRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.claimCancelDepositRequest(address(proxy), address(rateLimits), token);
     }
 
     function cancelCentrifugeRedeemRequest(address token)
@@ -383,12 +371,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.cancelRedeemRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.cancelRedeemRequest(address(proxy), address(rateLimits), token);
     }
 
     function claimCentrifugeCancelRedeemRequest(address token)
@@ -396,12 +379,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        CentrifugeLib.claimCancelRedeemRequest({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            token      : token,
-            requestId  : CENTRIFUGE_REQUEST_ID
-        });
+        CentrifugeLib.claimCancelRedeemRequest(address(proxy), address(rateLimits), token);
     }
 
     function transferSharesCentrifuge(address token, uint128 amount, uint16 centrifugeId)
