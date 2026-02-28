@@ -22,6 +22,7 @@ import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { MapleLib }         from "./libraries/MapleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
 import { OTCLib }           from "./libraries/OTCLib.sol";
+import { PendleLib }        from "./libraries/PendleLib.sol";
 import { PSMLib }           from "./libraries/PSMLib.sol";
 import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
@@ -59,6 +60,8 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
+
+    event PendleRouterSet(address indexed pendleRouter);
 
     event MerklDistributorSet(address indexed merklDistributor);
 
@@ -101,6 +104,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
     bytes32 public LIMIT_WSTETH_DEPOSIT          = WSTETHLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_WSTETH_REQUEST_WITHDRAW = WSTETHLib.LIMIT_REQUEST_WITHDRAW;
+    bytes32 public LIMIT_PENDLE_PT_REDEEM        = PendleLib.LIMIT_REDEEM;
 
     address public buffer;  // Allocator buffer
 
@@ -118,6 +122,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     address public usdc;
     address public ustb;
     address public susde;
+    address public pendleRouter;
     address public merklDistributor;
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
@@ -208,6 +213,15 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
         maxSlippages[pool] = maxSlippage;
         emit MaxSlippageSet(pool, maxSlippage);
+    }
+
+    function setPendleRouter(address pendleRouter_)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        pendleRouter = pendleRouter_;
+        emit PendleRouterSet(pendleRouter_);
     }
 
     function setOTCBuffer(address exchange, address otcBuffer)
@@ -683,6 +697,25 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         onlyRole(RELAYER)
     {
         MapleLib.cancelRedemption(address(proxy), address(rateLimits), mapleToken, shares);
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Pendle functions                                                               ***/
+    /**********************************************************************************************/
+
+    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
+        external    
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        PendleLib.redeem({
+            proxy        : address(proxy),
+            rateLimits   : address(rateLimits),
+            market       : pendleMarket,
+            router       : pendleRouter,
+            pyAmountIn   : pyAmountIn,
+            minAmountOut : minAmountOut
+        });
     }
 
     /**********************************************************************************************/
