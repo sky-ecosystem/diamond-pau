@@ -704,7 +704,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
-        external    
+        external
         nonReentrant
         onlyRole(RELAYER)
     {
@@ -911,7 +911,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        ERC7540Lib.deposit(address(proxy), address(rateLimits), token, amount);
+        ERC7540Lib.requestDeposit(address(proxy), address(rateLimits), token, amount);
     }
 
     function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {

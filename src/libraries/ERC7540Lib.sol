@@ -51,7 +51,7 @@ library ERC7540Lib {
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function deposit(address proxy, address rateLimits, address token, uint256 amount) external {
+    function requestDeposit(address proxy, address rateLimits, address token, uint256 amount) external {
         // Note that whitelist is done by rate limits.
         _decreaseRateLimit(rateLimits, LIMIT_DEPOSIT, token, amount);
 

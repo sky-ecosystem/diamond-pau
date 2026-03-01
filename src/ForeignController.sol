@@ -359,7 +359,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(RELAYER)
     {
-        ERC7540Lib.deposit(address(proxy), address(rateLimits), token, amount);
+        ERC7540Lib.requestDeposit(address(proxy), address(rateLimits), token, amount);
     }
 
     function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {
