@@ -57,9 +57,9 @@ library CCTPLib {
     bytes32 public constant LIMIT_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
 
-    bytes32 public constant DESTINATION_CALLER     = 0; // 0 means anyone can relay
-    uint256 public constant MAX_FEE                = 0; // 0 for standard burns (no fast burn fee)
-    uint32  public constant MAX_FINALITY_THRESHOLD = 2_000; // 2_000 for standard (finalized) messages
+    bytes32 public constant DESTINATION_CALLER     = 0;      // 0 means anyone can relay
+    uint256 public constant MAX_FEE                = 0;      // 0 for standard burns (no fast burn fee)
+    uint32  public constant MAX_FINALITY_THRESHOLD = 2_000;  // 2_000 for standard (finalized) messages
 
     /**********************************************************************************************/
     /*** External functions                                                                     ***/

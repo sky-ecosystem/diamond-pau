@@ -224,8 +224,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         // Reuse the same mainnet fork so contracts from ForkTestBase.setUp() are accessible
         source = Domain({
-            chain:  getChain("mainnet"),
-            forkId: vm.activeFork()
+            chain  : getChain("mainnet"),
+            forkId : vm.activeFork()
         });
 
         destination = getChain("base").createSelectFork(37589683);  // November 1, 2025
@@ -693,10 +693,10 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
             address(almProxy),
             mainnetController.mintRecipients(CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE),
             CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
-            0,
-            2_000,
+            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),  // TokenMessenger v2
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),  // DestinationCaller
+            0,                                                                            // MaxFee
+            2_000,                                                                        // MinFinalityThreshold
             ""
         );
 
@@ -718,10 +718,10 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
             address(foreignAlmProxy),
             foreignController.mintRecipients(CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
             CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
-            0,
-            2_000,
+            bytes32(0x00000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d),  // TokenMessenger v2
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),  // DestinationCaller
+            0,                                                                            // MaxFee
+            2_000,                                                                        // MinFinalityThreshold
             ""
         );
 
