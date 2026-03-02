@@ -270,16 +270,25 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
     }
 
-    function setUniswapV3PositionManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setUniswapV3PositionManager(address manager)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         emit UniswapV3PositionManagerSet(uniswapV3PositionManager = manager);
     }
 
-    function setUniswapV3SwapRouter(address swapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setUniswapV3SwapRouter(address swapRouter)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         emit UniswapV3SwapRouterSet(uniswapV3Router = swapRouter);
     }
 
     function setUniswapV3PoolMaxTickDelta(address pool, uint24 maxTickDelta)
         external
+        nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         UniswapV3Lib.setPoolMaxTickDelta(pool, maxTickDelta, uniswapV3PoolParams);
@@ -287,6 +296,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function setUniswapV3AddLiquidityLowerTickBound(address pool, int24 lowerTickBound)
         external
+        nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         UniswapV3Lib.setAddLiquidityLowerTickBound(pool, lowerTickBound, uniswapV3PoolParams);
@@ -294,6 +304,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function setUniswapV3AddLiquidityUpperTickBound(address pool, int24 upperTickBound)
         external
+        nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         UniswapV3Lib.setAddLiquidityUpperTickBound(pool, upperTickBound, uniswapV3PoolParams);
@@ -301,6 +312,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
 
     function setUniswapV3TWAPSecondsAgo(address pool, uint32 twapSecondsAgo)
         external
+        nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         UniswapV3Lib.setTWAPSecondsAgo(pool, twapSecondsAgo, uniswapV3PoolParams);
@@ -593,6 +605,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         uint24  maxTickDelta
     )
         external
+        nonReentrant
         onlyRole(RELAYER)
         returns (uint256 amountOut)
     {
@@ -618,6 +631,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         uint256                            deadline
     )
         external
+        nonReentrant
         onlyRole(RELAYER)
         returns (uint256 tokenId_, uint128 liquidity_, UniswapV3Lib.TokenAmounts memory amounts_)
     {
@@ -644,6 +658,7 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
         uint256                            deadline
     )
         external
+        nonReentrant
         onlyRole(RELAYER)
         returns (UniswapV3Lib.TokenAmounts memory amounts_)
     {
