@@ -618,7 +618,7 @@ contract MainnetController_Admin_SetUniswapV3PoolMaxTickDelta_Tests is MainnetCo
 
 contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is MainnetController_Admin_TestBase {
 
-    int24 internal constant MIN_TICK = -887_272;
+    int24 internal constant _MIN_UNISWAP_TICK = -887_272;
 
     address internal immutable _pool         = makeAddr("pool");
     address internal immutable _unauthorized = makeAddr("unauthorized");
@@ -646,7 +646,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
     function test_setUniswapV3AddLiquidityLowerTickBound_outOfBoundsBoundary() external {
         vm.expectRevert("UniswapV3Lib/lower-tick-oob");
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK - 1);
+        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK - 1);
 
         // First set an upper tick bound
         vm.prank(admin);
@@ -658,7 +658,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
         mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, 1000);
 
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK);
+        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK);
 
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, 999);
@@ -687,16 +687,16 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit UniswapV3Lib.UniswapV3PoolLowerTickUpdated(_pool, MIN_TICK);
+        emit UniswapV3Lib.UniswapV3PoolLowerTickUpdated(_pool, _MIN_UNISWAP_TICK);
 
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK);
+        mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK);
 
         _assertReentrancyGuardWrittenToTwice();
 
         ( , tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
-        assertEq(tickBounds.lower, MIN_TICK);
+        assertEq(tickBounds.lower, _MIN_UNISWAP_TICK);
     }
 
 }
@@ -951,7 +951,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
     uint24 internal constant _MAX_TICK_DELTA = 887272;
 
-    int24 internal constant MIN_TICK         = -887_272;
+    int24 internal constant _MIN_UNISWAP_TICK = -887_272;
     int24 internal constant _MAX_UNISWAP_TICK =  887_272;
 
     address internal immutable _pool            = makeAddr("pool");
@@ -1358,7 +1358,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     function test_setUniswapV3AddLiquidityLowerTickBound_outOfBoundsBoundary() external {
         vm.expectRevert("UniswapV3Lib/lower-tick-oob");
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK - 1);
+        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK - 1);
 
         // First set an upper tick bound
         vm.prank(admin);
@@ -1370,7 +1370,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, 1000);
 
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK);
+        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK);
 
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, 999);
@@ -1399,16 +1399,16 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit UniswapV3Lib.UniswapV3PoolLowerTickUpdated(_pool, MIN_TICK);
+        emit UniswapV3Lib.UniswapV3PoolLowerTickUpdated(_pool, _MIN_UNISWAP_TICK);
 
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, MIN_TICK);
+        foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, _MIN_UNISWAP_TICK);
 
         _assertReentrancyGuardWrittenToTwice();
 
         ( , tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
-        assertEq(tickBounds.lower, MIN_TICK);
+        assertEq(tickBounds.lower, _MIN_UNISWAP_TICK);
     }
 
     function test_setUniswapV3AddLiquidityUpperTickBound_reentrancy() external {

@@ -179,7 +179,7 @@ library UniswapV3Lib {
     int24 public constant MAX_TICK =  887_272;
 
     /**********************************************************************************************/
-    /*** External interactive functions                                                         ***/
+    /*** Setters                                                                                ***/
     /**********************************************************************************************/
 
     function setPoolMaxTickDelta(
@@ -253,6 +253,10 @@ library UniswapV3Lib {
 
         emit UniswapV3PoolTWAPSecondsAgoUpdated(pool, twapSecondsAgo);
     }
+
+    /**********************************************************************************************/
+    /*** Swap and liquidity management functions                                                ***/
+    /**********************************************************************************************/
 
     function swap(
         address proxy,
@@ -394,7 +398,7 @@ library UniswapV3Lib {
         mapping (address => uint256) storage maxSlippages
     )
         external
-        returns (TokenAmounts memory amounts)
+        returns (TokenAmounts memory collected)
     {
         address token0 = IUniswapV3PoolLike(pool).token0();
         address token1 = IUniswapV3PoolLike(pool).token1();
@@ -413,7 +417,7 @@ library UniswapV3Lib {
 
         _callDecreaseLiquidity(proxy, positionManager, tokenId, liquidity, min, deadline);
 
-        amounts = _callCollect(proxy, positionManager, tokenId);
+        collected = _callCollect(proxy, positionManager, tokenId);
 
         TokenAmounts memory endingBalances = _getBalances(proxy, token0, token1);
 
@@ -431,12 +435,12 @@ library UniswapV3Lib {
             min.amount1
         );
 
-        _decreaseRateLimit(rateLimits, LIMIT_WITHDRAW, token0, pool, amounts.amount0);
-        _decreaseRateLimit(rateLimits, LIMIT_WITHDRAW, token1, pool, amounts.amount1);
+        _decreaseRateLimit(rateLimits, LIMIT_WITHDRAW, token0, pool, collected.amount0);
+        _decreaseRateLimit(rateLimits, LIMIT_WITHDRAW, token1, pool, collected.amount1);
     }
 
     /**********************************************************************************************/
-    /*** Internal interactive functions                                                         ***/
+    /*** Swap helper functions                                                                  ***/
     /**********************************************************************************************/
 
     function _callSwap(
@@ -469,6 +473,178 @@ library UniswapV3Lib {
         });
 
         return abi.decode(IALMProxy(proxy).doCall(router, callData), (uint256));
+    }
+
+    function _getSwapCallData(
+        address proxy,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint24  fee,
+        uint160 sqrtPriceLimitX96
+    ) internal pure returns (bytes memory) {
+        return abi.encodeCall(
+            ISwapRouter.exactInputSingle,
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn           : tokenIn,
+                tokenOut          : tokenOut,
+                fee               : fee,
+                recipient         : proxy,
+                amountIn          : amountIn,
+                amountOutMinimum  : minAmountOut,
+                sqrtPriceLimitX96 : sqrtPriceLimitX96
+            })
+        );
+    }
+
+    function _getPoolData(
+        address pool,
+        address tokenIn,
+        uint24  tickDelta,
+        uint32  twapSecondsAgo
+    )
+        internal
+        view
+        returns (address tokenOut, uint160 sqrtPriceLimitX96, uint24 fee)
+    {
+        address token0 = IUniswapV3PoolLike(pool).token0();
+        address token1 = IUniswapV3PoolLike(pool).token1();
+
+        require(
+            tokenIn == token0 || tokenIn == token1,
+            "UniswapV3Lib/invalid-token-pair"
+        );
+
+        tokenOut = tokenIn == token0 ? token1 : token0;
+
+        // Fetch twap tick
+        ( int24 twapTick, ) = UniswapV3OracleLib.consult(pool, twapSecondsAgo);
+
+        int24 limitTick = (tokenIn == token0)
+            ? _max(twapTick - int24(tickDelta), TickMath.MIN_TICK)
+            : _min(twapTick + int24(tickDelta), TickMath.MAX_TICK);
+
+        sqrtPriceLimitX96 = TickMath.getSqrtRatioAtTick(limitTick);
+
+        fee = IUniswapV3PoolLike(pool).fee();
+    }
+
+    function _max(int24 a, int24 b) internal pure returns (int24) {
+        return a > b ? a : b;
+    }
+
+    function _min(int24 a, int24 b) internal pure returns (int24) {
+        return a < b ? a : b;
+    }
+
+    /**********************************************************************************************/
+    /*** Add liquidity helper functions                                                         ***/
+    /**********************************************************************************************/
+
+    function _validateAddLiquidityParameters(
+        address             pool,
+        Ticks        memory ticks,
+        TokenAmounts memory target,
+        TokenAmounts memory min,
+        mapping (address => uint256)    storage maxSlippages,
+        mapping (address => PoolParams) storage poolParams
+    )
+        internal
+        view
+    {
+        uint256 maxSlippage = maxSlippages[pool];
+
+        require(target.amount0 > 0 || target.amount1 > 0, "UniswapV3Lib/zero-amount");
+        require(maxSlippage != 0,                         "UniswapV3Lib/max-slippage-not-set");
+        require(poolParams[pool].twapSecondsAgo != 0,     "UniswapV3Lib/zero-twap-seconds");
+
+        // Check user input is within governance bounds.
+        require(
+            ticks.lower >= poolParams[pool].addLiquidityTickBounds.lower,
+            "UniswapV3Lib/lower-tick-outside-bounds"
+        );
+
+        require(
+            ticks.upper <= poolParams[pool].addLiquidityTickBounds.upper,
+            "UniswapV3Lib/upper-tick-outside-bounds"
+        );
+
+        (
+            uint256 expectedAmount0,
+            uint256 expectedAmount1
+        ) = _getExpectedAmounts(pool, ticks, target, poolParams[pool].twapSecondsAgo);
+
+        _validateMinAmount(min.amount0, expectedAmount0, maxSlippage);
+        _validateMinAmount(min.amount1, expectedAmount1, maxSlippage);
+    }
+
+    function _getExpectedAmounts(
+        address             pool,
+        Ticks        memory ticks,
+        TokenAmounts memory target,
+        uint32              twapSecondsAgo
+    )
+        internal
+        view
+        returns (uint256 expectedAmount0, uint256 expectedAmount1)
+    {
+        ( int24 twapTick, ) = UniswapV3OracleLib.consult(pool, twapSecondsAgo);
+
+        uint160 sqrtTWAPPriceX96  = TickMath.getSqrtRatioAtTick(twapTick);
+        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(ticks.lower);
+        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(ticks.upper);
+
+        uint128 expectedLiquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtTWAPPriceX96,
+            sqrtRatioLowerX96,
+            sqrtRatioUpperX96,
+            target.amount0,
+            target.amount1
+        );
+
+        if (twapTick <= ticks.lower) {
+            expectedAmount0 = UniswapV3UtilsLib.getAmount0Delta(
+                sqrtRatioLowerX96,
+                sqrtRatioUpperX96,
+                expectedLiquidity,
+                false
+            );
+        } else if (twapTick >= ticks.upper) {
+            expectedAmount1 = UniswapV3UtilsLib.getAmount1Delta(
+                sqrtRatioLowerX96,
+                sqrtRatioUpperX96,
+                expectedLiquidity,
+                false
+            );
+        } else {
+            expectedAmount0 = UniswapV3UtilsLib.getAmount0Delta(
+                sqrtTWAPPriceX96,
+                sqrtRatioUpperX96,
+                expectedLiquidity,
+                false
+            );
+
+            expectedAmount1 = UniswapV3UtilsLib.getAmount1Delta(
+                sqrtRatioLowerX96,
+                sqrtTWAPPriceX96,
+                expectedLiquidity,
+                false
+            );
+        }
+    }
+
+    function _validateMinAmount(uint256 minAmount, uint256 expectedAmount, uint256 maxSlippage)
+        internal
+        pure
+    {
+        if (expectedAmount == 0) {
+            require(minAmount == 0, "UniswapV3Lib/min-amount-below-bound");
+            return;
+        }
+
+        uint256 minAmountThreshold = FullMath.mulDiv(expectedAmount, maxSlippage, 1e18);
+        require(minAmount >= minAmountThreshold, "UniswapV3Lib/min-amount-below-bound");
     }
 
     function _mintLiquidity(
@@ -551,19 +727,13 @@ library UniswapV3Lib {
         );
 
         (
-            , // ignore nonce
-            , // ignore operator
             address token0,
             address token1,
             uint24  fee,
             int24   tickLower,
             int24   tickUpper,
-            , // ignore liquidity
-            , // ignore feeGrowthInside0LastX128
-            , // ignore feeGrowthInside1LastX128
-            , // ignore tokensOwed0
-              // ignore tokensOwed1
-        ) = INonfungiblePositionManager(positionManager).positions(tokenId);
+            // ignore liquidity
+        ) = _getPosition(tokenId, positionManager);
 
         require(
             IUniswapV3PoolLike(pool).token0() == token0 &&
@@ -614,6 +784,55 @@ library UniswapV3Lib {
         ) = abi.decode(result, (uint128, uint256, uint256));
     }
 
+    /**********************************************************************************************/
+    /*** Remove liquidity helper functions                                                      ***/
+    /**********************************************************************************************/
+
+    function _validateRemoveLiquidityParams(
+        address proxy,
+        address pool,
+        address positionManager,
+        uint256 tokenId,
+        address token0,
+        address token1,
+        uint128 liquidity
+    )
+        internal
+        view
+    {
+        (
+            address positionToken0,
+            address positionToken1,
+            uint24  positionFee,
+            , // ignore tickLower
+            , // ignore tickUpper
+            uint128 positionLiquidity
+        ) = _getPosition(tokenId, positionManager);
+
+        require(
+            positionToken0 == token0 &&
+            positionToken1 == token1 &&
+            positionFee == IUniswapV3PoolLike(pool).fee(),
+            "UniswapV3Lib/invalid-pool"
+        );
+
+        require(liquidity != 0 && liquidity <= positionLiquidity, "UniswapV3Lib/liquidity-oob");
+
+        require(
+            INonfungiblePositionManager(positionManager).ownerOf(tokenId) == proxy,
+            "UniswapV3Lib/proxy-does-not-own-token-id"
+        );
+    }
+
+    function _getBalances(address proxy, address token0, address token1)
+        internal
+        view
+        returns (TokenAmounts memory balances)
+    {
+        balances.amount0 = IERC20Like(token0).balanceOf(proxy);
+        balances.amount1 = IERC20Like(token1).balanceOf(proxy);
+    }
+
     function _callDecreaseLiquidity(
         address             proxy,
         address             positionManager,
@@ -659,6 +878,67 @@ library UniswapV3Lib {
         ( amounts.amount0, amounts.amount1 ) = abi.decode(result, (uint256, uint256));
     }
 
+    function _checkSlippage(
+        uint256 maxSlippage,
+        uint256 startingBalance,
+        uint256 endingBalance,
+        uint256 minAmount
+    ) internal pure {
+        require(
+            minAmount >= ((endingBalance - startingBalance) * maxSlippage) / 1e18,
+            "UniswapV3Lib/min-amount-below-bound"
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** General helper functions                                                               ***/
+    /**********************************************************************************************/
+
+    function _getPosition(uint256 tokenId, address positionManager) internal view returns (
+        address token0,
+        address token1,
+        uint24  fee,
+        int24   tickLower,
+        int24   tickUpper,
+        uint128 liquidity
+    ) {
+        bytes memory positionData = abi.encodeCall(INonfungiblePositionManager.positions, tokenId);
+
+        ( bool success, bytes memory result ) = positionManager.staticcall(positionData);
+
+        require(success,              "UniswapV3Lib/positions-call-failed");
+        require(result.length >= 384, "UniswapV3Lib/invalid-positions-return-data");
+
+        assembly {
+            // Pointer to the first return slot (nonce).
+            let data := add(result, 32)
+
+            // --- ABI return layout (each 32 bytes) ---
+            // word 0: nonce
+            // word 1: operator
+            // word 2: token0
+            // word 3: token1
+            // word 4: fee
+            // word 5: tickLower
+            // word 6: tickUpper
+            // word 7: liquidity
+            // -----------------------------------------
+
+            token0    := mload(add(data, 64))   // word 2
+            token1    := mload(add(data, 96))   // word 3
+            fee       := mload(add(data, 128))  // word 4
+            tickLower := mload(add(data, 160))  // word 5
+            tickUpper := mload(add(data, 192))  // word 6
+            liquidity := mload(add(data, 224))  // word 7
+
+            // Sign-extend from int24 to int256 for proper handling.
+            // If bit 23 is set (negative), extend with 1s, otherwise with 0s.
+            // 2 = 24 bits - 1 byte (3 bytes total, 0-indexed = 2).
+            tickLower := signextend(2, tickLower)
+            tickUpper := signextend(2, tickUpper)
+        }
+    }
+
     function _decreaseRateLimit(
         address rateLimits,
         bytes32 key,
@@ -672,241 +952,6 @@ library UniswapV3Lib {
             makeAddressAddressKey(key, token, pool),
             amount
         );
-    }
-
-    /**********************************************************************************************/
-    /*** Internal view/pure functions                                                           ***/
-    /**********************************************************************************************/
-
-    function _checkSlippage(
-        uint256 maxSlippage,
-        uint256 startingBalance,
-        uint256 endingBalance,
-        uint256 minAmount
-    ) internal pure {
-        require(
-            minAmount >= ((endingBalance - startingBalance) * maxSlippage) / 1e18,
-            "UniswapV3Lib/min-amount-below-bound"
-        );
-    }
-
-    function _getBalances(address proxy, address token0, address token1)
-        internal
-        view
-        returns (TokenAmounts memory balances)
-    {
-        balances.amount0 = IERC20Like(token0).balanceOf(proxy);
-        balances.amount1 = IERC20Like(token1).balanceOf(proxy);
-    }
-
-    function _getExpectedAmounts(
-        address             pool,
-        Ticks        memory ticks,
-        TokenAmounts memory target,
-        uint32              twapSecondsAgo
-    )
-        internal
-        view
-        returns (uint256 expectedAmount0, uint256 expectedAmount1)
-    {
-        ( int24 twapTick, ) = UniswapV3OracleLib.consult(pool, twapSecondsAgo);
-
-        uint160 sqrtTWAPPriceX96  = TickMath.getSqrtRatioAtTick(twapTick);
-        uint160 sqrtRatioLowerX96 = TickMath.getSqrtRatioAtTick(ticks.lower);
-        uint160 sqrtRatioUpperX96 = TickMath.getSqrtRatioAtTick(ticks.upper);
-
-        uint128 expectedLiquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtTWAPPriceX96,
-            sqrtRatioLowerX96,
-            sqrtRatioUpperX96,
-            target.amount0,
-            target.amount1
-        );
-
-        if (twapTick <= ticks.lower) {
-            expectedAmount0 = UniswapV3UtilsLib.getAmount0Delta(
-                sqrtRatioLowerX96,
-                sqrtRatioUpperX96,
-                expectedLiquidity,
-                false
-            );
-        } else if (twapTick >= ticks.upper) {
-            expectedAmount1 = UniswapV3UtilsLib.getAmount1Delta(
-                sqrtRatioLowerX96,
-                sqrtRatioUpperX96,
-                expectedLiquidity,
-                false
-            );
-        } else {
-            expectedAmount0 = UniswapV3UtilsLib.getAmount0Delta(
-                sqrtTWAPPriceX96,
-                sqrtRatioUpperX96,
-                expectedLiquidity,
-                false
-            );
-
-            expectedAmount1 = UniswapV3UtilsLib.getAmount1Delta(
-                sqrtRatioLowerX96,
-                sqrtTWAPPriceX96,
-                expectedLiquidity,
-                false
-            );
-        }
-    }
-
-    function _getPoolData(
-        address pool,
-        address tokenIn,
-        uint24  tickDelta,
-        uint32  twapSecondsAgo
-    )
-        internal
-        view
-        returns (address tokenOut, uint160 sqrtPriceLimitX96, uint24 fee)
-    {
-        address token0 = IUniswapV3PoolLike(pool).token0();
-        address token1 = IUniswapV3PoolLike(pool).token1();
-
-        require(
-            tokenIn == token0 || tokenIn == token1,
-            "UniswapV3Lib/invalid-token-pair"
-        );
-
-        tokenOut = tokenIn == token0 ? token1 : token0;
-
-        // Fetch twap tick
-        ( int24 twapTick, ) = UniswapV3OracleLib.consult(pool, twapSecondsAgo);
-
-        int24 limitTick = (tokenIn == token0)
-            ? _max(twapTick - int24(tickDelta), TickMath.MIN_TICK)
-            : _min(twapTick + int24(tickDelta), TickMath.MAX_TICK);
-
-        sqrtPriceLimitX96 = TickMath.getSqrtRatioAtTick(limitTick);
-
-        fee = IUniswapV3PoolLike(pool).fee();
-    }
-
-    function _getSwapCallData(
-        address proxy,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 minAmountOut,
-        uint24  fee,
-        uint160 sqrtPriceLimitX96
-    ) internal pure returns (bytes memory) {
-        return abi.encodeCall(
-            ISwapRouter.exactInputSingle,
-            ISwapRouter.ExactInputSingleParams({
-                tokenIn           : tokenIn,
-                tokenOut          : tokenOut,
-                fee               : fee,
-                recipient         : proxy,
-                amountIn          : amountIn,
-                amountOutMinimum  : minAmountOut,
-                sqrtPriceLimitX96 : sqrtPriceLimitX96
-            })
-        );
-    }
-
-    function _validateAddLiquidityParameters(
-        address             pool,
-        Ticks        memory ticks,
-        TokenAmounts memory target,
-        TokenAmounts memory min,
-        mapping (address => uint256)    storage maxSlippages,
-        mapping (address => PoolParams) storage poolParams
-    )
-        internal
-        view
-    {
-        uint256 maxSlippage = maxSlippages[pool];
-
-        require(target.amount0 > 0 || target.amount1 > 0, "UniswapV3Lib/zero-amount");
-        require(maxSlippage != 0,                         "UniswapV3Lib/max-slippage-not-set");
-        require(poolParams[pool].twapSecondsAgo != 0,     "UniswapV3Lib/zero-twap-seconds");
-
-        // Check user input is within governance bounds.
-        require(
-            ticks.lower >= poolParams[pool].addLiquidityTickBounds.lower,
-            "UniswapV3Lib/lower-tick-outside-bounds"
-        );
-
-        require(
-            ticks.upper <= poolParams[pool].addLiquidityTickBounds.upper,
-            "UniswapV3Lib/upper-tick-outside-bounds"
-        );
-
-        (
-            uint256 expectedAmount0,
-            uint256 expectedAmount1
-        ) =_getExpectedAmounts(pool, ticks, target, poolParams[pool].twapSecondsAgo);
-
-        _validateMinAmount(min.amount0, expectedAmount0, maxSlippage);
-        _validateMinAmount(min.amount1, expectedAmount1, maxSlippage);
-    }
-
-    function _validateMinAmount(uint256 minAmount, uint256 expectedAmount, uint256 maxSlippage)
-        internal
-        pure
-    {
-        if (expectedAmount == 0) {
-            require(minAmount == 0, "UniswapV3Lib/min-amount-below-bound");
-            return;
-        }
-
-        uint256 minAmountThreshold = FullMath.mulDiv(expectedAmount, maxSlippage, 1e18);
-        require(minAmount >= minAmountThreshold, "UniswapV3Lib/min-amount-below-bound");
-    }
-
-    function _validateRemoveLiquidityParams(
-        address proxy,
-        address pool,
-        address positionManager,
-        uint256 tokenId,
-        address token0,
-        address token1,
-        uint128 liquidity
-    )
-        internal
-        view
-    {
-        (
-            , // ignore nonce
-            , // ignore operator
-            address positionToken0,
-            address positionToken1,
-            uint24  positionFee,
-            , // ignore tickLower
-            , // ignore tickUpper
-            uint128 positionLiquidity,
-            , // ignore feeGrowthInside0LastX128
-            , // ignore feeGrowthInside1LastX128
-            , // ignore tokensOwed0
-              // ignore tokensOwed1
-        ) = INonfungiblePositionManager(positionManager).positions(tokenId);
-
-        require(
-            positionToken0 == token0 &&
-            positionToken1 == token1 &&
-            positionFee == IUniswapV3PoolLike(pool).fee(),
-            "UniswapV3Lib/invalid-pool"
-        );
-
-        require(liquidity != 0 && liquidity <= positionLiquidity, "UniswapV3Lib/liquidity-oob");
-
-        require(
-            INonfungiblePositionManager(positionManager).ownerOf(tokenId) == proxy,
-            "UniswapV3Lib/proxy-does-not-own-token-id"
-        );
-    }
-
-    function _min(int24 a, int24 b) internal pure returns (int24) {
-        return a < b ? a : b;
-    }
-
-    function _max(int24 a, int24 b) internal pure returns (int24) {
-        return a > b ? a : b;
     }
 
 }

@@ -1118,8 +1118,6 @@ abstract contract UniswapV3_AddLiquidity_E2ETestBase is UniswapV3_TestBase {
             token1RateLimitKey
         );
 
-        return;
-
         assertGt(liquidity, 0, "liquidity should be greater than 0");
 
         assertApproxEqRel(amount0, amount0Used, .05e18, "amount0Used should be within 5% of amount0");
