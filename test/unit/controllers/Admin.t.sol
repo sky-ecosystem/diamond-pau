@@ -551,7 +551,7 @@ contract MainnetController_Admin_SetUniswapV3SwapRouter_Tests is MainnetControll
 
 contract MainnetController_Admin_SetUniswapV3PoolMaxTickDelta_Tests is MainnetController_Admin_TestBase {
 
-    uint24 internal constant MAX_TICK_DELTA = 887272;
+    uint24 internal constant _MAX_TICK_DELTA = 887_272;
 
     address internal immutable _pool         = makeAddr("pool");
     address internal immutable _unauthorized = makeAddr("unauthorized");
@@ -583,7 +583,7 @@ contract MainnetController_Admin_SetUniswapV3PoolMaxTickDelta_Tests is MainnetCo
 
         vm.prank(admin);
         vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        mainnetController.setUniswapV3PoolMaxTickDelta(_pool, MAX_TICK_DELTA + 1);
+        mainnetController.setUniswapV3PoolMaxTickDelta(_pool, _MAX_TICK_DELTA + 1);
 
         // Can set at boundary
 
@@ -591,11 +591,11 @@ contract MainnetController_Admin_SetUniswapV3PoolMaxTickDelta_Tests is MainnetCo
         mainnetController.setUniswapV3PoolMaxTickDelta(_pool, 1);
 
         vm.prank(admin);
-        mainnetController.setUniswapV3PoolMaxTickDelta(_pool, MAX_TICK_DELTA);
+        mainnetController.setUniswapV3PoolMaxTickDelta(_pool, _MAX_TICK_DELTA);
     }
 
     function test_setUniswapV3PoolMaxTickDelta() external {
-        ( uint24 maxTickDelta,, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( uint24 maxTickDelta, , ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(maxTickDelta, 0);
 
@@ -609,7 +609,7 @@ contract MainnetController_Admin_SetUniswapV3PoolMaxTickDelta_Tests is MainnetCo
 
         _assertReentrancyGuardWrittenToTwice();
 
-        ( maxTickDelta,, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( maxTickDelta, , ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(maxTickDelta, 1000);
     }
@@ -669,7 +669,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, 5000);
 
-        (, UniswapV3Lib.Ticks memory tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , UniswapV3Lib.Ticks memory tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 5000);
@@ -680,7 +680,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityLowerTickBound(_pool, -1000);
 
-        (, tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, -1000);
 
@@ -694,7 +694,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (, tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, MIN_TICK);
     }
@@ -703,7 +703,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityLowerTickBound_Tests is
 
 contract MainnetController_Admin_SetUniswapV3AddLiquidityUpperTickBound_Tests is MainnetController_Admin_TestBase {
 
-    int24 internal constant MAX_UNISWAP_TICK = 887_272;
+    int24 internal constant _MAX_UNISWAP_TICK = 887_272;
 
     address internal immutable _pool         = makeAddr("pool");
     address internal immutable _unauthorized = makeAddr("unauthorized");
@@ -731,21 +731,21 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityUpperTickBound_Tests is
     function test_setUniswapV3AddLiquidityUpperTickBound_outOfBoundsBoundary() external {
         vm.expectRevert("UniswapV3Lib/upper-tick-oob");
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK + 1);
+        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK + 1);
 
         vm.expectRevert("UniswapV3Lib/upper-tick-oob");
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, 0); // Current lower tick is 0
 
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK);
+        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK);
 
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, 1);
     }
 
     function test_setUniswapV3AddLiquidityUpperTickBound() external {
-        (, UniswapV3Lib.Ticks memory tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , UniswapV3Lib.Ticks memory tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 0);
@@ -756,7 +756,7 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityUpperTickBound_Tests is
         vm.prank(admin);
         mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, 1000);
 
-        (, tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 1000);
@@ -764,16 +764,16 @@ contract MainnetController_Admin_SetUniswapV3AddLiquidityUpperTickBound_Tests is
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit UniswapV3Lib.UniswapV3PoolUpperTickUpdated(_pool, MAX_UNISWAP_TICK);
+        emit UniswapV3Lib.UniswapV3PoolUpperTickUpdated(_pool, _MAX_UNISWAP_TICK);
 
         vm.prank(admin);
-        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK);
+        mainnetController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (, tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = mainnetController.uniswapV3PoolParams(_pool);
 
-        assertEq(tickBounds.upper, MAX_UNISWAP_TICK);
+        assertEq(tickBounds.upper, _MAX_UNISWAP_TICK);
     }
 
 }
@@ -813,7 +813,7 @@ contract MainnetController_Admin_SetUniswapV3TWAPSecondsAgo_Tests is MainnetCont
     }
 
     function test_setUniswapV3TWAPSecondsAgo() external {
-        (,, uint32 twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , , uint32 twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 0);
 
@@ -823,7 +823,7 @@ contract MainnetController_Admin_SetUniswapV3TWAPSecondsAgo_Tests is MainnetCont
         vm.prank(admin);
         mainnetController.setUniswapV3TWAPSecondsAgo(_pool, 300);
 
-        (,, twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , , twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 300);
 
@@ -837,7 +837,7 @@ contract MainnetController_Admin_SetUniswapV3TWAPSecondsAgo_Tests is MainnetCont
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (,, twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
+        ( , , twapSecondsAgo ) = mainnetController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 1800);
     }
@@ -949,10 +949,10 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
 
-    uint24 internal constant MAX_TICK_DELTA = 887272;
+    uint24 internal constant _MAX_TICK_DELTA = 887272;
 
     int24 internal constant MIN_TICK         = -887_272;
-    int24 internal constant MAX_UNISWAP_TICK =  887_272;
+    int24 internal constant _MAX_UNISWAP_TICK =  887_272;
 
     address internal immutable _pool            = makeAddr("pool");
     address internal immutable _positionManager = makeAddr("positionManager");
@@ -1304,7 +1304,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         vm.prank(admin);
         vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        foreignController.setUniswapV3PoolMaxTickDelta(_pool, MAX_TICK_DELTA + 1);
+        foreignController.setUniswapV3PoolMaxTickDelta(_pool, _MAX_TICK_DELTA + 1);
 
         // Can set at boundary
 
@@ -1312,11 +1312,11 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         foreignController.setUniswapV3PoolMaxTickDelta(_pool, 1);
 
         vm.prank(admin);
-        foreignController.setUniswapV3PoolMaxTickDelta(_pool, MAX_TICK_DELTA);
+        foreignController.setUniswapV3PoolMaxTickDelta(_pool, _MAX_TICK_DELTA);
     }
 
     function test_setUniswapV3PoolMaxTickDelta() external {
-        ( uint24 maxTickDelta,, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( uint24 maxTickDelta, , ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(maxTickDelta, 0);
 
@@ -1330,7 +1330,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        ( maxTickDelta,, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( maxTickDelta, , ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(maxTickDelta, 1000);
     }
@@ -1381,7 +1381,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, 5000);
 
-        (, UniswapV3Lib.Ticks memory tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , UniswapV3Lib.Ticks memory tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 5000);
@@ -1392,7 +1392,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityLowerTickBound(_pool, -1000);
 
-        (, tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, -1000);
 
@@ -1406,7 +1406,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (, tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, MIN_TICK);
     }
@@ -1434,21 +1434,21 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     function test_setUniswapV3AddLiquidityUpperTickBound_outOfBoundsBoundary() external {
         vm.expectRevert("UniswapV3Lib/upper-tick-oob");
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK + 1);
+        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK + 1);
 
         vm.expectRevert("UniswapV3Lib/upper-tick-oob");
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, 0); // Current lower tick is 0
 
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK);
+        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK);
 
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, 1);
     }
 
     function test_setUniswapV3AddLiquidityUpperTickBound() external {
-        (, UniswapV3Lib.Ticks memory tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , UniswapV3Lib.Ticks memory tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 0);
@@ -1459,7 +1459,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.prank(admin);
         foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, 1000);
 
-        (, tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(tickBounds.lower, 0);
         assertEq(tickBounds.upper, 1000);
@@ -1467,16 +1467,16 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit UniswapV3Lib.UniswapV3PoolUpperTickUpdated(_pool, MAX_UNISWAP_TICK);
+        emit UniswapV3Lib.UniswapV3PoolUpperTickUpdated(_pool, _MAX_UNISWAP_TICK);
 
         vm.prank(admin);
-        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, MAX_UNISWAP_TICK);
+        foreignController.setUniswapV3AddLiquidityUpperTickBound(_pool, _MAX_UNISWAP_TICK);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (, tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , tickBounds, ) = foreignController.uniswapV3PoolParams(_pool);
 
-        assertEq(tickBounds.upper, MAX_UNISWAP_TICK);
+        assertEq(tickBounds.upper, _MAX_UNISWAP_TICK);
     }
 
     function test_setUniswapV3TWAPSecondsAgo_reentrancy() external {
@@ -1509,7 +1509,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     }
 
     function test_setUniswapV3TWAPSecondsAgo() external {
-        (,, uint32 twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , , uint32 twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 0);
 
@@ -1519,7 +1519,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.prank(admin);
         foreignController.setUniswapV3TWAPSecondsAgo(_pool, 300);
 
-        (,, twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , , twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 300);
 
@@ -1533,7 +1533,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        (,, twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
+        ( , , twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 1800);
     }

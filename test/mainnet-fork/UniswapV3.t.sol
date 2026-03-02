@@ -337,7 +337,7 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         vm.stopPrank();
     }
 
-    function test_swapUniswapV3min_minAmountNotMet() public {
+    function test_swapUniswapV3_minAmountNotMet() public {
         uint256 amountIn = 100_000e6;
         _fundProxy(amountIn, 0);
 
@@ -927,7 +927,7 @@ contract MainnetController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         vm.stopPrank();
     }
 
-    function test_addLiquidityUniswapV3min_amount0BelowBound() public {
+    function test_addLiquidityUniswapV3_minAmount0BelowBound() public {
         ( UniswapV3Lib.Ticks memory tick, UniswapV3Lib.TokenAmounts memory desired, ) = _prepareDefaultAddLiquidity();
 
         UniswapV3Lib.TokenAmounts memory min = UniswapV3Lib.TokenAmounts({
@@ -948,7 +948,7 @@ contract MainnetController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         vm.stopPrank();
     }
 
-    function test_addLiquidityUniswapV3min_amount1BelowBound() public {
+    function test_addLiquidityUniswapV3_minAmount1BelowBound() public {
         ( UniswapV3Lib.Ticks memory tick, UniswapV3Lib.TokenAmounts memory desired, ) = _prepareDefaultAddLiquidity();
 
         UniswapV3Lib.TokenAmounts memory min = UniswapV3Lib.TokenAmounts({
@@ -1877,7 +1877,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
         vm.stopPrank();
     }
 
-    function test_removeLiquidityUniswapV3min_amount0BelowBound() public {
+    function test_removeLiquidityUniswapV3_minAmount0BelowBound() public {
         vm.startPrank(relayer);
         vm.expectRevert("UniswapV3Lib/min-amount-below-bound");
         mainnetController.removeLiquidityUniswapV3(
@@ -1890,7 +1890,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
         vm.stopPrank();
     }
 
-    function test_removeLiquidityUniswapV3min_amount1BelowBound() public {
+    function test_removeLiquidityUniswapV3_minAmount1BelowBound() public {
         vm.startPrank(relayer);
         vm.expectRevert("UniswapV3Lib/min-amount-below-bound");
         mainnetController.removeLiquidityUniswapV3(

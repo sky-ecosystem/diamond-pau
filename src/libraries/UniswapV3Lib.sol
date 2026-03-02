@@ -146,9 +146,9 @@ library UniswapV3Lib {
     }
 
     struct PoolParams {
-        uint24  swapMaxTickDelta;
-        Ticks   addLiquidityTickBounds;
-        uint32  twapSecondsAgo;
+        uint24 swapMaxTickDelta;
+        Ticks  addLiquidityTickBounds;
+        uint32 twapSecondsAgo;
     }
 
     /**********************************************************************************************/
@@ -172,7 +172,7 @@ library UniswapV3Lib {
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_UNISWAP_V3_WITHDRAW");
 
     // https://github.com/sky-ecosystem/dss-allocator/blob/dev/src/funnels/uniV3/TickMath.sol#L15
-    uint24 public constant MAX_TICK_DELTA = 887272;
+    uint24 public constant MAX_TICK_DELTA = 887_272;
 
     // https://github.com/uniswap/v4-core/blob/v4.0.0/src/libraries/TickMath.sol#L18-L23
     int24 public constant MIN_TICK = -887_272;
@@ -209,7 +209,8 @@ library UniswapV3Lib {
         require(
             lowerTickBound >= MIN_TICK &&
             lowerTickBound < poolParams[pool].addLiquidityTickBounds.upper,
-            "UniswapV3Lib/lower-tick-oob");
+            "UniswapV3Lib/lower-tick-oob"
+        );
 
         poolParams[pool].addLiquidityTickBounds.lower = lowerTickBound;
 
@@ -226,7 +227,8 @@ library UniswapV3Lib {
         require(
             upperTickBound <= MAX_TICK &&
             upperTickBound > poolParams[pool].addLiquidityTickBounds.lower,
-            "UniswapV3Lib/upper-tick-oob");
+            "UniswapV3Lib/upper-tick-oob"
+        );
 
         poolParams[pool].addLiquidityTickBounds.upper = upperTickBound;
 
@@ -409,9 +411,9 @@ library UniswapV3Lib {
 
         TokenAmounts memory startingBalances = _getBalances(proxy, token0, token1);
 
-        _decreaseLiquidityCall(proxy, positionManager, tokenId, liquidity, min, deadline);
+        _callDecreaseLiquidity(proxy, positionManager, tokenId, liquidity, min, deadline);
 
-        amounts = _collectAll(proxy, positionManager, tokenId);
+        amounts = _callCollect(proxy, positionManager, tokenId);
 
         TokenAmounts memory endingBalances = _getBalances(proxy, token0, token1);
 
@@ -456,7 +458,7 @@ library UniswapV3Lib {
             uint24  fee
         ) = _getPoolData(pool, tokenIn, tickDelta, twapSecondsAgo);
 
-        bytes memory callData = _getSwapCalldata({
+        bytes memory callData = _getSwapCallData({
             proxy             : proxy,
             tokenIn           : tokenIn,
             tokenOut          : tokenOut,
@@ -612,7 +614,7 @@ library UniswapV3Lib {
         ) = abi.decode(result, (uint128, uint256, uint256));
     }
 
-    function _decreaseLiquidityCall(
+    function _callDecreaseLiquidity(
         address             proxy,
         address             positionManager,
         uint256             tokenId,
@@ -637,7 +639,7 @@ library UniswapV3Lib {
         );
     }
 
-    function _collectAll(address proxy, address positionManager, uint256 tokenId)
+    function _callCollect(address proxy, address positionManager, uint256 tokenId)
         internal
         returns (TokenAmounts memory amounts)
     {
@@ -784,7 +786,7 @@ library UniswapV3Lib {
         fee = IUniswapV3PoolLike(pool).fee();
     }
 
-    function _getSwapCalldata(
+    function _getSwapCallData(
         address proxy,
         address tokenIn,
         address tokenOut,

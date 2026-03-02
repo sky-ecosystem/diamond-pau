@@ -325,18 +325,6 @@ contract ForeignController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         );
     }
 
-    function test_setUniswapV3PoolMaxTickDelta_zeroTickDelta() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        foreignController.setUniswapV3PoolMaxTickDelta(_getPool(), 0);
-    }
-
-    function test_setUniswapV3PoolMaxTickDelta_outOfBounds() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        foreignController.setUniswapV3PoolMaxTickDelta(_getPool(), UniswapV3Lib.MAX_TICK_DELTA + 1);
-    }
-
     function test_swapUniswapV3_invalidTokenPair() public {
         vm.startPrank(relayer);
         vm.expectRevert("UniswapV3Lib/invalid-token-pair");
@@ -462,7 +450,6 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
             block.timestamp + 1 hours
         );
     }
-
 
     function test_addLiquidityUniswapV3_zeroAmount() public {
         UniswapV3Lib.Ticks memory tick = _defaultTickRange();
@@ -613,7 +600,6 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         vm.stopPrank();
     }
 
-
     function test_addLiquidityUniswapV3_rateLimitExceeded_token0() public {
         uint256 amount0 = 2_000_000e18;
         uint256 amount1 = 0;
@@ -709,7 +695,6 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         vm.stopPrank();
     }
 
-
     function test_addLiquidityUniswapV3_lowerTickDoesNotMatchPosition() public {
         // Create new default position
         ( UniswapV3Lib.Ticks memory tick, UniswapV3Lib.TokenAmounts memory desired, ) = _prepareDefaultAddLiquidity();
@@ -775,7 +760,6 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         );
         vm.stopPrank();
     }
-
 
     function test_addLiquidityUniswapV3_failsAfterLowerTickBoundChanges() public {
         // Create new default position
@@ -1243,7 +1227,6 @@ contract ForeignController_UniswapV3_AddLiquidity_USDSUSDC_E2ETests is UniswapV3
         );
     }
 
-    // TODO
     function test_e2e_addLiquidityUniswapV3_token0Only(uint256 addAmount) public {
         addAmount = bound(addAmount, 1e18, 100_000e18);
 
@@ -1606,7 +1589,6 @@ contract ForeignController_UniswapV3_RemoveLiquidity_AUSDUSDS_E2ETests is Uniswa
         return usdsAusdPool;
     }
 
-    // TODO
     function test_e2e_addRemoveLiquidityUniswapV3_ausdUsds(uint128 liquidity) public {
         liquidity = uint128(bound(uint256(liquidity), 1000000, uint256(totalLiquidity)));
 
