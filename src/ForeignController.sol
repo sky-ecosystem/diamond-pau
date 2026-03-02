@@ -6,7 +6,9 @@ import { ReentrancyGuard }         from "../lib/openzeppelin-contracts/contracts
 
 import { AaveLib }          from "./libraries/AaveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
+import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
+import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
@@ -45,9 +47,12 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
     bytes32 public constant LIMIT_4626_DEPOSIT        = ERC4626Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_4626_WITHDRAW       = ERC4626Lib.LIMIT_WITHDRAW;
+    bytes32 public constant LIMIT_7540_DEPOSIT        = ERC7540Lib.LIMIT_DEPOSIT;
+    bytes32 public constant LIMIT_7540_REDEEM         = ERC7540Lib.LIMIT_REDEEM;
     bytes32 public constant LIMIT_AAVE_DEPOSIT        = AaveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_AAVE_WITHDRAW       = AaveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_ASSET_TRANSFER      = TransferAssetLib.LIMIT_TRANSFER;
+    bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = CentrifugeLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_PSM_DEPOSIT         = PSM3Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_PSM_WITHDRAW        = PSM3Lib.LIMIT_WITHDRAW;
@@ -77,6 +82,7 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
 
     mapping(uint32 destinationDomain     => bytes32 mintRecipient)      public mintRecipients;
     mapping(uint32 destinationEndpointId => bytes32 layerZeroRecipient) public layerZeroRecipients;
+    mapping(uint16 destinationCentrifugeId => bytes32 recipient)        public centrifugeRecipients;
 
     // ERC4626 exchange rate thresholds (1e36 precision)
     mapping(address token => uint256 maxExchangeRate) public maxExchangeRates;
@@ -162,6 +168,14 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         emit MerklDistributorSet(merklDistributor_);
     }
 
+    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        CentrifugeLib.setCentrifugeRecipient(centrifugeRecipients, centrifugeId, recipient);
+    }
+
     function setUniswapV3SwapRouter(address swapRouter) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit UniswapV3SwapRouterSet(uniswapV3Router = swapRouter);
     }
@@ -170,44 +184,32 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
         emit UniswapV3PositionManagerSet(uniswapV3PositionManager = manager);
     }
 
-    function setUniswapV3PoolMaxTickDelta(
-        address pool,
-        uint24  maxTickDelta
-    )
+    function setUniswapV3PoolMaxTickDelta(address pool, uint24 maxTickDelta)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        UniswapV3Lib.setUniswapV3PoolMaxTickDelta(pool, maxTickDelta, uniswapV3PoolParams);
+        UniswapV3Lib.setPoolMaxTickDelta(pool, maxTickDelta, uniswapV3PoolParams);
     }
 
-    function setUniswapV3AddLiquidityLowerTickBound(
-        address pool,
-        int24   lowerTickBound
-    )
+    function setUniswapV3AddLiquidityLowerTickBound(address pool, int24 lowerTickBound)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        UniswapV3Lib.setUniswapV3AddLiquidityLowerTickBound(pool, lowerTickBound, uniswapV3PoolParams);
+        UniswapV3Lib.setAddLiquidityLowerTickBound(pool, lowerTickBound, uniswapV3PoolParams);
     }
 
-    function setUniswapV3AddLiquidityUpperTickBound(
-        address pool,
-        int24   upperTickBound
-    )
+    function setUniswapV3AddLiquidityUpperTickBound(address pool, int24 upperTickBound)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        UniswapV3Lib.setUniswapV3AddLiquidityUpperTickBound(pool, upperTickBound, uniswapV3PoolParams);
+        UniswapV3Lib.setAddLiquidityUpperTickBound(pool, upperTickBound, uniswapV3PoolParams);
     }
 
-    function setUniswapV3TWAPSecondsAgo(
-        address pool,
-        uint32  twapSecondsAgo
-    )
+    function setUniswapV3TWAPSecondsAgo(address pool, uint32 twapSecondsAgo)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        UniswapV3Lib.setUniswapV3TWAPSecondsAgo(pool, twapSecondsAgo, uniswapV3PoolParams);
+        UniswapV3Lib.setTWAPSecondsAgo(pool, twapSecondsAgo, uniswapV3PoolParams);
     }
 
     /**********************************************************************************************/
@@ -474,6 +476,88 @@ contract ForeignController is ReentrancyGuard, AccessControlEnumerable {
             router       : pendleRouter,
             pyAmountIn   : pyAmountIn,
             minAmountOut : minAmountOut
+        });
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer ERC7540 functions                                                              ***/
+    /**********************************************************************************************/
+
+    function requestDepositERC7540(address token, uint256 amount)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.requestDeposit(address(proxy), address(rateLimits), token, amount);
+    }
+
+    function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {
+        ERC7540Lib.claimDeposit(address(proxy), address(rateLimits), token);
+    }
+
+    function requestRedeemERC7540(address token, uint256 shares)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        ERC7540Lib.requestRedeem(address(proxy), address(rateLimits), token, shares);
+    }
+
+    function claimRedeemERC7540(address token) external nonReentrant onlyRole(RELAYER) {
+        ERC7540Lib.claimRedeem(address(proxy), address(rateLimits), token);
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Centrifuge functions                                                           ***/
+    /**********************************************************************************************/
+
+    // NOTE: These cancellation methods are compatible with ERC-7887
+
+    function cancelCentrifugeDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.cancelDepositRequest(address(proxy), address(rateLimits), token);
+    }
+
+    function claimCentrifugeCancelDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.claimCancelDepositRequest(address(proxy), address(rateLimits), token);
+    }
+
+    function cancelCentrifugeRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.cancelRedeemRequest(address(proxy), address(rateLimits), token);
+    }
+
+    function claimCentrifugeCancelRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.claimCancelRedeemRequest(address(proxy), address(rateLimits), token);
+    }
+
+    function transferSharesCentrifuge(address token, uint128 amount, uint16 centrifugeId)
+        external
+        payable
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CentrifugeLib.transferShares({
+            proxy        : address(proxy),
+            rateLimits   : address(rateLimits),
+            token        : token,
+            centrifugeId : centrifugeId,
+            amount       : amount,
+            recipients   : centrifugeRecipients
         });
     }
 

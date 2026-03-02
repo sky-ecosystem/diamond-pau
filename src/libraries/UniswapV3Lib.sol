@@ -182,7 +182,7 @@ library UniswapV3Lib {
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function setUniswapV3PoolMaxTickDelta(
+    function setPoolMaxTickDelta(
         address pool,
         uint24  maxTickDelta,
         mapping (address => PoolParams) storage poolParams
@@ -199,7 +199,7 @@ library UniswapV3Lib {
         emit UniswapV3PoolMaxTickDeltaSet(pool, maxTickDelta);
     }
 
-    function setUniswapV3AddLiquidityLowerTickBound(
+    function setAddLiquidityLowerTickBound(
         address pool,
         int24   lowerTickBound,
         mapping (address => PoolParams) storage poolParams
@@ -216,7 +216,7 @@ library UniswapV3Lib {
         emit UniswapV3PoolLowerTickUpdated(pool, lowerTickBound);
     }
 
-    function setUniswapV3AddLiquidityUpperTickBound(
+    function setAddLiquidityUpperTickBound(
         address pool,
         int24   upperTickBound,
         mapping (address => PoolParams) storage poolParams
@@ -233,7 +233,7 @@ library UniswapV3Lib {
         emit UniswapV3PoolUpperTickUpdated(pool, upperTickBound);
     }
 
-    function setUniswapV3TWAPSecondsAgo(
+    function setTWAPSecondsAgo(
         address pool,
         uint32  twapSecondsAgo,
         mapping (address => PoolParams) storage poolParams
