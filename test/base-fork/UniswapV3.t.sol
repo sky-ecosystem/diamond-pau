@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { FullMath } from "../../lib/dss-allocator/src/funnels/uniV3/FullMath.sol";
 import { TickMath } from "../../lib/dss-allocator/src/funnels/uniV3/TickMath.sol";
 
@@ -289,59 +291,23 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
 
 }
 
-contract ForeignController_UniswapV3_ConfigFailureTests is UniswapV3_TestBase {
-
-    int24 internal constant MIN_UNISWAP_TICK = -887_272;
-    int24 internal constant MAX_UNISWAP_TICK =  887_272;
-
-    function test_setUniswapV3PoolMaxTickDelta_notAdmin() public {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setUniswapV3PoolMaxTickDelta(_getPool(), 100);
-    }
-
-    function test_setUniswapV3PoolMaxTickDelta_isZero() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        foreignController.setUniswapV3PoolMaxTickDelta(_getPool(), 0);
-    }
-
-    function test_setUniswapV3PoolMaxTickDelta_isTooLarge() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/max-tick-delta-oob");
-        foreignController.setUniswapV3PoolMaxTickDelta(_getPool(), UniswapV3Lib.MAX_TICK_DELTA + 1);
-    }
-
-    function test_setUniswapV3AddLiquidityLowerTickBound_isTooSmall() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/lower-tick-oob");
-        foreignController.setUniswapV3AddLiquidityLowerTickBound(_getPool(), MIN_UNISWAP_TICK - 1);
-    }
-
-    function test_setUniswapv3AddLiquidityLowerTickBound_isTooLarge() public {
-        (, UniswapV3Lib.Ticks memory tickBounds,) = foreignController.uniswapV3PoolParams(_getPool());
-        int24 currentUpper = tickBounds.upper;
-
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/lower-tick-oob");
-        foreignController.setUniswapV3AddLiquidityLowerTickBound(_getPool(), currentUpper);
-    }
-
-    function test_setUniswapV3AddLiquidityUpperTickBound_isTooLarge() public {
-        vm.prank(Base.SPARK_EXECUTOR);
-        vm.expectRevert("UniswapV3Lib/upper-tick-oob");
-        foreignController.setUniswapV3AddLiquidityUpperTickBound(_getPool(), MAX_UNISWAP_TICK + 1);
-    }
-
-}
-
 contract ForeignController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
 
     function _getPool() internal view override returns (address) {
         return usdsUsdcPool;
+    }
+
+    function test_swapUniswapV3_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.swapUniswapV3(
+            _getPool(),
+            address(token0),
+            1,
+            1,
+            100
+        );
     }
 
     function test_swapUniswapV3_notRelayer() public {
@@ -451,6 +417,26 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
             })
         );
         vm.stopPrank();
+    }
+
+    function test_addLiquidityUniswapV3_reentrancy() external {
+        _setControllerEntered();
+
+        (
+            UniswapV3Lib.Ticks        memory tick,
+            UniswapV3Lib.TokenAmounts memory desired,
+            UniswapV3Lib.TokenAmounts memory min
+        ) = _prepareDefaultAddLiquidity();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            tick,
+            desired,
+            min,
+            block.timestamp + 1 hours
+        );
     }
 
     function test_addLiquidityUniswapV3_notRelayer() public {
@@ -1376,6 +1362,23 @@ contract ForeignController_UniswapV3_RemoveLiquidity_FailureTests  is UniswapV3_
                 deadline       : block.timestamp + 1 hours
             })
         );
+        vm.stopPrank();
+    }
+
+    function test_removeLiquidityUniswapV3_reentrancy() public {
+        _setControllerEntered();
+
+        vm.startPrank(relayer);
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.removeLiquidityUniswapV3(
+            _getPool(),
+            tokenId,
+            liquidity,
+            UniswapV3Lib.TokenAmounts({ amount0: 0, amount1: 0 }),
+            block.timestamp + 1 hours
+        );
+
         vm.stopPrank();
     }
 
