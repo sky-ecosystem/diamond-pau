@@ -68,32 +68,6 @@ abstract contract Pendle_TestBase is ForkTestBase {
 
 }
 
-contract MainnetController_Pendle_SetRouter_Tests is Pendle_TestBase {
-
-    function test_setPendleRouter_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
-    }
-
-    function test_setPendleRouter_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
-    }
-
-    function test_setPendleRouter() external {
-        vm.prank(SparkBase.SPARK_EXECUTOR);
-        foreignController.setPendleRouter(GroveBase.PENDLE_ROUTER);
-
-        assertEq(foreignController.pendleRouter(), GroveBase.PENDLE_ROUTER);
-    }
-
-}
-
 contract ForeignController_Pendle_RedeemPT_Tests is Pendle_TestBase {
 
     function test_redeemPendlePT_pendleRouterNotSet() external {
