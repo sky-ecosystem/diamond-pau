@@ -188,6 +188,8 @@ contract MainnetController_Pendle_RedeemPT_Tests is Pendle_TestBase {
         ( address sy, address pt, address yt ) = MARKET.readTokens();
         IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
+        deal(address(yieldToken), almProxy, 0);
+
         vm.prank(ptDonor);
         IERC20Like(pt).transfer(almProxy, 1_000_000e18);
 
