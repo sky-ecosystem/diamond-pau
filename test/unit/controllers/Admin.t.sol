@@ -256,6 +256,49 @@ contract MainnetController_Admin_SetMaxSlippage_Tests is MainnetController_Admin
 
 }
 
+contract MainnetController_Admin_SetPendleRouter_Tests is MainnetController_Admin_TestBase {
+
+    address internal immutable _pendleRouter = makeAddr("pendleRouter");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+
+    function test_setPendleRouter_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setPendleRouter(_pendleRouter);
+    }
+
+    function test_setPendleRouter_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setPendleRouter(_pendleRouter);
+    }
+
+    function test_setPendleRouter() external {
+        assertEq(mainnetController.pendleRouter(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.PendleRouterSet(_pendleRouter);
+
+        vm.prank(admin);
+        mainnetController.setPendleRouter(_pendleRouter);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.pendleRouter(), _pendleRouter);
+    }
+
+}
+
 contract MainnetController_Admin_SetOTCBuffer_Tests is MainnetController_Admin_TestBase {
 
     address internal exchange  = makeAddr("exchange");
@@ -937,11 +980,12 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     int24 internal constant _MIN_UNISWAP_TICK = -887_272;
     int24 internal constant _MAX_UNISWAP_TICK =  887_272;
 
+    address internal immutable _merklDistributor = makeAddr("merklDistributor");
+    address internal immutable _pendleRouter     = makeAddr("pendleRouter");
     address internal immutable _pool             = makeAddr("pool");
     address internal immutable _positionManager  = makeAddr("positionManager");
     address internal immutable _swapRouter       = makeAddr("swapRouter");
     address internal immutable _unauthorized     = makeAddr("unauthorized");
-    address internal immutable _merklDistributor = makeAddr("merklDistributor");
 
     ForeignController internal foreignController;
 
@@ -1213,6 +1257,42 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         foreignController.setMaxExchangeRate(token, 1e6, 1e18);
 
         assertEq(foreignController.maxExchangeRates(token), 1e48);
+    }
+
+    function test_setPendleRouter_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setPendleRouter(_pendleRouter);
+    }
+
+    function test_setPendleRouter_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setPendleRouter(_pendleRouter);
+    }
+
+    function test_setPendleRouter() external {
+        assertEq(foreignController.pendleRouter(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ForeignController.PendleRouterSet(_pendleRouter);
+
+        vm.prank(admin);
+        foreignController.setPendleRouter(_pendleRouter);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.pendleRouter(), _pendleRouter);
     }
 
     function test_setUniswapV3PositionManager_reentrancy() external {
