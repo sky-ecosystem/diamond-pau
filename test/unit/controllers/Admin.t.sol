@@ -301,81 +301,92 @@ contract MainnetController_Admin_SetPendleRouter_Tests is MainnetController_Admi
 
 contract MainnetController_Admin_SetOTCBuffer_Tests is MainnetController_Admin_TestBase {
 
-    address internal exchange  = makeAddr("exchange");
-    address internal otcBuffer = makeAddr("otcBuffer");
+    address internal immutable _exchange     = makeAddr("exchange");
+    address internal immutable _otcBuffer    = makeAddr("otcBuffer");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
 
     function test_setOTCBuffer_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setOTCBuffer(exchange, address(otcBuffer));
+        mainnetController.setOTCBuffer(_exchange, _otcBuffer);
     }
 
     function test_setOTCBuffer_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setOTCBuffer(exchange, address(otcBuffer));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setOTCBuffer(_exchange, _otcBuffer);
     }
 
     function test_setOTCBuffer_exchangeZero() external {
         vm.expectRevert("OTCLib/exchange-zero-address");
         vm.prank(admin);
-        mainnetController.setOTCBuffer(address(0), address(otcBuffer));
+        mainnetController.setOTCBuffer(address(0), _otcBuffer);
     }
 
     function test_setOTCBuffer_otcBufferZero() external {
         vm.expectRevert("OTCLib/otcBuffer-zero-address");
         vm.prank(admin);
-        mainnetController.setOTCBuffer(exchange, address(0));
+        mainnetController.setOTCBuffer(_exchange, address(0));
     }
 
     function test_setOTCBuffer_exchangeEqualsOTCBuffer() external {
         vm.expectRevert("OTCLib/exchange-equals-otcBuffer");
         vm.prank(admin);
-        mainnetController.setOTCBuffer(address(otcBuffer), address(otcBuffer));
+        mainnetController.setOTCBuffer(_otcBuffer, _otcBuffer);
     }
 
     function test_setOTCBuffer() external {
-        ( address otcBuffer_, , , , ) = mainnetController.otcs(exchange);
+        ( address otcBuffer_, , , , ) = mainnetController.otcs(_exchange);
 
         assertEq(otcBuffer_, address(0));
 
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit OTCLib.OTCBufferSet(exchange, address(otcBuffer));
+        emit OTCLib.OTCBufferSet(_exchange, _otcBuffer);
 
         vm.prank(admin);
-        mainnetController.setOTCBuffer(exchange, address(otcBuffer));
+        mainnetController.setOTCBuffer(_exchange, _otcBuffer);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        ( otcBuffer_, , , , ) = mainnetController.otcs(exchange);
+        ( otcBuffer_, , , , ) = mainnetController.otcs(_exchange);
 
-        assertEq(otcBuffer_, address(otcBuffer));
+        assertEq(otcBuffer_, _otcBuffer);
     }
 
 }
 
 contract MainnetController_Admin_SetOTCRechargeRate_Tests is MainnetController_Admin_TestBase {
 
-    address internal exchange = makeAddr("exchange");
+    address internal immutable _exchange     = makeAddr("exchange");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
 
     function test_setOTCRechargeRate_reentrancy() external {
         _setControllerEntered();
+
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setOTCRechargeRate(exchange, uint256(1_000_000e18) / 1 days);
+        mainnetController.setOTCRechargeRate(_exchange, uint256(1_000_000e18) / 1 days);
     }
 
     function test_setOTCRechargeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setOTCRechargeRate(exchange, uint256(1_000_000e18) / 1 days);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setOTCRechargeRate(_exchange, uint256(1_000_000e18) / 1 days);
     }
 
     function test_setOTCRechargeRate_exchangeZero() external {
@@ -385,20 +396,20 @@ contract MainnetController_Admin_SetOTCRechargeRate_Tests is MainnetController_A
     }
 
     function test_setOTCRechargeRate() external {
-        ( , uint256 rate18, , , ) = mainnetController.otcs(exchange);
+        ( , uint256 rate18, , , ) = mainnetController.otcs(_exchange);
         assertEq(rate18, 0);
 
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit OTCLib.OTCRechargeRateSet(exchange, uint256(1_000_000e18) / 1 days);
+        emit OTCLib.OTCRechargeRateSet(_exchange, uint256(1_000_000e18) / 1 days);
 
         vm.prank(admin);
-        mainnetController.setOTCRechargeRate(exchange, uint256(1_000_000e18) / 1 days);
+        mainnetController.setOTCRechargeRate(_exchange, uint256(1_000_000e18) / 1 days);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        ( , rate18, , , ) = mainnetController.otcs(exchange);
+        ( , rate18, , , ) = mainnetController.otcs(_exchange);
         assertEq(rate18, uint256(1_000_000e18) / 1 days);
     }
 
@@ -406,64 +417,70 @@ contract MainnetController_Admin_SetOTCRechargeRate_Tests is MainnetController_A
 
 contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetController_Admin_TestBase {
 
-    address internal asset    = makeAddr("asset");
-    address internal exchange = makeAddr("exchange");
+    address internal immutable _asset        = makeAddr("asset");
+    address internal immutable _exchange     = makeAddr("exchange");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
 
     function test_setOTCWhitelistedAsset_reentrancy() external {
         _setControllerEntered();
+
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setOTCWhitelistedAsset(exchange, asset, true);
+        mainnetController.setOTCWhitelistedAsset(_exchange, _asset, true);
     }
 
     function test_setOTCWhitelistedAsset_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setOTCWhitelistedAsset(exchange, asset, true);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setOTCWhitelistedAsset(_exchange, _asset, true);
     }
 
     function test_setOTCWhitelistedAsset_exchangeZero() external {
         vm.expectRevert("OTCLib/exchange-zero-address");
         vm.prank(admin);
-        mainnetController.setOTCWhitelistedAsset(address(0), asset, true);
+        mainnetController.setOTCWhitelistedAsset(address(0), _asset, true);
     }
 
     function test_setOTCWhitelistedAsset_assetZero() external {
         vm.expectRevert("OTCLib/asset-zero-address");
         vm.prank(admin);
-        mainnetController.setOTCWhitelistedAsset(exchange, address(0), true);
+        mainnetController.setOTCWhitelistedAsset(_exchange, address(0), true);
     }
 
     function test_setOTCWhitelistedAsset_otcBufferNotSet() external {
         vm.expectRevert("OTCLib/otc-buffer-not-set");
         vm.prank(admin);
-        mainnetController.setOTCWhitelistedAsset(makeAddr("fake-exchange"), asset, true);
+        mainnetController.setOTCWhitelistedAsset(makeAddr("fake-exchange"), _asset, true);
     }
 
     function test_setOTCWhitelistedAsset() external {
         vm.startPrank(admin);
 
-        mainnetController.setOTCBuffer(exchange, asset);
+        mainnetController.setOTCBuffer(_exchange, _asset);
 
         vm.expectEmit(address(mainnetController));
-        emit OTCLib.OTCWhitelistedAssetSet(exchange, asset, true);
+        emit OTCLib.OTCWhitelistedAssetSet(_exchange, _asset, true);
 
-        mainnetController.setOTCWhitelistedAsset(exchange, asset, true);
+        mainnetController.setOTCWhitelistedAsset(_exchange, _asset, true);
 
-        assertEq(mainnetController.otcWhitelistedAssets(exchange, asset), true);
+        assertEq(mainnetController.otcWhitelistedAssets(_exchange, _asset), true);
 
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit OTCLib.OTCWhitelistedAssetSet(exchange, asset, false);
+        emit OTCLib.OTCWhitelistedAssetSet(_exchange, _asset, false);
 
-        mainnetController.setOTCWhitelistedAsset(exchange, asset, false);
+        mainnetController.setOTCWhitelistedAsset(_exchange, _asset, false);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(mainnetController.otcWhitelistedAssets(exchange, asset), false);
+        assertEq(mainnetController.otcWhitelistedAssets(_exchange, _asset), false);
 
         vm.stopPrank();
     }
