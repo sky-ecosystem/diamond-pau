@@ -1232,6 +1232,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     address internal immutable _pendleRouter       = makeAddr("pendleRouter");
     address internal immutable _pool               = makeAddr("pool");
     address internal immutable _positionManager    = makeAddr("positionManager");
+    address internal immutable _psm3               = makeAddr("psm3");
     address internal immutable _token              = makeAddr("token");
     address internal immutable _swapRouter         = makeAddr("swapRouter");
     address internal immutable _unauthorized       = makeAddr("unauthorized");
@@ -1925,6 +1926,42 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         ( , , twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 1800);
+    }
+    
+    function test_setPSM3_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setPSM3(_psm3);
+    }
+
+    function test_setPSM3_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setPSM3(_psm3);
+    }
+
+    function test_setPSM3() external {
+        assertEq(foreignController.psm3(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ForeignController.PSM3Set(_psm3);
+
+        vm.prank(admin);
+        foreignController.setPSM3(_psm3);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.psm3(), _psm3);
     }
 
     function test_setCCTPTokenMessenger_reentrancy() external {
