@@ -1037,6 +1037,49 @@ contract MainnetController_Admin_SetUSDSVault_Tests is MainnetController_Admin_T
 
 }
 
+contract MainnetController_Admin_SetEthenaMinter is MainnetController_Admin_TestBase {
+
+    address internal immutable _ethenaMinter = makeAddr("ethenaMinter");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+
+    function test_setEthenaMinter_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setEthenaMinter(_ethenaMinter);
+    }
+
+    function test_setEthenaMinter_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setEthenaMinter(_ethenaMinter);
+    }
+
+    function test_setEthenaMinter() external {
+        assertEq(mainnetController.ethenaMinter(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.EthenaMinterSet(_ethenaMinter);
+
+        vm.prank(admin);
+        mainnetController.setEthenaMinter(_ethenaMinter);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.ethenaMinter(), _ethenaMinter);
+    }
+
+}
+
 contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
