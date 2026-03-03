@@ -489,19 +489,27 @@ contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetControll
 
 contract MainnetController_Admin_SetMaxExchangeRate_Tests is MainnetController_Admin_TestBase {
 
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+    address internal immutable _token        = makeAddr("token");
+
     function test_setMaxExchangeRate_reentrancy() external {
         _setControllerEntered();
+
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        mainnetController.setMaxExchangeRate(_token, 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setMaxExchangeRate(_token, 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_tokenZeroAddress() external {
@@ -511,37 +519,35 @@ contract MainnetController_Admin_SetMaxExchangeRate_Tests is MainnetController_A
     }
 
     function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(mainnetController.maxExchangeRates(token), 0);
+        assertEq(mainnetController.maxExchangeRates(_token), 0);
 
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e36);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e36);
 
         vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e18);
+        mainnetController.setMaxExchangeRate(_token, 1e18, 1e18);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(mainnetController.maxExchangeRates(token), 1e36);
+        assertEq(mainnetController.maxExchangeRates(_token), 1e36);
 
         vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e24);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e24);
 
         vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e6);
+        mainnetController.setMaxExchangeRate(_token, 1e18, 1e6);
 
-        assertEq(mainnetController.maxExchangeRates(token), 1e24);
+        assertEq(mainnetController.maxExchangeRates(_token), 1e24);
 
         vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e48);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e48);
 
         vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e6, 1e18);
+        mainnetController.setMaxExchangeRate(_token, 1e6, 1e18);
 
-        assertEq(mainnetController.maxExchangeRates(token), 1e48);
+        assertEq(mainnetController.maxExchangeRates(_token), 1e48);
     }
 
 }
@@ -1001,6 +1007,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     address internal immutable _pendleRouter     = makeAddr("pendleRouter");
     address internal immutable _pool             = makeAddr("pool");
     address internal immutable _positionManager  = makeAddr("positionManager");
+    address internal immutable _token            = makeAddr("token");
     address internal immutable _swapRouter       = makeAddr("swapRouter");
     address internal immutable _unauthorized     = makeAddr("unauthorized");
 
@@ -1223,17 +1230,22 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
     function test_setMaxExchangeRate_reentrancy() external {
         _setControllerEntered();
+
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        foreignController.setMaxExchangeRate(_token, 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setMaxExchangeRate(_token, 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_tokenZeroAddress() external {
@@ -1243,37 +1255,35 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     }
 
     function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(foreignController.maxExchangeRates(token), 0);
+        assertEq(foreignController.maxExchangeRates(_token), 0);
 
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e36);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e36);
 
         vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e18);
+        foreignController.setMaxExchangeRate(_token, 1e18, 1e18);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(foreignController.maxExchangeRates(token), 1e36);
+        assertEq(foreignController.maxExchangeRates(_token), 1e36);
 
         vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e24);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e24);
 
         vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e6);
+        foreignController.setMaxExchangeRate(_token, 1e18, 1e6);
 
-        assertEq(foreignController.maxExchangeRates(token), 1e24);
+        assertEq(foreignController.maxExchangeRates(_token), 1e24);
 
         vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e48);
+        emit ERC4626Lib.MaxExchangeRateSet(_token, 1e48);
 
         vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e6, 1e18);
+        foreignController.setMaxExchangeRate(_token, 1e6, 1e18);
 
-        assertEq(foreignController.maxExchangeRates(token), 1e48);
+        assertEq(foreignController.maxExchangeRates(_token), 1e48);
     }
 
     function test_setPendleRouter_reentrancy() external {
