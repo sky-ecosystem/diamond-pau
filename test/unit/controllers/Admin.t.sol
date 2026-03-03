@@ -4,12 +4,13 @@ pragma solidity ^0.8.21;
 import { IAccessControl }  from "../../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { CCTPLib }      from "../../../src/libraries/CCTPLib.sol";
-import { ERC4626Lib }   from "../../../src/libraries/ERC4626Lib.sol";
-import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
-import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
-import { UniswapV3Lib } from "../../../src/libraries/UniswapV3Lib.sol";
-import { UniswapV4Lib } from "../../../src/libraries/UniswapV4Lib.sol";
+import { CCTPLib }       from "../../../src/libraries/CCTPLib.sol";
+import { CentrifugeLib } from "../../../src/libraries/CentrifugeLib.sol";
+import { ERC4626Lib }    from "../../../src/libraries/ERC4626Lib.sol";
+import { LayerZeroLib }  from "../../../src/libraries/LayerZeroLib.sol";
+import { OTCLib }        from "../../../src/libraries/OTCLib.sol";
+import { UniswapV3Lib }  from "../../../src/libraries/UniswapV3Lib.sol";
+import { UniswapV4Lib }  from "../../../src/libraries/UniswapV4Lib.sol";
 
 import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
@@ -17,11 +18,6 @@ import { MainnetController } from "../../../src/MainnetController.sol";
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 abstract contract MainnetController_Admin_TestBase is UnitTestBase {
-
-    bytes32 internal layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
-    bytes32 internal layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
-    bytes32 internal mintRecipient1      = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
-    bytes32 internal mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
     MainnetController internal mainnetController;
 
@@ -41,26 +37,27 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
 contract MainnetController_Admin_SetMintRecipient_Tests is MainnetController_Admin_TestBase {
 
+    bytes32 internal immutable mintRecipient1 = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
+    bytes32 internal immutable mintRecipient2 = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
+    address internal immutable _unauthorized  = makeAddr("unauthorized");
+
     function test_setMintRecipient_reentrancy() external {
         _setControllerEntered();
+
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         mainnetController.setMintRecipient(1, mintRecipient1);
     }
 
     function test_setMintRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setMintRecipient(1, mintRecipient1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
 
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            freezer,
-            DEFAULT_ADMIN_ROLE
-        ));
-        vm.prank(freezer);
+        vm.prank(_unauthorized);
         mainnetController.setMintRecipient(1, mintRecipient1);
     }
 
@@ -101,6 +98,10 @@ contract MainnetController_Admin_SetMintRecipient_Tests is MainnetController_Adm
 
 contract MainnetController_Admin_SetLayerZeroRecipient_Tests is MainnetController_Admin_TestBase {
 
+    bytes32 internal immutable layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
+    bytes32 internal immutable layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
+    address internal immutable _unauthorized       = makeAddr("unauthorized");
+
     function test_setLayerZeroRecipient_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
@@ -108,20 +109,16 @@ contract MainnetController_Admin_SetLayerZeroRecipient_Tests is MainnetControlle
     }
 
     function test_setLayerZeroRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
 
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            freezer,
-            DEFAULT_ADMIN_ROLE
-        ));
-        vm.prank(freezer);
-        mainnetController.setMintRecipient(1, mintRecipient1);
+        vm.prank(_unauthorized);
+        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
     }
 
     function test_setLayerZeroRecipient() external {
@@ -1166,6 +1163,60 @@ contract MainnetController_Admin_SetCCTPUSDC is MainnetController_Admin_TestBase
 
 }
 
+contract MainnetController_Admin_SetCentrifugeRecipient is MainnetController_Admin_TestBase {
+
+    bytes32 internal immutable centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
+    bytes32 internal immutable centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
+    address internal immutable _unauthorized        = makeAddr("unauthorized");
+
+    function test_setCentrifugeRecipient_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient() external {
+        assertEq(mainnetController.centrifugeRecipients(1), bytes32(0));
+        assertEq(mainnetController.centrifugeRecipients(2), bytes32(0));
+
+        vm.expectEmit(address(mainnetController));
+        emit CentrifugeLib.CentrifugeRecipientSet(1, centrifugeRecipient1);
+
+        vm.prank(admin);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+
+        assertEq(mainnetController.centrifugeRecipients(1), centrifugeRecipient1);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit CentrifugeLib.CentrifugeRecipientSet(2, centrifugeRecipient2);
+
+        vm.prank(admin);
+        mainnetController.setCentrifugeRecipient(2, centrifugeRecipient2);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.centrifugeRecipients(2), centrifugeRecipient2);
+    }
+
+}
+
+
 contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
@@ -1187,10 +1238,12 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
     ForeignController internal foreignController;
 
-    bytes32 internal layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
-    bytes32 internal layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
-    bytes32 internal mintRecipient1      = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
-    bytes32 internal mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
+    bytes32 internal centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
+    bytes32 internal centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
+    bytes32 internal layerZeroRecipient1  = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
+    bytes32 internal layerZeroRecipient2  = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
+    bytes32 internal mintRecipient1       = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
+    bytes32 internal mintRecipient2       = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
     function setUp() public {
         foreignController = new ForeignController(admin, makeAddr("almProxy"), makeAddr("rateLimits"));
@@ -1394,12 +1447,57 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.merklDistributor(), address(0));
 
         vm.expectEmit(address(foreignController));
-        emit MainnetController.MerklDistributorSet(_merklDistributor);
+        emit ForeignController.MerklDistributorSet(_merklDistributor);
 
         vm.prank(admin);
         foreignController.setMerklDistributor(_merklDistributor);
 
         assertEq(foreignController.merklDistributor(), _merklDistributor);
+    }
+
+    function test_setCentrifugeRecipient_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient() external {
+        assertEq(foreignController.centrifugeRecipients(1), bytes32(0));
+        assertEq(foreignController.centrifugeRecipients(2), bytes32(0));
+
+        vm.expectEmit(address(foreignController));
+        emit CentrifugeLib.CentrifugeRecipientSet(1, centrifugeRecipient1);
+
+        vm.prank(admin);
+        foreignController.setCentrifugeRecipient(1, centrifugeRecipient1);
+
+        assertEq(foreignController.centrifugeRecipients(1), centrifugeRecipient1);
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit CentrifugeLib.CentrifugeRecipientSet(2, centrifugeRecipient2);
+
+        vm.prank(admin);
+        foreignController.setCentrifugeRecipient(2, centrifugeRecipient2);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.centrifugeRecipients(2), centrifugeRecipient2);
     }
 
     function test_setMaxExchangeRate_reentrancy() external {
