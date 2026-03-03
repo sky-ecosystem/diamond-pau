@@ -1123,6 +1123,49 @@ contract MainnetController_Admin_SetCCTPTokenMessenger is MainnetController_Admi
 
 }
 
+contract MainnetController_Admin_SetCCTPUSDC is MainnetController_Admin_TestBase {
+
+    address internal immutable _cctpUSDC     = makeAddr("cctpUSDC");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+
+    function test_setCCTPUSDC_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setCCTPUSDC(_cctpUSDC);
+    }
+
+    function test_setCCTPUSDC_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setCCTPUSDC(_cctpUSDC);
+    }
+
+    function test_setCCTPUSDC() external {
+        assertEq(mainnetController.cctpUSDC(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.CCTPUSDCSet(_cctpUSDC);
+
+        vm.prank(admin);
+        mainnetController.setCCTPUSDC(_cctpUSDC);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.cctpUSDC(), _cctpUSDC);
+    }
+
+}
+
 contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
@@ -1133,6 +1176,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     int24 internal constant _MAX_UNISWAP_TICK =  887_272;
     
     address internal immutable _cctpTokenMessenger = makeAddr("cctpTokenMessenger");
+    address internal immutable _cctpUSDC           = makeAddr("cctpUSDC");
     address internal immutable _merklDistributor   = makeAddr("merklDistributor");
     address internal immutable _pendleRouter       = makeAddr("pendleRouter");
     address internal immutable _pool               = makeAddr("pool");
@@ -1819,6 +1863,42 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(foreignController.cctpTokenMessenger(), _cctpTokenMessenger);
+    }
+
+    function test_setCCTPUSDC_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setCCTPUSDC(_cctpUSDC);
+    }
+
+    function test_setCCTPUSDC_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setCCTPUSDC(_cctpUSDC);
+    }
+
+    function test_setCCTPUSDC() external {
+        assertEq(foreignController.cctpUSDC(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ForeignController.CCTPUSDCSet(_cctpUSDC);
+
+        vm.prank(admin);
+        foreignController.setCCTPUSDC(_cctpUSDC);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.cctpUSDC(), _cctpUSDC);
     }
 
 }
