@@ -1080,6 +1080,49 @@ contract MainnetController_Admin_SetEthenaMinter is MainnetController_Admin_Test
 
 }
 
+contract MainnetController_Admin_SetCCTPTokenMessenger is MainnetController_Admin_TestBase {
+
+    address internal immutable _cctpTokenMessenger = makeAddr("cctpTokenMessenger");
+    address internal immutable _unauthorized       = makeAddr("unauthorized");
+
+    function test_setCCTPTokenMessenger_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setCCTPTokenMessenger(_cctpTokenMessenger);
+    }
+
+    function test_setCCTPTokenMessenger_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setCCTPTokenMessenger(_cctpTokenMessenger);
+    }
+
+    function test_setCCTPTokenMessenger() external {
+        assertEq(mainnetController.cctpTokenMessenger(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.CCTPTokenMessengerSet(_cctpTokenMessenger);
+
+        vm.prank(admin);
+        mainnetController.setCCTPTokenMessenger(_cctpTokenMessenger);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.cctpTokenMessenger(), _cctpTokenMessenger);
+    }
+
+}
+
 contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
@@ -1088,14 +1131,15 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
     int24 internal constant _MIN_UNISWAP_TICK = -887_272;
     int24 internal constant _MAX_UNISWAP_TICK =  887_272;
-
-    address internal immutable _merklDistributor = makeAddr("merklDistributor");
-    address internal immutable _pendleRouter     = makeAddr("pendleRouter");
-    address internal immutable _pool             = makeAddr("pool");
-    address internal immutable _positionManager  = makeAddr("positionManager");
-    address internal immutable _token            = makeAddr("token");
-    address internal immutable _swapRouter       = makeAddr("swapRouter");
-    address internal immutable _unauthorized     = makeAddr("unauthorized");
+    
+    address internal immutable _cctpTokenMessenger = makeAddr("cctpTokenMessenger");
+    address internal immutable _merklDistributor   = makeAddr("merklDistributor");
+    address internal immutable _pendleRouter       = makeAddr("pendleRouter");
+    address internal immutable _pool               = makeAddr("pool");
+    address internal immutable _positionManager    = makeAddr("positionManager");
+    address internal immutable _token              = makeAddr("token");
+    address internal immutable _swapRouter         = makeAddr("swapRouter");
+    address internal immutable _unauthorized       = makeAddr("unauthorized");
 
     ForeignController internal foreignController;
 
@@ -1739,6 +1783,42 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         ( , , twapSecondsAgo ) = foreignController.uniswapV3PoolParams(_pool);
 
         assertEq(twapSecondsAgo, 1800);
+    }
+
+    function test_setCCTPTokenMessenger_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setCCTPTokenMessenger(_cctpTokenMessenger);
+    }
+
+    function test_setCCTPTokenMessenger_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        foreignController.setCCTPTokenMessenger(_cctpTokenMessenger);
+    }
+
+    function test_setCCTPTokenMessenger() external {
+        assertEq(foreignController.cctpTokenMessenger(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ForeignController.CCTPTokenMessengerSet(_cctpTokenMessenger);
+
+        vm.prank(admin);
+        foreignController.setCCTPTokenMessenger(_cctpTokenMessenger);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.cctpTokenMessenger(), _cctpTokenMessenger);
     }
 
 }
