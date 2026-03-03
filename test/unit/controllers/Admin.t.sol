@@ -994,6 +994,49 @@ contract MainnetController_Admin_SetUniswapV4TickLimits_Tests is MainnetControll
 
 }
 
+contract MainnetController_Admin_SetUSDSVault_Tests is MainnetController_Admin_TestBase {
+
+    address internal immutable _usdVault     = makeAddr("usdVault");
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+
+    function test_setUSDSVault_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setUSDSVault(_usdVault);
+    }
+
+    function test_setUSDSVault_unauthorizedAccount() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                _unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(_unauthorized);
+        mainnetController.setUSDSVault(_usdVault);
+    }
+
+    function test_setUSDSVault() external {
+        assertEq(mainnetController.usdsVault(), address(0));
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.USDSVaultSet(_usdVault);
+
+        vm.prank(admin);
+        mainnetController.setUSDSVault(_usdVault);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.usdsVault(), _usdVault);
+    }
+
+}
+
 contract ForeignController_Admin_Tests is UnitTestBase {
 
     event MerklDistributorSet(address indexed merklDistributor);
