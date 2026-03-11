@@ -81,6 +81,7 @@ library CCTPLib {
         uint32  destinationDomain,
         uint256 usdcAmount,
         uint256 maxFee,
+        uint256 cctpMaxFeeCap,
         mapping (uint32 => bytes32) storage mintRecipients
     )
         external
@@ -96,6 +97,8 @@ library CCTPLib {
         bytes32 recipient = mintRecipients[destinationDomain];
 
         require(recipient != 0, "CCTPLib/domain-not-configured");
+
+        require(maxFee <= cctpMaxFeeCap, "CCTPLib/max-fee-exceeds-cap");
 
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
         _approve(usdc, proxy, cctp, usdcAmount);

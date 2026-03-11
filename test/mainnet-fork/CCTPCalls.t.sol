@@ -51,11 +51,24 @@ interface IERC20Like {
 
 }
 
-contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
+contract MainnetController_CCTP_TestBase is ForkTestBase {
+
+    uint256 internal constant CCTP_MAX_FEE_CAP = 100e6;
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setCCTPMaxFeeCap(CCTP_MAX_FEE_CAP);
+    }
 
     function _getBlock() internal override pure returns (uint256) {
         return 23700802; // November 1, 2025
     }
+
+} 
+
+contract MainnetController_CCTP_Transfer_Tests is MainnetController_CCTP_TestBase {
 
     function test_transferUSDCToCCTP_reentrancy() external {
         _setControllerEntered();
@@ -187,13 +200,9 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
 
 }
 
-contract MainnetController_CCTP_Transfer_MaxFee_Tests is ForkTestBase {
+contract MainnetController_CCTP_Transfer_MaxFee_Tests is MainnetController_CCTP_TestBase {
 
     uint256 internal constant MAX_FEE = 10;
-
-    function _getBlock() internal override pure returns (uint256) {
-        return 23700802; // November 1, 2025
-    }
 
     function test_transferUSDCToCCTP_reentrancy() external {
         _setControllerEntered();
@@ -346,21 +355,27 @@ contract MainnetController_CCTP_Transfer_MaxFee_Tests is ForkTestBase {
         );
     }
 
-    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
-        // Configure to pass modifiers
-        vm.startPrank(Ethereum.SPARK_PROXY);
+    function test_transferUSDCToCCTP_maxFeeExceedsCapBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), 1000e6);
 
-        rateLimits.setUnlimitedRateLimitData(
-            makeUint32Key(
-                mainnetController.LIMIT_USDC_TO_DOMAIN(),
-                CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
-            )
+        vm.expectRevert("CCTPLib/max-fee-exceeds-cap");
+    
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(
+            1000e6,
+            CCTP_MAX_FEE_CAP + 1,
+            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(
+            1000e6,
+            CCTP_MAX_FEE_CAP,
+            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE
+        );
+    }
 
-        vm.stopPrank();
-
+    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 1e6);
 
         vm.expectRevert("CCTPLib/incorrect-max-fee");
@@ -395,6 +410,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     IERC20Like internal constant BASE_USDC = IERC20Like(Base.USDC);
 
     address internal constant BASE_CCTP_TOKEN_MESSENGER = Base.CCTP_TOKEN_MESSENGER;
+
+    uint256 internal constant CCTP_MAX_FEE_CAP = 100e6;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -484,6 +501,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), usdcMaxAmount, usdcSlope);
         foreignRateLimits.setRateLimitData(domainKeyEthereum,                      usdcMaxAmount, usdcSlope);
+
+        foreignController.setCCTPMaxFeeCap(CCTP_MAX_FEE_CAP);
 
         vm.stopPrank();
 
@@ -831,21 +850,27 @@ contract ForeignController_CCTP_Transfer_MaxFee_Tests is BaseChain_CCTP_TestBase
         );
     }
 
-    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
-        // Configure to pass modifiers
-        vm.startPrank(Base.SPARK_EXECUTOR);
+    function test_transferUSDCToCCTP_maxFeeExceedsCapBoundary() external {
+        deal(Base.USDC, address(foreignAlmProxy), 1000e6);
 
-        foreignRateLimits.setUnlimitedRateLimitData(
-            makeUint32Key(
-                foreignController.LIMIT_USDC_TO_DOMAIN(),
-                CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-            )
+        vm.expectRevert("CCTPLib/max-fee-exceeds-cap");
+    
+        vm.prank(relayer);
+        foreignController.transferUSDCToCCTP(
+            1000e6,
+            CCTP_MAX_FEE_CAP + 1,
+            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+        vm.prank(relayer);
+        foreignController.transferUSDCToCCTP(
+            1000e6,
+            CCTP_MAX_FEE_CAP,
+            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
+    }
 
-        vm.stopPrank();
-
+    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
         deal(Base.USDC, address(foreignAlmProxy), 1e6);
 
         vm.expectRevert("CCTPLib/incorrect-max-fee");
