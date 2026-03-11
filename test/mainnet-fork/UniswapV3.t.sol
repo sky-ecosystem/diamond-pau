@@ -1861,6 +1861,22 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
         vm.stopPrank();
     }
 
+    function test_removeLiquidityUniswapV3_invalidPosition() public {
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setMaxSlippage(UNISWAP_V3_DAI_USDC_POOL, 1_000_000e18);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("UniswapV3Lib/invalid-pool");
+        mainnetController.removeLiquidityUniswapV3(
+            UNISWAP_V3_DAI_USDC_POOL,
+            tokenId,
+            liquidity,
+            UniswapV3Lib.TokenAmounts({ amount0: defaultMinAmount0, amount1: defaultMinAmount1 }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
     function test_removeLiquidityUniswapV3_rateLimitExceeded_token0() public {
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcRemoveLiquidityKey, 1, 0);
