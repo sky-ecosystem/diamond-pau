@@ -1382,7 +1382,7 @@ contract ForeignController_UniswapV3_RemoveLiquidity_FailureTests  is UniswapV3_
     }
 
     function test_removeLiquidityUniswapV3_maxSlippageNotSet() public {
-        (uint256 tokenId_, uint128 liquidity_, , ) = _mintExternalPosition();
+        ( uint256 tokenId_, uint128 liquidity_, , ) = _mintExternalPosition();
 
         vm.prank(Base.SPARK_EXECUTOR);
         foreignController.setMaxSlippage(_getPool(), 0);

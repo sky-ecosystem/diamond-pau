@@ -1802,7 +1802,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
     }
 
     function test_removeLiquidityUniswapV3_maxSlippageNotSet() public {
-        (uint256 externalTokenId, uint128 externalLiquidity, , ) = _mintExternalPosition();
+        ( uint256 externalTokenId, uint128 externalLiquidity, , ) = _mintExternalPosition();
 
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setMaxSlippage(_getPool(), 0);
