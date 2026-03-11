@@ -108,7 +108,7 @@ library CCTPLib {
             uint256 amount = usdcAmount > burnLimit ? burnLimit : usdcAmount;
 
             // TODO : This check is necessary but its not possible to pass a corret maxFee to satisfy this. 
-            require(maxFee < usdcAmount, "CCTPLib/incorrect-max-fee");
+            require(maxFee < amount, "CCTPLib/incorrect-max-fee");
 
             _initiateTransfer(
                 proxy,

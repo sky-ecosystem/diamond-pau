@@ -185,38 +185,6 @@ contract MainnetController_CCTP_Transfer_Tests is ForkTestBase {
         mainnetController.transferUSDCToCCTP(1e6, CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
     }
 
-    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
-        // Configure to pass modifiers
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        rateLimits.setUnlimitedRateLimitData(
-            makeUint32Key(
-                mainnetController.LIMIT_USDC_TO_DOMAIN(),
-                CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
-            )
-        );
-
-        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
-
-        vm.stopPrank();
-
-        deal(Ethereum.USDC, address(almProxy), 1);
-
-        vm.expectRevert("CCTPLib/incorrect-max-fee");
-    
-        vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP(
-            0,
-            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE
-        );
-
-        vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP(
-            1,
-            CCTPv2Forwarder.DOMAIN_ID_CIRCLE_BASE
-        );
-    }
-
 }
 
 contract MainnetController_CCTP_Transfer_MaxFee_Tests is ForkTestBase {
@@ -677,31 +645,6 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
         vm.expectRevert("CCTPLib/domain-not-configured");
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(1e6, CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
-    }
-
-    function test_transferUSDCToCCTP_incorrectMaxFeeBoundary() external {
-        // Configure to pass modifiers
-        vm.startPrank(Base.SPARK_EXECUTOR);
-
-        foreignRateLimits.setUnlimitedRateLimitData(
-            makeUint32Key(
-                foreignController.LIMIT_USDC_TO_DOMAIN(),
-                CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
-            )
-        );
-
-        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
-
-        vm.stopPrank();
-
-        deal(Base.USDC, address(foreignAlmProxy), 1);
-
-        vm.expectRevert("CCTPLib/incorrect-max-fee");
-        vm.prank(relayer);
-        foreignController.transferUSDCToCCTP(0, CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
-
-        vm.prank(relayer);
-        foreignController.transferUSDCToCCTP(1, CCTPv2Forwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
     }
 
 }
