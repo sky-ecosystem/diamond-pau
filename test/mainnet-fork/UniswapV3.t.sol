@@ -1801,6 +1801,24 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
         );
     }
 
+    function test_removeLiquidityUniswapV3_maxSlippageNotSet() public {
+        (uint256 externalTokenId, uint128 externalLiquidity, , ) = _mintExternalPosition();
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setMaxSlippage(_getPool(), 0);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("UniswapV3Lib/max-slippage-not-set");
+        mainnetController.removeLiquidityUniswapV3(
+            _getPool(),
+            externalTokenId,
+            externalLiquidity,
+            UniswapV3Lib.TokenAmounts({ amount0: defaultMinAmount0, amount1: defaultMinAmount1 }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
     function test_removeLiquidityUniswapV3_proxyDoesNotOwnTokenId() public {
         (uint256 externalTokenId, uint128 externalLiquidity,,) = _mintExternalPosition();
 

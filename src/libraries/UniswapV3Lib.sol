@@ -410,7 +410,8 @@ library UniswapV3Lib {
             tokenId         : tokenId,
             token0          : token0,
             token1          : token1,
-            liquidity       : liquidity
+            liquidity       : liquidity,
+            maxSlippages    : maxSlippages
         });
 
         amounts = _callDecreaseLiquidity(proxy, positionManager, tokenId, liquidity, min, deadline);
@@ -780,11 +781,14 @@ library UniswapV3Lib {
         uint256 tokenId,
         address token0,
         address token1,
-        uint128 liquidity
+        uint128 liquidity,
+        mapping (address => uint256) storage maxSlippages
     )
         internal
         view
     {
+        require(maxSlippages[pool] != 0, "UniswapV3Lib/max-slippage-not-set");
+
         (
             address positionToken0,
             address positionToken1,
