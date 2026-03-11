@@ -80,6 +80,7 @@ library CCTPLib {
         address usdc,
         uint32  destinationDomain,
         uint256 usdcAmount,
+        uint256 maxFee,
         mapping (uint32 => bytes32) storage mintRecipients
     )
         external
@@ -106,11 +107,15 @@ library CCTPLib {
         while (usdcAmount > 0) {
             uint256 amount = usdcAmount > burnLimit ? burnLimit : usdcAmount;
 
+            // TODO : This check is necessary but its not possible to pass a corret maxFee to satisfy this. 
+            require(maxFee < usdcAmount, "CCTPLib/incorrect-max-fee");
+
             _initiateTransfer(
                 proxy,
                 cctp,
                 usdc,
                 amount,
+                maxFee,
                 recipient,
                 destinationDomain
             );
@@ -133,6 +138,7 @@ library CCTPLib {
         address cctp,
         address usdc,
         uint256 usdcAmount,
+        uint256 maxFee,
         bytes32 mintRecipient,
         uint32  destinationDomain
     )
@@ -148,7 +154,7 @@ library CCTPLib {
                     mintRecipient,
                     usdc,
                     DESTINATION_CALLER,
-                    MAX_FEE,
+                    maxFee,
                     MAX_FINALITY_THRESHOLD
                 )
             )

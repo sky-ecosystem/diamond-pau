@@ -971,6 +971,24 @@ contract MainnetController is ReentrancyGuard, AccessControlEnumerable {
             usdc              : usdc,
             destinationDomain : destinationDomain,
             usdcAmount        : usdcAmount,
+            maxFee            : CCTPLib.MAX_FEE,
+            mintRecipients    : mintRecipients
+        });
+    }
+
+    function transferUSDCToCCTP(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+        external
+        nonReentrant
+        onlyRole(RELAYER)
+    {
+        CCTPLib.transfer({
+            proxy             : address(proxy),
+            rateLimits        : address(rateLimits),
+            cctp              : cctp,
+            usdc              : usdc,
+            destinationDomain : destinationDomain,
+            usdcAmount        : usdcAmount,
+            maxFee            : maxFee,
             mintRecipients    : mintRecipients
         });
     }
