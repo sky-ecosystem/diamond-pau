@@ -107,7 +107,7 @@ library CCTPLib {
         while (usdcAmount > 0) {
             uint256 amount = usdcAmount > burnLimit ? burnLimit : usdcAmount;
 
-            // TODO : This check is necessary but its not possible to pass a corret maxFee to satisfy this. 
+            // NOTE: When amount is split into chunks, the last chunk may be smaller than maxFee causing a revert.
             require(maxFee < amount, "CCTPLib/incorrect-max-fee");
 
             _initiateTransfer(
