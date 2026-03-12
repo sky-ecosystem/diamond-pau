@@ -48,8 +48,6 @@ library CCTPLib {
         uint256         usdcAmount
     );
 
-    event CCTPMaxFeeCapSet(uint256 maxFeeCap);
-
     event MintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
 
     /**********************************************************************************************/
@@ -66,10 +64,6 @@ library CCTPLib {
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
-
-    function setCCTPMaxFeeCap(uint256 storage cctpMaxFeeCap, uint256 maxFeeCap) external {
-        emit CCTPMaxFeeCapSet(cctpMaxFeeCap = maxFeeCap);
-    }
 
     function setMintRecipient(
         mapping (uint32 => bytes32) storage mintRecipients,
