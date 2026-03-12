@@ -15,6 +15,7 @@ contract Controller is IController, ReentrancyGuard {
     struct ControllerStorage {
         address proxy;
         address rateLimits;
+        address accessControlRegistry;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.Controller")) - 1)) & ~bytes32(uint256(0xff))
@@ -31,11 +32,12 @@ contract Controller is IController, ReentrancyGuard {
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address proxy_, address rateLimits_) {
+    constructor(address proxy_, address rateLimits_, address accessControlRegistry_) {
         ControllerStorage storage $ = _getControllerStorage();
 
-        $.proxy      = proxy_;
-        $.rateLimits = rateLimits_;
+        $.proxy                 = proxy_;
+        $.rateLimits            = rateLimits_;
+        $.accessControlRegistry = accessControlRegistry_;
     }
 
 }
