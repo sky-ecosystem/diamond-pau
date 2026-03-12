@@ -66,7 +66,7 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 ### Centrifuge Integration
 
-**Architecture Note:** Cancel/Claim paths will be blocked if `Deposit` ratelimit is set to zero. To circumvent this the ratelimit would be set to 1 so that cancel and claim can be used.
+**Architecture Note:** Cancel/Claim paths will be blocked if deposit rate limit is set to zero. To circumvent this the rate limit would be set to 1 so that cancel and claim can be used.
 
 ---
 
