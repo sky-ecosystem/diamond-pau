@@ -32,6 +32,7 @@ contract MainnetController_RemoveRelayer_Tests is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("accessControlRegistry"),
+            makeAddr("parameterRegistry"),
             address(vault),
             address(psm),
             address(daiUsds),
@@ -117,6 +118,7 @@ contract ForeignController_RemoveRelayer_Tests is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("accessControlRegistry"),
+            makeAddr("parameterRegistry"),
             address(psm3),
             usdc,
             makeAddr("cctp")

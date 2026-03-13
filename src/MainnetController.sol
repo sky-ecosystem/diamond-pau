@@ -170,11 +170,12 @@ contract MainnetController is Controller, AccessControlEnumerable {
         address proxy_,
         address rateLimits_,
         address accessControlRegistry_,
+        address parameterRegistry_,
         address vault_,
         address psm_,
         address daiUsds_,
         address cctp_
-    ) Controller(proxy_, rateLimits_, accessControlRegistry_) {
+    ) Controller(proxy_, rateLimits_, accessControlRegistry_, parameterRegistry_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         proxy      = IALMProxy(proxy_);

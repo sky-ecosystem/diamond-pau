@@ -109,10 +109,11 @@ contract ForeignController is Controller, AccessControlEnumerable {
         address proxy_,
         address rateLimits_,
         address accessControlRegistry_,
+        address parameterRegistry_,
         address psm_,
         address usdc_,
         address cctp_
-    ) Controller(proxy_, rateLimits_, accessControlRegistry_) {
+    ) Controller(proxy_, rateLimits_, accessControlRegistry_, parameterRegistry_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         proxy      = IALMProxy(proxy_);

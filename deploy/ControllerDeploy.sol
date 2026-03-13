@@ -26,6 +26,7 @@ library ForeignControllerDeploy {
             proxy_                 : almProxy,
             rateLimits_            : rateLimits,
             accessControlRegistry_ : address(0),
+            parameterRegistry_     : address(0),
             psm_                   : psm,
             usdc_                  : usdc,
             cctp_                  : cctp
@@ -49,6 +50,7 @@ library ForeignControllerDeploy {
             proxy_                 : instance.almProxy,
             rateLimits_            : instance.rateLimits,
             accessControlRegistry_ : address(0),
+            parameterRegistry_     : address(0),
             psm_                   : psm,
             usdc_                  : usdc,
             cctp_                  : cctp
@@ -76,6 +78,7 @@ library MainnetControllerDeploy {
             proxy_                 : almProxy,
             rateLimits_            : rateLimits,
             accessControlRegistry_ : address(0),
+            parameterRegistry_     : address(0),
             vault_                 : vault,
             psm_                   : psm,
             daiUsds_               : daiUsds,
@@ -101,6 +104,7 @@ library MainnetControllerDeploy {
             proxy_                 : instance.almProxy,
             rateLimits_            : instance.rateLimits,
             accessControlRegistry_ : address(0),
+            parameterRegistry_     : address(0),
             vault_                 : vault,
             psm_                   : psm,
             daiUsds_               : daiUsds,
