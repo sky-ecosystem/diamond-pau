@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-interface IController {}
+interface IController {
+
+    /**********************************************************************************************/
+    /*** Custom Errors                                                                          ***/
+    /**********************************************************************************************/
+
+    /// @notice Thrown when the caller is not an admin.
+    error NotAdmin(address caller);
+
+}
