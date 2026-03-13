@@ -23,6 +23,7 @@ contract MainnetController_Constructor_Tests is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("accessControls"),
+            makeAddr("parameters"),
             address(vault),
             address(psm),
             address(daiUsds),
@@ -61,6 +62,7 @@ contract ForeignController_Constructor_Tests is UnitTestBase {
             almProxy,
             rateLimits,
             makeAddr("accessControls"),
+            makeAddr("parameters"),
             psm,
             usdc,
             cctp
