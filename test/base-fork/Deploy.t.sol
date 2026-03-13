@@ -25,7 +25,7 @@ contract ForeignController_Deploy_SuccessTests is ForkTestBase {
         });
 
         ALMProxy          newAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
-        ForeignController newController = ForeignController(controllerInst.controller);
+        ForeignController newController = ForeignController(payable(controllerInst.controller));
         RateLimits        newRateLimits = RateLimits(controllerInst.rateLimits);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR), true);
@@ -40,14 +40,16 @@ contract ForeignController_Deploy_SuccessTests is ForkTestBase {
     function test_deployController() external {
         // Perform new deployments against existing fork environment
 
-        ForeignController newController = ForeignController(ForeignControllerDeploy.deployController({
-            admin      : Base.SPARK_EXECUTOR,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            psm        : Base.PSM3,
-            usdc       : Base.USDC,
-            cctp       : Base.CCTP_TOKEN_MESSENGER
-        }));
+        ForeignController newController = ForeignController(payable(ForeignControllerDeploy.deployController({
+            admin                 : Base.SPARK_EXECUTOR,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            psm                   : Base.PSM3,
+            usdc                  : Base.USDC,
+            cctp                  : Base.CCTP_TOKEN_MESSENGER
+        })));
 
         _assertControllerInitState(newController, address(almProxy), address(rateLimits));
     }

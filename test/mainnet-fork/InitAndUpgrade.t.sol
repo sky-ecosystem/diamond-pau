@@ -9,9 +9,11 @@ import { ControllerInstance }            from "../../deploy/ControllerInstance.s
 import { MainnetControllerDeploy }       from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit as Init } from "../../deploy/MainnetControllerInit.sol";
 
-import { ALMProxy }          from "../../src/ALMProxy.sol";
-import { MainnetController } from "../../src/MainnetController.sol";
-import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { MainnetController }     from "../../src/MainnetController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -105,13 +107,15 @@ abstract contract InitAndUpgrade_TestBase is ForkTestBase {
         });
 
         checkAddresses = Init.CheckAddressParams({
-            admin      : Ethereum.SPARK_PROXY,
-            proxy      : address(almProxy),
-            rateLimits : address(rateLimits),
-            vault      : address(vault),
-            psm        : Ethereum.PSM,
-            daiUsds    : Ethereum.DAI_USDS,
-            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+            admin                 : Ethereum.SPARK_PROXY,
+            proxy                 : address(almProxy),
+            rateLimits            : address(rateLimits),
+            vault                 : address(vault),
+            psm                   : Ethereum.PSM,
+            daiUsds               : Ethereum.DAI_USDS,
+            cctp                  : Ethereum.CCTP_TOKEN_MESSENGER,
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         mintRecipients = new Init.MintRecipient[](1);
@@ -168,15 +172,17 @@ contract MainnetController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
         //       It also should be noted that the almProxy and rateLimits that are being used in initAlmSystem
         //       are already deployed. This is technically possible to do and works in the same way, it was
         //       done also for make testing easier.
-        mainnetController = MainnetController(MainnetControllerDeploy.deployController({
-            admin      : Ethereum.SPARK_PROXY,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            vault      : address(vault),
-            psm        : Ethereum.PSM,
-            daiUsds    : Ethereum.DAI_USDS,
-            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
-        }));
+        mainnetController = MainnetController(payable(MainnetControllerDeploy.deployController({
+            admin                 : Ethereum.SPARK_PROXY,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            vault                 : address(vault),
+            psm                   : Ethereum.PSM,
+            daiUsds               : Ethereum.DAI_USDS,
+            cctp                  : Ethereum.CCTP_TOKEN_MESSENGER
+        })));
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -186,9 +192,11 @@ contract MainnetController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
         mintRecipients.push(mintRecipients_[0]);
 
         controllerInst = ControllerInstance({
-            almProxy   : address(almProxy),
-            controller : address(mainnetController),
-            rateLimits : address(rateLimits)
+            almProxy              : address(almProxy),
+            controller            : address(mainnetController),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         // Admin will be calling the library from its own address
@@ -403,9 +411,11 @@ contract MainnetController_InitAlmSystem_SuccessTests is InitAndUpgrade_TestBase
         );
 
         // Overwrite storage for all previous deployments in setUp and assert brand new deployment
-        mainnetController = MainnetController(controllerInst.controller);
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
+        mainnetController     = MainnetController(payable(controllerInst.controller));
+        almProxy              = ALMProxy(payable(controllerInst.almProxy));
+        rateLimits            = RateLimits(controllerInst.rateLimits);
+        accessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        parameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -554,20 +564,24 @@ contract MainnetController_UpgradeController_SuccessTests is InitAndUpgrade_Test
         layerZeroRecipients.push(layerZeroRecipients_[0]);
         maxSlippageParams.push(maxSlippageParams_[0]);
 
-        newController = MainnetController(MainnetControllerDeploy.deployController({
-            admin      : Ethereum.SPARK_PROXY,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            vault      : address(vault),
-            psm        : Ethereum.PSM,
-            daiUsds    : Ethereum.DAI_USDS,
-            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
-        }));
+        newController = MainnetController(payable(MainnetControllerDeploy.deployController({
+            admin                 : Ethereum.SPARK_PROXY,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            vault                 : address(vault),
+            psm                   : Ethereum.PSM,
+            daiUsds               : Ethereum.DAI_USDS,
+            cctp                  : Ethereum.CCTP_TOKEN_MESSENGER
+        })));
 
         controllerInst = ControllerInstance({
-            almProxy   : address(almProxy),
-            controller : address(newController),
-            rateLimits : address(rateLimits)
+            almProxy              : address(almProxy),
+            controller            : address(newController),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         configAddresses.oldController = address(mainnetController);  // Revoke from old controller

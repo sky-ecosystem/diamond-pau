@@ -43,13 +43,17 @@ contract DeployMainnetFull is Script {
 
         vm.stopBroadcast();
 
-        console.log("ALMProxy   deployed at", instance.almProxy);
-        console.log("Controller deployed at", instance.controller);
-        console.log("RateLimits deployed at", instance.rateLimits);
+        console.log("ALMProxy              deployed at", instance.almProxy);
+        console.log("Controller            deployed at", instance.controller);
+        console.log("RateLimits            deployed at", instance.rateLimits);
+        console.log("AccessControlRegistry deployed at", instance.accessControlRegistry);
+        console.log("ParameterRegistry     deployed at", instance.parameterRegistry);
 
-        ScriptTools.exportContract(fileSlug, "almProxy",   instance.almProxy);
-        ScriptTools.exportContract(fileSlug, "controller", instance.controller);
-        ScriptTools.exportContract(fileSlug, "rateLimits", instance.rateLimits);
+        ScriptTools.exportContract(fileSlug, "almProxy",              instance.almProxy);
+        ScriptTools.exportContract(fileSlug, "controller",            instance.controller);
+        ScriptTools.exportContract(fileSlug, "rateLimits",            instance.rateLimits);
+        ScriptTools.exportContract(fileSlug, "accessControlRegistry", instance.accessControlRegistry);
+        ScriptTools.exportContract(fileSlug, "parameterRegistry",     instance.parameterRegistry);
     }
 
 }
@@ -78,13 +82,15 @@ contract DeployMainnetController is Script {
             : config.readAddress(".psm");
 
         address controller = MainnetControllerDeploy.deployController({
-            admin      : config.readAddress(".admin"),
-            almProxy   : config.readAddress(".almProxy"),
-            rateLimits : config.readAddress(".rateLimits"),
-            vault      : config.readAddress(".allocatorVault"),
-            psm        : psm,
-            daiUsds    : config.readAddress(".daiUsds"),
-            cctp       : config.readAddress(".cctpTokenMessenger")
+            admin                 : config.readAddress(".admin"),
+            almProxy              : config.readAddress(".almProxy"),
+            rateLimits            : config.readAddress(".rateLimits"),
+            accessControlRegistry : config.readAddress(".accessControlRegistry"),
+            parameterRegistry     : config.readAddress(".parameterRegistry"),
+            vault                 : config.readAddress(".allocatorVault"),
+            psm                   : psm,
+            daiUsds               : config.readAddress(".daiUsds"),
+            cctp                  : config.readAddress(".cctpTokenMessenger")
         });
 
         vm.stopBroadcast();
@@ -124,13 +130,17 @@ contract DeployForeignFull is Script {
 
         vm.stopBroadcast();
 
-        console.log("ALMProxy   deployed at", instance.almProxy);
-        console.log("Controller deployed at", instance.controller);
-        console.log("RateLimits deployed at", instance.rateLimits);
+        console.log("ALMProxy              deployed at", instance.almProxy);
+        console.log("Controller            deployed at", instance.controller);
+        console.log("RateLimits            deployed at", instance.rateLimits);
+        console.log("AccessControlRegistry deployed at", instance.accessControlRegistry);
+        console.log("ParameterRegistry     deployed at", instance.parameterRegistry);
 
-        ScriptTools.exportContract(fileSlug, "almProxy",   instance.almProxy);
-        ScriptTools.exportContract(fileSlug, "controller", instance.controller);
-        ScriptTools.exportContract(fileSlug, "rateLimits", instance.rateLimits);
+        ScriptTools.exportContract(fileSlug, "almProxy",              instance.almProxy);
+        ScriptTools.exportContract(fileSlug, "controller",            instance.controller);
+        ScriptTools.exportContract(fileSlug, "rateLimits",            instance.rateLimits);
+        ScriptTools.exportContract(fileSlug, "accessControlRegistry", instance.accessControlRegistry);
+        ScriptTools.exportContract(fileSlug, "parameterRegistry",     instance.parameterRegistry);
     }
 
 }
@@ -155,12 +165,14 @@ contract DeployForeignController is Script {
         vm.startBroadcast();
 
         address controller = ForeignControllerDeploy.deployController({
-            admin      : config.readAddress(".admin"),
-            almProxy   : config.readAddress(".almProxy"),
-            rateLimits : config.readAddress(".rateLimits"),
-            psm        : config.readAddress(".psm"),
-            usdc       : config.readAddress(".usdc"),
-            cctp       : config.readAddress(".cctpTokenMessenger")
+            admin                 : config.readAddress(".admin"),
+            almProxy              : config.readAddress(".almProxy"),
+            rateLimits            : config.readAddress(".rateLimits"),
+            accessControlRegistry : config.readAddress(".accessControlRegistry"),
+            parameterRegistry     : config.readAddress(".parameterRegistry"),
+            psm                   : config.readAddress(".psm"),
+            usdc                  : config.readAddress(".usdc"),
+            cctp                  : config.readAddress(".cctpTokenMessenger")
         });
 
         vm.stopBroadcast();

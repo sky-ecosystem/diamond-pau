@@ -17,10 +17,12 @@ import { ForeignControllerInit }   from "../../deploy/ForeignControllerInit.sol"
 
 import { CCTPLib } from "../../src/libraries/CCTPLib.sol";
 
-import { ALMProxy }          from "../../src/ALMProxy.sol";
-import { ForeignController } from "../../src/ForeignController.sol";
-import { makeUint32Key }     from "../../src/RateLimitHelpers.sol";
-import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { ForeignController }     from "../../src/ForeignController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { makeUint32Key }         from "../../src/RateLimitHelpers.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -417,9 +419,11 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy          internal foreignAlmProxy;
-    RateLimits        internal foreignRateLimits;
-    ForeignController internal foreignController;
+    AccessControlRegistry internal foreignAccessControlRegistry;
+    ALMProxy              internal foreignAlmProxy;
+    ForeignController     internal foreignController;
+    ParameterRegistry     internal foreignParameterRegistry;
+    RateLimits            internal foreignRateLimits;
 
     /**********************************************************************************************/
     /*** Bridging setup                                                                         ***/
@@ -451,9 +455,11 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             cctp  : BASE_CCTP_TOKEN_MESSENGER
         });
 
-        foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
-        foreignRateLimits = RateLimits(controllerInst.rateLimits);
-        foreignController = ForeignController(controllerInst.controller);
+        foreignAccessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        foreignAlmProxy              = ALMProxy(payable(controllerInst.almProxy));
+        foreignController            = ForeignController(payable(controllerInst.controller));
+        foreignParameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
+        foreignRateLimits            = RateLimits(controllerInst.rateLimits);
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -465,12 +471,14 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         });
 
         ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
-            admin : Base.SPARK_EXECUTOR,
-            psm   : address(0),
-            cctp  : BASE_CCTP_TOKEN_MESSENGER,
-            usdc  : Base.USDC,
-            susds : address(0),
-            usds  : address(0)
+            admin                 : Base.SPARK_EXECUTOR,
+            psm                   : address(0),
+            cctp                  : BASE_CCTP_TOKEN_MESSENGER,
+            usdc                  : Base.USDC,
+            susds                 : address(0),
+            usds                  : address(0),
+            accessControlRegistry : address(foreignAccessControlRegistry),
+            parameterRegistry     : address(foreignParameterRegistry)
         });
 
         ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);

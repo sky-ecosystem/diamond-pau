@@ -26,7 +26,7 @@ contract MainnetController_Deploy_SuccessTests is ForkTestBase {
         });
 
         ALMProxy          newAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
-        MainnetController newController = MainnetController(controllerInst.controller);
+        MainnetController newController = MainnetController(payable(controllerInst.controller));
         RateLimits        newRateLimits = RateLimits(controllerInst.rateLimits);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),   true);
@@ -41,15 +41,17 @@ contract MainnetController_Deploy_SuccessTests is ForkTestBase {
     function test_deployController() external {
         // Perform new deployments against existing fork environment
 
-        MainnetController newController = MainnetController(MainnetControllerDeploy.deployController({
-            admin      : SPARK_PROXY,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            vault      : vault,
-            psm        : Ethereum.PSM,
-            daiUsds    : DAI_USDS,
-            cctp       : CCTP_MESSENGER
-        }));
+        MainnetController newController = MainnetController(payable(MainnetControllerDeploy.deployController({
+            admin                 : SPARK_PROXY,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            vault                 : vault,
+            psm                   : Ethereum.PSM,
+            daiUsds               : DAI_USDS,
+            cctp                  : CCTP_MESSENGER
+        })));
 
         _assertControllerInitState(newController, address(almProxy), address(rateLimits), vault, buffer);
     }

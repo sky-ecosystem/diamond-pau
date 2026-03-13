@@ -263,13 +263,15 @@ contract FullStagingDeploy is Script {
 
         MainnetControllerInit.CheckAddressParams memory checkAddresses
             = MainnetControllerInit.CheckAddressParams({
-                admin      : mainnet.admin,
-                proxy      : mainnetInst.almProxy,
-                rateLimits : mainnetInst.rateLimits,
-                vault      : vault,
-                psm        : psm,
-                daiUsds    : mainnet.input.readAddress(".daiUsds"),
-                cctp       : mainnet.input.readAddress(".cctpTokenMessenger")
+                admin                 : mainnet.admin,
+                proxy                 : mainnetInst.almProxy,
+                rateLimits            : mainnetInst.rateLimits,
+                vault                 : vault,
+                psm                   : psm,
+                daiUsds               : mainnet.input.readAddress(".daiUsds"),
+                cctp                  : mainnet.input.readAddress(".cctpTokenMessenger"),
+                accessControlRegistry : mainnetInst.accessControlRegistry,
+                parameterRegistry     : mainnetInst.parameterRegistry
             });
 
         MainnetControllerInit.MintRecipient[] memory mintRecipients = new MainnetControllerInit.MintRecipient[](0);
@@ -297,11 +299,13 @@ contract FullStagingDeploy is Script {
 
         // Step 6: Export all relevant addresses
 
-        ScriptTools.exportContract(mainnet.output, "freezer",    mainnet.input.readAddress(".freezer"));
-        ScriptTools.exportContract(mainnet.output, "relayer",    mainnet.input.readAddress(".relayer"));
-        ScriptTools.exportContract(mainnet.output, "almProxy",   mainnetInst.almProxy);
-        ScriptTools.exportContract(mainnet.output, "controller", mainnetInst.controller);
-        ScriptTools.exportContract(mainnet.output, "rateLimits", mainnetInst.rateLimits);
+        ScriptTools.exportContract(mainnet.output, "freezer",               mainnet.input.readAddress(".freezer"));
+        ScriptTools.exportContract(mainnet.output, "relayer",               mainnet.input.readAddress(".relayer"));
+        ScriptTools.exportContract(mainnet.output, "almProxy",              mainnetInst.almProxy);
+        ScriptTools.exportContract(mainnet.output, "controller",            mainnetInst.controller);
+        ScriptTools.exportContract(mainnet.output, "rateLimits",            mainnetInst.rateLimits);
+        ScriptTools.exportContract(mainnet.output, "accessControlRegistry", mainnetInst.accessControlRegistry);
+        ScriptTools.exportContract(mainnet.output, "parameterRegistry",     mainnetInst.parameterRegistry);
     }
 
     function _setUpForeignALMController(Domain memory domain) internal returns (ControllerInstance memory controllerInst) {
@@ -329,12 +333,14 @@ contract FullStagingDeploy is Script {
         });
 
         ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
-            admin : domain.admin,
-            psm   : domain.input.readAddress(".psm"),
-            cctp  : domain.input.readAddress(".cctpTokenMessenger"),
-            usdc  : domain.input.readAddress(".usdc"),
-            susds : domain.input.readAddress(".susds"),
-            usds  : domain.input.readAddress(".usds")
+            admin                 : domain.admin,
+            psm                   : domain.input.readAddress(".psm"),
+            cctp                  : domain.input.readAddress(".cctpTokenMessenger"),
+            usdc                  : domain.input.readAddress(".usdc"),
+            susds                 : domain.input.readAddress(".susds"),
+            usds                  : domain.input.readAddress(".usds"),
+            accessControlRegistry : controllerInst.accessControlRegistry,
+            parameterRegistry     : controllerInst.parameterRegistry
         });
 
         ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);
@@ -362,18 +368,20 @@ contract FullStagingDeploy is Script {
 
         // Step 4: Export all relevant addresses
 
-        ScriptTools.exportContract(domain.output, "freezer",    domain.input.readAddress(".freezer"));
-        ScriptTools.exportContract(domain.output, "relayer",    domain.input.readAddress(".relayer"));
-        ScriptTools.exportContract(domain.output, "almProxy",   controllerInst.almProxy);
-        ScriptTools.exportContract(domain.output, "controller", controllerInst.controller);
-        ScriptTools.exportContract(domain.output, "rateLimits", controllerInst.rateLimits);
+        ScriptTools.exportContract(domain.output, "freezer",               domain.input.readAddress(".freezer"));
+        ScriptTools.exportContract(domain.output, "relayer",               domain.input.readAddress(".relayer"));
+        ScriptTools.exportContract(domain.output, "almProxy",              controllerInst.almProxy);
+        ScriptTools.exportContract(domain.output, "controller",            controllerInst.controller);
+        ScriptTools.exportContract(domain.output, "rateLimits",            controllerInst.rateLimits);
+        ScriptTools.exportContract(domain.output, "accessControlRegistry", controllerInst.accessControlRegistry);
+        ScriptTools.exportContract(domain.output, "parameterRegistry",     controllerInst.parameterRegistry);
     }
 
     function _setUpMainnetMintRecipients() internal {
         vm.selectFork(mainnet.forkId);
         vm.startBroadcast();
 
-        MainnetController controller = MainnetController(mainnetInst.controller);
+        MainnetController controller = MainnetController(payable(mainnetInst.controller));
 
         controller.setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
@@ -392,7 +400,7 @@ contract FullStagingDeploy is Script {
     /**********************************************************************************************/
 
     function _setMainnetControllerRateLimits() internal {
-        MainnetController controller = MainnetController(mainnetInst.controller);
+        MainnetController controller = MainnetController(payable(mainnetInst.controller));
 
         IRateLimits rateLimits = IRateLimits(mainnetInst.rateLimits);
 
@@ -440,7 +448,7 @@ contract FullStagingDeploy is Script {
         vm.selectFork(domain.forkId);
         vm.startBroadcast();
 
-        ForeignController foreignController = ForeignController(controllerInst.controller);
+        ForeignController foreignController = ForeignController(payable(controllerInst.controller));
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
@@ -502,8 +510,8 @@ contract FullStagingDeploy is Script {
         vm.startBroadcast();
 
         // NOTE: MainnetController and ForeignController both have the same LIMIT constants for this
-        bytes32 depositKey  = MainnetController(controllerInst.controller).LIMIT_AAVE_DEPOSIT();
-        bytes32 withdrawKey = MainnetController(controllerInst.controller).LIMIT_AAVE_WITHDRAW();
+        bytes32 depositKey  = MainnetController(payable(controllerInst.controller)).LIMIT_AAVE_DEPOSIT();
+        bytes32 withdrawKey = MainnetController(payable(controllerInst.controller)).LIMIT_AAVE_WITHDRAW();
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
@@ -526,8 +534,8 @@ contract FullStagingDeploy is Script {
         vm.startBroadcast();
 
         // NOTE: MainnetController and ForeignController both have the same LIMIT constants for this
-        bytes32 depositKey  = MainnetController(controllerInst.controller).LIMIT_4626_DEPOSIT();
-        bytes32 withdrawKey = MainnetController(controllerInst.controller).LIMIT_4626_WITHDRAW();
+        bytes32 depositKey  = MainnetController(payable(controllerInst.controller)).LIMIT_4626_DEPOSIT();
+        bytes32 withdrawKey = MainnetController(payable(controllerInst.controller)).LIMIT_4626_WITHDRAW();
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 

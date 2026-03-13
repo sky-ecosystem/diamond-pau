@@ -20,10 +20,12 @@ import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { ForeignControllerInit }   from "../../deploy/ForeignControllerInit.sol";
 
-import { ALMProxy }             from "../../src/ALMProxy.sol";
-import { ForeignController }    from "../../src/ForeignController.sol";
-import { makeAddressUint32Key } from "../../src/RateLimitHelpers.sol";
-import { RateLimits }           from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { ForeignController }     from "../../src/ForeignController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { makeAddressUint32Key }  from "../../src/RateLimitHelpers.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -320,9 +322,11 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy          internal foreignAlmProxy;
-    RateLimits        internal foreignRateLimits;
-    ForeignController internal foreignController;
+    AccessControlRegistry internal foreignAccessControlRegistry;
+    ALMProxy              internal foreignAlmProxy;
+    ForeignController     internal foreignController;
+    ParameterRegistry     internal foreignParameterRegistry;
+    RateLimits            internal foreignRateLimits;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -372,9 +376,11 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
             cctp  : CCTP_MESSENGER_ARB
         });
 
-        foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
-        foreignRateLimits = RateLimits(controllerInst.rateLimits);
-        foreignController = ForeignController(controllerInst.controller);
+        foreignAccessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        foreignAlmProxy              = ALMProxy(payable(controllerInst.almProxy));
+        foreignController            = ForeignController(payable(controllerInst.controller));
+        foreignParameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
+        foreignRateLimits            = RateLimits(controllerInst.rateLimits);
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -386,12 +392,14 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
         });
 
         ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
-            admin : SPARK_EXECUTOR,
-            psm   : psmArb,
-            cctp  : CCTP_MESSENGER_ARB,
-            usdc  : Arbitrum.USDC,
-            susds : susdsArb,
-            usds  : usdsArb
+            admin                 : SPARK_EXECUTOR,
+            psm                   : psmArb,
+            cctp                  : CCTP_MESSENGER_ARB,
+            usdc                  : Arbitrum.USDC,
+            susds                 : susdsArb,
+            usds                  : usdsArb,
+            accessControlRegistry : address(foreignAccessControlRegistry),
+            parameterRegistry     : address(foreignParameterRegistry)
         });
 
         ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);

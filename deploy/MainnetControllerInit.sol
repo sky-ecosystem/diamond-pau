@@ -3,8 +3,13 @@ pragma solidity ^0.8.21;
 
 import { MainnetController } from "../src/MainnetController.sol";
 
-import { IALMProxy }   from "../src/interfaces/IALMProxy.sol";
-import { IRateLimits } from "../src/interfaces/IRateLimits.sol";
+import { addressToKeyComponent, combineKeyComponents } from "../src/ParameterKeys.sol";
+import { Parameters }                                  from "../src/Parameters.sol";
+
+import { IAccessControlRegistry } from "../src/interfaces/IAccessControlRegistry.sol";
+import { IALMProxy }              from "../src/interfaces/IALMProxy.sol";
+import { IParameterRegistry }     from "../src/interfaces/IParameterRegistry.sol";
+import { IRateLimits }            from "../src/interfaces/IRateLimits.sol";
 
 import { ControllerInstance } from "./ControllerInstance.sol";
 
@@ -42,6 +47,8 @@ library MainnetControllerInit {
         address psm;
         address daiUsds;
         address cctp;
+        address accessControlRegistry;
+        address parameterRegistry;
     }
 
     struct ConfigAddressParams {
@@ -87,6 +94,9 @@ library MainnetControllerInit {
 
         require(IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin),     "MainnetControllerInit/incorrect-admin-almProxy");
         require(IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
+
+        require(IAccessControlRegistry(controllerInst.accessControlRegistry).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-acr");
+        require(IParameterRegistry(controllerInst.parameterRegistry).isAdmin(checkAddresses.admin),                             "MainnetControllerInit/incorrect-admin-paramReg");
 
         // Step 2: Initialize the controller
 
@@ -144,7 +154,7 @@ library MainnetControllerInit {
     {
         // Step 1: Perform controller sanity checks
 
-        MainnetController newController = MainnetController(controllerInst.controller);
+        MainnetController newController = MainnetController(payable(controllerInst.controller));
 
         require(newController.hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-controller");
 
@@ -155,6 +165,9 @@ library MainnetControllerInit {
         require(address(newController.psm())     == checkAddresses.psm,     "MainnetControllerInit/incorrect-psm");
         require(address(newController.daiUsds()) == checkAddresses.daiUsds, "MainnetControllerInit/incorrect-daiUsds");
         require(address(newController.cctp())    == checkAddresses.cctp,    "MainnetControllerInit/incorrect-cctp");
+
+        require(controllerInst.accessControlRegistry == checkAddresses.accessControlRegistry, "MainnetControllerInit/incorrect-acr");
+        require(controllerInst.parameterRegistry     == checkAddresses.parameterRegistry,     "MainnetControllerInit/incorrect-paramReg");
 
         require(newController.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
 
@@ -173,19 +186,31 @@ library MainnetControllerInit {
             newController.grantRole(newController.RELAYER(), configAddresses.relayers[i]);
         }
 
-        // Step 3: Configure the mint recipients on other domains
+        // Step 3: Make controller an admin on ParameterRegistry (for setFacet)
+
+        IParameterRegistry parameterRegistry = IParameterRegistry(controllerInst.parameterRegistry);
+
+        parameterRegistry.set(
+            combineKeyComponents(
+                parameterRegistry.ADMIN_PARAMETER_KEY_PREFIX(),
+                addressToKeyComponent(controllerInst.controller)
+            ),
+            Parameters.fromBool(true)
+        );
+
+        // Step 4: Configure the mint recipients on other domains
 
         for (uint256 i; i < mintRecipients.length; ++i) {
             newController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
 
-        // Step 4: Configure LayerZero recipients
+        // Step 5: Configure LayerZero recipients
 
         for (uint256 i; i < layerZeroRecipients.length; ++i) {
             newController.setLayerZeroRecipient(layerZeroRecipients[i].destinationEndpointId, layerZeroRecipients[i].recipient);
         }
 
-        // Step 5: Configure max slippage
+        // Step 6: Configure max slippage
 
         for (uint256 i; i < maxSlippageParams.length; ++i) {
             newController.setMaxSlippage(maxSlippageParams[i].pool, maxSlippageParams[i].maxSlippage);

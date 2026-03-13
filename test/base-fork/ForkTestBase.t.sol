@@ -18,10 +18,12 @@ import { ForeignControllerDeploy }       from "../../deploy/ControllerDeploy.sol
 import { ControllerInstance }            from "../../deploy/ControllerInstance.sol";
 import { ForeignControllerInit as Init } from "../../deploy/ForeignControllerInit.sol";
 
-import { ALMProxy }          from "../../src/ALMProxy.sol";
-import { ForeignController } from "../../src/ForeignController.sol";
-import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
-import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { ForeignController }     from "../../src/ForeignController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { RateLimitHelpers }      from "../../src/RateLimitHelpers.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 abstract contract ForkTestBase is Test {
 
@@ -58,9 +60,11 @@ abstract contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy          almProxy;
-    RateLimits        rateLimits;
-    ForeignController foreignController;
+    AccessControlRegistry accessControlRegistry;
+    ALMProxy              almProxy;
+    ForeignController     foreignController;
+    ParameterRegistry     parameterRegistry;
+    RateLimits            rateLimits;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -108,9 +112,11 @@ abstract contract ForkTestBase is Test {
             cctp  : CCTP_MESSENGER_BASE
         });
 
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-        foreignController = ForeignController(controllerInst.controller);
+        accessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        almProxy              = ALMProxy(payable(controllerInst.almProxy));
+        foreignController     = ForeignController(payable(controllerInst.controller));
+        parameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
+        rateLimits            = RateLimits(controllerInst.rateLimits);
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = foreignController.FREEZER();
@@ -128,12 +134,14 @@ abstract contract ForkTestBase is Test {
         });
 
         Init.CheckAddressParams memory checkAddresses = Init.CheckAddressParams({
-            admin : Base.SPARK_EXECUTOR,
-            psm   : address(psmBase),
-            cctp  : Base.CCTP_TOKEN_MESSENGER,
-            usdc  : address(usdcBase),
-            susds : address(susdsBase),
-            usds  : address(usdsBase)
+            admin                 : Base.SPARK_EXECUTOR,
+            psm                   : address(psmBase),
+            cctp                  : Base.CCTP_TOKEN_MESSENGER,
+            usdc                  : address(usdcBase),
+            susds                 : address(susdsBase),
+            usds                  : address(usdsBase),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         Init.MintRecipient[] memory mintRecipients = new Init.MintRecipient[](1);

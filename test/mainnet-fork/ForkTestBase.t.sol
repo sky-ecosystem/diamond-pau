@@ -25,10 +25,12 @@ import { MainnetControllerDeploy }       from "../../deploy/ControllerDeploy.sol
 import { ControllerInstance }            from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerInit as Init } from "../../deploy/MainnetControllerInit.sol";
 
-import { ALMProxy }          from "../../src/ALMProxy.sol";
-import { MainnetController } from "../../src/MainnetController.sol";
-import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
-import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { MainnetController }     from "../../src/MainnetController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { RateLimitHelpers }      from "../../src/RateLimitHelpers.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 interface IChainlogLike {
 
@@ -115,9 +117,11 @@ abstract contract ForkTestBase is DssTest {
     /*** ALM system and allocation system deployments                                           ***/
     /**********************************************************************************************/
 
-    ALMProxy          almProxy;
-    RateLimits        rateLimits;
-    MainnetController mainnetController;
+    AccessControlRegistry accessControlRegistry;
+    ALMProxy              almProxy;
+    MainnetController     mainnetController;
+    ParameterRegistry     parameterRegistry;
+    RateLimits            rateLimits;
 
     address buffer;
     address vault;
@@ -198,9 +202,11 @@ abstract contract ForkTestBase is DssTest {
             cctp    : CCTP_MESSENGER
         });
 
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-        mainnetController = MainnetController(controllerInst.controller);
+        accessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        almProxy              = ALMProxy(payable(controllerInst.almProxy));
+        mainnetController     = MainnetController(payable(controllerInst.controller));
+        parameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
+        rateLimits            = RateLimits(controllerInst.rateLimits);
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = mainnetController.FREEZER();
@@ -218,13 +224,15 @@ abstract contract ForkTestBase is DssTest {
 
         Init.CheckAddressParams memory checkAddresses
             = Init.CheckAddressParams({
-                admin      : Ethereum.SPARK_PROXY,
-                proxy      : address(almProxy),
-                rateLimits : address(rateLimits),
-                vault      : address(vault),
-                psm        : Ethereum.PSM,
-                daiUsds    : Ethereum.DAI_USDS,
-                cctp       : CCTP_MESSENGER
+                admin                 : Ethereum.SPARK_PROXY,
+                proxy                 : address(almProxy),
+                rateLimits            : address(rateLimits),
+                vault                 : address(vault),
+                psm                   : Ethereum.PSM,
+                daiUsds               : Ethereum.DAI_USDS,
+                cctp                  : CCTP_MESSENGER,
+                accessControlRegistry : address(accessControlRegistry),
+                parameterRegistry     : address(parameterRegistry)
             });
 
         Init.LayerZeroRecipient[] memory layerZeroRecipients = new Init.LayerZeroRecipient[](0);

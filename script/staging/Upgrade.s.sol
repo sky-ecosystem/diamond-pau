@@ -19,6 +19,11 @@ import { ControllerInstance }                   from "../../deploy/ControllerIns
 import { ForeignControllerInit as ForeignInit } from "../../deploy/ForeignControllerInit.sol";
 import { MainnetControllerInit as MainnetInit } from "../../deploy/MainnetControllerInit.sol";
 
+import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
+import { Parameters }                                  from "../../src/Parameters.sol";
+
+import { IParameterRegistry } from "../../src/interfaces/IParameterRegistry.sol";
+
 import { ForeignController } from "../../src/ForeignController.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
@@ -53,9 +58,11 @@ contract UpgradeMainnetController is Script {
         string memory inputConfig = ScriptTools.readInput(fileSlug);
 
         ControllerInstance memory controllerInst = ControllerInstance({
-            almProxy   : inputConfig.readAddress(".almProxy"),
-            controller : newController,
-            rateLimits : inputConfig.readAddress(".rateLimits")
+            almProxy              : inputConfig.readAddress(".almProxy"),
+            controller            : newController,
+            rateLimits            : inputConfig.readAddress(".rateLimits"),
+            accessControlRegistry : inputConfig.readAddress(".accessControlRegistry"),
+            parameterRegistry     : inputConfig.readAddress(".parameterRegistry")
         });
 
         address[] memory relayers = new address[](2);
@@ -69,13 +76,15 @@ contract UpgradeMainnetController is Script {
         });
 
         MainnetInit.CheckAddressParams memory checkAddresses = MainnetInit.CheckAddressParams({
-            admin      : inputConfig.readAddress(".admin"),
-            proxy      : inputConfig.readAddress(".almProxy"),
-            rateLimits : inputConfig.readAddress(".rateLimits"),
-            vault      : inputConfig.readAddress(".allocatorVault"),
-            psm        : inputConfig.readAddress(".psmWrapper"),
-            daiUsds    : inputConfig.readAddress(".daiUsds"),
-            cctp       : inputConfig.readAddress(".cctpTokenMessenger")
+            admin                 : inputConfig.readAddress(".admin"),
+            proxy                 : inputConfig.readAddress(".almProxy"),
+            rateLimits            : inputConfig.readAddress(".rateLimits"),
+            vault                 : inputConfig.readAddress(".allocatorVault"),
+            psm                   : inputConfig.readAddress(".psmWrapper"),
+            daiUsds               : inputConfig.readAddress(".daiUsds"),
+            cctp                  : inputConfig.readAddress(".cctpTokenMessenger"),
+            accessControlRegistry : inputConfig.readAddress(".accessControlRegistry"),
+            parameterRegistry     : inputConfig.readAddress(".parameterRegistry")
         });
 
         MainnetInit.MintRecipient[]      memory mintRecipients      = new MainnetInit.MintRecipient[](1);
@@ -107,7 +116,7 @@ contract UpgradeMainnetController is Script {
         });
         maxSlippageParams[4] = MainnetInit.MaxSlippageParams({
             pool        : Ethereum.CURVE_SUSDSUSDT,
-            maxSlippage : MainnetController(oldController).maxSlippages(Ethereum.CURVE_SUSDSUSDT)
+            maxSlippage : MainnetController(payable(oldController)).maxSlippages(Ethereum.CURVE_SUSDSUSDT)
         });
 
         vm.startBroadcast();
@@ -139,7 +148,7 @@ contract UpgradeMainnetController is Script {
     }
 
     function _setMaxExchangeRate(address controller, address vault) internal {
-        MainnetController(controller).setMaxExchangeRate(
+        MainnetController(payable(controller)).setMaxExchangeRate(
             vault,
             1  * 10 ** IERC20(vault).decimals(),
             10 * 10 ** IERC20(IERC4626(vault).asset()).decimals()
@@ -160,7 +169,7 @@ contract UpgradeMainnetController is Script {
     )
         internal
     {
-        MainnetController controller = MainnetController(controller_);
+        MainnetController controller = MainnetController(payable(controller_));
         RateLimits        rateLimits = RateLimits(rateLimits_);
 
         controller.setMaxSlippage(pool, maxSlippage);
@@ -220,9 +229,11 @@ contract UpgradeBaseController is Script {
         string memory inputConfig = ScriptTools.readInput("base-staging");
 
         ControllerInstance memory controllerInst = ControllerInstance({
-            almProxy   : inputConfig.readAddress(".almProxy"),
-            controller : newController,
-            rateLimits : inputConfig.readAddress(".rateLimits")
+            almProxy              : inputConfig.readAddress(".almProxy"),
+            controller            : newController,
+            rateLimits            : inputConfig.readAddress(".rateLimits"),
+            accessControlRegistry : inputConfig.readAddress(".accessControlRegistry"),
+            parameterRegistry     : inputConfig.readAddress(".parameterRegistry")
         });
 
         address[] memory relayers = new address[](2);
@@ -236,12 +247,14 @@ contract UpgradeBaseController is Script {
         });
 
         ForeignInit.CheckAddressParams memory checkAddresses = ForeignInit.CheckAddressParams({
-            admin : inputConfig.readAddress(".admin"),
-            psm   : inputConfig.readAddress(".psm"),
-            cctp  : inputConfig.readAddress(".cctpTokenMessenger"),
-            usdc  : inputConfig.readAddress(".usdc"),
-            susds : inputConfig.readAddress(".susds"),
-            usds  : inputConfig.readAddress(".usds")
+            admin                 : inputConfig.readAddress(".admin"),
+            psm                   : inputConfig.readAddress(".psm"),
+            cctp                  : inputConfig.readAddress(".cctpTokenMessenger"),
+            usdc                  : inputConfig.readAddress(".usdc"),
+            susds                 : inputConfig.readAddress(".susds"),
+            usds                  : inputConfig.readAddress(".usds"),
+            accessControlRegistry : inputConfig.readAddress(".accessControlRegistry"),
+            parameterRegistry     : inputConfig.readAddress(".parameterRegistry")
         });
 
         ForeignInit.MintRecipient[]      memory mintRecipients      = new ForeignInit.MintRecipient[](1);
@@ -264,7 +277,7 @@ contract UpgradeBaseController is Script {
 
         ForeignInit.upgradeController(controllerInst, configAddresses, checkAddresses, mintRecipients, layerZeroRecipients, maxSlippageParams, true);
 
-        ForeignController(newController).setMaxExchangeRate(
+        ForeignController(payable(newController)).setMaxExchangeRate(
             Base.MORPHO_VAULT_SUSDC,
             1  * 10 ** IERC20(Base.MORPHO_VAULT_SUSDC).decimals(),
             10 * 10 ** IERC20(IERC4626(Base.MORPHO_VAULT_SUSDC).asset()).decimals()
@@ -308,9 +321,11 @@ contract TransferAdminRoles is Script {
 
         string memory inputConfig = ScriptTools.readInput(fileSlug);
 
-        IAccessControlLike controller = IAccessControlLike(inputConfig.readAddress(".controller"));
-        IAccessControlLike rateLimits = IAccessControlLike(inputConfig.readAddress(".rateLimits"));
-        IAccessControlLike almProxy   = IAccessControlLike(inputConfig.readAddress(".almProxy"));
+        IAccessControlLike controller            = IAccessControlLike(inputConfig.readAddress(".controller"));
+        IAccessControlLike rateLimits            = IAccessControlLike(inputConfig.readAddress(".rateLimits"));
+        IAccessControlLike almProxy              = IAccessControlLike(inputConfig.readAddress(".almProxy"));
+        IAccessControlLike accessControlRegistry = IAccessControlLike(inputConfig.readAddress(".accessControlRegistry"));
+        IParameterRegistry parameterRegistry     = IParameterRegistry(inputConfig.readAddress(".parameterRegistry"));
 
         address oldAdmin = inputConfig.readAddress(".admin");
         address newAdmin = STAGING_SAFE;
@@ -318,10 +333,22 @@ contract TransferAdminRoles is Script {
         controller.grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         rateLimits.grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         almProxy.grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
+        accessControlRegistry.grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
+
+        parameterRegistry.set(
+            combineKeyComponents(parameterRegistry.ADMIN_PARAMETER_KEY_PREFIX(), addressToKeyComponent(newAdmin)),
+            Parameters.fromBool(true)
+        );
 
         controller.revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
+        accessControlRegistry.revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
+
+        parameterRegistry.set(
+            combineKeyComponents(parameterRegistry.ADMIN_PARAMETER_KEY_PREFIX(), addressToKeyComponent(oldAdmin)),
+            Parameters.fromBool(false)
+        );
 
         vm.stopBroadcast();
 

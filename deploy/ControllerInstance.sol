@@ -5,4 +5,6 @@ struct ControllerInstance {
     address almProxy;
     address controller;
     address rateLimits;
+    address accessControlRegistry;
+    address parameterRegistry;
 }

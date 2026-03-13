@@ -14,9 +14,11 @@ import { ControllerInstance }            from "../../deploy/ControllerInstance.s
 import { ForeignControllerDeploy }       from "../../deploy/ControllerDeploy.sol";
 import { ForeignControllerInit as Init } from "../../deploy/ForeignControllerInit.sol";
 
-import { ALMProxy }          from "../../src/ALMProxy.sol";
-import { ForeignController } from "../../src/ForeignController.sol";
-import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../src/ALMProxy.sol";
+import { ForeignController }     from "../../src/ForeignController.sol";
+import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { RateLimits }            from "../../src/RateLimits.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -77,12 +79,14 @@ abstract contract InitAndUpgrade_TestBase is ForkTestBase {
         });
 
         checkAddresses = Init.CheckAddressParams({
-            admin : Base.SPARK_EXECUTOR,
-            psm   : address(psmBase),
-            cctp  : Base.CCTP_TOKEN_MESSENGER,
-            usdc  : address(usdcBase),
-            susds : address(susdsBase),
-            usds  : address(usdsBase)
+            admin                 : Base.SPARK_EXECUTOR,
+            psm                   : address(psmBase),
+            cctp                  : Base.CCTP_TOKEN_MESSENGER,
+            usdc                  : address(usdcBase),
+            susds                 : address(susdsBase),
+            usds                  : address(usdsBase),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         mintRecipients = new Init.MintRecipient[](1);
@@ -137,14 +141,16 @@ contract ForeignController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
         // Deploy new controller against existing system
         // NOTE: initAlmSystem will redundantly call rely and approve on already inited
         //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures
-        foreignController = ForeignController(ForeignControllerDeploy.deployController({
-            admin      : Base.SPARK_EXECUTOR,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            psm        : address(psmBase),
-            usdc       : address(usdcBase),
-            cctp       : Base.CCTP_TOKEN_MESSENGER
-        }));
+        foreignController = ForeignController(payable(ForeignControllerDeploy.deployController({
+            admin                 : Base.SPARK_EXECUTOR,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            psm                   : address(psmBase),
+            usdc                  : address(usdcBase),
+            cctp                  : Base.CCTP_TOKEN_MESSENGER
+        })));
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -154,9 +160,11 @@ contract ForeignController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
         mintRecipients.push(mintRecipients_[0]);
 
         controllerInst = ControllerInstance({
-            almProxy   : address(almProxy),
-            controller : address(foreignController),
-            rateLimits : address(rateLimits)
+            almProxy              : address(almProxy),
+            controller            : address(foreignController),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         // Admin will be calling the library from its own address
@@ -314,7 +322,9 @@ contract ForeignController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
             CCTP_MESSENGER_BASE
         );
 
-        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.psm                   = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.accessControlRegistry = controllerInst.accessControlRegistry;
+        checkAddresses.parameterRegistry     = controllerInst.parameterRegistry;
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usdc"));
     }
@@ -337,7 +347,9 @@ contract ForeignController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
             CCTP_MESSENGER_BASE
         );
 
-        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.psm                   = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.accessControlRegistry = controllerInst.accessControlRegistry;
+        checkAddresses.parameterRegistry     = controllerInst.parameterRegistry;
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usds"));
     }
@@ -360,7 +372,9 @@ contract ForeignController_InitAndUpgrade_FailureTests is InitAndUpgrade_TestBas
             CCTP_MESSENGER_BASE
         );
 
-        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.psm                   = address(psmBase);  // Overwrite to point to misconfigured PSM
+        checkAddresses.accessControlRegistry = controllerInst.accessControlRegistry;
+        checkAddresses.parameterRegistry     = controllerInst.parameterRegistry;
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-susds"));
     }
@@ -507,9 +521,11 @@ contract ForeignController_InitAlmSystem_SuccessTests is InitAndUpgrade_TestBase
         );
 
         // Overwrite storage for all previous deployments in setUp and assert brand new deployment
-        foreignController = ForeignController(controllerInst.controller);
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
+        foreignController     = ForeignController(payable(controllerInst.controller));
+        almProxy              = ALMProxy(payable(controllerInst.almProxy));
+        rateLimits            = RateLimits(controllerInst.rateLimits);
+        accessControlRegistry = AccessControlRegistry(controllerInst.accessControlRegistry);
+        parameterRegistry     = ParameterRegistry(controllerInst.parameterRegistry);
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -625,19 +641,23 @@ contract ForeignController_UpgradeController_SuccessTests is InitAndUpgrade_Test
         layerZeroRecipients.push(layerZeroRecipients_[0]);
         maxSlippageParams.push(maxSlippageParams_[0]);
 
-        newController = ForeignController(ForeignControllerDeploy.deployController({
-            admin      : Base.SPARK_EXECUTOR,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            psm        : address(psmBase),
-            usdc       : address(usdcBase),
-            cctp       : Base.CCTP_TOKEN_MESSENGER
-        }));
+        newController = ForeignController(payable(ForeignControllerDeploy.deployController({
+            admin                 : Base.SPARK_EXECUTOR,
+            almProxy              : address(almProxy),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry),
+            psm                   : address(psmBase),
+            usdc                  : address(usdcBase),
+            cctp                  : Base.CCTP_TOKEN_MESSENGER
+        })));
 
         controllerInst = ControllerInstance({
-            almProxy   : address(almProxy),
-            controller : address(newController),
-            rateLimits : address(rateLimits)
+            almProxy              : address(almProxy),
+            controller            : address(newController),
+            rateLimits            : address(rateLimits),
+            accessControlRegistry : address(accessControlRegistry),
+            parameterRegistry     : address(parameterRegistry)
         });
 
         configAddresses.oldController = address(foreignController);  // Revoke from old controller

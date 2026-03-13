@@ -12,10 +12,12 @@ import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
 import { MockVault }   from "../mocks/MockVault.sol";
 
-import { ALMProxy }          from "../../../src/ALMProxy.sol";
-import { ForeignController } from "../../../src/ForeignController.sol";
-import { MainnetController } from "../../../src/MainnetController.sol";
-import { RateLimits }        from "../../../src/RateLimits.sol";
+import { AccessControlRegistry } from "../../../src/AccessControlRegistry.sol";
+import { ALMProxy }              from "../../../src/ALMProxy.sol";
+import { ForeignController }     from "../../../src/ForeignController.sol";
+import { MainnetController }     from "../../../src/MainnetController.sol";
+import { ParameterRegistry }     from "../../../src/ParameterRegistry.sol";
+import { RateLimits }            from "../../../src/RateLimits.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
@@ -27,19 +29,28 @@ contract ForeignController_Deploy_Tests is UnitTestBase {
         address usdc  = makeAddr("usdc");
         address cctp  = makeAddr("cctp");
 
-        address almProxy   = address(new ALMProxy(admin));
-        address rateLimits = address(new RateLimits(admin));
+        address almProxy              = address(new ALMProxy(admin));
+        address rateLimits            = address(new RateLimits(admin));
+        address accessControlRegistry = address(new AccessControlRegistry(admin));
 
-        ForeignController controller = ForeignController(
+        address[] memory admins = new address[](1);
+
+        admins[0] = admin;
+
+        address parameterRegistry = address(new ParameterRegistry(admins));
+
+        ForeignController controller = ForeignController(payable(
             ForeignControllerDeploy.deployController(
                 admin,
                 almProxy,
                 rateLimits,
+                accessControlRegistry,
+                parameterRegistry,
                 psm,
                 usdc,
                 cctp
             )
-        );
+        ));
 
         assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
@@ -59,13 +70,17 @@ contract ForeignController_Deploy_Tests is UnitTestBase {
         ControllerInstance memory instance
             = ForeignControllerDeploy.deployFull(admin, psm, usdc, cctp);
 
-        ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
-        ForeignController controller = ForeignController(instance.controller);
-        RateLimits        rateLimits = RateLimits(instance.rateLimits);
+        AccessControlRegistry accessControlRegistry = AccessControlRegistry(instance.accessControlRegistry);
+        ALMProxy              almProxy              = ALMProxy(payable(instance.almProxy));
+        ForeignController     controller            = ForeignController(payable(instance.controller));
+        ParameterRegistry     parameterRegistry     = ParameterRegistry(instance.parameterRegistry);
+        RateLimits            rateLimits            = RateLimits(instance.rateLimits);
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),   true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),              true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),            true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin),            true);
+        assertEq(accessControlRegistry.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(parameterRegistry.isAdmin(admin),                         true);
 
         assertEq(address(controller.proxy()),      instance.almProxy);
         assertEq(address(controller.rateLimits()), instance.rateLimits);
@@ -96,20 +111,29 @@ contract MainnetController_Deploy_Tests is UnitTestBase {
         vars.admin = makeAddr("admin");
         vars.cctp  = makeAddr("cctp");
 
-        address almProxy   = address(new ALMProxy(admin));
-        address rateLimits = address(new RateLimits(admin));
+        address almProxy              = address(new ALMProxy(admin));
+        address rateLimits            = address(new RateLimits(admin));
+        address accessControlRegistry = address(new AccessControlRegistry(admin));
 
-        MainnetController controller = MainnetController(
+        address[] memory admins = new address[](1);
+
+        admins[0] = admin;
+
+        address parameterRegistry = address(new ParameterRegistry(admins));
+
+        MainnetController controller = MainnetController(payable(
             MainnetControllerDeploy.deployController(
                 admin,
                 almProxy,
                 rateLimits,
+                accessControlRegistry,
+                parameterRegistry,
                 vars.vault,
                 vars.psm,
                 vars.daiUsds,
                 vars.cctp
             )
-        );
+        ));
 
         assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
@@ -144,13 +168,17 @@ contract MainnetController_Deploy_Tests is UnitTestBase {
             vars.cctp
         );
 
-        ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
-        MainnetController controller = MainnetController(instance.controller);
-        RateLimits        rateLimits = RateLimits(instance.rateLimits);
+        AccessControlRegistry accessControlRegistry = AccessControlRegistry(instance.accessControlRegistry);
+        ALMProxy              almProxy              = ALMProxy(payable(instance.almProxy));
+        MainnetController     controller            = MainnetController(payable(instance.controller));
+        ParameterRegistry     parameterRegistry     = ParameterRegistry(instance.parameterRegistry);
+        RateLimits            rateLimits            = RateLimits(instance.rateLimits);
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),   true);
-        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),              true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin),            true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),            true);
+        assertEq(accessControlRegistry.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(parameterRegistry.isAdmin(admin),                         true);
 
         assertEq(address(controller.proxy()),      instance.almProxy);
         assertEq(address(controller.rateLimits()), instance.rateLimits);
