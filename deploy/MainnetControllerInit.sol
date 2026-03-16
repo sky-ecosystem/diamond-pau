@@ -182,15 +182,12 @@ library MainnetControllerInit {
         newController.grantRole(newController.FREEZER(), configAddresses.freezer);
         rateLimits.grantRole(rateLimits.CONTROLLER(),    address(newController));
 
-        IAccessControlRegistry accessControlRegistry
-            = IAccessControlRegistry(controllerInst.accessControlRegistry);
-
         for (uint256 i; i < configAddresses.relayers.length; ++i) {
             newController.grantRole(newController.RELAYER(), configAddresses.relayers[i]);
 
             // Grant relayer role in accessControlRegistry
-            accessControlRegistry.grantRole(
-                accessControlRegistry.RELAYER_ROLE(),
+            IAccessControlRegistry(controllerInst.accessControlRegistry).grantRole(
+                IAccessControlRegistry(controllerInst.accessControlRegistry).RELAYER_ROLE(),
                 configAddresses.relayers[i]
             );
         }
