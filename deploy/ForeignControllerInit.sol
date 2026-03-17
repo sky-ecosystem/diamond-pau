@@ -127,7 +127,7 @@ library ForeignControllerInit {
     {
         // Step 1: Perform controller sanity checks
 
-        ForeignController newController = ForeignController(controllerInst.controller);
+        ForeignController newController = ForeignController(payable(controllerInst.controller));
 
         require(newController.hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "ForeignControllerInit/incorrect-admin-controller");
 

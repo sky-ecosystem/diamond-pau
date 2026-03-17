@@ -144,7 +144,7 @@ library MainnetControllerInit {
     {
         // Step 1: Perform controller sanity checks
 
-        MainnetController newController = MainnetController(controllerInst.controller);
+        MainnetController newController = MainnetController(payable(controllerInst.controller));
 
         require(newController.hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-controller");
 
