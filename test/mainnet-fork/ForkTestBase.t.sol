@@ -23,9 +23,11 @@ import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+import { IUSDEFacet }          from "../../src/interfaces/facets/IUSDEFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+import { USDEFacet }          from "../../src/libraries/USDELib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
@@ -240,9 +242,17 @@ abstract contract ForkTestBase is DssTest {
         RELAYER    = mainnetController.RELAYER();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+
+        // Facet wiring
+        _wireDAIUSDSFacet();
+        _wireTransferAssetFacet();
+        _wireUSDEFacet();
+
         vm.stopPrank();
 
         address[] memory relayers = new address[](2);
@@ -304,15 +314,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -398,6 +399,87 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
+        );
+    }
+
+    function _wireUSDEFacet() internal {
+        address usdeFacet = address(new USDEFacet(
+            ETHENA_MINTER,
+            address(susde),
+            address(usdc),
+            address(usde)
+        ));
+
+        vm.label(usdeFacet, "USDEFacet");
+
+        // "Controller.cooldownAssetsSUSDe()" -> "IUSDEFacet.cooldownAssets()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownAssetsSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownAssets.selector
+        );
+
+        // "Controller.cooldownSharesSUSDe()" -> "IUSDEFacet.cooldownShares()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownSharesSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownShares.selector
+        );
+
+        // "Controller.prepareUSDeMint()" -> "IUSDEFacet.prepareMint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeMint.selector,
+            usdeFacet,
+            IUSDEFacet.prepareMint.selector
+        );
+
+        // "Controller.prepareUSDeBurn()" -> "IUSDEFacet.prepareBurn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeBurn.selector,
+            usdeFacet,
+            IUSDEFacet.prepareBurn.selector
+        );
+
+        // "Controller.removeDelegatedSigner()" -> "IUSDEFacet.removeDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.removeDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.removeDelegatedSigner.selector
+        );
+
+        // "Controller.setDelegatedSigner()" -> "IUSDEFacet.setDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.setDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.setDelegatedSigner.selector
+        );
+
+        // "Controller.unstakeSUSDe()" -> "IUSDEFacet.unstakeSUSDE()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.unstakeSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.unstakeSUSDE.selector
+        );
+
+        // "Controller.LIMIT_USDE_BURN()" -> "IUSDEFacet.LIMIT_USDE_BURN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_BURN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_BURN.selector
+        );
+
+        // "Controller.LIMIT_USDE_MINT()" -> "IUSDEFacet.LIMIT_USDE_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_MINT.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_MINT.selector
+        );
+
+        // "Controller.LIMIT_SUSDE_COOLDOWN()" -> "IUSDEFacet.LIMIT_SUSDE_COOLDOWN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
         );
     }
 

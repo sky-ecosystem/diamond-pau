@@ -25,7 +25,6 @@ import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 import { UniswapV4Lib }     from "./libraries/UniswapV4Lib.sol";
-import { USDELib }          from "./libraries/USDELib.sol";
 import { USDSLib }          from "./libraries/USDSLib.sol";
 import { WEETHLib }         from "./libraries/WEETHLib.sol";
 import { WrapProxyETHLib }  from "./libraries/WrapProxyETHLib.sol";
@@ -94,7 +93,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_OTC_SWAP                = OTCLib.LIMIT_SWAP;
     bytes32 public LIMIT_SPARK_VAULT_TAKE        = SparkVaultLib.LIMIT_TAKE;
     bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = SuperstateLib.LIMIT_SUBSCRIBE;
-    bytes32 public LIMIT_SUSDE_COOLDOWN          = USDELib.LIMIT_SUSDE_COOLDOWN;
     bytes32 public LIMIT_UNISWAP_V3_DEPOSIT      = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V3_SWAP         = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public LIMIT_UNISWAP_V3_WITHDRAW     = UniswapV3Lib.LIMIT_WITHDRAW;
@@ -103,8 +101,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_UNISWAP_V4_SWAP         = UniswapV4Lib.LIMIT_SWAP;
     bytes32 public LIMIT_USDC_TO_CCTP            = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public LIMIT_USDC_TO_DOMAIN          = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public LIMIT_USDE_BURN               = USDELib.LIMIT_USDE_BURN;
-    bytes32 public LIMIT_USDE_MINT               = USDELib.LIMIT_USDE_MINT;
     bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
@@ -768,59 +764,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             amountOutMin : amountOutMin,
             maxSlippages : maxSlippages
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Ethena functions                                                               ***/
-    /**********************************************************************************************/
-
-    function setDelegatedSigner(address delegatedSigner) external nonReentrant onlyRole(RELAYER) {
-        USDELib.setDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
-    }
-
-    function removeDelegatedSigner(address delegatedSigner)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        USDELib.removeDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
-    }
-
-    // Note that Ethena's mint/redeem per-block limits include other users.
-    function prepareUSDeMint(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        USDELib.prepareMint({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            usdc       : usdc,
-            minter     : ethenaMinter,
-            usdcAmount : usdcAmount
-        });
-    }
-
-    function prepareUSDeBurn(uint256 usdeAmount) external nonReentrant onlyRole(RELAYER) {
-        USDELib.prepareBurn(address(proxy), address(rateLimits), usde, ethenaMinter, usdeAmount);
-    }
-
-    function cooldownAssetsSUSDe(uint256 usdeAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 cooldownShares)
-    {
-        return USDELib.cooldownAssets(address(proxy), address(rateLimits), susde, usdeAmount);
-    }
-
-    function cooldownSharesSUSDe(uint256 susdeAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 cooldownAssets)
-    {
-        return USDELib.cooldownShares(address(proxy), address(rateLimits), susde, susdeAmount);
-    }
-
-    function unstakeSUSDe() external nonReentrant onlyRole(RELAYER) {
-        USDELib.unstakeSUSDE(address(proxy), susde);
     }
 
     /**********************************************************************************************/
