@@ -32,7 +32,7 @@ contract AccessControls is IAccessControls, ReentrancyGuard, AccessControlEnumer
 
     function removeRelayer(address relayer) external nonReentrant onlyRole(FREEZER_ROLE) {
         _revokeRole(RELAYER_ROLE, relayer);
-        emit IAccessControls.RelayerRemoved(relayer);
+        emit RelayerRemoved(relayer);
     }
 
     /**********************************************************************************************/
@@ -49,4 +49,5 @@ contract AccessControls is IAccessControls, ReentrancyGuard, AccessControlEnumer
             interfaceId == type(IAccessControls).interfaceId ||
             super.supportsInterface(interfaceId);
     }
+
 }
