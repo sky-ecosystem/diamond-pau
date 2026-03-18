@@ -842,7 +842,7 @@ contract ParameterHelpers_Tests is Test {
         assertEq(harness.toBool(bytes32(uint256(0))), false);
     }
 
-    function test_fromBool_roundTrip() external view {
+    function test_fromBool_toBool_roundTrip() external view {
         assertEq(harness.toBool(harness.fromBool(true)),  true);
         assertEq(harness.toBool(harness.fromBool(false)), false);
     }
@@ -852,8 +852,7 @@ contract ParameterHelpers_Tests is Test {
     /**********************************************************************************************/
 
     function test_fromAddress() external {
-        address sample = makeAddr("sample");
-        assertEq(harness.fromAddress(sample), bytes32(uint256(uint160(sample))));
+        assertEq(harness.fromAddress(makeAddr("sample")), bytes32(uint256(uint160(makeAddr("sample")))));
     }
 
     function test_toAddress_outOfBounds() external {
@@ -862,13 +861,11 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toAddress() external {
-        address sample = makeAddr("sample");
-        assertEq(harness.toAddress(bytes32(uint256(uint160(sample)))), sample);
+        assertEq(harness.toAddress(bytes32(uint256(uint160(makeAddr("sample"))))), makeAddr("sample"));
     }
 
-    function test_fromAddress_roundTrip() external {
-        address sample = makeAddr("sample");
-        assertEq(harness.toAddress(harness.fromAddress(sample)), sample);
+    function test_fromAddress_toAddress_roundTrip() external {
+        assertEq(harness.toAddress(harness.fromAddress(makeAddr("sample"))), makeAddr("sample"));
     }
 
     /**********************************************************************************************/
@@ -876,8 +873,7 @@ contract ParameterHelpers_Tests is Test {
     /**********************************************************************************************/
 
     function test_fromBytes1() external view {
-        bytes1 sample = bytes1(type(uint8).max);
-        assertEq(harness.fromBytes1(sample), bytes32(uint256(uint8(sample))));
+        assertEq(harness.fromBytes1(bytes1(type(uint8).max)), bytes32(uint256(uint8(bytes1(type(uint8).max)))));
     }
 
     function test_toBytes1_outOfBounds() external {
@@ -886,18 +882,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes1() external view {
-        bytes1 sample = bytes1(type(uint8).max);
-        assertEq(harness.toBytes1(bytes32(uint256(uint8(sample)))), sample);
+        assertEq(harness.toBytes1(bytes32(uint256(uint8(bytes1(type(uint8).max))))), bytes1(type(uint8).max));
     }
 
-    function test_fromBytes1_roundTrip() external view {
-        bytes1 sample = bytes1(type(uint8).max);
-        assertEq(harness.toBytes1(harness.fromBytes1(sample)), sample);
+    function test_fromBytes1_toBytes1_roundTrip() external view {
+        assertEq(harness.toBytes1(harness.fromBytes1(bytes1(type(uint8).max))), bytes1(type(uint8).max));
     }
 
     function test_fromBytes2() external view {
-        bytes2 sample = bytes2(type(uint16).max);
-        assertEq(harness.fromBytes2(sample), bytes32(uint256(uint16(sample))));
+        assertEq(harness.fromBytes2(bytes2(type(uint16).max)), bytes32(uint256(uint16(bytes2(type(uint16).max)))));
     }
 
     function test_toBytes2_outOfBounds() external {
@@ -906,18 +899,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes2() external view {
-        bytes2 sample = bytes2(type(uint16).max);
-        assertEq(harness.toBytes2(bytes32(uint256(uint16(sample)))), sample);
+        assertEq(harness.toBytes2(bytes32(uint256(uint16(bytes2(type(uint16).max))))), bytes2(type(uint16).max));
     }
 
-    function test_fromBytes2_roundTrip() external view {
-        bytes2 sample = bytes2(type(uint16).max);
-        assertEq(harness.toBytes2(harness.fromBytes2(sample)), sample);
+    function test_fromBytes2_toBytes2_roundTrip() external view {
+        assertEq(harness.toBytes2(harness.fromBytes2(bytes2(type(uint16).max))), bytes2(type(uint16).max));
     }
 
     function test_fromBytes3() external view {
-        bytes3 sample = bytes3(type(uint24).max);
-        assertEq(harness.fromBytes3(sample), bytes32(uint256(uint24(sample))));
+        assertEq(harness.fromBytes3(bytes3(type(uint24).max)), bytes32(uint256(uint24(bytes3(type(uint24).max)))));
     }
 
     function test_toBytes3_outOfBounds() external {
@@ -926,18 +916,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes3() external view {
-        bytes3 sample = bytes3(type(uint24).max);
-        assertEq(harness.toBytes3(bytes32(uint256(uint24(sample)))), sample);
+        assertEq(harness.toBytes3(bytes32(uint256(uint24(bytes3(type(uint24).max))))), bytes3(type(uint24).max));
     }
 
-    function test_fromBytes3_roundTrip() external view {
-        bytes3 sample = bytes3(type(uint24).max);
-        assertEq(harness.toBytes3(harness.fromBytes3(sample)), sample);
+    function test_fromBytes3_toBytes3_roundTrip() external view {
+        assertEq(harness.toBytes3(harness.fromBytes3(bytes3(type(uint24).max))), bytes3(type(uint24).max));
     }
 
     function test_fromBytes4() external view {
-        bytes4 sample = bytes4(type(uint32).max);
-        assertEq(harness.fromBytes4(sample), bytes32(uint256(uint32(sample))));
+        assertEq(harness.fromBytes4(bytes4(type(uint32).max)), bytes32(uint256(uint32(bytes4(type(uint32).max)))));
     }
 
     function test_toBytes4_outOfBounds() external {
@@ -946,18 +933,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes4() external view {
-        bytes4 sample = bytes4(type(uint32).max);
-        assertEq(harness.toBytes4(bytes32(uint256(uint32(sample)))), sample);
+        assertEq(harness.toBytes4(bytes32(uint256(uint32(bytes4(type(uint32).max))))), bytes4(type(uint32).max));
     }
 
-    function test_fromBytes4_roundTrip() external view {
-        bytes4 sample = bytes4(type(uint32).max);
-        assertEq(harness.toBytes4(harness.fromBytes4(sample)), sample);
+    function test_fromBytes4_toBytes4_roundTrip() external view {
+        assertEq(harness.toBytes4(harness.fromBytes4(bytes4(type(uint32).max))), bytes4(type(uint32).max));
     }
 
     function test_fromBytes5() external view {
-        bytes5 sample = bytes5(type(uint40).max);
-        assertEq(harness.fromBytes5(sample), bytes32(uint256(uint40(sample))));
+        assertEq(harness.fromBytes5(bytes5(type(uint40).max)), bytes32(uint256(uint40(bytes5(type(uint40).max)))));
     }
 
     function test_toBytes5_outOfBounds() external {
@@ -966,18 +950,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes5() external view {
-        bytes5 sample = bytes5(type(uint40).max);
-        assertEq(harness.toBytes5(bytes32(uint256(uint40(sample)))), sample);
+        assertEq(harness.toBytes5(bytes32(uint256(uint40(bytes5(type(uint40).max))))), bytes5(type(uint40).max));
     }
 
-    function test_fromBytes5_roundTrip() external view {
-        bytes5 sample = bytes5(type(uint40).max);
-        assertEq(harness.toBytes5(harness.fromBytes5(sample)), sample);
+    function test_fromBytes5_toBytes5_roundTrip() external view {
+        assertEq(harness.toBytes5(harness.fromBytes5(bytes5(type(uint40).max))), bytes5(type(uint40).max));
     }
 
     function test_fromBytes6() external view {
-        bytes6 sample = bytes6(type(uint48).max);
-        assertEq(harness.fromBytes6(sample), bytes32(uint256(uint48(sample))));
+        assertEq(harness.fromBytes6(bytes6(type(uint48).max)), bytes32(uint256(uint48(bytes6(type(uint48).max)))));
     }
 
     function test_toBytes6_outOfBounds() external {
@@ -986,18 +967,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes6() external view {
-        bytes6 sample = bytes6(type(uint48).max);
-        assertEq(harness.toBytes6(bytes32(uint256(uint48(sample)))), sample);
+        assertEq(harness.toBytes6(bytes32(uint256(uint48(bytes6(type(uint48).max))))), bytes6(type(uint48).max));
     }
 
-    function test_fromBytes6_roundTrip() external view {
-        bytes6 sample = bytes6(type(uint48).max);
-        assertEq(harness.toBytes6(harness.fromBytes6(sample)), sample);
+    function test_fromBytes6_toBytes6_roundTrip() external view {
+        assertEq(harness.toBytes6(harness.fromBytes6(bytes6(type(uint48).max))), bytes6(type(uint48).max));
     }
 
     function test_fromBytes7() external view {
-        bytes7 sample = bytes7(type(uint56).max);
-        assertEq(harness.fromBytes7(sample), bytes32(uint256(uint56(sample))));
+        assertEq(harness.fromBytes7(bytes7(type(uint56).max)), bytes32(uint256(uint56(bytes7(type(uint56).max)))));
     }
 
     function test_toBytes7_outOfBounds() external {
@@ -1006,18 +984,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes7() external view {
-        bytes7 sample = bytes7(type(uint56).max);
-        assertEq(harness.toBytes7(bytes32(uint256(uint56(sample)))), sample);
+        assertEq(harness.toBytes7(bytes32(uint256(uint56(bytes7(type(uint56).max))))), bytes7(type(uint56).max));
     }
 
-    function test_fromBytes7_roundTrip() external view {
-        bytes7 sample = bytes7(type(uint56).max);
-        assertEq(harness.toBytes7(harness.fromBytes7(sample)), sample);
+    function test_fromBytes7_toBytes7_roundTrip() external view {
+        assertEq(harness.toBytes7(harness.fromBytes7(bytes7(type(uint56).max))), bytes7(type(uint56).max));
     }
 
     function test_fromBytes8() external view {
-        bytes8 sample = bytes8(type(uint64).max);
-        assertEq(harness.fromBytes8(sample), bytes32(uint256(uint64(sample))));
+        assertEq(harness.fromBytes8(bytes8(type(uint64).max)), bytes32(uint256(uint64(bytes8(type(uint64).max)))));
     }
 
     function test_toBytes8_outOfBounds() external {
@@ -1026,18 +1001,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes8() external view {
-        bytes8 sample = bytes8(type(uint64).max);
-        assertEq(harness.toBytes8(bytes32(uint256(uint64(sample)))), sample);
+        assertEq(harness.toBytes8(bytes32(uint256(uint64(bytes8(type(uint64).max))))), bytes8(type(uint64).max));
     }
 
-    function test_fromBytes8_roundTrip() external view {
-        bytes8 sample = bytes8(type(uint64).max);
-        assertEq(harness.toBytes8(harness.fromBytes8(sample)), sample);
+    function test_fromBytes8_toBytes8_roundTrip() external view {
+        assertEq(harness.toBytes8(harness.fromBytes8(bytes8(type(uint64).max))), bytes8(type(uint64).max));
     }
 
     function test_fromBytes9() external view {
-        bytes9 sample = bytes9(type(uint72).max);
-        assertEq(harness.fromBytes9(sample), bytes32(uint256(uint72(sample))));
+        assertEq(harness.fromBytes9(bytes9(type(uint72).max)), bytes32(uint256(uint72(bytes9(type(uint72).max)))));
     }
 
     function test_toBytes9_outOfBounds() external {
@@ -1046,18 +1018,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes9() external view {
-        bytes9 sample = bytes9(type(uint72).max);
-        assertEq(harness.toBytes9(bytes32(uint256(uint72(sample)))), sample);
+        assertEq(harness.toBytes9(bytes32(uint256(uint72(bytes9(type(uint72).max))))), bytes9(type(uint72).max));
     }
 
-    function test_fromBytes9_roundTrip() external view {
-        bytes9 sample = bytes9(type(uint72).max);
-        assertEq(harness.toBytes9(harness.fromBytes9(sample)), sample);
+    function test_fromBytes9_toBytes9_roundTrip() external view {
+        assertEq(harness.toBytes9(harness.fromBytes9(bytes9(type(uint72).max))), bytes9(type(uint72).max));
     }
 
     function test_fromBytes10() external view {
-        bytes10 sample = bytes10(type(uint80).max);
-        assertEq(harness.fromBytes10(sample), bytes32(uint256(uint80(sample))));
+        assertEq(harness.fromBytes10(bytes10(type(uint80).max)), bytes32(uint256(uint80(bytes10(type(uint80).max)))));
     }
 
     function test_toBytes10_outOfBounds() external {
@@ -1066,418 +1035,433 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes10() external view {
-        bytes10 sample = bytes10(type(uint80).max);
-        assertEq(harness.toBytes10(bytes32(uint256(uint80(sample)))), sample);
+        assertEq(harness.toBytes10(bytes32(uint256(uint80(bytes10(type(uint80).max))))), bytes10(type(uint80).max));
     }
 
-    function test_fromBytes10_roundTrip() external view {
-        bytes10 sample = bytes10(type(uint80).max);
-        assertEq(harness.toBytes10(harness.fromBytes10(sample)), sample);
+    function test_fromBytes10_toBytes10_roundTrip() external view {
+        assertEq(harness.toBytes10(harness.fromBytes10(bytes10(type(uint80).max))), bytes10(type(uint80).max));
     }
 
     function test_fromBytes11() external view {
-        bytes11 sample = bytes11(type(uint88).max);
-        assertEq(harness.fromBytes11(sample), bytes32(uint256(uint88(sample))));
+        assertEq(harness.fromBytes11(bytes11(type(uint88).max)), bytes32(uint256(uint88(bytes11(type(uint88).max)))));
     }
+
 
     function test_toBytes11_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes11(bytes32(uint256(type(uint88).max) + 1));
     }
 
+
     function test_toBytes11() external view {
-        bytes11 sample = bytes11(type(uint88).max);
-        assertEq(harness.toBytes11(bytes32(uint256(uint88(sample)))), sample);
+        assertEq(harness.toBytes11(bytes32(uint256(uint88(bytes11(type(uint88).max))))), bytes11(type(uint88).max));
     }
 
-    function test_fromBytes11_roundTrip() external view {
-        bytes11 sample = bytes11(type(uint88).max);
-        assertEq(harness.toBytes11(harness.fromBytes11(sample)), sample);
+
+    function test_fromBytes11_toBytes11_roundTrip() external view {
+        assertEq(harness.toBytes11(harness.fromBytes11(bytes11(type(uint88).max))), bytes11(type(uint88).max));
     }
+
 
     function test_fromBytes12() external view {
-        bytes12 sample = bytes12(type(uint96).max);
-        assertEq(harness.fromBytes12(sample), bytes32(uint256(uint96(sample))));
+        assertEq(harness.fromBytes12(bytes12(type(uint96).max)), bytes32(uint256(uint96(bytes12(type(uint96).max)))));
     }
+
 
     function test_toBytes12_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes12(bytes32(uint256(type(uint96).max) + 1));
     }
 
+
     function test_toBytes12() external view {
-        bytes12 sample = bytes12(type(uint96).max);
-        assertEq(harness.toBytes12(bytes32(uint256(uint96(sample)))), sample);
+        assertEq(harness.toBytes12(bytes32(uint256(uint96(bytes12(type(uint96).max))))), bytes12(type(uint96).max));
     }
 
-    function test_fromBytes12_roundTrip() external view {
-        bytes12 sample = bytes12(type(uint96).max);
-        assertEq(harness.toBytes12(harness.fromBytes12(sample)), sample);
+
+    function test_fromBytes12_toBytes12_roundTrip() external view {
+        assertEq(harness.toBytes12(harness.fromBytes12(bytes12(type(uint96).max))), bytes12(type(uint96).max));
     }
+
 
     function test_fromBytes13() external view {
-        bytes13 sample = bytes13(type(uint104).max);
-        assertEq(harness.fromBytes13(sample), bytes32(uint256(uint104(sample))));
+        assertEq(harness.fromBytes13(bytes13(type(uint104).max)), bytes32(uint256(uint104(bytes13(type(uint104).max)))));
     }
+
 
     function test_toBytes13_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes13(bytes32(uint256(type(uint104).max) + 1));
     }
 
+
     function test_toBytes13() external view {
-        bytes13 sample = bytes13(type(uint104).max);
-        assertEq(harness.toBytes13(bytes32(uint256(uint104(sample)))), sample);
+        assertEq(harness.toBytes13(bytes32(uint256(uint104(bytes13(type(uint104).max))))), bytes13(type(uint104).max));
     }
 
-    function test_fromBytes13_roundTrip() external view {
-        bytes13 sample = bytes13(type(uint104).max);
-        assertEq(harness.toBytes13(harness.fromBytes13(sample)), sample);
+
+    function test_fromBytes13_toBytes13_roundTrip() external view {
+        assertEq(harness.toBytes13(harness.fromBytes13(bytes13(type(uint104).max))), bytes13(type(uint104).max));
     }
+
 
     function test_fromBytes14() external view {
-        bytes14 sample = bytes14(type(uint112).max);
-        assertEq(harness.fromBytes14(sample), bytes32(uint256(uint112(sample))));
+        assertEq(harness.fromBytes14(bytes14(type(uint112).max)), bytes32(uint256(uint112(bytes14(type(uint112).max)))));
     }
+
 
     function test_toBytes14_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes14(bytes32(uint256(type(uint112).max) + 1));
     }
 
+
     function test_toBytes14() external view {
-        bytes14 sample = bytes14(type(uint112).max);
-        assertEq(harness.toBytes14(bytes32(uint256(uint112(sample)))), sample);
+        assertEq(harness.toBytes14(bytes32(uint256(uint112(bytes14(type(uint112).max))))), bytes14(type(uint112).max));
     }
 
-    function test_fromBytes14_roundTrip() external view {
-        bytes14 sample = bytes14(type(uint112).max);
-        assertEq(harness.toBytes14(harness.fromBytes14(sample)), sample);
+
+    function test_fromBytes14_toBytes14_roundTrip() external view {
+        assertEq(harness.toBytes14(harness.fromBytes14(bytes14(type(uint112).max))), bytes14(type(uint112).max));
     }
+
 
     function test_fromBytes15() external view {
-        bytes15 sample = bytes15(type(uint120).max);
-        assertEq(harness.fromBytes15(sample), bytes32(uint256(uint120(sample))));
+        assertEq(harness.fromBytes15(bytes15(type(uint120).max)), bytes32(uint256(uint120(bytes15(type(uint120).max)))));
     }
+
 
     function test_toBytes15_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes15(bytes32(uint256(type(uint120).max) + 1));
     }
 
+
     function test_toBytes15() external view {
-        bytes15 sample = bytes15(type(uint120).max);
-        assertEq(harness.toBytes15(bytes32(uint256(uint120(sample)))), sample);
+        assertEq(harness.toBytes15(bytes32(uint256(uint120(bytes15(type(uint120).max))))), bytes15(type(uint120).max));
     }
 
-    function test_fromBytes15_roundTrip() external view {
-        bytes15 sample = bytes15(type(uint120).max);
-        assertEq(harness.toBytes15(harness.fromBytes15(sample)), sample);
+
+    function test_fromBytes15_toBytes15_roundTrip() external view {
+        assertEq(harness.toBytes15(harness.fromBytes15(bytes15(type(uint120).max))), bytes15(type(uint120).max));
     }
+
 
     function test_fromBytes16() external view {
-        bytes16 sample = bytes16(type(uint128).max);
-        assertEq(harness.fromBytes16(sample), bytes32(uint256(uint128(sample))));
+        assertEq(harness.fromBytes16(bytes16(type(uint128).max)), bytes32(uint256(uint128(bytes16(type(uint128).max)))));
     }
+
 
     function test_toBytes16_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes16(bytes32(uint256(type(uint128).max) + 1));
     }
 
+
     function test_toBytes16() external view {
-        bytes16 sample = bytes16(type(uint128).max);
-        assertEq(harness.toBytes16(bytes32(uint256(uint128(sample)))), sample);
+        assertEq(harness.toBytes16(bytes32(uint256(uint128(bytes16(type(uint128).max))))), bytes16(type(uint128).max));
     }
 
-    function test_fromBytes16_roundTrip() external view {
-        bytes16 sample = bytes16(type(uint128).max);
-        assertEq(harness.toBytes16(harness.fromBytes16(sample)), sample);
+
+    function test_fromBytes16_toBytes16_roundTrip() external view {
+        assertEq(harness.toBytes16(harness.fromBytes16(bytes16(type(uint128).max))), bytes16(type(uint128).max));
     }
+
 
     function test_fromBytes17() external view {
-        bytes17 sample = bytes17(type(uint136).max);
-        assertEq(harness.fromBytes17(sample), bytes32(uint256(uint136(sample))));
+        assertEq(harness.fromBytes17(bytes17(type(uint136).max)), bytes32(uint256(uint136(bytes17(type(uint136).max)))));
     }
+
 
     function test_toBytes17_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes17(bytes32(uint256(type(uint136).max) + 1));
     }
 
+
     function test_toBytes17() external view {
-        bytes17 sample = bytes17(type(uint136).max);
-        assertEq(harness.toBytes17(bytes32(uint256(uint136(sample)))), sample);
+        assertEq(harness.toBytes17(bytes32(uint256(uint136(bytes17(type(uint136).max))))), bytes17(type(uint136).max));
     }
 
-    function test_fromBytes17_roundTrip() external view {
-        bytes17 sample = bytes17(type(uint136).max);
-        assertEq(harness.toBytes17(harness.fromBytes17(sample)), sample);
+
+    function test_fromBytes17_toBytes17_roundTrip() external view {
+        assertEq(harness.toBytes17(harness.fromBytes17(bytes17(type(uint136).max))), bytes17(type(uint136).max));
     }
+
 
     function test_fromBytes18() external view {
-        bytes18 sample = bytes18(type(uint144).max);
-        assertEq(harness.fromBytes18(sample), bytes32(uint256(uint144(sample))));
+        assertEq(harness.fromBytes18(bytes18(type(uint144).max)), bytes32(uint256(uint144(bytes18(type(uint144).max)))));
     }
+
 
     function test_toBytes18_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes18(bytes32(uint256(type(uint144).max) + 1));
     }
 
+
     function test_toBytes18() external view {
-        bytes18 sample = bytes18(type(uint144).max);
-        assertEq(harness.toBytes18(bytes32(uint256(uint144(sample)))), sample);
+        assertEq(harness.toBytes18(bytes32(uint256(uint144(bytes18(type(uint144).max))))), bytes18(type(uint144).max));
     }
 
-    function test_fromBytes18_roundTrip() external view {
-        bytes18 sample = bytes18(type(uint144).max);
-        assertEq(harness.toBytes18(harness.fromBytes18(sample)), sample);
+
+    function test_fromBytes18_toBytes18_roundTrip() external view {
+        assertEq(harness.toBytes18(harness.fromBytes18(bytes18(type(uint144).max))), bytes18(type(uint144).max));
     }
+
 
     function test_fromBytes19() external view {
-        bytes19 sample = bytes19(type(uint152).max);
-        assertEq(harness.fromBytes19(sample), bytes32(uint256(uint152(sample))));
+        assertEq(harness.fromBytes19(bytes19(type(uint152).max)), bytes32(uint256(uint152(bytes19(type(uint152).max)))));
     }
+
 
     function test_toBytes19_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes19(bytes32(uint256(type(uint152).max) + 1));
     }
 
+
     function test_toBytes19() external view {
-        bytes19 sample = bytes19(type(uint152).max);
-        assertEq(harness.toBytes19(bytes32(uint256(uint152(sample)))), sample);
+        assertEq(harness.toBytes19(bytes32(uint256(uint152(bytes19(type(uint152).max))))), bytes19(type(uint152).max));
     }
 
-    function test_fromBytes19_roundTrip() external view {
-        bytes19 sample = bytes19(type(uint152).max);
-        assertEq(harness.toBytes19(harness.fromBytes19(sample)), sample);
+
+    function test_fromBytes19_toBytes19_roundTrip() external view {
+        assertEq(harness.toBytes19(harness.fromBytes19(bytes19(type(uint152).max))), bytes19(type(uint152).max));
     }
+
 
     function test_fromBytes20() external view {
-        bytes20 sample = bytes20(type(uint160).max);
-        assertEq(harness.fromBytes20(sample), bytes32(uint256(uint160(sample))));
+        assertEq(harness.fromBytes20(bytes20(type(uint160).max)), bytes32(uint256(uint160(bytes20(type(uint160).max)))));
     }
+
 
     function test_toBytes20_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes20(bytes32(uint256(type(uint160).max) + 1));
     }
 
+
     function test_toBytes20() external view {
-        bytes20 sample = bytes20(type(uint160).max);
-        assertEq(harness.toBytes20(bytes32(uint256(uint160(sample)))), sample);
+        assertEq(harness.toBytes20(bytes32(uint256(uint160(bytes20(type(uint160).max))))), bytes20(type(uint160).max));
     }
 
-    function test_fromBytes20_roundTrip() external view {
-        bytes20 sample = bytes20(type(uint160).max);
-        assertEq(harness.toBytes20(harness.fromBytes20(sample)), sample);
+
+    function test_fromBytes20_toBytes20_roundTrip() external view {
+        assertEq(harness.toBytes20(harness.fromBytes20(bytes20(type(uint160).max))), bytes20(type(uint160).max));
     }
 
     function test_fromBytes21() external view {
-        bytes21 sample = bytes21(type(uint168).max);
-        assertEq(harness.fromBytes21(sample), bytes32(uint256(uint168(sample))));
+        assertEq(harness.fromBytes21(bytes21(type(uint168).max)), bytes32(uint256(uint168(bytes21(type(uint168).max)))));
     }
+
 
     function test_toBytes21_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes21(bytes32(uint256(type(uint168).max) + 1));
     }
 
+
     function test_toBytes21() external view {
-        bytes21 sample = bytes21(type(uint168).max);
-        assertEq(harness.toBytes21(bytes32(uint256(uint168(sample)))), sample);
+        assertEq(harness.toBytes21(bytes32(uint256(uint168(bytes21(type(uint168).max))))), bytes21(type(uint168).max));
     }
 
-    function test_fromBytes21_roundTrip() external view {
-        bytes21 sample = bytes21(type(uint168).max);
-        assertEq(harness.toBytes21(harness.fromBytes21(sample)), sample);
+
+    function test_fromBytes21_toBytes21_roundTrip() external view {
+        assertEq(harness.toBytes21(harness.fromBytes21(bytes21(type(uint168).max))), bytes21(type(uint168).max));
     }
+
 
     function test_fromBytes22() external view {
-        bytes22 sample = bytes22(type(uint176).max);
-        assertEq(harness.fromBytes22(sample), bytes32(uint256(uint176(sample))));
+        assertEq(harness.fromBytes22(bytes22(type(uint176).max)), bytes32(uint256(uint176(bytes22(type(uint176).max)))));
     }
+
 
     function test_toBytes22_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes22(bytes32(uint256(type(uint176).max) + 1));
     }
 
+
     function test_toBytes22() external view {
-        bytes22 sample = bytes22(type(uint176).max);
-        assertEq(harness.toBytes22(bytes32(uint256(uint176(sample)))), sample);
+        assertEq(harness.toBytes22(bytes32(uint256(uint176(bytes22(type(uint176).max))))), bytes22(type(uint176).max));
     }
 
-    function test_fromBytes22_roundTrip() external view {
-        bytes22 sample = bytes22(type(uint176).max);
-        assertEq(harness.toBytes22(harness.fromBytes22(sample)), sample);
+
+    function test_fromBytes22_toBytes22_roundTrip() external view {
+        assertEq(harness.toBytes22(harness.fromBytes22(bytes22(type(uint176).max))), bytes22(type(uint176).max));
     }
+
 
     function test_fromBytes23() external view {
-        bytes23 sample = bytes23(type(uint184).max);
-        assertEq(harness.fromBytes23(sample), bytes32(uint256(uint184(sample))));
+        assertEq(harness.fromBytes23(bytes23(type(uint184).max)), bytes32(uint256(uint184(bytes23(type(uint184).max)))));
     }
+
 
     function test_toBytes23_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes23(bytes32(uint256(type(uint184).max) + 1));
     }
 
+
     function test_toBytes23() external view {
-        bytes23 sample = bytes23(type(uint184).max);
-        assertEq(harness.toBytes23(bytes32(uint256(uint184(sample)))), sample);
+        assertEq(harness.toBytes23(bytes32(uint256(uint184(bytes23(type(uint184).max))))), bytes23(type(uint184).max));
     }
 
-    function test_fromBytes23_roundTrip() external view {
-        bytes23 sample = bytes23(type(uint184).max);
-        assertEq(harness.toBytes23(harness.fromBytes23(sample)), sample);
+
+    function test_fromBytes23_toBytes23_roundTrip() external view {
+        assertEq(harness.toBytes23(harness.fromBytes23(bytes23(type(uint184).max))), bytes23(type(uint184).max));
     }
+
 
     function test_fromBytes24() external view {
-        bytes24 sample = bytes24(type(uint192).max);
-        assertEq(harness.fromBytes24(sample), bytes32(uint256(uint192(sample))));
+        assertEq(harness.fromBytes24(bytes24(type(uint192).max)), bytes32(uint256(uint192(bytes24(type(uint192).max)))));
     }
+
 
     function test_toBytes24_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes24(bytes32(uint256(type(uint192).max) + 1));
     }
 
+
     function test_toBytes24() external view {
-        bytes24 sample = bytes24(type(uint192).max);
-        assertEq(harness.toBytes24(bytes32(uint256(uint192(sample)))), sample);
+        assertEq(harness.toBytes24(bytes32(uint256(uint192(bytes24(type(uint192).max))))), bytes24(type(uint192).max));
     }
 
-    function test_fromBytes24_roundTrip() external view {
-        bytes24 sample = bytes24(type(uint192).max);
-        assertEq(harness.toBytes24(harness.fromBytes24(sample)), sample);
+
+    function test_fromBytes24_toBytes24_roundTrip() external view {
+        assertEq(harness.toBytes24(harness.fromBytes24(bytes24(type(uint192).max))), bytes24(type(uint192).max));
     }
+
 
     function test_fromBytes25() external view {
-        bytes25 sample = bytes25(type(uint200).max);
-        assertEq(harness.fromBytes25(sample), bytes32(uint256(uint200(sample))));
+        assertEq(harness.fromBytes25(bytes25(type(uint200).max)), bytes32(uint256(uint200(bytes25(type(uint200).max)))));
     }
+
 
     function test_toBytes25_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes25(bytes32(uint256(type(uint200).max) + 1));
     }
 
+
     function test_toBytes25() external view {
-        bytes25 sample = bytes25(type(uint200).max);
-        assertEq(harness.toBytes25(bytes32(uint256(uint200(sample)))), sample);
+        assertEq(harness.toBytes25(bytes32(uint256(uint200(bytes25(type(uint200).max))))), bytes25(type(uint200).max));
     }
 
-    function test_fromBytes25_roundTrip() external view {
-        bytes25 sample = bytes25(type(uint200).max);
-        assertEq(harness.toBytes25(harness.fromBytes25(sample)), sample);
+
+    function test_fromBytes25_toBytes25_roundTrip() external view {
+        assertEq(harness.toBytes25(harness.fromBytes25(bytes25(type(uint200).max))), bytes25(type(uint200).max));
     }
+
 
     function test_fromBytes26() external view {
-        bytes26 sample = bytes26(type(uint208).max);
-        assertEq(harness.fromBytes26(sample), bytes32(uint256(uint208(sample))));
+        assertEq(harness.fromBytes26(bytes26(type(uint208).max)), bytes32(uint256(uint208(bytes26(type(uint208).max)))));
     }
+
 
     function test_toBytes26_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes26(bytes32(uint256(type(uint208).max) + 1));
     }
 
+
     function test_toBytes26() external view {
-        bytes26 sample = bytes26(type(uint208).max);
-        assertEq(harness.toBytes26(bytes32(uint256(uint208(sample)))), sample);
+        assertEq(harness.toBytes26(bytes32(uint256(uint208(bytes26(type(uint208).max))))), bytes26(type(uint208).max));
     }
 
-    function test_fromBytes26_roundTrip() external view {
-        bytes26 sample = bytes26(type(uint208).max);
-        assertEq(harness.toBytes26(harness.fromBytes26(sample)), sample);
+
+    function test_fromBytes26_toBytes26_roundTrip() external view {
+        assertEq(harness.toBytes26(harness.fromBytes26(bytes26(type(uint208).max))), bytes26(type(uint208).max));
     }
+
 
     function test_fromBytes27() external view {
-        bytes27 sample = bytes27(type(uint216).max);
-        assertEq(harness.fromBytes27(sample), bytes32(uint256(uint216(sample))));
+        assertEq(harness.fromBytes27(bytes27(type(uint216).max)), bytes32(uint256(uint216(bytes27(type(uint216).max)))));
     }
+
 
     function test_toBytes27_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes27(bytes32(uint256(type(uint216).max) + 1));
     }
 
+
     function test_toBytes27() external view {
-        bytes27 sample = bytes27(type(uint216).max);
-        assertEq(harness.toBytes27(bytes32(uint256(uint216(sample)))), sample);
+        assertEq(harness.toBytes27(bytes32(uint256(uint216(bytes27(type(uint216).max))))), bytes27(type(uint216).max));
     }
 
-    function test_fromBytes27_roundTrip() external view {
-        bytes27 sample = bytes27(type(uint216).max);
-        assertEq(harness.toBytes27(harness.fromBytes27(sample)), sample);
+
+    function test_fromBytes27_toBytes27_roundTrip() external view {
+        assertEq(harness.toBytes27(harness.fromBytes27(bytes27(type(uint216).max))), bytes27(type(uint216).max));
     }
+
 
     function test_fromBytes28() external view {
-        bytes28 sample = bytes28(type(uint224).max);
-        assertEq(harness.fromBytes28(sample), bytes32(uint256(uint224(sample))));
+        assertEq(harness.fromBytes28(bytes28(type(uint224).max)), bytes32(uint256(uint224(bytes28(type(uint224).max)))));
     }
+
 
     function test_toBytes28_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes28(bytes32(uint256(type(uint224).max) + 1));
     }
 
+
     function test_toBytes28() external view {
-        bytes28 sample = bytes28(type(uint224).max);
-        assertEq(harness.toBytes28(bytes32(uint256(uint224(sample)))), sample);
+        assertEq(harness.toBytes28(bytes32(uint256(uint224(bytes28(type(uint224).max))))), bytes28(type(uint224).max));
     }
 
-    function test_fromBytes28_roundTrip() external view {
-        bytes28 sample = bytes28(type(uint224).max);
-        assertEq(harness.toBytes28(harness.fromBytes28(sample)), sample);
+
+    function test_fromBytes28_toBytes28_roundTrip() external view {
+        assertEq(harness.toBytes28(harness.fromBytes28(bytes28(type(uint224).max))), bytes28(type(uint224).max));
     }
+
 
     function test_fromBytes29() external view {
-        bytes29 sample = bytes29(type(uint232).max);
-        assertEq(harness.fromBytes29(sample), bytes32(uint256(uint232(sample))));
+        assertEq(harness.fromBytes29(bytes29(type(uint232).max)), bytes32(uint256(uint232(bytes29(type(uint232).max)))));
     }
+
 
     function test_toBytes29_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes29(bytes32(uint256(type(uint232).max) + 1));
     }
 
+
     function test_toBytes29() external view {
-        bytes29 sample = bytes29(type(uint232).max);
-        assertEq(harness.toBytes29(bytes32(uint256(uint232(sample)))), sample);
+        assertEq(harness.toBytes29(bytes32(uint256(uint232(bytes29(type(uint232).max))))), bytes29(type(uint232).max));
     }
 
-    function test_fromBytes29_roundTrip() external view {
-        bytes29 sample = bytes29(type(uint232).max);
-        assertEq(harness.toBytes29(harness.fromBytes29(sample)), sample);
+
+    function test_fromBytes29_toBytes29_roundTrip() external view {
+        assertEq(harness.toBytes29(harness.fromBytes29(bytes29(type(uint232).max))), bytes29(type(uint232).max));
     }
+
 
     function test_fromBytes30() external view {
-        bytes30 sample = bytes30(type(uint240).max);
-        assertEq(harness.fromBytes30(sample), bytes32(uint256(uint240(sample))));
+        assertEq(harness.fromBytes30(bytes30(type(uint240).max)), bytes32(uint256(uint240(bytes30(type(uint240).max)))));
     }
+
 
     function test_toBytes30_outOfBounds() external {
         vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
         harness.toBytes30(bytes32(uint256(type(uint240).max) + 1));
     }
 
+
     function test_toBytes30() external view {
-        bytes30 sample = bytes30(type(uint240).max);
-        assertEq(harness.toBytes30(bytes32(uint256(uint240(sample)))), sample);
+        assertEq(harness.toBytes30(bytes32(uint256(uint240(bytes30(type(uint240).max))))), bytes30(type(uint240).max));
     }
 
-    function test_fromBytes30_roundTrip() external view {
-        bytes30 sample = bytes30(type(uint240).max);
-        assertEq(harness.toBytes30(harness.fromBytes30(sample)), sample);
+
+    function test_fromBytes30_toBytes30_roundTrip() external view {
+        assertEq(harness.toBytes30(harness.fromBytes30(bytes30(type(uint240).max))), bytes30(type(uint240).max));
     }
 
     function test_fromBytes31() external view {
-        bytes31 sample = bytes31(type(uint248).max);
-        assertEq(harness.fromBytes31(sample), bytes32(uint256(uint248(sample))));
+        assertEq(harness.fromBytes31(bytes31(type(uint248).max)), bytes32(uint256(uint248(bytes31(type(uint248).max)))));
     }
 
     function test_toBytes31_outOfBounds() external {
@@ -1486,28 +1470,23 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toBytes31() external view {
-        bytes31 sample = bytes31(type(uint248).max);
-        assertEq(harness.toBytes31(bytes32(uint256(uint248(sample)))), sample);
+        assertEq(harness.toBytes31(bytes32(uint256(uint248(bytes31(type(uint248).max))))), bytes31(type(uint248).max));
     }
 
-    function test_fromBytes31_roundTrip() external view {
-        bytes31 sample = bytes31(type(uint248).max);
-        assertEq(harness.toBytes31(harness.fromBytes31(sample)), sample);
+    function test_fromBytes31_toBytes31_roundTrip() external view {
+        assertEq(harness.toBytes31(harness.fromBytes31(bytes31(type(uint248).max))), bytes31(type(uint248).max));
     }
 
     function test_fromBytes32() external view {
-        bytes32 sample = bytes32(type(uint256).max);
-        assertEq(harness.fromBytes32(sample), bytes32(uint256(uint256(sample))));
+        assertEq(harness.fromBytes32(bytes32(type(uint256).max)), bytes32(type(uint256).max));
     }
 
     function test_toBytes32() external view {
-        bytes32 sample = bytes32(type(uint256).max);
-        assertEq(harness.toBytes32(bytes32(uint256(uint256(sample)))), sample);
+        assertEq(harness.toBytes32(bytes32(type(uint256).max)), bytes32(type(uint256).max));
     }
 
-    function test_fromBytes32_roundTrip() external view {
-        bytes32 sample = bytes32(type(uint256).max);
-        assertEq(harness.toBytes32(harness.fromBytes32(sample)), sample);
+    function test_fromBytes32_toBytes32_roundTrip() external view {
+        assertEq(harness.toBytes32(harness.fromBytes32(bytes32(type(uint256).max))), bytes32(type(uint256).max));
     }
 
     /**********************************************************************************************/
@@ -1515,8 +1494,8 @@ contract ParameterHelpers_Tests is Test {
     /**********************************************************************************************/
 
     function test_fromInt8() external view {
-        int8 sample = type(int8).max;
-        assertEq(harness.fromInt8(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt8(type(int8).max), bytes32(uint256(int256(type(int8).max))));
+        assertEq(harness.fromInt8(type(int8).min), bytes32(uint256(int256(type(int8).min))));
     }
 
     function test_toInt8_outOfBounds() external {
@@ -1528,18 +1507,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt8() external view {
-        int8 sample = type(int8).max;
-        assertEq(harness.toInt8(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt8(bytes32(uint256(int256(type(int8).max)))), type(int8).max);
+        assertEq(harness.toInt8(bytes32(uint256(int256(type(int8).min)))), type(int8).min);
     }
 
-    function test_fromInt8_roundTrip() external view {
-        int8 sample = type(int8).max;
-        assertEq(harness.toInt8(harness.fromInt8(sample)), sample);
+    function test_fromInt8_toInt8_roundTrip() external view {
+        assertEq(harness.toInt8(harness.fromInt8(type(int8).max)), type(int8).max);
     }
 
     function test_fromInt16() external view {
-        int16 sample = type(int16).max;
-        assertEq(harness.fromInt16(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt16(type(int16).max), bytes32(uint256(int256(type(int16).max))));
+        assertEq(harness.fromInt16(type(int16).min), bytes32(uint256(int256(type(int16).min))));
     }
 
     function test_toInt16_outOfBounds() external {
@@ -1551,18 +1529,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt16() external view {
-        int16 sample = type(int16).max;
-        assertEq(harness.toInt16(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt16(bytes32(uint256(int256(type(int16).max)))), type(int16).max);
+        assertEq(harness.toInt16(bytes32(uint256(int256(type(int16).min)))), type(int16).min);
     }
 
-    function test_fromInt16_roundTrip() external view {
-        int16 sample = type(int16).max;
-        assertEq(harness.toInt16(harness.fromInt16(sample)), sample);
+    function test_fromInt16_toInt16_roundTrip() external view {
+        assertEq(harness.toInt16(harness.fromInt16(type(int16).max)), type(int16).max);
     }
 
     function test_fromInt24() external view {
-        int24 sample = type(int24).max;
-        assertEq(harness.fromInt24(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt24(type(int24).max), bytes32(uint256(int256(type(int24).max))));
+        assertEq(harness.fromInt24(type(int24).min), bytes32(uint256(int256(type(int24).min))));
     }
 
     function test_toInt24_outOfBounds() external {
@@ -1574,18 +1551,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt24() external view {
-        int24 sample = type(int24).max;
-        assertEq(harness.toInt24(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt24(bytes32(uint256(int256(type(int24).max)))), type(int24).max);
+        assertEq(harness.toInt24(bytes32(uint256(int256(type(int24).min)))), type(int24).min);
     }
 
-    function test_fromInt24_roundTrip() external view {
-        int24 sample = type(int24).max;
-        assertEq(harness.toInt24(harness.fromInt24(sample)), sample);
+    function test_fromInt24_toInt24_roundTrip() external view {
+        assertEq(harness.toInt24(harness.fromInt24(type(int24).max)), type(int24).max);
     }
 
     function test_fromInt32() external view {
-        int32 sample = type(int32).max;
-        assertEq(harness.fromInt32(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt32(type(int32).max), bytes32(uint256(int256(type(int32).max))));
+        assertEq(harness.fromInt32(type(int32).min), bytes32(uint256(int256(type(int32).min))));
     }
 
     function test_toInt32_outOfBounds() external {
@@ -1597,18 +1573,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt32() external view {
-        int32 sample = type(int32).max;
-        assertEq(harness.toInt32(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt32(bytes32(uint256(int256(type(int32).max)))), type(int32).max);
+        assertEq(harness.toInt32(bytes32(uint256(int256(type(int32).min)))), type(int32).min);
     }
 
-    function test_fromInt32_roundTrip() external view {
-        int32 sample = type(int32).max;
-        assertEq(harness.toInt32(harness.fromInt32(sample)), sample);
+    function test_fromInt32_toInt32_roundTrip() external view {
+        assertEq(harness.toInt32(harness.fromInt32(type(int32).max)), type(int32).max);
     }
 
     function test_fromInt40() external view {
-        int40 sample = type(int40).max;
-        assertEq(harness.fromInt40(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt40(type(int40).max), bytes32(uint256(int256(type(int40).max))));
+        assertEq(harness.fromInt40(type(int40).min), bytes32(uint256(int256(type(int40).min))));
     }
 
     function test_toInt40_outOfBounds() external {
@@ -1620,18 +1595,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt40() external view {
-        int40 sample = type(int40).max;
-        assertEq(harness.toInt40(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt40(bytes32(uint256(int256(type(int40).max)))), type(int40).max);
+        assertEq(harness.toInt40(bytes32(uint256(int256(type(int40).min)))), type(int40).min);
     }
 
-    function test_fromInt40_roundTrip() external view {
-        int40 sample = type(int40).max;
-        assertEq(harness.toInt40(harness.fromInt40(sample)), sample);
+    function test_fromInt40_toInt40_roundTrip() external view {
+        assertEq(harness.toInt40(harness.fromInt40(type(int40).max)), type(int40).max);
     }
 
     function test_fromInt48() external view {
-        int48 sample = type(int48).max;
-        assertEq(harness.fromInt48(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt48(type(int48).max), bytes32(uint256(int256(type(int48).max))));
+        assertEq(harness.fromInt48(type(int48).min), bytes32(uint256(int256(type(int48).min))));
     }
 
     function test_toInt48_outOfBounds() external {
@@ -1643,18 +1617,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt48() external view {
-        int48 sample = type(int48).max;
-        assertEq(harness.toInt48(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt48(bytes32(uint256(int256(type(int48).max)))), type(int48).max);
+        assertEq(harness.toInt48(bytes32(uint256(int256(type(int48).min)))), type(int48).min);
     }
 
-    function test_fromInt48_roundTrip() external view {
-        int48 sample = type(int48).max;
-        assertEq(harness.toInt48(harness.fromInt48(sample)), sample);
+    function test_fromInt48_toInt48_roundTrip() external view {
+        assertEq(harness.toInt48(harness.fromInt48(type(int48).max)), type(int48).max);
     }
 
     function test_fromInt56() external view {
-        int56 sample = type(int56).max;
-        assertEq(harness.fromInt56(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt56(type(int56).max), bytes32(uint256(int256(type(int56).max))));
+        assertEq(harness.fromInt56(type(int56).min), bytes32(uint256(int256(type(int56).min))));
     }
 
     function test_toInt56_outOfBounds() external {
@@ -1666,18 +1639,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt56() external view {
-        int56 sample = type(int56).max;
-        assertEq(harness.toInt56(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt56(bytes32(uint256(int256(type(int56).max)))), type(int56).max);
+        assertEq(harness.toInt56(bytes32(uint256(int256(type(int56).min)))), type(int56).min);
     }
 
-    function test_fromInt56_roundTrip() external view {
-        int56 sample = type(int56).max;
-        assertEq(harness.toInt56(harness.fromInt56(sample)), sample);
+    function test_fromInt56_toInt56_roundTrip() external view {
+        assertEq(harness.toInt56(harness.fromInt56(type(int56).max)), type(int56).max);
     }
 
     function test_fromInt64() external view {
-        int64 sample = type(int64).max;
-        assertEq(harness.fromInt64(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt64(type(int64).max), bytes32(uint256(int256(type(int64).max))));
+        assertEq(harness.fromInt64(type(int64).min), bytes32(uint256(int256(type(int64).min))));
     }
 
     function test_toInt64_outOfBounds() external {
@@ -1689,18 +1661,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt64() external view {
-        int64 sample = type(int64).max;
-        assertEq(harness.toInt64(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt64(bytes32(uint256(int256(type(int64).max)))), type(int64).max);
+        assertEq(harness.toInt64(bytes32(uint256(int256(type(int64).min)))), type(int64).min);
     }
 
-    function test_fromInt64_roundTrip() external view {
-        int64 sample = type(int64).max;
-        assertEq(harness.toInt64(harness.fromInt64(sample)), sample);
+    function test_fromInt64_toInt64_roundTrip() external view {
+        assertEq(harness.toInt64(harness.fromInt64(type(int64).max)), type(int64).max);
     }
 
     function test_fromInt72() external view {
-        int72 sample = type(int72).max;
-        assertEq(harness.fromInt72(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt72(type(int72).max), bytes32(uint256(int256(type(int72).max))));
+        assertEq(harness.fromInt72(type(int72).min), bytes32(uint256(int256(type(int72).min))));
     }
 
     function test_toInt72_outOfBounds() external {
@@ -1712,18 +1683,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt72() external view {
-        int72 sample = type(int72).max;
-        assertEq(harness.toInt72(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt72(bytes32(uint256(int256(type(int72).max)))), type(int72).max);
+        assertEq(harness.toInt72(bytes32(uint256(int256(type(int72).min)))), type(int72).min);
     }
 
-    function test_fromInt72_roundTrip() external view {
-        int72 sample = type(int72).max;
-        assertEq(harness.toInt72(harness.fromInt72(sample)), sample);
+    function test_fromInt72_toInt72_roundTrip() external view {
+        assertEq(harness.toInt72(harness.fromInt72(type(int72).max)), type(int72).max);
     }
 
     function test_fromInt80() external view {
-        int80 sample = type(int80).max;
-        assertEq(harness.fromInt80(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt80(type(int80).max), bytes32(uint256(int256(type(int80).max))));
+        assertEq(harness.fromInt80(type(int80).min), bytes32(uint256(int256(type(int80).min))));
     }
 
     function test_toInt80_outOfBounds() external {
@@ -1735,18 +1705,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt80() external view {
-        int80 sample = type(int80).max;
-        assertEq(harness.toInt80(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt80(bytes32(uint256(int256(type(int80).max)))), type(int80).max);
+        assertEq(harness.toInt80(bytes32(uint256(int256(type(int80).min)))), type(int80).min);
     }
 
-    function test_fromInt80_roundTrip() external view {
-        int80 sample = type(int80).max;
-        assertEq(harness.toInt80(harness.fromInt80(sample)), sample);
+    function test_fromInt80_toInt80_roundTrip() external view {
+        assertEq(harness.toInt80(harness.fromInt80(type(int80).max)), type(int80).max);
     }
 
     function test_fromInt88() external view {
-        int88 sample = type(int88).max;
-        assertEq(harness.fromInt88(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt88(type(int88).max), bytes32(uint256(int256(type(int88).max))));
+        assertEq(harness.fromInt88(type(int88).min), bytes32(uint256(int256(type(int88).min))));
     }
 
     function test_toInt88_outOfBounds() external {
@@ -1758,18 +1727,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt88() external view {
-        int88 sample = type(int88).max;
-        assertEq(harness.toInt88(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt88(bytes32(uint256(int256(type(int88).max)))), type(int88).max);
+        assertEq(harness.toInt88(bytes32(uint256(int256(type(int88).min)))), type(int88).min);
     }
 
-    function test_fromInt88_roundTrip() external view {
-        int88 sample = type(int88).max;
-        assertEq(harness.toInt88(harness.fromInt88(sample)), sample);
+    function test_fromInt88_toInt88_roundTrip() external view {
+        assertEq(harness.toInt88(harness.fromInt88(type(int88).max)), type(int88).max);
     }
 
     function test_fromInt96() external view {
-        int96 sample = type(int96).max;
-        assertEq(harness.fromInt96(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt96(type(int96).max), bytes32(uint256(int256(type(int96).max))));
+        assertEq(harness.fromInt96(type(int96).min), bytes32(uint256(int256(type(int96).min))));
     }
 
     function test_toInt96_outOfBounds() external {
@@ -1781,18 +1749,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt96() external view {
-        int96 sample = type(int96).max;
-        assertEq(harness.toInt96(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt96(bytes32(uint256(int256(type(int96).max)))), type(int96).max);
+        assertEq(harness.toInt96(bytes32(uint256(int256(type(int96).min)))), type(int96).min);
     }
 
-    function test_fromInt96_roundTrip() external view {
-        int96 sample = type(int96).max;
-        assertEq(harness.toInt96(harness.fromInt96(sample)), sample);
+    function test_fromInt96_toInt96_roundTrip() external view {
+        assertEq(harness.toInt96(harness.fromInt96(type(int96).max)), type(int96).max);
     }
 
     function test_fromInt104() external view {
-        int104 sample = type(int104).max;
-        assertEq(harness.fromInt104(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt104(type(int104).max), bytes32(uint256(int256(type(int104).max))));
+        assertEq(harness.fromInt104(type(int104).min), bytes32(uint256(int256(type(int104).min))));
     }
 
     function test_toInt104_outOfBounds() external {
@@ -1804,18 +1771,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt104() external view {
-        int104 sample = type(int104).max;
-        assertEq(harness.toInt104(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt104(bytes32(uint256(int256(type(int104).max)))), type(int104).max);
+        assertEq(harness.toInt104(bytes32(uint256(int256(type(int104).min)))), type(int104).min);
     }
 
-    function test_fromInt104_roundTrip() external view {
-        int104 sample = type(int104).max;
-        assertEq(harness.toInt104(harness.fromInt104(sample)), sample);
+    function test_fromInt104_toInt104_roundTrip() external view {
+        assertEq(harness.toInt104(harness.fromInt104(type(int104).max)), type(int104).max);
     }
 
     function test_fromInt112() external view {
-        int112 sample = type(int112).max;
-        assertEq(harness.fromInt112(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt112(type(int112).max), bytes32(uint256(int256(type(int112).max))));
+        assertEq(harness.fromInt112(type(int112).min), bytes32(uint256(int256(type(int112).min))));
     }
 
     function test_toInt112_outOfBounds() external {
@@ -1827,18 +1793,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt112() external view {
-        int112 sample = type(int112).max;
-        assertEq(harness.toInt112(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt112(bytes32(uint256(int256(type(int112).max)))), type(int112).max);
+        assertEq(harness.toInt112(bytes32(uint256(int256(type(int112).min)))), type(int112).min);
     }
 
-    function test_fromInt112_roundTrip() external view {
-        int112 sample = type(int112).max;
-        assertEq(harness.toInt112(harness.fromInt112(sample)), sample);
+    function test_fromInt112_toInt112_roundTrip() external view {
+        assertEq(harness.toInt112(harness.fromInt112(type(int112).max)), type(int112).max);
     }
 
     function test_fromInt120() external view {
-        int120 sample = type(int120).max;
-        assertEq(harness.fromInt120(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt120(type(int120).max), bytes32(uint256(int256(type(int120).max))));
+        assertEq(harness.fromInt120(type(int120).min), bytes32(uint256(int256(type(int120).min))));
     }
 
     function test_toInt120_outOfBounds() external {
@@ -1850,18 +1815,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt120() external view {
-        int120 sample = type(int120).max;
-        assertEq(harness.toInt120(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt120(bytes32(uint256(int256(type(int120).max)))), type(int120).max);
+        assertEq(harness.toInt120(bytes32(uint256(int256(type(int120).min)))), type(int120).min);
     }
 
-    function test_fromInt120_roundTrip() external view {
-        int120 sample = type(int120).max;
-        assertEq(harness.toInt120(harness.fromInt120(sample)), sample);
+    function test_fromInt120_toInt120_roundTrip() external view {
+        assertEq(harness.toInt120(harness.fromInt120(type(int120).max)), type(int120).max);
     }
 
     function test_fromInt128() external view {
-        int128 sample = type(int128).max;
-        assertEq(harness.fromInt128(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt128(type(int128).max), bytes32(uint256(int256(type(int128).max))));
+        assertEq(harness.fromInt128(type(int128).min), bytes32(uint256(int256(type(int128).min))));
     }
 
     function test_toInt128_outOfBounds() external {
@@ -1873,18 +1837,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt128() external view {
-        int128 sample = type(int128).max;
-        assertEq(harness.toInt128(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt128(bytes32(uint256(int256(type(int128).max)))), type(int128).max);
+        assertEq(harness.toInt128(bytes32(uint256(int256(type(int128).min)))), type(int128).min);
     }
 
-    function test_fromInt128_roundTrip() external view {
-        int128 sample = type(int128).max;
-        assertEq(harness.toInt128(harness.fromInt128(sample)), sample);
+    function test_fromInt128_toInt128_roundTrip() external view {
+        assertEq(harness.toInt128(harness.fromInt128(type(int128).max)), type(int128).max);
     }
 
     function test_fromInt136() external view {
-        int136 sample = type(int136).max;
-        assertEq(harness.fromInt136(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt136(type(int136).max), bytes32(uint256(int256(type(int136).max))));
+        assertEq(harness.fromInt136(type(int136).min), bytes32(uint256(int256(type(int136).min))));
     }
 
     function test_toInt136_outOfBounds() external {
@@ -1896,18 +1859,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt136() external view {
-        int136 sample = type(int136).max;
-        assertEq(harness.toInt136(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt136(bytes32(uint256(int256(type(int136).max)))), type(int136).max);
+        assertEq(harness.toInt136(bytes32(uint256(int256(type(int136).min)))), type(int136).min);
     }
 
-    function test_fromInt136_roundTrip() external view {
-        int136 sample = type(int136).max;
-        assertEq(harness.toInt136(harness.fromInt136(sample)), sample);
+    function test_fromInt136_toInt136_roundTrip() external view {
+        assertEq(harness.toInt136(harness.fromInt136(type(int136).max)), type(int136).max);
     }
 
     function test_fromInt144() external view {
-        int144 sample = type(int144).max;
-        assertEq(harness.fromInt144(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt144(type(int144).max), bytes32(uint256(int256(type(int144).max))));
+        assertEq(harness.fromInt144(type(int144).min), bytes32(uint256(int256(type(int144).min))));
     }
 
     function test_toInt144_outOfBounds() external {
@@ -1919,18 +1881,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt144() external view {
-        int144 sample = type(int144).max;
-        assertEq(harness.toInt144(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt144(bytes32(uint256(int256(type(int144).max)))), type(int144).max);
+        assertEq(harness.toInt144(bytes32(uint256(int256(type(int144).min)))), type(int144).min);
     }
 
-    function test_fromInt144_roundTrip() external view {
-        int144 sample = type(int144).max;
-        assertEq(harness.toInt144(harness.fromInt144(sample)), sample);
+    function test_fromInt144_toInt144_roundTrip() external view {
+        assertEq(harness.toInt144(harness.fromInt144(type(int144).max)), type(int144).max);
     }
 
     function test_fromInt152() external view {
-        int152 sample = type(int152).max;
-        assertEq(harness.fromInt152(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt152(type(int152).max), bytes32(uint256(int256(type(int152).max))));
+        assertEq(harness.fromInt152(type(int152).min), bytes32(uint256(int256(type(int152).min))));
     }
 
     function test_toInt152_outOfBounds() external {
@@ -1942,18 +1903,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt152() external view {
-        int152 sample = type(int152).max;
-        assertEq(harness.toInt152(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt152(bytes32(uint256(int256(type(int152).max)))), type(int152).max);
+        assertEq(harness.toInt152(bytes32(uint256(int256(type(int152).min)))), type(int152).min);
     }
 
-    function test_fromInt152_roundTrip() external view {
-        int152 sample = type(int152).max;
-        assertEq(harness.toInt152(harness.fromInt152(sample)), sample);
+    function test_fromInt152_toInt152_roundTrip() external view {
+        assertEq(harness.toInt152(harness.fromInt152(type(int152).max)), type(int152).max);
     }
 
     function test_fromInt160() external view {
-        int160 sample = type(int160).max;
-        assertEq(harness.fromInt160(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt160(type(int160).max), bytes32(uint256(int256(type(int160).max))));
+        assertEq(harness.fromInt160(type(int160).min), bytes32(uint256(int256(type(int160).min))));
     }
 
     function test_toInt160_outOfBounds() external {
@@ -1965,18 +1925,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt160() external view {
-        int160 sample = type(int160).max;
-        assertEq(harness.toInt160(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt160(bytes32(uint256(int256(type(int160).max)))), type(int160).max);
+        assertEq(harness.toInt160(bytes32(uint256(int256(type(int160).min)))), type(int160).min);
     }
 
-    function test_fromInt160_roundTrip() external view {
-        int160 sample = type(int160).max;
-        assertEq(harness.toInt160(harness.fromInt160(sample)), sample);
+    function test_fromInt160_toInt160_roundTrip() external view {
+        assertEq(harness.toInt160(harness.fromInt160(type(int160).max)), type(int160).max);
     }
 
     function test_fromInt168() external view {
-        int168 sample = type(int168).max;
-        assertEq(harness.fromInt168(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt168(type(int168).max), bytes32(uint256(int256(type(int168).max))));
+        assertEq(harness.fromInt168(type(int168).min), bytes32(uint256(int256(type(int168).min))));
     }
 
     function test_toInt168_outOfBounds() external {
@@ -1988,18 +1947,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt168() external view {
-        int168 sample = type(int168).max;
-        assertEq(harness.toInt168(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt168(bytes32(uint256(int256(type(int168).max)))), type(int168).max);
+        assertEq(harness.toInt168(bytes32(uint256(int256(type(int168).min)))), type(int168).min);
     }
 
-    function test_fromInt168_roundTrip() external view {
-        int168 sample = type(int168).max;
-        assertEq(harness.toInt168(harness.fromInt168(sample)), sample);
+    function test_fromInt168_toInt168_roundTrip() external view {
+        assertEq(harness.toInt168(harness.fromInt168(type(int168).max)), type(int168).max);
     }
 
     function test_fromInt176() external view {
-        int176 sample = type(int176).max;
-        assertEq(harness.fromInt176(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt176(type(int176).max), bytes32(uint256(int256(type(int176).max))));
+        assertEq(harness.fromInt176(type(int176).min), bytes32(uint256(int256(type(int176).min))));
     }
 
     function test_toInt176_outOfBounds() external {
@@ -2011,18 +1969,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt176() external view {
-        int176 sample = type(int176).max;
-        assertEq(harness.toInt176(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt176(bytes32(uint256(int256(type(int176).max)))), type(int176).max);
+        assertEq(harness.toInt176(bytes32(uint256(int256(type(int176).min)))), type(int176).min);
     }
 
-    function test_fromInt176_roundTrip() external view {
-        int176 sample = type(int176).max;
-        assertEq(harness.toInt176(harness.fromInt176(sample)), sample);
+    function test_fromInt176_toInt176_roundTrip() external view {
+        assertEq(harness.toInt176(harness.fromInt176(type(int176).max)), type(int176).max);
     }
 
     function test_fromInt184() external view {
-        int184 sample = type(int184).max;
-        assertEq(harness.fromInt184(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt184(type(int184).max), bytes32(uint256(int256(type(int184).max))));
+        assertEq(harness.fromInt184(type(int184).min), bytes32(uint256(int256(type(int184).min))));
     }
 
     function test_toInt184_outOfBounds() external {
@@ -2034,18 +1991,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt184() external view {
-        int184 sample = type(int184).max;
-        assertEq(harness.toInt184(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt184(bytes32(uint256(int256(type(int184).max)))), type(int184).max);
+        assertEq(harness.toInt184(bytes32(uint256(int256(type(int184).min)))), type(int184).min);
     }
 
-    function test_fromInt184_roundTrip() external view {
-        int184 sample = type(int184).max;
-        assertEq(harness.toInt184(harness.fromInt184(sample)), sample);
+    function test_fromInt184_toInt184_roundTrip() external view {
+        assertEq(harness.toInt184(harness.fromInt184(type(int184).max)), type(int184).max);
     }
 
     function test_fromInt192() external view {
-        int192 sample = type(int192).max;
-        assertEq(harness.fromInt192(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt192(type(int192).max), bytes32(uint256(int256(type(int192).max))));
+        assertEq(harness.fromInt192(type(int192).min), bytes32(uint256(int256(type(int192).min))));
     }
 
     function test_toInt192_outOfBounds() external {
@@ -2057,18 +2013,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt192() external view {
-        int192 sample = type(int192).max;
-        assertEq(harness.toInt192(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt192(bytes32(uint256(int256(type(int192).max)))), type(int192).max);
+        assertEq(harness.toInt192(bytes32(uint256(int256(type(int192).min)))), type(int192).min);
     }
 
-    function test_fromInt192_roundTrip() external view {
-        int192 sample = type(int192).max;
-        assertEq(harness.toInt192(harness.fromInt192(sample)), sample);
+    function test_fromInt192_toInt192_roundTrip() external view {
+        assertEq(harness.toInt192(harness.fromInt192(type(int192).max)), type(int192).max);
     }
 
     function test_fromInt200() external view {
-        int200 sample = type(int200).max;
-        assertEq(harness.fromInt200(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt200(type(int200).max), bytes32(uint256(int256(type(int200).max))));
+        assertEq(harness.fromInt200(type(int200).min), bytes32(uint256(int256(type(int200).min))));
     }
 
     function test_toInt200_outOfBounds() external {
@@ -2080,18 +2035,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt200() external view {
-        int200 sample = type(int200).max;
-        assertEq(harness.toInt200(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt200(bytes32(uint256(int256(type(int200).max)))), type(int200).max);
+        assertEq(harness.toInt200(bytes32(uint256(int256(type(int200).min)))), type(int200).min);
     }
 
-    function test_fromInt200_roundTrip() external view {
-        int200 sample = type(int200).max;
-        assertEq(harness.toInt200(harness.fromInt200(sample)), sample);
+    function test_fromInt200_toInt200_roundTrip() external view {
+        assertEq(harness.toInt200(harness.fromInt200(type(int200).max)), type(int200).max);
     }
 
     function test_fromInt208() external view {
-        int208 sample = type(int208).max;
-        assertEq(harness.fromInt208(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt208(type(int208).max), bytes32(uint256(int256(type(int208).max))));
+        assertEq(harness.fromInt208(type(int208).min), bytes32(uint256(int256(type(int208).min))));
     }
 
     function test_toInt208_outOfBounds() external {
@@ -2103,18 +2057,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt208() external view {
-        int208 sample = type(int208).max;
-        assertEq(harness.toInt208(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt208(bytes32(uint256(int256(type(int208).max)))), type(int208).max);
+        assertEq(harness.toInt208(bytes32(uint256(int256(type(int208).min)))), type(int208).min);
     }
 
-    function test_fromInt208_roundTrip() external view {
-        int208 sample = type(int208).max;
-        assertEq(harness.toInt208(harness.fromInt208(sample)), sample);
+    function test_fromInt208_toInt208_roundTrip() external view {
+        assertEq(harness.toInt208(harness.fromInt208(type(int208).max)), type(int208).max);
     }
 
     function test_fromInt216() external view {
-        int216 sample = type(int216).max;
-        assertEq(harness.fromInt216(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt216(type(int216).max), bytes32(uint256(int256(type(int216).max))));
+        assertEq(harness.fromInt216(type(int216).min), bytes32(uint256(int256(type(int216).min))));
     }
 
     function test_toInt216_outOfBounds() external {
@@ -2126,18 +2079,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt216() external view {
-        int216 sample = type(int216).max;
-        assertEq(harness.toInt216(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt216(bytes32(uint256(int256(type(int216).max)))), type(int216).max);
+        assertEq(harness.toInt216(bytes32(uint256(int256(type(int216).min)))), type(int216).min);
     }
 
-    function test_fromInt216_roundTrip() external view {
-        int216 sample = type(int216).max;
-        assertEq(harness.toInt216(harness.fromInt216(sample)), sample);
+    function test_fromInt216_toInt216_roundTrip() external view {
+        assertEq(harness.toInt216(harness.fromInt216(type(int216).max)), type(int216).max);
     }
 
     function test_fromInt224() external view {
-        int224 sample = type(int224).max;
-        assertEq(harness.fromInt224(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt224(type(int224).max), bytes32(uint256(int256(type(int224).max))));
+        assertEq(harness.fromInt224(type(int224).min), bytes32(uint256(int256(type(int224).min))));
     }
 
     function test_toInt224_outOfBounds() external {
@@ -2149,18 +2101,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt224() external view {
-        int224 sample = type(int224).max;
-        assertEq(harness.toInt224(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt224(bytes32(uint256(int256(type(int224).max)))), type(int224).max);
+        assertEq(harness.toInt224(bytes32(uint256(int256(type(int224).min)))), type(int224).min);
     }
 
-    function test_fromInt224_roundTrip() external view {
-        int224 sample = type(int224).max;
-        assertEq(harness.toInt224(harness.fromInt224(sample)), sample);
+    function test_fromInt224_toInt224_roundTrip() external view {
+        assertEq(harness.toInt224(harness.fromInt224(type(int224).max)), type(int224).max);
     }
 
     function test_fromInt232() external view {
-        int232 sample = type(int232).max;
-        assertEq(harness.fromInt232(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt232(type(int232).max), bytes32(uint256(int256(type(int232).max))));
+        assertEq(harness.fromInt232(type(int232).min), bytes32(uint256(int256(type(int232).min))));
     }
 
     function test_toInt232_outOfBounds() external {
@@ -2172,18 +2123,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt232() external view {
-        int232 sample = type(int232).max;
-        assertEq(harness.toInt232(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt232(bytes32(uint256(int256(type(int232).max)))), type(int232).max);
+        assertEq(harness.toInt232(bytes32(uint256(int256(type(int232).min)))), type(int232).min);
     }
 
-    function test_fromInt232_roundTrip() external view {
-        int232 sample = type(int232).max;
-        assertEq(harness.toInt232(harness.fromInt232(sample)), sample);
+    function test_fromInt232_toInt232_roundTrip() external view {
+        assertEq(harness.toInt232(harness.fromInt232(type(int232).max)), type(int232).max);
     }
 
     function test_fromInt240() external view {
-        int240 sample = type(int240).max;
-        assertEq(harness.fromInt240(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt240(type(int240).max), bytes32(uint256(int256(type(int240).max))));
+        assertEq(harness.fromInt240(type(int240).min), bytes32(uint256(int256(type(int240).min))));
     }
 
     function test_toInt240_outOfBounds() external {
@@ -2195,18 +2145,17 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt240() external view {
-        int240 sample = type(int240).max;
-        assertEq(harness.toInt240(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt240(bytes32(uint256(int256(type(int240).max)))), type(int240).max);
+        assertEq(harness.toInt240(bytes32(uint256(int256(type(int240).min)))), type(int240).min);
     }
 
-    function test_fromInt240_roundTrip() external view {
-        int240 sample = type(int240).max;
-        assertEq(harness.toInt240(harness.fromInt240(sample)), sample);
+    function test_fromInt240_toInt240_roundTrip() external view {
+        assertEq(harness.toInt240(harness.fromInt240(type(int240).max)), type(int240).max);
     }
 
     function test_fromInt248() external view {
-        int248 sample = type(int248).max;
-        assertEq(harness.fromInt248(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt248(type(int248).max), bytes32(uint256(int256(type(int248).max))));
+        assertEq(harness.fromInt248(type(int248).min), bytes32(uint256(int256(type(int248).min))));
     }
 
     function test_toInt248_outOfBounds() external {
@@ -2218,28 +2167,26 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toInt248() external view {
-        int240 sample = type(int240).max;
-        assertEq(harness.toInt248(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt248(bytes32(uint256(int256(type(int248).max)))), type(int248).max);
+        assertEq(harness.toInt248(bytes32(uint256(int256(type(int248).min)))), type(int248).min);
     }
 
-    function test_fromInt248_roundTrip() external view {
-        int248 sample = type(int248).max;
-        assertEq(harness.toInt248(harness.fromInt248(sample)), sample);
+    function test_fromInt248_toInt248_roundTrip() external view {
+        assertEq(harness.toInt248(harness.fromInt248(type(int248).max)), type(int248).max);
     }
 
     function test_fromInt256() external view {
-        int256 sample = type(int256).max;
-        assertEq(harness.fromInt256(sample), bytes32(uint256(int256(sample))));
+        assertEq(harness.fromInt256(type(int256).max), bytes32(uint256(type(int256).max)));
+        assertEq(harness.fromInt256(type(int256).min), bytes32(uint256(type(int256).min)));
     }
 
     function test_toInt256() external view {
-        int256 sample = type(int256).max;
-        assertEq(harness.toInt256(bytes32(uint256(int256(sample)))), sample);
+        assertEq(harness.toInt256(bytes32(uint256(type(int256).max))), type(int256).max);
+        assertEq(harness.toInt256(bytes32(uint256(type(int256).min))), type(int256).min);
     }
 
-    function test_fromInt256_roundTrip() external view {
-        int256 sample = type(int256).max;
-        assertEq(harness.toInt256(harness.fromInt256(sample)), sample);
+    function test_fromInt256_toInt256_roundTrip() external view {
+        assertEq(harness.toInt256(harness.fromInt256(type(int256).max)), type(int256).max);
     }
 
     /**********************************************************************************************/
@@ -2247,8 +2194,7 @@ contract ParameterHelpers_Tests is Test {
     /**********************************************************************************************/
 
     function test_fromUint8() external view {
-        uint8 sample = type(uint8).max;
-        assertEq(harness.fromUint8(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint8(type(uint8).max), bytes32(uint256(type(uint8).max)));
     }
 
     function test_toUint8_outOfBounds() external {
@@ -2257,18 +2203,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint8() external view {
-        uint8 sample = type(uint8).max;
-        assertEq(harness.toUint8(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint8(bytes32(uint256(type(uint8).max))), type(uint8).max);
     }
 
-    function test_fromUint8_roundTrip() external view {
-        uint8 sample = type(uint8).max;
-        assertEq(harness.toUint8(harness.fromUint8(sample)), sample);
+    function test_fromUint8_toUint8_roundTrip() external view {
+        assertEq(harness.toUint8(harness.fromUint8(type(uint8).max)), type(uint8).max);
     }
 
     function test_fromUint16() external view {
-        uint16 sample = type(uint16).max;
-        assertEq(harness.fromUint16(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint16(type(uint16).max), bytes32(uint256(type(uint16).max)));
     }
 
     function test_toUint16_outOfBounds() external {
@@ -2277,18 +2220,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint16() external view {
-        uint16 sample = type(uint16).max;
-        assertEq(harness.toUint16(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint16(bytes32(uint256(type(uint16).max))), type(uint16).max);
     }
 
-    function test_fromUint16_roundTrip() external view {
-        uint16 sample = type(uint16).max;
-        assertEq(harness.toUint16(harness.fromUint16(sample)), sample);
+    function test_fromUint16_toUint16_roundTrip() external view {
+        assertEq(harness.toUint16(harness.fromUint16(type(uint16).max)), type(uint16).max);
     }
 
     function test_fromUint24() external view {
-        uint24 sample = type(uint24).max;
-        assertEq(harness.fromUint24(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint24(type(uint24).max), bytes32(uint256(type(uint24).max)));
     }
 
     function test_toUint24_outOfBounds() external {
@@ -2297,18 +2237,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint24() external view {
-        uint24 sample = type(uint24).max;
-        assertEq(harness.toUint24(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint24(bytes32(uint256(type(uint24).max))), type(uint24).max);
     }
 
-    function test_fromUint24_roundTrip() external view {
-        uint24 sample = type(uint24).max;
-        assertEq(harness.toUint24(harness.fromUint24(sample)), sample);
+    function test_fromUint24_toUint24_roundTrip() external view {
+        assertEq(harness.toUint24(harness.fromUint24(type(uint24).max)), type(uint24).max);
     }
 
     function test_fromUint32() external view {
-        uint32 sample = type(uint32).max;
-        assertEq(harness.fromUint32(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint32(type(uint32).max), bytes32(uint256(type(uint32).max)));
     }
 
     function test_toUint32_outOfBounds() external {
@@ -2317,18 +2254,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint32() external view {
-        uint32 sample = type(uint32).max;
-        assertEq(harness.toUint32(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint32(bytes32(uint256(type(uint32).max))), type(uint32).max);
     }
 
-    function test_fromUint32_roundTrip() external view {
-        uint32 sample = type(uint32).max;
-        assertEq(harness.toUint32(harness.fromUint32(sample)), sample);
+    function test_fromUint32_toUint32_roundTrip() external view {
+        assertEq(harness.toUint32(harness.fromUint32(type(uint32).max)), type(uint32).max);
     }
 
     function test_fromUint40() external view {
-        uint40 sample = type(uint40).max;
-        assertEq(harness.fromUint40(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint40(type(uint40).max), bytes32(uint256(type(uint40).max)));
     }
 
     function test_toUint40_outOfBounds() external {
@@ -2337,18 +2271,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint40() external view {
-        uint40 sample = type(uint40).max;
-        assertEq(harness.toUint40(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint40(bytes32(uint256(type(uint40).max))), type(uint40).max);
     }
 
-    function test_fromUint40_roundTrip() external view {
-        uint40 sample = type(uint40).max;
-        assertEq(harness.toUint40(harness.fromUint40(sample)), sample);
+    function test_fromUint40_toUint40_roundTrip() external view {
+        assertEq(harness.toUint40(harness.fromUint40(type(uint40).max)), type(uint40).max);
     }
 
     function test_fromUint48() external view {
-        uint48 sample = type(uint48).max;
-        assertEq(harness.fromUint48(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint48(type(uint48).max), bytes32(uint256(type(uint48).max)));
     }
 
     function test_toUint48_outOfBounds() external {
@@ -2357,18 +2288,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint48() external view {
-        uint48 sample = type(uint48).max;
-        assertEq(harness.toUint48(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint48(bytes32(uint256(type(uint48).max))), type(uint48).max);
     }
 
-    function test_fromUint48_roundTrip() external view {
-        uint48 sample = type(uint48).max;
-        assertEq(harness.toUint48(harness.fromUint48(sample)), sample);
+    function test_fromUint48_toUint48_roundTrip() external view {
+        assertEq(harness.toUint48(harness.fromUint48(type(uint48).max)), type(uint48).max);
     }
 
     function test_fromUint56() external view {
-        uint56 sample = type(uint56).max;
-        assertEq(harness.fromUint56(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint56(type(uint56).max), bytes32(uint256(type(uint56).max)));
     }
 
     function test_toUint56_outOfBounds() external {
@@ -2377,18 +2305,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint56() external view {
-        uint56 sample = type(uint56).max;
-        assertEq(harness.toUint56(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint56(bytes32(uint256(type(uint56).max))), type(uint56).max);
     }
 
-    function test_fromUint56_roundTrip() external view {
-        uint56 sample = type(uint56).max;
-        assertEq(harness.toUint56(harness.fromUint56(sample)), sample);
+    function test_fromUint56_toUint56_roundTrip() external view {
+        assertEq(harness.toUint56(harness.fromUint56(type(uint56).max)), type(uint56).max);
     }
 
     function test_fromUint64() external view {
-        uint64 sample = type(uint64).max;
-        assertEq(harness.fromUint64(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint64(type(uint64).max), bytes32(uint256(type(uint64).max)));
     }
 
     function test_toUint64_outOfBounds() external {
@@ -2397,18 +2322,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint64() external view {
-        uint64 sample = type(uint64).max;
-        assertEq(harness.toUint64(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint64(bytes32(uint256(type(uint64).max))), type(uint64).max);
     }
 
-    function test_fromUint64_roundTrip() external view {
-        uint64 sample = type(uint64).max;
-        assertEq(harness.toUint64(harness.fromUint64(sample)), sample);
+    function test_fromUint64_toUint64_roundTrip() external view {
+        assertEq(harness.toUint64(harness.fromUint64(type(uint64).max)), type(uint64).max);
     }
 
     function test_fromUint72() external view {
-        uint72 sample = type(uint72).max;
-        assertEq(harness.fromUint72(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint72(type(uint72).max), bytes32(uint256(type(uint72).max)));
     }
 
     function test_toUint72_outOfBounds() external {
@@ -2417,18 +2339,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint72() external view {
-        uint72 sample = type(uint72).max;
-        assertEq(harness.toUint72(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint72(bytes32(uint256(type(uint72).max))), type(uint72).max);
     }
 
-    function test_fromUint72_roundTrip() external view {
-        uint72 sample = type(uint72).max;
-        assertEq(harness.toUint72(harness.fromUint72(sample)), sample);
+    function test_fromUint72_toUint72_roundTrip() external view {
+        assertEq(harness.toUint72(harness.fromUint72(type(uint72).max)), type(uint72).max);
     }
 
     function test_fromUint80() external view {
-        uint80 sample = type(uint80).max;
-        assertEq(harness.fromUint80(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint80(type(uint80).max), bytes32(uint256(type(uint80).max)));
     }
 
     function test_toUint80_outOfBounds() external {
@@ -2437,18 +2356,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint80() external view {
-        uint80 sample = type(uint80).max;
-        assertEq(harness.toUint80(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint80(bytes32(uint256(type(uint80).max))), type(uint80).max);
     }
 
-    function test_fromUint80_roundTrip() external view {
-        uint80 sample = type(uint80).max;
-        assertEq(harness.toUint80(harness.fromUint80(sample)), sample);
+    function test_fromUint80_toUint80_roundTrip() external view {
+        assertEq(harness.toUint80(harness.fromUint80(type(uint80).max)), type(uint80).max);
     }
 
     function test_fromUint88() external view {
-        uint88 sample = type(uint88).max;
-        assertEq(harness.fromUint88(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint88(type(uint88).max), bytes32(uint256(type(uint88).max)));
     }
 
     function test_toUint88_outOfBounds() external {
@@ -2457,18 +2373,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint88() external view {
-        uint88 sample = type(uint88).max;
-        assertEq(harness.toUint88(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint88(bytes32(uint256(type(uint88).max))), type(uint88).max);
     }
 
-    function test_fromUint88_roundTrip() external view {
-        uint88 sample = type(uint88).max;
-        assertEq(harness.toUint88(harness.fromUint88(sample)), sample);
+    function test_fromUint88_toUint88_roundTrip() external view {
+        assertEq(harness.toUint88(harness.fromUint88(type(uint88).max)), type(uint88).max);
     }
 
     function test_fromUint96() external view {
-        uint96 sample = type(uint96).max;
-        assertEq(harness.fromUint96(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint96(type(uint96).max), bytes32(uint256(type(uint96).max)));
     }
 
     function test_toUint96_outOfBounds() external {
@@ -2477,18 +2390,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint96() external view {
-        uint96 sample = type(uint96).max;
-        assertEq(harness.toUint96(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint96(bytes32(uint256(type(uint96).max))), type(uint96).max);
     }
 
-    function test_fromUint96_roundTrip() external view {
-        uint96 sample = type(uint96).max;
-        assertEq(harness.toUint96(harness.fromUint96(sample)), sample);
+    function test_fromUint96_toUint96_roundTrip() external view {
+        assertEq(harness.toUint96(harness.fromUint96(type(uint96).max)), type(uint96).max);
     }
 
     function test_fromUint104() external view {
-        uint104 sample = type(uint104).max;
-        assertEq(harness.fromUint104(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint104(type(uint104).max), bytes32(uint256(type(uint104).max)));
     }
 
     function test_toUint104_outOfBounds() external {
@@ -2497,18 +2407,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint104() external view {
-        uint104 sample = type(uint104).max;
-        assertEq(harness.toUint104(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint104(bytes32(uint256(type(uint104).max))), type(uint104).max);
     }
 
-    function test_fromUint104_roundTrip() external view {
-        uint104 sample = type(uint104).max;
-        assertEq(harness.toUint104(harness.fromUint104(sample)), sample);
+    function test_fromUint104_toUint104_roundTrip() external view {
+        assertEq(harness.toUint104(harness.fromUint104(type(uint104).max)), type(uint104).max);
     }
 
     function test_fromUint112() external view {
-        uint112 sample = type(uint112).max;
-        assertEq(harness.fromUint112(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint112(type(uint112).max), bytes32(uint256(type(uint112).max)));
     }
 
     function test_toUint112_outOfBounds() external {
@@ -2517,18 +2424,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint112() external view {
-        uint112 sample = type(uint112).max;
-        assertEq(harness.toUint112(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint112(bytes32(uint256(type(uint112).max))), type(uint112).max);
     }
 
-    function test_fromUint112_roundTrip() external view {
-        uint112 sample = type(uint112).max;
-        assertEq(harness.toUint112(harness.fromUint112(sample)), sample);
+    function test_fromUint112_toUint112_roundTrip() external view {
+        assertEq(harness.toUint112(harness.fromUint112(type(uint112).max)), type(uint112).max);
     }
 
     function test_fromUint120() external view {
-        uint120 sample = type(uint120).max;
-        assertEq(harness.fromUint120(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint120(type(uint120).max), bytes32(uint256(type(uint120).max)));
     }
 
     function test_toUint120_outOfBounds() external {
@@ -2537,18 +2441,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint120() external view {
-        uint120 sample = type(uint120).max;
-        assertEq(harness.toUint120(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint120(bytes32(uint256(type(uint120).max))), type(uint120).max);
     }
 
-    function test_fromUint120_roundTrip() external view {
-        uint120 sample = type(uint120).max;
-        assertEq(harness.toUint120(harness.fromUint120(sample)), sample);
+    function test_fromUint120_toUint120_roundTrip() external view {
+        assertEq(harness.toUint120(harness.fromUint120(type(uint120).max)), type(uint120).max);
     }
 
     function test_fromUint128() external view {
-        uint128 sample = type(uint128).max;
-        assertEq(harness.fromUint128(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint128(type(uint128).max), bytes32(uint256(type(uint128).max)));
     }
 
     function test_toUint128_outOfBounds() external {
@@ -2557,18 +2458,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint128() external view {
-        uint128 sample = type(uint128).max;
-        assertEq(harness.toUint128(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint128(bytes32(uint256(type(uint128).max))), type(uint128).max);
     }
 
-    function test_fromUint128_roundTrip() external view {
-        uint128 sample = type(uint128).max;
-        assertEq(harness.toUint128(harness.fromUint128(sample)), sample);
+    function test_fromUint128_toUint128_roundTrip() external view {
+        assertEq(harness.toUint128(harness.fromUint128(type(uint128).max)), type(uint128).max);
     }
 
     function test_fromUint136() external view {
-        uint136 sample = type(uint136).max;
-        assertEq(harness.fromUint136(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint136(type(uint136).max), bytes32(uint256(type(uint136).max)));
     }
 
     function test_toUint136_outOfBounds() external {
@@ -2577,18 +2475,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint136() external view {
-        uint136 sample = type(uint136).max;
-        assertEq(harness.toUint136(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint136(bytes32(uint256(type(uint136).max))), type(uint136).max);
     }
 
-    function test_fromUint136_roundTrip() external view {
-        uint136 sample = type(uint136).max;
-        assertEq(harness.toUint136(harness.fromUint136(sample)), sample);
+    function test_fromUint136_toUint136_roundTrip() external view {
+        assertEq(harness.toUint136(harness.fromUint136(type(uint136).max)), type(uint136).max);
     }
 
     function test_fromUint144() external view {
-        uint144 sample = type(uint144).max;
-        assertEq(harness.fromUint144(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint144(type(uint144).max), bytes32(uint256(type(uint144).max)));
     }
 
     function test_toUint144_outOfBounds() external {
@@ -2597,18 +2492,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint144() external view {
-        uint144 sample = type(uint144).max;
-        assertEq(harness.toUint144(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint144(bytes32(uint256(type(uint144).max))), type(uint144).max);
     }
 
-    function test_fromUint144_roundTrip() external view {
-        uint144 sample = type(uint144).max;
-        assertEq(harness.toUint144(harness.fromUint144(sample)), sample);
+    function test_fromUint144_toUint144_roundTrip() external view {
+        assertEq(harness.toUint144(harness.fromUint144(type(uint144).max)), type(uint144).max);
     }
 
     function test_fromUint152() external view {
-        uint152 sample = type(uint152).max;
-        assertEq(harness.fromUint152(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint152(type(uint152).max), bytes32(uint256(type(uint152).max)));
     }
 
     function test_toUint152_outOfBounds() external {
@@ -2617,18 +2509,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint152() external view {
-        uint152 sample = type(uint152).max;
-        assertEq(harness.toUint152(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint152(bytes32(uint256(type(uint152).max))), type(uint152).max);
     }
 
-    function test_fromUint152_roundTrip() external view {
-        uint152 sample = type(uint152).max;
-        assertEq(harness.toUint152(harness.fromUint152(sample)), sample);
+    function test_fromUint152_toUint152_roundTrip() external view {
+        assertEq(harness.toUint152(harness.fromUint152(type(uint152).max)), type(uint152).max);
     }
 
     function test_fromUint160() external view {
-        uint160 sample = type(uint160).max;
-        assertEq(harness.fromUint160(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint160(type(uint160).max), bytes32(uint256(type(uint160).max)));
     }
 
     function test_toUint160_outOfBounds() external {
@@ -2637,18 +2526,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint160() external view {
-        uint160 sample = type(uint160).max;
-        assertEq(harness.toUint160(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint160(bytes32(uint256(type(uint160).max))), type(uint160).max);
     }
 
-    function test_fromUint160_roundTrip() external view {
-        uint160 sample = type(uint160).max;
-        assertEq(harness.toUint160(harness.fromUint160(sample)), sample);
+    function test_fromUint160_toUint160_roundTrip() external view {
+        assertEq(harness.toUint160(harness.fromUint160(type(uint160).max)), type(uint160).max);
     }
 
     function test_fromUint168() external view {
-        uint168 sample = type(uint168).max;
-        assertEq(harness.fromUint168(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint168(type(uint168).max), bytes32(uint256(type(uint168).max)));
     }
 
     function test_toUint168_outOfBounds() external {
@@ -2657,18 +2543,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint168() external view {
-        uint168 sample = type(uint168).max;
-        assertEq(harness.toUint168(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint168(bytes32(uint256(type(uint168).max))), type(uint168).max);
     }
 
-    function test_fromUint168_roundTrip() external view {
-        uint168 sample = type(uint168).max;
-        assertEq(harness.toUint168(harness.fromUint168(sample)), sample);
+    function test_fromUint168_toUint168_roundTrip() external view {
+        assertEq(harness.toUint168(harness.fromUint168(type(uint168).max)), type(uint168).max);
     }
 
     function test_fromUint176() external view {
-        uint176 sample = type(uint176).max;
-        assertEq(harness.fromUint176(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint176(type(uint176).max), bytes32(uint256(type(uint176).max)));
     }
 
     function test_toUint176_outOfBounds() external {
@@ -2677,18 +2560,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint176() external view {
-        uint176 sample = type(uint176).max;
-        assertEq(harness.toUint176(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint176(bytes32(uint256(type(uint176).max))), type(uint176).max);
     }
 
-    function test_fromUint176_roundTrip() external view {
-        uint176 sample = type(uint176).max;
-        assertEq(harness.toUint176(harness.fromUint176(sample)), sample);
+    function test_fromUint176_toUint176_roundTrip() external view {
+        assertEq(harness.toUint176(harness.fromUint176(type(uint176).max)), type(uint176).max);
     }
 
     function test_fromUint184() external view {
-        uint184 sample = type(uint184).max;
-        assertEq(harness.fromUint184(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint184(type(uint184).max), bytes32(uint256(type(uint184).max)));
     }
 
     function test_toUint184_outOfBounds() external {
@@ -2697,18 +2577,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint184() external view {
-        uint184 sample = type(uint184).max;
-        assertEq(harness.toUint184(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint184(bytes32(uint256(type(uint184).max))), type(uint184).max);
     }
 
-    function test_fromUint184_roundTrip() external view {
-        uint184 sample = type(uint184).max;
-        assertEq(harness.toUint184(harness.fromUint184(sample)), sample);
+    function test_fromUint184_toUint184_roundTrip() external view {
+        assertEq(harness.toUint184(harness.fromUint184(type(uint184).max)), type(uint184).max);
     }
 
     function test_fromUint192() external view {
-        uint192 sample = type(uint192).max;
-        assertEq(harness.fromUint192(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint192(type(uint192).max), bytes32(uint256(type(uint192).max)));
     }
 
     function test_toUint192_outOfBounds() external {
@@ -2717,18 +2594,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint192() external view {
-        uint192 sample = type(uint192).max;
-        assertEq(harness.toUint192(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint192(bytes32(uint256(type(uint192).max))), type(uint192).max);
     }
 
-    function test_fromUint192_roundTrip() external view {
-        uint192 sample = type(uint192).max;
-        assertEq(harness.toUint192(harness.fromUint192(sample)), sample);
+    function test_fromUint192_toUint192_roundTrip() external view {
+        assertEq(harness.toUint192(harness.fromUint192(type(uint192).max)), type(uint192).max);
     }
 
     function test_fromUint200() external view {
-        uint200 sample = type(uint200).max;
-        assertEq(harness.fromUint200(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint200(type(uint200).max), bytes32(uint256(type(uint200).max)));
     }
 
     function test_toUint200_outOfBounds() external {
@@ -2737,18 +2611,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint200() external view {
-        uint200 sample = type(uint200).max;
-        assertEq(harness.toUint200(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint200(bytes32(uint256(type(uint200).max))), type(uint200).max);
     }
 
-    function test_fromUint200_roundTrip() external view {
-        uint200 sample = type(uint200).max;
-        assertEq(harness.toUint200(harness.fromUint200(sample)), sample);
+    function test_fromUint200_toUint200_roundTrip() external view {
+        assertEq(harness.toUint200(harness.fromUint200(type(uint200).max)), type(uint200).max);
     }
 
     function test_fromUint208() external view {
-        uint208 sample = type(uint208).max;
-        assertEq(harness.fromUint208(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint208(type(uint208).max), bytes32(uint256(type(uint208).max)));
     }
 
     function test_toUint208_outOfBounds() external {
@@ -2757,18 +2628,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint208() external view {
-        uint208 sample = type(uint208).max;
-        assertEq(harness.toUint208(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint208(bytes32(uint256(type(uint208).max))), type(uint208).max);
     }
 
-    function test_fromUint208_roundTrip() external view {
-        uint208 sample = type(uint208).max;
-        assertEq(harness.toUint208(harness.fromUint208(sample)), sample);
+    function test_fromUint208_toUint208_roundTrip() external view {
+        assertEq(harness.toUint208(harness.fromUint208(type(uint208).max)), type(uint208).max);
     }
 
     function test_fromUint216() external view {
-        uint216 sample = type(uint216).max;
-        assertEq(harness.fromUint216(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint216(type(uint216).max), bytes32(uint256(type(uint216).max)));
     }
 
     function test_toUint216_outOfBounds() external {
@@ -2777,18 +2645,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint216() external view {
-        uint216 sample = type(uint216).max;
-        assertEq(harness.toUint216(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint216(bytes32(uint256(type(uint216).max))), type(uint216).max);
     }
 
-    function test_fromUint216_roundTrip() external view {
-        uint216 sample = type(uint216).max;
-        assertEq(harness.toUint216(harness.fromUint216(sample)), sample);
+    function test_fromUint216_toUint216_roundTrip() external view {
+        assertEq(harness.toUint216(harness.fromUint216(type(uint216).max)), type(uint216).max);
     }
 
     function test_fromUint224() external view {
-        uint224 sample = type(uint224).max;
-        assertEq(harness.fromUint224(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint224(type(uint224).max), bytes32(uint256(type(uint224).max)));
     }
 
     function test_toUint224_outOfBounds() external {
@@ -2797,18 +2662,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint224() external view {
-        uint224 sample = type(uint224).max;
-        assertEq(harness.toUint224(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint224(bytes32(uint256(type(uint224).max))), type(uint224).max);
     }
 
-    function test_fromUint224_roundTrip() external view {
-        uint224 sample = type(uint224).max;
-        assertEq(harness.toUint224(harness.fromUint224(sample)), sample);
+    function test_fromUint224_toUint224_roundTrip() external view {
+        assertEq(harness.toUint224(harness.fromUint224(type(uint224).max)), type(uint224).max);
     }
 
     function test_fromUint232() external view {
-        uint232 sample = type(uint232).max;
-        assertEq(harness.fromUint232(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint232(type(uint232).max), bytes32(uint256(type(uint232).max)));
     }
 
     function test_toUint232_outOfBounds() external {
@@ -2817,18 +2679,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint232() external view {
-        uint232 sample = type(uint232).max;
-        assertEq(harness.toUint232(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint232(bytes32(uint256(type(uint232).max))), type(uint232).max);
     }
 
-    function test_fromUint232_roundTrip() external view {
-        uint232 sample = type(uint232).max;
-        assertEq(harness.toUint232(harness.fromUint232(sample)), sample);
+    function test_fromUint232_toUint232_roundTrip() external view {
+        assertEq(harness.toUint232(harness.fromUint232(type(uint232).max)), type(uint232).max);
     }
 
     function test_fromUint240() external view {
-        uint240 sample = type(uint240).max;
-        assertEq(harness.fromUint240(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint240(type(uint240).max), bytes32(uint256(type(uint240).max)));
     }
 
     function test_toUint240_outOfBounds() external {
@@ -2837,18 +2696,15 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint240() external view {
-        uint240 sample = type(uint240).max;
-        assertEq(harness.toUint240(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint240(bytes32(uint256(type(uint240).max))), type(uint240).max);
     }
 
-    function test_fromUint240_roundTrip() external view {
-        uint240 sample = type(uint240).max;
-        assertEq(harness.toUint240(harness.fromUint240(sample)), sample);
+    function test_fromUint240_toUint240_roundTrip() external view {
+        assertEq(harness.toUint240(harness.fromUint240(type(uint240).max)), type(uint240).max);
     }
 
     function test_fromUint248() external view {
-        uint248 sample = type(uint248).max;
-        assertEq(harness.fromUint248(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint248(type(uint248).max), bytes32(uint256(type(uint248).max)));
     }
 
     function test_toUint248_outOfBounds() external {
@@ -2857,28 +2713,23 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_toUint248() external view {
-        uint248 sample = type(uint248).max;
-        assertEq(harness.toUint248(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint248(bytes32(uint256(type(uint248).max))), type(uint248).max);
     }
 
-    function test_fromUint248_roundTrip() external view {
-        uint248 sample = type(uint248).max;
-        assertEq(harness.toUint248(harness.fromUint248(sample)), sample);
+    function test_fromUint248_toUint248_roundTrip() external view {
+        assertEq(harness.toUint248(harness.fromUint248(type(uint248).max)), type(uint248).max);
     }
 
     function test_fromUint256() external view {
-        uint256 sample = type(uint256).max;
-        assertEq(harness.fromUint256(sample), bytes32(uint256(sample)));
+        assertEq(harness.fromUint256(type(uint256).max), bytes32(uint256(type(uint256).max)));
     }
 
     function test_toUint256() external view {
-        uint256 sample = type(uint256).max;
-        assertEq(harness.toUint256(bytes32(uint256(sample))), sample);
+        assertEq(harness.toUint256(bytes32(uint256(type(uint256).max))), type(uint256).max);
     }
 
-    function test_fromUint256_roundTrip() external view {
-        uint256 sample = type(uint256).max;
-        assertEq(harness.toUint256(harness.fromUint256(sample)), sample);
+    function test_fromUint256_toUint256_roundTrip() external view {
+        assertEq(harness.toUint256(harness.fromUint256(type(uint256).max)), type(uint256).max);
     }
 
 }

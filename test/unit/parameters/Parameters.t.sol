@@ -8,6 +8,7 @@ import { IParameters } from "../../../src/interfaces/IParameters.sol";
 import { Parameters } from "../../../src/Parameters.sol";
 
 contract ParametersHarness is Parameters {
+
     constructor(address[] memory admins) Parameters(admins) {}
 
     function __setParameter(string calldata key, address value) external {
@@ -25,15 +26,16 @@ contract ParametersHarness is Parameters {
     function __setParameter(string calldata key, bytes32 value) public {
         _parameters[key] = value;
     }
+
 }
 
 contract Parameters_Tests is Test {
 
     ParametersHarness internal parameters;
 
-    address internal admin1       = makeAddr("admin1");
-    address internal admin2       = makeAddr("admin2");
-    address internal unauthorized = makeAddr("unauthorized");
+    address internal admin1       = 0x0000000000000000000000000000000000000001;
+    address internal admin2       = 0x0000000000000000000000000000000000000002;
+    address internal unauthorized = 0x0000000000000000000000000000000000000003;
 
     function setUp() external {
         address[] memory admins = new address[](2);
@@ -43,9 +45,40 @@ contract Parameters_Tests is Test {
         parameters = new ParametersHarness(admins);
     }
 
-    function test_constructor() external view {
-        assertEq(parameters.isAdmin(admin1), true);
-        assertEq(parameters.isAdmin(admin2), true);
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
+
+    function test_constructor_emptyAdmins() external {
+        vm.expectRevert(IParameters.EmptyAdmins.selector);
+        new ParametersHarness(new address[](0));
+    }
+
+    function test_constructor_zeroAdmin() external {
+        vm.expectRevert(IParameters.ZeroAdmin.selector);
+        new ParametersHarness(new address[](1));
+    }
+
+    function test_constructor() external {
+        address[] memory admins = new address[](2);
+        admins[0] = admin1;
+        admins[1] = admin2;
+
+        vm.expectEmit();
+        emit IParameters.ParameterSet(
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
+            bytes32(uint256(1))
+        );
+
+        vm.expectEmit();
+        emit IParameters.ParameterSet(
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000002",
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000002",
+            bytes32(uint256(1))
+        );
+
+        new ParametersHarness(admins);
     }
 
     /**********************************************************************************************/
@@ -118,14 +151,19 @@ contract Parameters_Tests is Test {
     /**********************************************************************************************/
 
     function test_isAdmin() external {
-        assertFalse(parameters.isAdmin(address(1)));
+        assertFalse(parameters.isAdmin(address(3)));
 
         parameters.__setParameter(
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000003",
             bytes32(uint256(1))
         );
 
-        assertTrue(parameters.isAdmin(address(1)));
+        assertTrue(parameters.isAdmin(address(3)));
+
+        assertEq(
+            keccak256(bytes(parameters.ADMIN_PARAMETER_KEY_PREFIX())),
+            keccak256(bytes("sky.pau.parameters.isAdmin"))
+        );
     }
 
     /**********************************************************************************************/
@@ -135,8 +173,8 @@ contract Parameters_Tests is Test {
     function test_get_one() external {
         parameters.__setParameter("this.is.a.parameter", bytes32(uint256(1010101)));
 
-        assertEq(parameters.get("this.is.a.parameter"), bytes32(uint256(1010101)));
-        assertEq(parameters.get(string(bytes("this.is.a.parameter"))), bytes32(uint256(1010101)));
+        assertEq(parameters.get("this.is.a.parameter"),                           bytes32(uint256(1010101)));
+        assertEq(parameters.get(string(bytes("this.is.a.parameter"))),            bytes32(uint256(1010101)));
         assertEq(parameters.get(string(abi.encodePacked("this.is.a.parameter"))), bytes32(uint256(1010101)));
 
         // NOTE: Encoding a string non-compactly is a different key.
@@ -171,4 +209,5 @@ contract Parameters_Tests is Test {
         assertEq(values_[0], expectedValues_[0]);
         assertEq(values_[1], expectedValues_[1]);
     }
+
 }

@@ -14,7 +14,6 @@ function getParameterKey(string[] memory keyComponents) pure returns (string mem
     require(keyComponents.length > 0,           IParameterKeysErrors.NoKeyComponents());
     require(bytes(keyComponents[0]).length > 0, IParameterKeysErrors.EmptyKeyComponent());
 
-    // TODO: Compute the final size of the key and allocate the memory in one go, in assembly.
     for (uint256 i; i < keyComponents.length; ++i) {
         key = i == 0 ? keyComponents[i] : combineKeyComponents(key, keyComponents[i]);
     }
