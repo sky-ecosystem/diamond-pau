@@ -373,7 +373,7 @@ contract FullStagingDeploy is Script {
         vm.selectFork(mainnet.forkId);
         vm.startBroadcast();
 
-        MainnetController controller = MainnetController(mainnetInst.controller);
+        MainnetController controller = MainnetController(payable(mainnetInst.controller));
 
         controller.setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
@@ -392,7 +392,7 @@ contract FullStagingDeploy is Script {
     /**********************************************************************************************/
 
     function _setMainnetControllerRateLimits() internal {
-        MainnetController controller = MainnetController(mainnetInst.controller);
+        MainnetController controller = MainnetController(payable(mainnetInst.controller));
 
         IRateLimits rateLimits = IRateLimits(mainnetInst.rateLimits);
 
@@ -440,7 +440,7 @@ contract FullStagingDeploy is Script {
         vm.selectFork(domain.forkId);
         vm.startBroadcast();
 
-        ForeignController foreignController = ForeignController(controllerInst.controller);
+        ForeignController foreignController = ForeignController(payable(controllerInst.controller));
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
@@ -502,8 +502,8 @@ contract FullStagingDeploy is Script {
         vm.startBroadcast();
 
         // NOTE: MainnetController and ForeignController both have the same LIMIT constants for this
-        bytes32 depositKey  = MainnetController(controllerInst.controller).LIMIT_AAVE_DEPOSIT();
-        bytes32 withdrawKey = MainnetController(controllerInst.controller).LIMIT_AAVE_WITHDRAW();
+        bytes32 depositKey  = MainnetController(payable(controllerInst.controller)).LIMIT_AAVE_DEPOSIT();
+        bytes32 withdrawKey = MainnetController(payable(controllerInst.controller)).LIMIT_AAVE_WITHDRAW();
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
@@ -526,8 +526,8 @@ contract FullStagingDeploy is Script {
         vm.startBroadcast();
 
         // NOTE: MainnetController and ForeignController both have the same LIMIT constants for this
-        bytes32 depositKey  = MainnetController(controllerInst.controller).LIMIT_4626_DEPOSIT();
-        bytes32 withdrawKey = MainnetController(controllerInst.controller).LIMIT_4626_WITHDRAW();
+        bytes32 depositKey  = MainnetController(payable(controllerInst.controller)).LIMIT_4626_DEPOSIT();
+        bytes32 withdrawKey = MainnetController(payable(controllerInst.controller)).LIMIT_4626_WITHDRAW();
 
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
