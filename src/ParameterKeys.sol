@@ -36,11 +36,11 @@ function addressToKeyComponent(address account) pure returns (string memory keyC
 }
 
 function bytes4ToKeyComponent(bytes4 value) pure returns (string memory keyComponent) {
-    return Strings.toHexString(uint32(value));
+    return Strings.toHexString(uint32(value), 4);
 }
 
 function bytes32ToKeyComponent(bytes32 value) pure returns (string memory keyComponent) {
-    return Strings.toHexString(uint256(value));
+    return Strings.toHexString(uint256(value), 32);
 }
 
 function int256ToKeyComponent(int256 value) pure returns (string memory keyComponent) {

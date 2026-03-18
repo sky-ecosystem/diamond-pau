@@ -2721,11 +2721,11 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_fromUint256() external view {
-        assertEq(harness.fromUint256(type(uint256).max), bytes32(uint256(type(uint256).max)));
+        assertEq(harness.fromUint256(type(uint256).max), bytes32(type(uint256).max));
     }
 
     function test_toUint256() external view {
-        assertEq(harness.toUint256(bytes32(uint256(type(uint256).max))), type(uint256).max);
+        assertEq(harness.toUint256(bytes32(type(uint256).max)), type(uint256).max);
     }
 
     function test_fromUint256_toUint256_roundTrip() external view {

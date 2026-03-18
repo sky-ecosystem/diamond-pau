@@ -68,8 +68,24 @@ contract ParameterKeys_Tests is Test {
         vm.expectRevert(IParameterKeysErrors.EmptyKeyComponent.selector);
         harness.getParameterKey(new string[](1));
 
-        string[] memory keyComponents = new string[](2);
+        string[] memory keyComponents = new string[](3);
+        keyComponents[0] = "";
+        keyComponents[1] = "pau";
+        keyComponents[2] = "test";
+
+        vm.expectRevert(IParameterKeysErrors.EmptyKeyComponent.selector);
+        harness.getParameterKey(keyComponents);
+
         keyComponents[0] = "sky";
+        keyComponents[1] = "";
+        keyComponents[2] = "test";
+
+        vm.expectRevert(IParameterKeysErrors.EmptyKeyComponent.selector);
+        harness.getParameterKey(keyComponents);
+
+        keyComponents[0] = "sky";
+        keyComponents[1] = "pau";
+        keyComponents[2] = "";
 
         vm.expectRevert(IParameterKeysErrors.EmptyKeyComponent.selector);
         harness.getParameterKey(keyComponents);
@@ -106,33 +122,79 @@ contract ParameterKeys_Tests is Test {
     }
 
     function test_combineKeyComponents() external view {
-        string memory key = harness.combineKeyComponents("sky", "pau");
-        assertEq(key, "sky.pau");
+        assertEq(harness.combineKeyComponents("sky", "pau"), "sky.pau");
     }
 
     function test_addressToKeyComponent() external view {
-        string memory key = harness.addressToKeyComponent(0x123456789aBCdef0123456789AbCDEF012345678);
-        assertEq(key, "0x123456789abcdef0123456789abcdef012345678");
+        assertEq(
+            harness.addressToKeyComponent(0x123456789aBCdef0123456789AbCDEF012345678),
+            "0x123456789abcdef0123456789abcdef012345678"
+        );
+        assertEq(
+            harness.addressToKeyComponent(0x0000000000000000000000000000000000000000),
+            "0x0000000000000000000000000000000000000000"
+        );
     }
 
     function test_bytes4ToKeyComponent() external view {
-        string memory key = harness.bytes4ToKeyComponent(0x12345678);
-        assertEq(key, "0x12345678");
+        assertEq(harness.bytes4ToKeyComponent(0x12345678), "0x12345678");
+        assertEq(harness.bytes4ToKeyComponent(0x00345678), "0x00345678");
+        assertEq(harness.bytes4ToKeyComponent(0x00005678), "0x00005678");
+        assertEq(harness.bytes4ToKeyComponent(0x00000078), "0x00000078");
+        assertEq(harness.bytes4ToKeyComponent(0x00000000), "0x00000000");
     }
 
     function test_bytes32ToKeyComponent() external view {
-        string memory key = harness.bytes32ToKeyComponent(0x123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0);
-        assertEq(key, "0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0");
+        assertEq(
+            harness.bytes32ToKeyComponent(0x123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0),
+            "0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
+        );
+        assertEq(
+            harness.bytes32ToKeyComponent(0x0000000000000000123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0),
+            "0x0000000000000000123456789abcdef0123456789abcdef0123456789abcdef0"
+        );
+        assertEq(
+            harness.bytes32ToKeyComponent(0x0000000000000000000000000000000000000000000000000000000000000000),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
     }
 
     function test_int256ToKeyComponent() external view {
-        string memory key = harness.int256ToKeyComponent(-1234567890123456789012345678901234567890);
-        assertEq(key, "-1234567890123456789012345678901234567890");
+        assertEq(
+            harness.int256ToKeyComponent(type(int256).min),
+            "-57896044618658097711785492504343953926634992332820282019728792003956564819968"
+        );
+        assertEq(
+            harness.int256ToKeyComponent(-1234567890123456789012345678901234567890),
+            "-1234567890123456789012345678901234567890"
+        );
+        assertEq(
+            harness.int256ToKeyComponent(0),
+            "0"
+        );
+        assertEq(
+            harness.int256ToKeyComponent(1234567890123456789012345678901234567890),
+            "1234567890123456789012345678901234567890"
+        );
+        assertEq(
+            harness.int256ToKeyComponent(type(int256).max),
+            "57896044618658097711785492504343953926634992332820282019728792003956564819967"
+        );
     }
 
     function test_uint256ToKeyComponent() external view {
-        string memory key = harness.uint256ToKeyComponent(1234567890123456789012345678901234567890);
-        assertEq(key, "1234567890123456789012345678901234567890");
+        assertEq(
+            harness.uint256ToKeyComponent(0),
+            "0"
+        );
+        assertEq(
+            harness.uint256ToKeyComponent(1234567890123456789012345678901234567890),
+            "1234567890123456789012345678901234567890"
+        );
+        assertEq(
+            harness.uint256ToKeyComponent(type(uint256).max),
+            "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+        );
     }
 
 }

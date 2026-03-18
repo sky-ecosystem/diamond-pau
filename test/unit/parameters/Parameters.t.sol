@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 
-import { IParameters } from "../../../src/interfaces/IParameters.sol";
+import { IParameterHelpersErrors } from "../../../src/interfaces/IParameterHelpersErrors.sol";
+import { IParameters }             from "../../../src/interfaces/IParameters.sol";
 
 import { Parameters } from "../../../src/Parameters.sol";
 
@@ -12,7 +13,7 @@ contract ParametersHarness is Parameters {
     constructor(address[] memory admins) Parameters(admins) {}
 
     function __setParameter(string calldata key, address value) external {
-        _setParameter(key, bytes32(uint256(uint160(value))));
+        __setParameter(key, bytes32(uint256(uint160(value))));
     }
 
     function __setParameter(string calldata key, bool value) external {
@@ -149,6 +150,16 @@ contract Parameters_Tests is Test {
     /**********************************************************************************************/
     /*** Is Admin Tests                                                                         ***/
     /**********************************************************************************************/
+
+    function test_isAdmin_invalidValue() external {
+        parameters.__setParameter(
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000003",
+            bytes32(uint256(2))
+        );
+
+        vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
+        parameters.isAdmin(address(3));
+    }
 
     function test_isAdmin() external {
         assertFalse(parameters.isAdmin(address(3)));

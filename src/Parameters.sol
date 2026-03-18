@@ -15,6 +15,9 @@ import { IParameters } from "./interfaces/IParameters.sol";
  */
 contract Parameters is IParameters {
 
+    /// @inheritdoc IParameters
+    string public constant ADMIN_PARAMETER_KEY_PREFIX = "sky.pau.parameters.isAdmin";
+
     mapping(string key => bytes32 value) internal _parameters;
 
     /**********************************************************************************************/
@@ -70,11 +73,6 @@ contract Parameters is IParameters {
     /**********************************************************************************************/
 
     /// @inheritdoc IParameters
-    function ADMIN_PARAMETER_KEY_PREFIX() public pure returns (string memory key) {
-        return "sky.pau.parameters.isAdmin";
-    }
-
-    /// @inheritdoc IParameters
     function isAdmin(address account) public view returns (bool) {
         return ParameterHelpers.toBool(_parameters[_getAdminKey(account)]);
     }
@@ -116,7 +114,7 @@ contract Parameters is IParameters {
      *      "sky.pau.parameters.isAdmin.0x1234567890123456789012345678901234567890".
      */
     function _getAdminKey(address account) internal pure returns (string memory key) {
-        return combineKeyComponents(ADMIN_PARAMETER_KEY_PREFIX(), addressToKeyComponent(account));
+        return combineKeyComponents(ADMIN_PARAMETER_KEY_PREFIX, addressToKeyComponent(account));
     }
 
     function _revertIfNotAdmin() internal view {

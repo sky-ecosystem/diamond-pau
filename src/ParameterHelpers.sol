@@ -3,6 +3,11 @@ pragma solidity ^0.8.28;
 
 import { IParameterHelpersErrors } from "./interfaces/IParameterHelpersErrors.sol";
 
+/**
+* @notice Helper functions for converting between parameter types and bytes32.
+* @dev    NOTE: Right aligned bytes32 (i.e. zero-padded on the left) for all source types, including
+*         bytesN (e.g. bytes1, bytes2, etc.).
+*/
 library ParameterHelpers {
 
     /**********************************************************************************************/
