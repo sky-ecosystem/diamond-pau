@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import { Strings } from "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
@@ -11,9 +11,8 @@ import { IParameterKeysErrors } from "./interfaces/IParameterKeysErrors.sol";
 * @return key           The combined key.
 */
 function getParameterKey(string[] memory keyComponents) pure returns (string memory key) {
-    if (keyComponents.length == 0) revert IParameterKeysErrors.NoKeyComponents();
-
-    if (bytes(keyComponents[0]).length == 0) revert IParameterKeysErrors.EmptyKeyComponent();
+    require(keyComponents.length > 0,           IParameterKeysErrors.NoKeyComponents());
+    require(bytes(keyComponents[0]).length > 0, IParameterKeysErrors.EmptyKeyComponent());
 
     // TODO: Compute the final size of the key and allocate the memory in one go, in assembly.
     for (uint256 i; i < keyComponents.length; ++i) {
@@ -25,9 +24,10 @@ function combineKeyComponents(string memory left, string memory right)
     pure
     returns (string memory key)
 {
-    if (bytes(left).length == 0 || bytes(right).length == 0) {
-        revert IParameterKeysErrors.EmptyKeyComponent();
-    }
+    require(
+        bytes(left).length > 0 && bytes(right).length > 0,
+        IParameterKeysErrors.EmptyKeyComponent()
+    );
 
     return string.concat(left, ".", right);
 }

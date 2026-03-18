@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import { IParameterHelpersErrors } from "./interfaces/IParameterHelpersErrors.sol";
 
@@ -14,9 +14,10 @@ library ParameterHelpers {
     }
 
     function toBool(bytes32 parameter) internal pure returns (bool value) {
-        if (uint256(parameter) > uint256(1)) {
-            revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
-        }
+        require(
+            uint256(parameter) <= uint256(1),
+            IParameterHelpersErrors.ParameterOutOfTypeBounds()
+        );
 
         return uint256(parameter) == uint256(1);
     }
@@ -30,9 +31,10 @@ library ParameterHelpers {
     }
 
     function toAddress(bytes32 parameter) internal pure returns (address value) {
-        if (uint256(parameter) > type(uint160).max) {
-            revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
-        }
+        require(
+            uint256(parameter) <= type(uint160).max,
+            IParameterHelpersErrors.ParameterOutOfTypeBounds()
+        );
 
         return address(uint160(uint256(parameter)));
     }
@@ -321,12 +323,11 @@ library ParameterHelpers {
     }
 
     function fromBytes32(bytes32 value) internal pure returns (bytes32 parameter) {
-        return bytes32(uint256(uint256(value)));
+        return value;
     }
 
     function toBytes32(bytes32 parameter) internal pure returns (bytes32 value) {
-        _checkBytes(parameter, type(uint256).max);
-        return bytes32(uint256(parameter));
+        return parameter;
     }
 
     /**********************************************************************************************/
@@ -613,11 +614,11 @@ library ParameterHelpers {
     }
 
     function fromInt256(int256 value) internal pure returns (bytes32 parameter) {
-        return bytes32(uint256(int256(value)));
+        return bytes32(uint256(value));
     }
 
     function toInt256(bytes32 parameter) internal pure returns (int256 value) {
-        return int256(int256(uint256(parameter)));
+        return int256(uint256(parameter));
     }
 
     /**********************************************************************************************/
@@ -904,11 +905,11 @@ library ParameterHelpers {
     }
 
     function fromUint256(uint256 value) internal pure returns (bytes32 parameter) {
-        return bytes32(uint256(value));
+        return bytes32(value);
     }
 
     function toUint256(bytes32 parameter) internal pure returns (uint256 value) {
-        return uint256(uint256(parameter));
+        return uint256(parameter);
     }
 
     /**********************************************************************************************/
@@ -916,21 +917,23 @@ library ParameterHelpers {
     /**********************************************************************************************/
 
     function _checkBytes(bytes32 parameter, uint256 max) private pure {
-        if (uint256(parameter) > max) revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
+        require(uint256(parameter) <= max, IParameterHelpersErrors.ParameterOutOfTypeBounds());
     }
 
     function _checkInt(bytes32 parameter, int256 min, int256 max) private pure {
-        if (int256(uint256(parameter)) > max) {
-            revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
-        }
+        require(
+            int256(uint256(parameter)) <= max,
+            IParameterHelpersErrors.ParameterOutOfTypeBounds()
+        );
 
-        if (int256(uint256(parameter)) < min) {
-            revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
-        }
+        require(
+            int256(uint256(parameter)) >= min,
+            IParameterHelpersErrors.ParameterOutOfTypeBounds()
+        );
     }
 
     function _checkUint(bytes32 parameter, uint256 max) private pure {
-        if (uint256(parameter) > max) revert IParameterHelpersErrors.ParameterOutOfTypeBounds();
+        require(uint256(parameter) <= max, IParameterHelpersErrors.ParameterOutOfTypeBounds());
     }
 
 }

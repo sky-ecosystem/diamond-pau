@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import { addressToKeyComponent, combineKeyComponents } from "./ParameterKeys.sol";
 import { ParameterHelpers }                            from "./ParameterHelpers.sol";
@@ -34,13 +34,13 @@ contract Parameters is IParameters {
      * @notice Constructor for the implementation contract.
      */
     constructor(address[] memory admins) {
-        if (admins.length == 0) revert EmptyAdmins();
+        require(admins.length > 0, EmptyAdmins());
 
         // Each admin-specific key is set to true (i.e. 1).
         for (uint256 i; i < admins.length; ++i) {
             address admin = admins[i];
 
-            if (admin == address(0)) revert ZeroAdmin();
+            require(admin != address(0), ZeroAdmin());
 
             _setParameter(_getAdminKey(admin), ParameterHelpers.fromBool(true));
         }
@@ -52,8 +52,8 @@ contract Parameters is IParameters {
 
     /// @inheritdoc IParameters
     function set(string[] calldata keys, bytes32[] calldata values) external onlyAdmin {
-        if (keys.length == 0) revert NoKeys();
-        if (keys.length != values.length) revert ArrayLengthMismatch();
+        require(keys.length > 0,              NoKeys());
+        require(keys.length == values.length, ArrayLengthMismatch());
 
         for (uint256 i; i < keys.length; ++i) {
             _setParameter(keys[i], values[i]);
@@ -71,7 +71,7 @@ contract Parameters is IParameters {
 
     /// @inheritdoc IParameters
     function ADMIN_PARAMETER_KEY_PREFIX() public pure returns (string memory key) {
-        return "sky.pau.parameterRegistry.isAdmin";
+        return "sky.pau.parameters.isAdmin";
     }
 
     /// @inheritdoc IParameters
@@ -81,7 +81,7 @@ contract Parameters is IParameters {
 
     /// @inheritdoc IParameters
     function get(string[] calldata keys) external view returns (bytes32[] memory values) {
-        if (keys.length == 0) revert NoKeys();
+        require(keys.length > 0, NoKeys());
 
         values = new bytes32[](keys.length);
 
@@ -108,18 +108,19 @@ contract Parameters is IParameters {
     /**********************************************************************************************/
 
     /**
-     * @dev Returns the admin-specific key used to query to parameter registry to determine if an
+     * @dev Returns the admin-specific key used to query the parameters contract to determine if an
      *      account is an admin. The admin-specific key is the concatenation of the admin parameter
      *      key prefix and the address of the admin. For example, if the admin parameter key prefix
-     *      is "sky.pau.parameterRegistry.isAdmin", then the key for admin
+     *      is "sky.pau.parameters.isAdmin", then the key for admin
      *      0x1234567890123456789012345678901234567890 is
-     *      "sky.pau.parameterRegistry.isAdmin.0x1234567890123456789012345678901234567890".
+     *      "sky.pau.parameters.isAdmin.0x1234567890123456789012345678901234567890".
      */
     function _getAdminKey(address account) internal pure returns (string memory key) {
         return combineKeyComponents(ADMIN_PARAMETER_KEY_PREFIX(), addressToKeyComponent(account));
     }
 
     function _revertIfNotAdmin() internal view {
-        if (!isAdmin(msg.sender)) revert NotAdmin(msg.sender);
+        require(isAdmin(msg.sender), NotAdmin(msg.sender));
     }
+
 }

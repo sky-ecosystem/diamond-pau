@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 
@@ -10,19 +10,19 @@ import { Parameters } from "../../../src/Parameters.sol";
 contract ParametersHarness is Parameters {
     constructor(address[] memory admins) Parameters(admins) {}
 
-    function __setRegistryParameter(string calldata key, address value) external {
+    function __setParameter(string calldata key, address value) external {
         _setParameter(key, bytes32(uint256(uint160(value))));
     }
 
-    function __setRegistryParameter(string calldata key, bool value) external {
-        __setRegistryParameter(key, value ? bytes32(uint256(1)) : bytes32(uint256(0)));
+    function __setParameter(string calldata key, bool value) external {
+        __setParameter(key, value ? bytes32(uint256(1)) : bytes32(uint256(0)));
     }
 
-    function __setRegistryParameter(string calldata key, uint256 value) external {
-        __setRegistryParameter(key, bytes32(value));
+    function __setParameter(string calldata key, uint256 value) external {
+        __setParameter(key, bytes32(value));
     }
 
-    function __setRegistryParameter(string calldata key, bytes32 value) public {
+    function __setParameter(string calldata key, bytes32 value) public {
         _parameters[key] = value;
     }
 }
@@ -120,8 +120,8 @@ contract Parameters_Tests is Test {
     function test_isAdmin() external {
         assertFalse(parameters.isAdmin(address(1)));
 
-        parameters.__setRegistryParameter(
-            "sky.pau.parameterRegistry.isAdmin.0x0000000000000000000000000000000000000001",
+        parameters.__setParameter(
+            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
             bytes32(uint256(1))
         );
 
@@ -133,7 +133,7 @@ contract Parameters_Tests is Test {
     /**********************************************************************************************/
 
     function test_get_one() external {
-        parameters.__setRegistryParameter("this.is.a.parameter", bytes32(uint256(1010101)));
+        parameters.__setParameter("this.is.a.parameter", bytes32(uint256(1010101)));
 
         assertEq(parameters.get("this.is.a.parameter"), bytes32(uint256(1010101)));
         assertEq(parameters.get(string(bytes("this.is.a.parameter"))), bytes32(uint256(1010101)));
@@ -162,8 +162,8 @@ contract Parameters_Tests is Test {
         expectedValues_[0] = bytes32(uint256(1010101));
         expectedValues_[1] = bytes32(uint256(2020202));
 
-        parameters.__setRegistryParameter(keys_[0], expectedValues_[0]);
-        parameters.__setRegistryParameter(keys_[1], expectedValues_[1]);
+        parameters.__setParameter(keys_[0], expectedValues_[0]);
+        parameters.__setParameter(keys_[1], expectedValues_[1]);
 
         bytes32[] memory values_ = parameters.get(keys_);
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import { IParameterKeysErrors }    from "./IParameterKeysErrors.sol";
 import { IParameterHelpersErrors } from "./IParameterHelpersErrors.sol";
@@ -73,9 +73,9 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors {
     /**********************************************************************************************/
 
     /**
-     * @notice The parameter registry key prefix used to fetch the status of an admin.
+     * @notice The parameters contract key prefix used to fetch the status of an admin.
      * @return key The prefix of the admin parameter key.
-     * @dev    The parameter registry uses its own key-value mechanism to track its own admins.
+     * @dev    The parameters contract uses its own key-value mechanism to track its own admins.
      */
     function ADMIN_PARAMETER_KEY_PREFIX() external pure returns (string memory key);
 
