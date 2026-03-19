@@ -22,9 +22,11 @@ import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwa
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
+import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
+import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -240,9 +242,16 @@ abstract contract ForkTestBase is DssTest {
         RELAYER    = mainnetController.RELAYER();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+        _wireDAIUSDSFacet();
+        _wireMapleFacet();
+        _wireTransferAssetFacet();
+
         vm.stopPrank();
 
         address[] memory relayers = new address[](2);
@@ -279,6 +288,9 @@ abstract contract ForkTestBase is DssTest {
         IVaultLike(ilkInst.vault).rely(address(almProxy));
         IBufferLike(IVaultLike(ilkInst.vault).buffer()).approve(address(usds), address(almProxy), type(uint256).max);
 
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
+
         uint256 usdsMaxAmount = 5_000_000e18;
         uint256 usdsSlope     = uint256(1_000_000e18) / 4 hours;
         uint256 usdcMaxAmount = 5_000_000e6;
@@ -304,15 +316,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -378,7 +381,6 @@ abstract contract ForkTestBase is DssTest {
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
-
     }
 
     function _wireTransferAssetFacet() internal {
@@ -398,6 +400,33 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
+        );
+    }
+
+    function _wireMapleFacet() internal {
+        address mapleFacet = address(new MapleFacet());
+
+        vm.label(mapleFacet, "MapleFacet");
+
+        // "Controller.requestMapleRedemption()" -> "MapleFacet.requestRedemption()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestMapleRedemption.selector,
+            mapleFacet,
+            IMapleFacet.requestRedemption.selector
+        );
+
+        // "Controller.cancelMapleRedemption()" -> "MapleFacet.cancelRedemption()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cancelMapleRedemption.selector,
+            mapleFacet,
+            IMapleFacet.cancelRedemption.selector
+        );
+
+        // "Controller.LIMIT_MAPLE_REDEEM()" -> "MapleFacet.LIMIT_REDEEM()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_MAPLE_REDEEM.selector,
+            mapleFacet,
+            IMapleFacet.LIMIT_REDEEM.selector
         );
     }
 

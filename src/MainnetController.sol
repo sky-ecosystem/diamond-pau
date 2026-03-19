@@ -16,7 +16,6 @@ import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
-import { MapleLib }         from "./libraries/MapleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
 import { OTCLib }           from "./libraries/OTCLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
@@ -90,7 +89,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_FARM_DEPOSIT            = FarmLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_FARM_WITHDRAW           = FarmLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_LAYERZERO_TRANSFER      = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public LIMIT_MAPLE_REDEEM            = MapleLib.LIMIT_REDEEM;
     bytes32 public LIMIT_OTC_SWAP                = OTCLib.LIMIT_SWAP;
     bytes32 public LIMIT_SPARK_VAULT_TAKE        = SparkVaultLib.LIMIT_TAKE;
     bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = SuperstateLib.LIMIT_SUBSCRIBE;
@@ -821,26 +819,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     function unstakeSUSDe() external nonReentrant onlyRole(RELAYER) {
         USDELib.unstakeSUSDE(address(proxy), susde);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Maple functions                                                                ***/
-    /**********************************************************************************************/
-
-    function requestMapleRedemption(address mapleToken, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        MapleLib.requestRedemption(address(proxy), address(rateLimits), mapleToken, shares);
-    }
-
-    function cancelMapleRedemption(address mapleToken, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        MapleLib.cancelRedemption(address(proxy), address(rateLimits), mapleToken, shares);
     }
 
     /**********************************************************************************************/
