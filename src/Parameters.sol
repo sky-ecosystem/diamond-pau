@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.34;
 
 import {
     AccessControlEnumerable
@@ -10,14 +10,15 @@ import { IParameters } from "./interfaces/IParameters.sol";
 /**
  * @notice A Parameters contract stores key-value pairs of parameters used by a protocol. Keys
  *         should be globally unique and human-readable strings, for easier parsing and indexing.
- *         Keys can only be set by account with the controller role.
+ *         Keys can only be set by account with `CONTROLLER_ROLE`.
  */
 contract Parameters is IParameters, AccessControlEnumerable {
 
     /**********************************************************************************************/
-    /*** Constants                                                                              ***/
+    /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IParameters
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER");
 
     mapping(string key => bytes32 value) internal _parameters;
@@ -40,7 +41,10 @@ contract Parameters is IParameters, AccessControlEnumerable {
     /**********************************************************************************************/
 
     /// @inheritdoc IParameters
-    function set(string[] calldata keys, bytes32[] calldata values) external onlyRole(CONTROLLER_ROLE) {
+    function set(string[] calldata keys, bytes32[] calldata values)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
         require(keys.length > 0,              NoKeys());
         require(keys.length == values.length, ArrayLengthMismatch());
 
@@ -74,6 +78,7 @@ contract Parameters is IParameters, AccessControlEnumerable {
         return _parameters[key];
     }
 
+    /// @inheritdoc IParameters
     function supportsInterface(bytes4 interfaceId)
         public
         view

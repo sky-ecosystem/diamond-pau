@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.34;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 
@@ -80,14 +80,22 @@ contract Parameters_Tests is Test {
 
     function test_set_one_notController() external {
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, parameters.CONTROLLER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                unauthorized,
+                parameters.CONTROLLER_ROLE()
+            )
         );
 
         vm.prank(unauthorized);
         parameters.set("", 0);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, parameters.CONTROLLER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                admin,
+                parameters.CONTROLLER_ROLE()
+            )
         );
 
         vm.prank(admin);
@@ -110,14 +118,22 @@ contract Parameters_Tests is Test {
 
     function test_set_several_notController() external {
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, parameters.CONTROLLER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                unauthorized,
+                parameters.CONTROLLER_ROLE()
+            )
         );
 
         vm.prank(unauthorized);
         parameters.set(new string[](0), new bytes32[](0));
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, parameters.CONTROLLER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                admin,
+                parameters.CONTROLLER_ROLE()
+            )
         );
 
         vm.prank(admin);

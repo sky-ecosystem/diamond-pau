@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.34;
 
 import {
     IAccessControlEnumerable
@@ -70,6 +70,9 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors, IAccessC
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
+    /**
+     * @return The role for the controller, which can set parameters.
+     */
     function CONTROLLER_ROLE() external view returns (bytes32);
 
     /**
@@ -88,6 +91,11 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors, IAccessC
      */
     function get(string calldata key) external view returns (bytes32 value);
 
+    /**
+     * @notice Checks if the contract supports an interface.
+     * @param  interfaceId The interface identifier to check.
+     * @return bool        True if the contract supports the interface, false otherwise.
+     */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
 }
