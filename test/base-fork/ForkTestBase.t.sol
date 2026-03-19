@@ -9,13 +9,17 @@ import { ERC20Mock } from "../../lib/openzeppelin-contracts/contracts/mocks/toke
 
 import { Base } from "../../lib/spark-address-registry/src/Base.sol";
 
+import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
+
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
+import { IPendleFacet }        from "../../src/interfaces/facets/IPendleFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
+import { PendleFacet }        from "../../src/libraries/PendleLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -134,9 +138,15 @@ abstract contract ForkTestBase is Test {
         RELAYER    = foreignController.RELAYER();
 
         vm.startPrank(SPARK_EXECUTOR);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+        _wirePendleFacet();
+        _wireTransferAssetFacet();
+
         vm.stopPrank();
 
         /*** Step 3: Configure ALM system through Spark governance (Spark spell payload) ***/
@@ -189,11 +199,6 @@ abstract contract ForkTestBase is Test {
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdsBase)));
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(susdsBase)));
 
-
-        // Facet wiring
-
-        _wireTransferAssetFacet();
-
         vm.stopPrank();
     }
 
@@ -228,6 +233,26 @@ abstract contract ForkTestBase is Test {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wirePendleFacet() internal {
+        address pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
+
+        vm.label(pendleFacet, "PendleFacet");
+
+        // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
+        foreignController.setFacet(
+            IForeignControllerFull.redeemPendlePT.selector,
+            pendleFacet,
+            IPendleFacet.redeem.selector
+        );
+
+        // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
+            pendleFacet,
+            IPendleFacet.LIMIT_REDEEM.selector
+        );
+    }
 
     function _wireTransferAssetFacet() internal {
         address transferAssetFacet = address(new TransferAssetFacet());

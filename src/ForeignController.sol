@@ -10,7 +10,6 @@ import { CurveLib }         from "./libraries/CurveLib.sol";
 import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
-import { PendleLib }        from "./libraries/PendleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
 import { PSM3Lib }          from "./libraries/PSM3Lib.sol";
 import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
@@ -32,8 +31,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
-
-    event PendleRouterSet(address indexed pendleRouter);
 
     event MerklDistributorSet(address indexed merklDistributor);
 
@@ -64,7 +61,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     bytes32 public constant LIMIT_SPARK_VAULT_TAKE    = SparkVaultLib.LIMIT_TAKE;
     bytes32 public constant LIMIT_USDC_TO_CCTP        = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public constant LIMIT_USDC_TO_DOMAIN      = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public constant LIMIT_PENDLE_PT_REDEEM    = PendleLib.LIMIT_REDEEM;
     bytes32 public constant LIMIT_UNISWAP_V3_DEPOSIT  = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_UNISWAP_V3_SWAP     = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public constant LIMIT_UNISWAP_V3_WITHDRAW = UniswapV3Lib.LIMIT_WITHDRAW;
@@ -80,8 +76,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     address public immutable usdc;
 
     address public merklDistributor;
-
-    address public pendleRouter;
 
     // NOTE : Nominal maxFee cap for all cctp supported domains
     uint256 public cctpMaxFeeCap;
@@ -166,15 +160,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
-    }
-
-    function setPendleRouter(address pendleRouter_)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        pendleRouter = pendleRouter_;
-        emit PendleRouterSet(pendleRouter_);
     }
 
     function setMerklDistributor(address merklDistributor_)
@@ -563,25 +548,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
         onlyRole(RELAYER)
     {
         SparkVaultLib.take(address(proxy), address(rateLimits), sparkVault, assetAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Pendle functions                                                               ***/
-    /**********************************************************************************************/
-
-    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        PendleLib.redeem({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            market       : pendleMarket,
-            router       : pendleRouter,
-            pyAmountIn   : pyAmountIn,
-            minAmountOut : minAmountOut
-        });
     }
 
     /**********************************************************************************************/
