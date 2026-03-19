@@ -6,10 +6,8 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { IController } from "../../src/interfaces/IController.sol";
-import { IParameters } from "../../src/interfaces/IParameters.sol";
 
-import { Controller }                                 from "../../src/Controller.sol";
-import { bytes4ToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
+import { Controller } from "../../src/Controller.sol";
 
 interface IMockFacet {
 

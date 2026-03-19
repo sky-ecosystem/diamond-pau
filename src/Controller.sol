@@ -38,7 +38,7 @@ contract Controller is IController, ReentrancyGuard {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00; // TODO: Maybe pull this from `AccessControl`
+    bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
@@ -130,9 +130,10 @@ contract Controller is IController, ReentrancyGuard {
     function _revertIfNotAdmin() internal view {
         address accessControls = _getControllerStorage().accessControls;
 
-        if (!IAccessControls(accessControls).hasRole(_DEFAULT_ADMIN_ROLE, msg.sender)) {
-            revert NotAdmin(msg.sender);
-        }
+        require(
+            IAccessControls(accessControls).hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
+            NotAdmin(msg.sender)
+        );
     }
 
 }
