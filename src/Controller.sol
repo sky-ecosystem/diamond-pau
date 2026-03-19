@@ -65,56 +65,30 @@ contract Controller is IController, ReentrancyGuard {
     function setFacet(bytes4 callSelector, address facet, bytes4 delegateSelector) external {
         _revertIfNotAdmin();
 
-        uint192 data = uint192(uint160(facet)) << 32 | uint192(uint32(delegateSelector));
-
         IParameters(_getControllerStorage().parameters).set(
             _getFacetKey(callSelector),
-            ParameterHelpers.fromUint192(data)
+            ParameterHelpers.fromBytes24(bytes24(abi.encodePacked(facet, delegateSelector)))
         );
 
         emit FacetSet(callSelector, facet, delegateSelector);
     }
 
     fallback() external payable {
-        // Get facet from function selector.
         ( address facet, bytes4 delegateSelector ) = _getFacet(msg.sig);
 
         require(facet != address(0), FacetNotFound(msg.sig));
 
+        // Replace the incoming selector with the delegate selector.
+        ( bool success, bytes memory returnData ) = facet.delegatecall(
+            abi.encodePacked(delegateSelector, msg.data[4:])
+        );
+
+        // Forward return data as-is (not possible without assembly in a fallback).
         // slither-disable-next-line assembly
         assembly {
-            // Allocate memory for the new calldata.
-            let ptr := mload(0x40)
-
-            // Store the 4-byte delegateSelector at ptr.
-            mstore(ptr, delegateSelector)
-
-            // Copy (calldatasize() - 4) bytes from calldata (starting after the first 4 bytes) just
-            // after the function selector.
-            let tail := sub(calldatasize(), 4)
-            calldatacopy(add(ptr, 4), 4, tail)
-
-            // Perform the delegatecall using facet.
-            let result := delegatecall(
-                gas(),
-                facet,
-                ptr,
-                add(tail, 4),
-                0,
-                0
-            )
-
-            // Copy return data.
-            returndatacopy(0, 0, returndatasize())
-
-            // Handle result.
-            switch result
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
+            switch success
+            case 0  { revert(add(returnData, 0x20), mload(returnData)) }
+            default { return(add(returnData, 0x20), mload(returnData)) }
         }
     }
 
@@ -144,13 +118,13 @@ contract Controller is IController, ReentrancyGuard {
         view
         returns (address facet, bytes4 delegateSelector)
     {
-        uint192 data = ParameterHelpers.toUint192(
+        bytes24 data = ParameterHelpers.toBytes24(
             IParameters(_getControllerStorage().parameters).get(
                 _getFacetKey(callSelector)
             )
         );
 
-        return ( address(uint160(data >> 32)), bytes4(uint32(data & 0xffffffff)) );
+        return ( address(bytes20(data)), bytes4(data << 160) );
     }
 
     function _revertIfNotAdmin() internal view {
