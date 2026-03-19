@@ -2523,7 +2523,7 @@ contract ParameterHelpers_Tests is Test {
     }
 
     function test_fromInt256_toInt256_roundTrip() external view {
-        int8 minValue = type(int8).min;
+        int256 minValue = type(int256).min;
         assertEq(harness.toInt256(harness.fromInt256(minValue)), minValue);
 
         int256 maxValue = type(int256).max;
