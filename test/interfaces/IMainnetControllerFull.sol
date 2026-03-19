@@ -23,4 +23,16 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function transferAsset(address asset, address destination, uint256 amount) external virtual;
 
+    /**********************************************************************************************/
+    /*** PSMFacet actions                                                                       ***/
+    /**********************************************************************************************/
+
+    function LIMIT_USDS_TO_USDC() external pure virtual returns (bytes32);
+
+    function swapUSDSToUSDC(uint256 usdcAmount) external virtual;
+
+    function swapUSDCToUSDS(uint256 usdcAmount) external virtual;
+
+    function psmTo18ConversionFactor() external view virtual returns (uint256);
+
 }

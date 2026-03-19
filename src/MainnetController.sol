@@ -20,7 +20,6 @@ import { MapleLib }         from "./libraries/MapleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
 import { OTCLib }           from "./libraries/OTCLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
-import { PSMLib }           from "./libraries/PSMLib.sol";
 import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
@@ -106,7 +105,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_USDE_BURN               = USDELib.LIMIT_USDE_BURN;
     bytes32 public LIMIT_USDE_MINT               = USDELib.LIMIT_USDE_MINT;
     bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
-    bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
     bytes32 public LIMIT_WSTETH_DEPOSIT          = WSTETHLib.LIMIT_DEPOSIT;
@@ -884,40 +882,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     function subscribeSuperstate(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
         SuperstateLib.subscribe(address(proxy), address(rateLimits), usdc, ustb, usdcAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer PSM functions                                                                  ***/
-    /**********************************************************************************************/
-
-    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
-    //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
-    function swapUSDSToUSDC(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        PSMLib.swapUSDSToUSDC({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            daiUSDS    : daiUsds,
-            psm        : psm,
-            usds       : usds,
-            dai        : dai,
-            usdcAmount : usdcAmount
-        });
-    }
-
-    function swapUSDCToUSDS(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        PSMLib.swapUSDCToUSDS({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            daiUSDS    : daiUsds,
-            psm        : psm,
-            dai        : dai,
-            usdc       : usdc,
-            usdcAmount : usdcAmount
-        });
-    }
-
-    function psmTo18ConversionFactor() external view returns (uint256) {
-        return PSMLib.to18ConversionFactor(psm);
     }
 
     // NOTE: !!! This function was deployed without integration testing !!!

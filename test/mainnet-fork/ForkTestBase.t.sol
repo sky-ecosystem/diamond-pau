@@ -21,18 +21,20 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
-import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
-import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
-
-import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
-import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
-
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
+
+import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
+import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+import { PSMFacet }           from "../../src/libraries/PSMLib.sol";
+
+import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
+import { IPSMFacet }           from "../../src/interfaces/facets/IPSMFacet.sol";
+import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
@@ -256,6 +258,16 @@ abstract contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
+        // Facet wiring
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        _wireDAIUSDSFacet();
+        _wirePSMFacet();
+        _wireTransferAssetFacet();
+
+        vm.stopPrank();
+
         // Step 4: Initialize through Sky governance (Sky spell payload)
 
         _pauseProxyInitAlmSystem(Ethereum.PSM, address(almProxy));
@@ -305,14 +317,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
 
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -379,6 +383,46 @@ abstract contract ForkTestBase is DssTest {
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
 
+    }
+
+    function _wirePSMFacet() internal {
+        address psmFacet = address(new PSMFacet(
+            Ethereum.DAI,
+            Ethereum.DAI_USDS,
+            Ethereum.PSM,
+            Ethereum.USDC,
+            Ethereum.USDS
+        ));
+
+        vm.label(psmFacet, "PSMFacet");
+
+        // "Controller.swapUSDSToUSDC()" -> "PSMFacet.swapUSDSToUSDC()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.swapUSDSToUSDC.selector,
+            psmFacet,
+            IPSMFacet.swapUSDSToUSDC.selector
+        );
+
+        // "Controller.swapUSDCToUSDS()" -> "PSMFacet.swapUSDCToUSDS()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.swapUSDCToUSDS.selector,
+            psmFacet,
+            IPSMFacet.swapUSDCToUSDS.selector
+        );
+
+        // "Controller.psmTo18ConversionFactor()" -> "PSMFacet.to18ConversionFactor()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.psmTo18ConversionFactor.selector,
+            psmFacet,
+            IPSMFacet.to18ConversionFactor.selector
+        );
+
+        // "Controller.LIMIT_USDS_TO_USDC()" -> "PSMFacet.LIMIT_USDS_TO_USDC()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDS_TO_USDC.selector,
+            psmFacet,
+            IPSMFacet.LIMIT_USDS_TO_USDC.selector
+        );
     }
 
     function _wireTransferAssetFacet() internal {

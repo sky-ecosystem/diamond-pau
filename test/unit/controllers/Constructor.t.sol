@@ -3,6 +3,14 @@ pragma solidity ^0.8.34;
 
 import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
+import { AccessControls }    from "../../../src/AccessControls.sol";
+import { Parameters }        from "../../../src/Parameters.sol";
+
+import { PSMFacet } from "../../../src/libraries/PSMLib.sol";
+
+import { IPSMFacet } from "../../../src/interfaces/facets/IPSMFacet.sol";
+
+import { IMainnetControllerFull } from "../../interfaces/IMainnetControllerFull.sol";
 
 import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
@@ -13,26 +21,44 @@ import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 contract MainnetController_Constructor_Tests is UnitTestBase {
 
+    AccessControls         accessControls;
+    IMainnetControllerFull mainnetController;
+    Parameters             parameters;
+
     function test_constructor() public {
+        address almProxy = makeAddr("almProxy");
+
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
-        MainnetController mainnetController = new MainnetController(
+        accessControls = new AccessControls(almProxy);
+        parameters     = new Parameters(almProxy);
+
+
+        mainnetController = IMainnetControllerFull(payable(new MainnetController(
             admin,
-            makeAddr("almProxy"),
+            almProxy,
             makeAddr("rateLimits"),
-            makeAddr("accessControls"),
-            makeAddr("parameters"),
+            address(accessControls),
+            address(parameters),
             address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp")
-        );
+        )));
+
+        vm.startPrank(almProxy);
+
+        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
+
+        _wirePSMFacet(address(psm));
+
+        vm.stopPrank();
 
         assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(mainnetController.proxy()),      makeAddr("almProxy"));
+        assertEq(address(mainnetController.proxy()),      almProxy);
         assertEq(address(mainnetController.rateLimits()), makeAddr("rateLimits"));
         assertEq(address(mainnetController.vault()),      address(vault));
         assertEq(address(mainnetController.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
@@ -44,6 +70,25 @@ contract MainnetController_Constructor_Tests is UnitTestBase {
 
         assertEq(mainnetController.psmTo18ConversionFactor(), psm.to18ConversionFactor());
         assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
+    }
+
+    // NOTE: Only wires admin-relevant PSMFacet functions for unit tests.
+    function _wirePSMFacet(address psm) internal {
+        address psmFacet = address(new PSMFacet(
+            makeAddr("dai"),
+            makeAddr("dai_usds"),
+            psm,
+            makeAddr("usdc"),
+            makeAddr("usds")
+        ));
+
+        vm.label(psmFacet, "PSMFacet");
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.psmTo18ConversionFactor.selector,
+            psmFacet,
+            IPSMFacet.to18ConversionFactor.selector
+        );
     }
 
 }
