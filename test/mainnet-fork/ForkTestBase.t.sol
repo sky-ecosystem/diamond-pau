@@ -22,9 +22,11 @@ import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwa
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
+import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
+import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -240,9 +242,16 @@ abstract contract ForkTestBase is DssTest {
         RELAYER    = mainnetController.RELAYER();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+        _wireDAIUSDSFacet();
+        _wireFarmFacet();
+        _wireTransferAssetFacet();
+
         vm.stopPrank();
 
         address[] memory relayers = new address[](2);
@@ -304,15 +313,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -378,7 +378,40 @@ abstract contract ForkTestBase is DssTest {
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
+    }
 
+    function _wireFarmFacet() internal {
+        address farmFacet = address(new FarmFacet());
+
+        vm.label(farmFacet, "FarmFacet");
+
+        // "Controller.depositToFarm()" -> "FarmFacet.deposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositToFarm.selector,
+            farmFacet,
+            IFarmFacet.deposit.selector
+        );
+
+        // "Controller.withdrawFromFarm()" -> "FarmFacet.withdraw()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.withdrawFromFarm.selector,
+            farmFacet,
+            IFarmFacet.withdraw.selector
+        );
+
+        // "Controller.LIMIT_FARM_DEPOSIT()" -> "FarmFacet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_FARM_DEPOSIT.selector,
+            farmFacet,
+            IFarmFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_FARM_WITHDRAW()" -> "FarmFacet.LIMIT_WITHDRAW()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
+            farmFacet,
+            IFarmFacet.LIMIT_WITHDRAW.selector
+        );
     }
 
     function _wireTransferAssetFacet() internal {
