@@ -122,7 +122,9 @@ contract ParameterKeys_Tests is Test {
     }
 
     function test_combineKeyComponents() external view {
-        assertEq(harness.combineKeyComponents("sky", "pau"), "sky.pau");
+        assertEq(harness.combineKeyComponents("sky", "pau"),     "sky.pau");
+        assertEq(harness.combineKeyComponents("sky.pau", "foo"), "sky.pau.foo");
+        assertEq(harness.combineKeyComponents("sky", "pau.foo"), "sky.pau.foo");
     }
 
     function test_addressToKeyComponent() external view {

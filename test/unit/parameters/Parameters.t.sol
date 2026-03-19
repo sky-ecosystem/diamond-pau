@@ -3,14 +3,17 @@ pragma solidity ^0.8.28;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 
-import { IParameterHelpersErrors } from "../../../src/interfaces/IParameterHelpersErrors.sol";
-import { IParameters }             from "../../../src/interfaces/IParameters.sol";
+import { IAccessControl }           from "../../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControlEnumerable } from "../../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
+import { IERC165 }                  from "../../../lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+
+import { IParameters } from "../../../src/interfaces/IParameters.sol";
 
 import { Parameters } from "../../../src/Parameters.sol";
 
 contract ParametersHarness is Parameters {
 
-    constructor(address[] memory admins) Parameters(admins) {}
+    constructor(address admin) Parameters(admin) {}
 
     function __setParameter(string calldata key, address value) external {
         __setParameter(key, bytes32(uint256(uint160(value))));
@@ -32,63 +35,62 @@ contract ParametersHarness is Parameters {
 
 contract Parameters_Tests is Test {
 
+    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    address internal admin        = makeAddr("admin");
+    address internal deployer     = makeAddr("deployer");
+    address internal controller   = makeAddr("controller");
+    address internal unauthorized = makeAddr("unauthorized");
+
     ParametersHarness internal parameters;
 
-    address internal admin1       = 0x0000000000000000000000000000000000000001;
-    address internal admin2       = 0x0000000000000000000000000000000000000002;
-    address internal unauthorized = 0x0000000000000000000000000000000000000003;
-
     function setUp() external {
-        address[] memory admins = new address[](2);
-        admins[0] = admin1;
-        admins[1] = admin2;
+        vm.prank(deployer);
+        parameters = new ParametersHarness(admin);
 
-        parameters = new ParametersHarness(admins);
+        vm.startPrank(admin);
+        parameters.grantRole(parameters.CONTROLLER_ROLE(), controller);
+        vm.stopPrank();
     }
 
     /**********************************************************************************************/
     /*** Constructor Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_constructor_emptyAdmins() external {
-        vm.expectRevert(IParameters.EmptyAdmins.selector);
-        new ParametersHarness(new address[](0));
-    }
-
     function test_constructor_zeroAdmin() external {
         vm.expectRevert(IParameters.ZeroAdmin.selector);
-        new ParametersHarness(new address[](1));
+        new ParametersHarness(address(0));
     }
 
     function test_constructor() external {
-        address[] memory admins = new address[](2);
-        admins[0] = admin1;
-        admins[1] = admin2;
-
         vm.expectEmit();
-        emit IParameters.ParameterSet(
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000001",
-            bytes32(uint256(1))
-        );
+        emit IAccessControl.RoleGranted(DEFAULT_ADMIN_ROLE, admin, deployer);
 
-        vm.expectEmit();
-        emit IParameters.ParameterSet(
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000002",
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000002",
-            bytes32(uint256(1))
-        );
+        vm.prank(deployer);
+        Parameters parameters_ = new Parameters(admin);
 
-        new ParametersHarness(admins);
+        assertEq(parameters_.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+
+        assertEq(parameters_.CONTROLLER_ROLE(), keccak256("CONTROLLER"));
     }
 
     /**********************************************************************************************/
     /*** Set One Tests                                                                          ***/
     /**********************************************************************************************/
 
-    function test_set_one_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSelector(IParameters.NotAdmin.selector, unauthorized));
+    function test_set_one_notController() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, parameters.CONTROLLER_ROLE())
+        );
+
         vm.prank(unauthorized);
+        parameters.set("", 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, parameters.CONTROLLER_ROLE())
+        );
+
+        vm.prank(admin);
         parameters.set("", 0);
     }
 
@@ -96,7 +98,7 @@ contract Parameters_Tests is Test {
         vm.expectEmit(address(parameters));
         emit IParameters.ParameterSet("this.is.a.parameter", "this.is.a.parameter", bytes32(uint256(1010101)));
 
-        vm.prank(admin1);
+        vm.prank(controller);
         parameters.set("this.is.a.parameter", bytes32(uint256(1010101)));
 
         assertEq(parameters.get("this.is.a.parameter"), bytes32(uint256(1010101)));
@@ -106,21 +108,31 @@ contract Parameters_Tests is Test {
     /*** Set Several Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_set_several_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSelector(IParameters.NotAdmin.selector, unauthorized));
+    function test_set_several_notController() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, parameters.CONTROLLER_ROLE())
+        );
+
         vm.prank(unauthorized);
+        parameters.set(new string[](0), new bytes32[](0));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, parameters.CONTROLLER_ROLE())
+        );
+
+        vm.prank(admin);
         parameters.set(new string[](0), new bytes32[](0));
     }
 
     function test_set_several_noKeys() external {
         vm.expectRevert(IParameters.NoKeys.selector);
-        vm.prank(admin1);
+        vm.prank(controller);
         parameters.set(new string[](0), new bytes32[](0));
     }
 
     function test_set_several_arrayLengthMismatch() external {
         vm.expectRevert(IParameters.ArrayLengthMismatch.selector);
-        vm.prank(admin1);
+        vm.prank(controller);
         parameters.set(new string[](1), new bytes32[](2));
     }
 
@@ -140,41 +152,11 @@ contract Parameters_Tests is Test {
         vm.expectEmit(address(parameters));
         emit IParameters.ParameterSet(keys_[1], keys_[1], values_[1]);
 
-        vm.prank(admin1);
+        vm.prank(controller);
         parameters.set(keys_, values_);
 
         assertEq(parameters.get(keys_[0]), bytes32(uint256(1010101)));
         assertEq(parameters.get(keys_[1]), bytes32(uint256(2020202)));
-    }
-
-    /**********************************************************************************************/
-    /*** Is Admin Tests                                                                         ***/
-    /**********************************************************************************************/
-
-    function test_isAdmin_invalidValue() external {
-        parameters.__setParameter(
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000003",
-            bytes32(uint256(2))
-        );
-
-        vm.expectRevert(IParameterHelpersErrors.ParameterOutOfTypeBounds.selector);
-        parameters.isAdmin(address(3));
-    }
-
-    function test_isAdmin() external {
-        assertFalse(parameters.isAdmin(address(3)));
-
-        parameters.__setParameter(
-            "sky.pau.parameters.isAdmin.0x0000000000000000000000000000000000000003",
-            bytes32(uint256(1))
-        );
-
-        assertTrue(parameters.isAdmin(address(3)));
-
-        assertEq(
-            keccak256(bytes(parameters.ADMIN_PARAMETER_KEY_PREFIX())),
-            keccak256(bytes("sky.pau.parameters.isAdmin"))
-        );
     }
 
     /**********************************************************************************************/
@@ -219,6 +201,17 @@ contract Parameters_Tests is Test {
         assertEq(values_.length, keys_.length);
         assertEq(values_[0], expectedValues_[0]);
         assertEq(values_[1], expectedValues_[1]);
+    }
+
+    /**********************************************************************************************/
+    /*** supportsInterface Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_supportsInterface() external view {
+        assertEq(parameters.supportsInterface(type(IParameters).interfaceId),              true);
+        assertEq(parameters.supportsInterface(type(IAccessControlEnumerable).interfaceId), true);
+        assertEq(parameters.supportsInterface(type(IAccessControl).interfaceId),           true);
+        assertEq(parameters.supportsInterface(type(IERC165).interfaceId),                  true);
     }
 
 }

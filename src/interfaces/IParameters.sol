@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {
+    IAccessControlEnumerable
+} from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
+
 import { IParameterKeysErrors }    from "./IParameterKeysErrors.sol";
 import { IParameterHelpersErrors } from "./IParameterHelpersErrors.sol";
 
@@ -9,7 +13,7 @@ import { IParameterHelpersErrors } from "./IParameterHelpersErrors.sol";
  * @notice A Parameters contract allows admins to set parameters, including whether an account is an
  *         admin, and allows any account/contract to query the values of parameters.
  */
-interface IParameters is IParameterKeysErrors, IParameterHelpersErrors {
+interface IParameters is IParameterKeysErrors, IParameterHelpersErrors, IAccessControlEnumerable {
 
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
@@ -32,17 +36,11 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors {
     /*** Custom Errors                                                                          ***/
     /**********************************************************************************************/
 
-    /// @notice Thrown when the caller is not an admin (e.g. when setting a parameter).
-    error NotAdmin(address caller);
-
     /// @notice Thrown when no keys are provided (e.g. when setting or getting parameters).
     error NoKeys();
 
     /// @notice Thrown when the array length mismatch (e.g. when setting multiple parameters).
     error ArrayLengthMismatch();
-
-    /// @notice Thrown when the array of admins is empty.
-    error EmptyAdmins();
 
     /// @notice Thrown when an admin is the zero address.
     error ZeroAdmin();
@@ -72,19 +70,7 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice The parameters contract key prefix used to fetch the status of an admin.
-     * @return key The prefix of the admin parameter key.
-     * @dev    The parameters contract uses its own key-value mechanism to track its own admins.
-     */
-    function ADMIN_PARAMETER_KEY_PREFIX() external pure returns (string memory key);
-
-    /**
-     * @notice Returns whether an account is an admin (i.e. an account that can set parameters).
-     * @param  account The address of the account to check.
-     * @return isAdmin True if the account is an admin, false otherwise.
-     */
-    function isAdmin(address account) external view returns (bool isAdmin);
+    function CONTROLLER_ROLE() external view returns (bytes32);
 
     /**
      * @notice Gets the values of several parameters.
@@ -101,5 +87,7 @@ interface IParameters is IParameterKeysErrors, IParameterHelpersErrors {
      * @dev    The default value for a parameter is bytes32(0).
      */
     function get(string calldata key) external view returns (bytes32 value);
+
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
 }

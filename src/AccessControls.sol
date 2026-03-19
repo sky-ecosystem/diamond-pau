@@ -23,6 +23,8 @@ contract AccessControls is IAccessControls, ReentrancyGuard, AccessControlEnumer
     /**********************************************************************************************/
 
     constructor(address admin) {
+        require(admin != address(0), ZeroAdmin());
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
