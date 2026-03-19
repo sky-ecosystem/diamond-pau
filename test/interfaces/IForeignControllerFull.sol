@@ -8,6 +8,12 @@ import { ForeignController } from "../../src/ForeignController.sol";
 abstract contract IForeignControllerFull is IController, ForeignController {
 
     /**********************************************************************************************/
+    /*** MerklFacet actions                                                                     ***/
+    /**********************************************************************************************/
+
+    function toggleOperatorMerkl(address operator) external virtual;
+
+    /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
 

@@ -11,7 +11,6 @@ import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
-import { MerklLib }         from "./libraries/MerklLib.sol";
 import { PSM3Lib }          from "./libraries/PSM3Lib.sol";
 import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
@@ -34,8 +33,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     event RelayerRemoved(address indexed relayer);
 
     event PendleRouterSet(address indexed pendleRouter);
-
-    event MerklDistributorSet(address indexed merklDistributor);
 
     event UniswapV3SwapRouterSet(address indexed swapRouter);
 
@@ -78,8 +75,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     address public uniswapV3PositionManager;
 
     address public immutable usdc;
-
-    address public merklDistributor;
 
     address public pendleRouter;
 
@@ -175,15 +170,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     {
         pendleRouter = pendleRouter_;
         emit PendleRouterSet(pendleRouter_);
-    }
-
-    function setMerklDistributor(address merklDistributor_)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        merklDistributor = merklDistributor_;
-        emit MerklDistributorSet(merklDistributor_);
     }
 
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
@@ -538,18 +524,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
             lpBurnAmount       : lpBurnAmount,
             minWithdrawAmounts : minWithdrawAmounts,
             maxSlippages       : maxSlippages
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Merkl functions                                                                ***/
-    /**********************************************************************************************/
-
-    function toggleOperatorMerkl(address operator) external nonReentrant onlyRole(RELAYER) {
-        MerklLib.toggleOperator({
-            proxy       : address(proxy),
-            distributor : merklDistributor,
-            operator    : operator
         });
     }
 

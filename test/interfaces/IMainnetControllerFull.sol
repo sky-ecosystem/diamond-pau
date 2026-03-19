@@ -16,6 +16,12 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     function swapDAIToUSDS(uint256 daiAmount) external virtual;
 
     /**********************************************************************************************/
+    /*** MerklFacet actions                                                                     ***/
+    /**********************************************************************************************/
+
+    function toggleOperatorMerkl(address operator) external virtual;
+
+    /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
 
