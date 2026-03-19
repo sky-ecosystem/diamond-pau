@@ -23,9 +23,11 @@ import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+import { IWSTETHFacet }        from "../../src/interfaces/facets/IWSTETHFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
@@ -240,9 +242,16 @@ abstract contract ForkTestBase is DssTest {
         RELAYER    = mainnetController.RELAYER();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+        _wireDAIUSDSFacet();
+        _wireTransferAssetFacet();
+        _wireWSTETHFacet();
+
         vm.stopPrank();
 
         address[] memory relayers = new address[](2);
@@ -304,15 +313,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -398,6 +398,51 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
+        );
+    }
+
+    function _wireWSTETHFacet() internal {
+        address wstethFacet = address(new WSTETHFacet(
+            Ethereum.WETH,
+            Ethereum.WSTETH_WITHDRAW_QUEUE,
+            Ethereum.WSTETH
+        ));
+
+        vm.label(wstethFacet, "WSTETHFacet");
+
+        // "Controller.depositToWstETH()" -> "WSTETHFacet.deposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositToWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.deposit.selector
+        );
+
+        // "Controller.requestWithdrawFromWstETH()" -> "WSTETHFacet.requestWithdraw()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestWithdrawFromWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.requestWithdraw.selector
+        );
+
+        // "Controller.claimWithdrawalFromWstETH()" -> "WSTETHFacet.claimWithdrawal()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.claimWithdrawalFromWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.claimWithdrawal.selector
+        );
+
+        // "Controller.LIMIT_WSTETH_DEPOSIT()" -> "WSTETHFacet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WSTETH_DEPOSIT.selector,
+            wstethFacet,
+            IWSTETHFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_WSTETH_REQUEST_WITHDRAW()" -> "WSTETHFacet.LIMIT_REQUEST_WITHDRAW()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WSTETH_REQUEST_WITHDRAW.selector,
+            wstethFacet,
+            IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
         );
     }
 

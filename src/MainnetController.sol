@@ -29,7 +29,6 @@ import { USDELib }          from "./libraries/USDELib.sol";
 import { USDSLib }          from "./libraries/USDSLib.sol";
 import { WEETHLib }         from "./libraries/WEETHLib.sol";
 import { WrapProxyETHLib }  from "./libraries/WrapProxyETHLib.sol";
-import { WSTETHLib }        from "./libraries/WSTETHLib.sol";
 
 import { Controller } from "./Controller.sol";
 
@@ -109,8 +108,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
-    bytes32 public LIMIT_WSTETH_DEPOSIT          = WSTETHLib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_WSTETH_REQUEST_WITHDRAW = WSTETHLib.LIMIT_REQUEST_WITHDRAW;
     bytes32 public LIMIT_PENDLE_PT_REDEEM        = PendleLib.LIMIT_REDEEM;
 
     address public buffer;
@@ -376,44 +373,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     function burnUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
         USDSLib.burn(address(proxy), address(rateLimits), vault, usds, usdsAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** wstETH Integration                                                                     ***/
-    /**********************************************************************************************/
-
-    function depositToWstETH(uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        WSTETHLib.deposit({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            weth       : Ethereum.WETH,
-            wsteth     : Ethereum.WSTETH,
-            amount     : amount
-        });
-    }
-
-    function requestWithdrawFromWstETH(uint256 amountToRedeem)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256[] memory requestIds)
-    {
-        return WSTETHLib.requestWithdraw({
-            proxy          : address(proxy),
-            rateLimits     : address(rateLimits),
-            wsteth         : Ethereum.WSTETH,
-            withdrawQueue  : Ethereum.WSTETH_WITHDRAW_QUEUE,
-            amountToRedeem : amountToRedeem
-        });
-    }
-
-    function claimWithdrawalFromWstETH(uint256 requestId) external nonReentrant onlyRole(RELAYER) {
-        WSTETHLib.claimWithdrawal({
-            proxy         : address(proxy),
-            withdrawQueue : Ethereum.WSTETH_WITHDRAW_QUEUE,
-            weth          : Ethereum.WETH,
-            requestId     : requestId
-        });
     }
 
     /**********************************************************************************************/
