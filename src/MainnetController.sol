@@ -12,7 +12,6 @@ import { AaveLib }          from "./libraries/AaveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
 import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
-import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
@@ -77,8 +76,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public FREEZER = keccak256("FREEZER");
     bytes32 public RELAYER = keccak256("RELAYER");
 
-    bytes32 public LIMIT_4626_DEPOSIT            = ERC4626Lib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_4626_WITHDRAW           = ERC4626Lib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_7540_DEPOSIT            = ERC7540Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_7540_REDEEM             = ERC7540Lib.LIMIT_REDEEM;
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
@@ -148,9 +145,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     mapping(address exchange => OTCLib.OTC otcData) public otcs;
 
     mapping(address exchange => mapping(address asset => bool)) public otcWhitelistedAssets;
-
-    // ERC4626 exchange rate thresholds (1e36 precision)
-    mapping(address token => uint256 maxExchangeRate) public maxExchangeRates;
 
     // Uniswap V3 pool params
     mapping(address pool => UniswapV3Lib.PoolParams params) public uniswapV3PoolParams;
@@ -272,14 +266,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         OTCLib.setWhitelistedAsset(exchange, asset, isWhitelisted, otcWhitelistedAssets, otcs);
-    }
-
-    function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
     }
 
     function setUniswapV3PositionManager(address manager)
@@ -468,48 +454,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
         WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer ERC4626 functions                                                              ***/
-    /**********************************************************************************************/
-
-    function depositERC4626(address token, uint256 amount, uint256 minSharesOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return ERC4626Lib.deposit({
-            proxy            : address(proxy),
-            rateLimits       : address(rateLimits),
-            token            : token,
-            amount           : amount,
-            minSharesOut     : minSharesOut,
-            maxExchangeRates : maxExchangeRates
-        });
-    }
-
-    function withdrawERC4626(address token, uint256 amount, uint256 maxSharesIn)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return ERC4626Lib.withdraw(address(proxy), address(rateLimits), token, amount, maxSharesIn);
-    }
-
-    function redeemERC4626(address token, uint256 shares, uint256 minAssetsOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 assets)
-    {
-        return ERC4626Lib.redeem(address(proxy), address(rateLimits), token, shares, minAssetsOut);
-    }
-
-    function EXCHANGE_RATE_PRECISION() external pure returns (uint256) {
-        return ERC4626Lib.EXCHANGE_RATE_PRECISION;
     }
 
     /**********************************************************************************************/

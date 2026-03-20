@@ -27,12 +27,21 @@ import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetF
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
+import { AccessControls }    from "../../src/AccessControls.sol";
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
+import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
-import { AccessControls }    from "../../src/AccessControls.sol";
-import { Parameters }        from "../../src/Parameters.sol";
+
+import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
+
+import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
+
+import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
+import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
+
+import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
@@ -217,11 +226,10 @@ abstract contract ForkTestBase is DssTest {
 
         /*** Step 3: Deploy ALM system ***/
 
-        almProxy   = new ALMProxy(Ethereum.SPARK_PROXY);
-        rateLimits = new RateLimits(Ethereum.SPARK_PROXY);
-
         accessControls = new AccessControls(Ethereum.SPARK_PROXY);
+        almProxy       = new ALMProxy(Ethereum.SPARK_PROXY);
         parameters     = new Parameters(Ethereum.SPARK_PROXY);
+        rateLimits     = new RateLimits(Ethereum.SPARK_PROXY);
 
         mainnetController = IMainnetControllerFull(payable(new MainnetController({
             admin_          : Ethereum.SPARK_PROXY,
@@ -240,9 +248,17 @@ abstract contract ForkTestBase is DssTest {
         RELAYER    = mainnetController.RELAYER();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+
+        // Facet wiring
+        _wireDAIUSDSFacet();
+        _wireERC4626Facet();
+        _wireTransferAssetFacet();
+
         vm.stopPrank();
 
         address[] memory relayers = new address[](2);
@@ -304,15 +320,6 @@ abstract contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
     }
 
     // Default configuration for the fork, can be overridden in inheriting tests
@@ -378,7 +385,53 @@ abstract contract ForkTestBase is DssTest {
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
+    }
 
+    function _wireERC4626Facet() internal {
+        address erc4626Facet = address(new ERC4626Facet());
+
+        vm.label(erc4626Facet, "ERC4626Facet");
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setMaxExchangeRate.selector,
+            erc4626Facet,
+            IERC4626Facet.setMaxExchangeRate.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.maxExchangeRates.selector,
+            erc4626Facet,
+            IERC4626Facet.maxExchangeRates.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.deposit.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.withdrawERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.withdraw.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.redeemERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.redeem.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_4626_DEPOSIT.selector,
+            erc4626Facet,
+            IERC4626Facet.LIMIT_DEPOSIT.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_4626_WITHDRAW.selector,
+            erc4626Facet,
+            IERC4626Facet.LIMIT_WITHDRAW.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.EXCHANGE_RATE_PRECISION.selector,
+            erc4626Facet,
+            IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
+        );
     }
 
     function _wireTransferAssetFacet() internal {

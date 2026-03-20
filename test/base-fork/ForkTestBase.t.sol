@@ -14,8 +14,10 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
+import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
+import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -25,7 +27,10 @@ import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
 
-import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
+import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
+import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
+
+import { IForeignControllerFull }  from "../interfaces/IForeignControllerFull.sol";
 
 abstract contract ForkTestBase is Test {
 
@@ -134,9 +139,15 @@ abstract contract ForkTestBase is Test {
         RELAYER    = foreignController.RELAYER();
 
         vm.startPrank(SPARK_EXECUTOR);
+
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+        _wireERC4626Facet();
+        _wireTransferAssetFacet();
+
         vm.stopPrank();
 
         /*** Step 3: Configure ALM system through Spark governance (Spark spell payload) ***/
@@ -189,11 +200,6 @@ abstract contract ForkTestBase is Test {
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdsBase)));
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(susdsBase)));
 
-
-        // Facet wiring
-
-        _wireTransferAssetFacet();
-
         vm.stopPrank();
     }
 
@@ -228,6 +234,53 @@ abstract contract ForkTestBase is Test {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wireERC4626Facet() internal {
+        address erc4626Facet = address(new ERC4626Facet());
+
+        vm.label(erc4626Facet, "ERC4626Facet");
+
+        foreignController.setFacet(
+            IForeignControllerFull.setMaxExchangeRate.selector,
+            erc4626Facet,
+            IERC4626Facet.setMaxExchangeRate.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.maxExchangeRates.selector,
+            erc4626Facet,
+            IERC4626Facet.maxExchangeRates.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.depositERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.deposit.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.withdrawERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.withdraw.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.redeemERC4626.selector,
+            erc4626Facet,
+            IERC4626Facet.redeem.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
+            erc4626Facet,
+            IERC4626Facet.LIMIT_DEPOSIT.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
+            erc4626Facet,
+            IERC4626Facet.LIMIT_WITHDRAW.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
+            erc4626Facet,
+            IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
+        );
+    }
 
     function _wireTransferAssetFacet() internal {
         address transferAssetFacet = address(new TransferAssetFacet());
