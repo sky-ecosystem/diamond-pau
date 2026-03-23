@@ -127,7 +127,7 @@ contract AaveFacet is IAaveFacet, FacetBase {
         _increaseRateLimit($.rateLimits, LIMIT_DEPOSIT,  aToken, amountWithdrawn);
     }
 
-    function maxSlippage(address aToken) external view returns (uint256) {
+    function maxSlippages(address aToken) external view returns (uint256) {
         return ParameterHelpers.toUint256(
             IParameters(_getControllerStorage().parameters).get(_getMaxSlippageKey(aToken))
         );

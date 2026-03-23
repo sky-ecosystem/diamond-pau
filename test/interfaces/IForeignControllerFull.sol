@@ -54,7 +54,7 @@ abstract contract IForeignControllerFull is IController, ForeignController {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function aaveMaxSlippage(address aToken) external view virtual returns (uint256);
+    function aaveMaxSlippages(address aToken) external view virtual returns (uint256);
 
     function depositAave(address aToken, uint256 amount) external virtual;
 

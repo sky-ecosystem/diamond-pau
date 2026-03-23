@@ -25,7 +25,7 @@ interface IAaveFacet is IFacetBase {
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function maxSlippage(address aToken) external view returns (uint256);
+    function maxSlippages(address aToken) external view returns (uint256);
 
     function DOMAIN() external pure returns (string memory);
 
