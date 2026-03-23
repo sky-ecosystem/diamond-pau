@@ -11,7 +11,6 @@ import { IRateLimits } from "./interfaces/IRateLimits.sol";
 import { AaveLib }          from "./libraries/AaveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
 import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
-import { CurveLib }         from "./libraries/CurveLib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
@@ -81,9 +80,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_CENTRIFUGE_TRANSFER     = CentrifugeLib.LIMIT_TRANSFER;
-    bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
-    bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_FARM_DEPOSIT            = FarmLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_FARM_WITHDRAW           = FarmLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_LAYERZERO_TRANSFER      = LayerZeroLib.LIMIT_TRANSFER;
@@ -471,70 +467,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
         returns (uint256 amountWithdrawn)
     {
         return AaveLib.withdraw(address(proxy), address(rateLimits), aToken, amount);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Curve StableSwap functions                                                     ***/
-    /**********************************************************************************************/
-
-    function swapCurve(
-        address pool,
-        uint256 inputIndex,
-        uint256 outputIndex,
-        uint256 amountIn,
-        uint256 minAmountOut
-    )
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 amountOut)
-    {
-        return CurveLib.swap({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            pool         : pool,
-            inputIndex   : inputIndex,
-            outputIndex  : outputIndex,
-            amountIn     : amountIn,
-            minAmountOut : minAmountOut,
-            maxSlippages : maxSlippages
-        });
-    }
-
-    function addLiquidityCurve(address pool, uint256[] memory depositAmounts, uint256 minLpAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return CurveLib.addLiquidity({
-            proxy          : address(proxy),
-            rateLimits     : address(rateLimits),
-            pool           : pool,
-            minLpAmount    : minLpAmount,
-            depositAmounts : depositAmounts,
-            maxSlippages   : maxSlippages
-        });
-    }
-
-    function removeLiquidityCurve(
-        address            pool,
-        uint256            lpBurnAmount,
-        uint256[] calldata minWithdrawAmounts
-    )
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256[] memory withdrawnTokens)
-    {
-        return CurveLib.removeLiquidity({
-            proxy              : address(proxy),
-            rateLimits         : address(rateLimits),
-            pool               : pool,
-            lpBurnAmount       : lpBurnAmount,
-            minWithdrawAmounts : minWithdrawAmounts,
-            maxSlippages       : maxSlippages
-        });
     }
 
     /**********************************************************************************************/
