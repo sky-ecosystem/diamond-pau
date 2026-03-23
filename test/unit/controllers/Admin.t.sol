@@ -10,9 +10,11 @@ import { ForeignController }                           from "../../../src/Foreig
 import { MainnetController }                           from "../../../src/MainnetController.sol";
 import { Parameters }                                  from "../../../src/Parameters.sol";
 import { ParameterHelpers }                            from "../../../src/ParameterHelpers.sol";
+import { ICurveFacet }                                 from "../../../src/interfaces/facets/ICurveFacet.sol";
 import { IERC4626Facet }                               from "../../../src/interfaces/facets/IERC4626Facet.sol";
 
-import { CCTPLib }       from "../../../src/libraries/CCTPLib.sol";
+import { CCTPLib }      from "../../../src/libraries/CCTPLib.sol";
+import { CurveFacet }   from "../../../src/libraries/CurveLib.sol";
 import { ERC4626Facet } from "../../../src/libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
@@ -64,9 +66,26 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
         // Facet wiring
 
+        _wireCurveFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
+    }
+
+    // NOTE: Only wires admin-relevant CurveFacet functions for unit tests.
+    function _wireCurveFacet() internal {
+        address curveFacet = address(new CurveFacet());
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setCurveMaxSlippage.selector,
+            curveFacet,
+            ICurveFacet.setMaxSlippage.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.curveMaxSlippages.selector,
+            curveFacet,
+            ICurveFacet.maxSlippages.selector
+        );
     }
 
     // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
@@ -539,6 +558,57 @@ contract MainnetController_Admin_SetMaxExchangeRate_Tests is MainnetController_A
         mainnetController.setMaxExchangeRate(token, 1e6, 1e18);
 
         assertEq(mainnetController.maxExchangeRates(token), 1e48);
+    }
+
+}
+
+contract MainnetController_Admin_SetCurveMaxSlippage_Tests is MainnetController_Admin_TestBase {
+
+    function test_setCurveMaxSlippage_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        mainnetController.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage_poolZeroAddress() external {
+        vm.expectRevert("CurveFacet/pool-zero-address");
+        vm.prank(admin);
+        mainnetController.setCurveMaxSlippage(address(0), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage() external {
+        address pool = makeAddr("pool");
+
+        assertEq(mainnetController.curveMaxSlippages(pool), 0);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit ICurveFacet.MaxSlippageSet(pool, 0.98e18);
+
+        vm.prank(admin);
+        mainnetController.setCurveMaxSlippage(pool, 0.98e18);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(mainnetController.curveMaxSlippages(pool), 0.98e18);
+
+        vm.expectEmit(address(mainnetController));
+        emit ICurveFacet.MaxSlippageSet(pool, 0.99e18);
+
+        vm.prank(admin);
+        mainnetController.setCurveMaxSlippage(pool, 0.99e18);
+
+        assertEq(mainnetController.curveMaxSlippages(pool), 0.99e18);
     }
 
 }
@@ -1068,9 +1138,26 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         // Facet wiring
 
+        _wireCurveFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
+    }
+
+    // NOTE: Only wires admin-relevant CurveFacet functions for unit tests.
+    function _wireCurveFacet() internal {
+        address curveFacet = address(new CurveFacet());
+
+        foreignController.setFacet(
+            IForeignControllerFull.setCurveMaxSlippage.selector,
+            curveFacet,
+            ICurveFacet.setMaxSlippage.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.curveMaxSlippages.selector,
+            curveFacet,
+            ICurveFacet.maxSlippages.selector
+        );
     }
 
     // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
@@ -1148,6 +1235,61 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.maxSlippages(pool), 0.99e18);
 
         _assertReentrancyGuardWrittenToTwice();
+    }
+
+    function test_setCurveMaxSlippage_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        foreignController.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
+
+        vm.prank(freezer);
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            freezer,
+            DEFAULT_ADMIN_ROLE
+        ));
+        foreignController.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage_poolZeroAddress() external {
+        vm.expectRevert("CurveFacet/pool-zero-address");
+        vm.prank(admin);
+        foreignController.setCurveMaxSlippage(address(0), 0.98e18);
+    }
+
+    function test_setCurveMaxSlippage() external {
+        address pool = makeAddr("pool");
+
+        assertEq(foreignController.curveMaxSlippages(pool), 0);
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ICurveFacet.MaxSlippageSet(pool, 0.98e18);
+
+        vm.prank(admin);
+        foreignController.setCurveMaxSlippage(pool, 0.98e18);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(foreignController.curveMaxSlippages(pool), 0.98e18);
+
+        vm.expectEmit(address(foreignController));
+        emit ICurveFacet.MaxSlippageSet(pool, 0.99e18);
+
+        vm.prank(admin);
+        foreignController.setCurveMaxSlippage(pool, 0.99e18);
+
+        assertEq(foreignController.curveMaxSlippages(pool), 0.99e18);
     }
 
     function test_setCCTPMaxFeeCap_reentrancy() external {

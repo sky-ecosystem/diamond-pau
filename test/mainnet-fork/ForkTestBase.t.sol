@@ -34,8 +34,10 @@ import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
+import { CurveFacet }   from "../../src/libraries/CurveLib.sol";
 import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
 
+import { ICurveFacet }   from "../../src/interfaces/facets/ICurveFacet.sol";
 import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
@@ -255,6 +257,8 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
 
         // Facet wiring
+
+        _wireCurveFacet();
         _wireDAIUSDSFacet();
         _wireERC4626Facet();
         _wireTransferAssetFacet();
@@ -362,6 +366,53 @@ abstract contract ForkTestBase is DssTest {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wireCurveFacet() internal {
+        address curveFacet = address(new CurveFacet());
+
+        vm.label(curveFacet, "CurveFacet");
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setCurveMaxSlippage.selector,
+            curveFacet,
+            ICurveFacet.setMaxSlippage.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.curveMaxSlippages.selector,
+            curveFacet,
+            ICurveFacet.maxSlippages.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.swapCurve.selector,
+            curveFacet,
+            ICurveFacet.swap.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.addLiquidityCurve.selector,
+            curveFacet,
+            ICurveFacet.addLiquidity.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.removeLiquidityCurve.selector,
+            curveFacet,
+            ICurveFacet.removeLiquidity.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_CURVE_DEPOSIT.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_DEPOSIT.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_CURVE_SWAP.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_SWAP.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_CURVE_WITHDRAW.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_WITHDRAW.selector
+        );
+    }
 
     function _wireDAIUSDSFacet() internal {
         address daiUSDSFacet = address(new DAIUSDSFacet({

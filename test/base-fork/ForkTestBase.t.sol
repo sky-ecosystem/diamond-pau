@@ -27,6 +27,12 @@ import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
 
+import { CurveFacet }   from "../../src/libraries/CurveLib.sol";
+import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
+
+import { ICurveFacet }   from "../../src/interfaces/facets/ICurveFacet.sol";
+import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
+
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
 import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
 
@@ -145,6 +151,8 @@ abstract contract ForkTestBase is Test {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
 
         // Facet wiring
+
+        _wireCurveFacet();
         _wireERC4626Facet();
         _wireTransferAssetFacet();
 
@@ -234,6 +242,53 @@ abstract contract ForkTestBase is Test {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wireCurveFacet() internal {
+        address curveFacet = address(new CurveFacet());
+
+        vm.label(curveFacet, "CurveFacet");
+
+        foreignController.setFacet(
+            IForeignControllerFull.setCurveMaxSlippage.selector,
+            curveFacet,
+            ICurveFacet.setMaxSlippage.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.curveMaxSlippages.selector,
+            curveFacet,
+            ICurveFacet.maxSlippages.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.swapCurve.selector,
+            curveFacet,
+            ICurveFacet.swap.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.addLiquidityCurve.selector,
+            curveFacet,
+            ICurveFacet.addLiquidity.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.removeLiquidityCurve.selector,
+            curveFacet,
+            ICurveFacet.removeLiquidity.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CURVE_DEPOSIT.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_DEPOSIT.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CURVE_SWAP.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_SWAP.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
+            curveFacet,
+            ICurveFacet.LIMIT_WITHDRAW.selector
+        );
+    }
 
     function _wireERC4626Facet() internal {
         address erc4626Facet = address(new ERC4626Facet());
