@@ -65,9 +65,11 @@ contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
+    AccessControls    accessControls;
     ALMProxy          almProxy;
-    RateLimits        rateLimits;
     ForeignController foreignController;
+    Parameters        parameters;
+    RateLimits        rateLimits;
 
     /**********************************************************************************************/
     /*** Addresses for testing                                                                  ***/
@@ -115,15 +117,15 @@ contract ForkTestBase is Test {
         almProxy   = new ALMProxy(GROVE_EXECUTOR);
         rateLimits = new RateLimits(GROVE_EXECUTOR);
 
-        address accessControls = address(new AccessControls(GROVE_EXECUTOR));
-        address parameters     = address(new Parameters(GROVE_EXECUTOR));
+        accessControls = new AccessControls(GROVE_EXECUTOR);
+        parameters     = new Parameters(GROVE_EXECUTOR);
 
         foreignController = new ForeignController({
             admin_          : GROVE_EXECUTOR,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
-            accessControls_ : accessControls,
-            parameters_     : parameters,
+            accessControls_ : address(accessControls),
+            parameters_     : address(parameters),
             psm_            : address(psmAvalanche),
             usdc_           : USDC_AVALANCHE,
             cctp_           : CCTP_TOKEN_MESSENGER

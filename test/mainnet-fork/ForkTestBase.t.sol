@@ -132,11 +132,11 @@ abstract contract ForkTestBase is DssTest {
     /*** ALM system and allocation system deployments                                           ***/
     /**********************************************************************************************/
 
-    ALMProxy          almProxy;
-    RateLimits        rateLimits;
-    MainnetController mainnetController;
     AccessControls    accessControls;
+    ALMProxy          almProxy;
+    MainnetController mainnetController;
     Parameters        parameters;
+    RateLimits        rateLimits;
 
     address buffer;
     address vault;
