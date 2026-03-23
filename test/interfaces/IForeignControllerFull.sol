@@ -50,4 +50,21 @@ abstract contract IForeignControllerFull is IController, ForeignController {
 
     function transferAsset(address asset, address destination, uint256 amount) external virtual;
 
+    /**********************************************************************************************/
+    /*** AaveFacet actions                                                                      ***/
+    /**********************************************************************************************/
+
+    function aaveMaxSlippage(address aToken) external view virtual returns (uint256);
+
+    function depositAave(address aToken, uint256 amount) external virtual;
+
+    function LIMIT_AAVE_DEPOSIT() external pure virtual returns (bytes32);
+
+    function LIMIT_AAVE_WITHDRAW() external pure virtual returns (bytes32);
+
+    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external virtual;
+
+    function withdrawAave(address aToken, uint256 amount)
+        external virtual returns (uint256 amountWithdrawn);
+
 }

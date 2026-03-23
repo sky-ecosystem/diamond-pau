@@ -34,8 +34,10 @@ import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
+import { AaveFacet }    from "../../src/libraries/AaveLib.sol";
 import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
 
+import { IAaveFacet }    from "../../src/interfaces/facets/IAaveFacet.sol";
 import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
@@ -255,6 +257,8 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
 
         // Facet wiring
+
+        _wireAaveFacet();
         _wireDAIUSDSFacet();
         _wireERC4626Facet();
         _wireTransferAssetFacet();
@@ -362,6 +366,43 @@ abstract contract ForkTestBase is DssTest {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wireAaveFacet() internal {
+        address aaveFacet = address(new AaveFacet());
+
+        vm.label(aaveFacet, "AaveFacet");
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setAaveMaxSlippage.selector,
+            aaveFacet,
+            IAaveFacet.setMaxSlippage.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.aaveMaxSlippage.selector,
+            aaveFacet,
+            IAaveFacet.maxSlippage.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositAave.selector,
+            aaveFacet,
+            IAaveFacet.deposit.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.withdrawAave.selector,
+            aaveFacet,
+            IAaveFacet.withdraw.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_AAVE_DEPOSIT.selector,
+            aaveFacet,
+            IAaveFacet.LIMIT_DEPOSIT.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_AAVE_WITHDRAW.selector,
+            aaveFacet,
+            IAaveFacet.LIMIT_WITHDRAW.selector
+        );
+    }
 
     function _wireDAIUSDSFacet() internal {
         address daiUSDSFacet = address(new DAIUSDSFacet({

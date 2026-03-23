@@ -14,18 +14,21 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
-import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
-
-import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
-import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
-
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
+
+import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
+import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
+import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+
+import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
+import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
+import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
 import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
@@ -145,6 +148,8 @@ abstract contract ForkTestBase is Test {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
 
         // Facet wiring
+
+        _wireAaveFacet();
         _wireERC4626Facet();
         _wireTransferAssetFacet();
 
@@ -234,6 +239,43 @@ abstract contract ForkTestBase is Test {
     /**********************************************************************************************/
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
+
+    function _wireAaveFacet() internal {
+        address aaveFacet = address(new AaveFacet());
+
+        vm.label(aaveFacet, "AaveFacet");
+
+        foreignController.setFacet(
+            IForeignControllerFull.setAaveMaxSlippage.selector,
+            aaveFacet,
+            IAaveFacet.setMaxSlippage.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.aaveMaxSlippage.selector,
+            aaveFacet,
+            IAaveFacet.maxSlippage.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.depositAave.selector,
+            aaveFacet,
+            IAaveFacet.deposit.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.withdrawAave.selector,
+            aaveFacet,
+            IAaveFacet.withdraw.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_AAVE_DEPOSIT.selector,
+            aaveFacet,
+            IAaveFacet.LIMIT_DEPOSIT.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
+            aaveFacet,
+            IAaveFacet.LIMIT_WITHDRAW.selector
+        );
+    }
 
     function _wireERC4626Facet() internal {
         address erc4626Facet = address(new ERC4626Facet());
