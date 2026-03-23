@@ -174,10 +174,18 @@ contract Controller_Tests is Test {
     /**********************************************************************************************/
 
     function test_receive() external {
-        deal(admin, 1 ether);
+        address account = makeAddr("account");
 
-        vm.prank(admin);
+        deal(account, 1 ether);
+
+        assertEq(account.balance,             1 ether);
+        assertEq(address(controller).balance, 0);
+
+        vm.prank(account);
         payable(controller).call{value: 1 ether}("");
+
+        assertEq(account.balance,             0);
+        assertEq(address(controller).balance, 1 ether);
     }
 
     /**********************************************************************************************/
@@ -198,7 +206,6 @@ contract Controller_Tests is Test {
             abi.encodeWithSelector(IController.FacetNotFound.selector, IMockController.facetFoo.selector)
         );
 
-        vm.prank(admin);
         IMockController(address(controller)).facetFoo();
     }
 
@@ -222,11 +229,10 @@ contract Controller_Tests is Test {
 
         vm.expectRevert(revertData);
 
-        vm.prank(admin);
         IMockController(address(controller)).facetFoo();
     }
 
-    function test_fallback_xxx() external {
+    function test_fallback() external {
         deal(admin, 1 ether);
 
         address arg0 = makeAddr("arg0");
@@ -283,7 +289,6 @@ contract Controller_Tests is Test {
             abi.encode(arg6, arg5, arg4, arg3, arg2, arg1, arg0)
         );
 
-        vm.prank(admin);
         (
             string[]   memory resultA,
             bytes      memory resultB,
