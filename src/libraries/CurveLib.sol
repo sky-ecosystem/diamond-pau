@@ -113,12 +113,10 @@ contract CurveFacet is ICurveFacet, FacetBase {
 
         require(inputIndex < numCoins && outputIndex < numCoins,"CurveFacet/index-too-high");
 
-        // Normalized to provide 36 decimal precision when multiplied by asset amount.
-        uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
-
-        // Makes the assumption that value in should equal value out.
-        uint256 valueIn             = _toNormalizedAmount(amountIn,  rates[inputIndex]);
-        uint256 equivalentAmountOut = _fromNormalizedAmount(valueIn, rates[outputIndex]);
+        ( 
+            uint256 valueIn,
+            uint256 equivalentAmountOut
+        ) = _getSwapNormalizedValues(pool, inputIndex, outputIndex, amountIn);
 
         require(
             minAmountOut >= equivalentAmountOut * maxSlippage / 1e18,
@@ -151,9 +149,6 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         ControllerStorage storage $ = _getControllerStorage();
 
-        address proxy      = $.proxy;
-        address rateLimits = $.rateLimits;
-
         uint256 maxSlippage = ParameterHelpers.toUint256(
             IParameters($.parameters).get(_getMaxSlippageKey(pool))
         );
@@ -173,7 +168,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
         for (uint256 i = 0; i < depositAmounts.length; ++i) {
             ApproveLib.approve(
                 ICurvePoolLike(pool).coins(i),
-                proxy,
+                $.proxy,
                 pool,
                 depositAmounts[i]
             );
@@ -192,31 +187,23 @@ contract CurveFacet is ICurveFacet, FacetBase {
         );
 
         // Reduce the rate limit by the aggregated underlying asset value of the deposit (e.g. USD).
-        _decreaseRateLimit(rateLimits, LIMIT_DEPOSIT, pool, valueDeposited);
+        _decreaseRateLimit($.rateLimits, LIMIT_DEPOSIT, pool, valueDeposited);
 
         shares = abi.decode(
-            IALMProxy(proxy).doCall(
+            IALMProxy($.proxy).doCall(
                 pool,
-                abi.encodeCall(ICurvePoolLike.add_liquidity, (depositAmounts, minLpAmount, proxy))
+                abi.encodeCall(ICurvePoolLike.add_liquidity, (depositAmounts, minLpAmount, $.proxy))
             ),
             (uint256)
         );
 
-        uint256 totalSupply = ICurvePoolLike(pool).totalSupply();
-
-        // Compute the swap value by taking the difference of the current underlying asset values
-        // from minted shares vs the deposited funds.
-        uint256 totalSwapped;
-        for (uint256 i; i < depositAmounts.length; ++i) {
-            totalSwapped += _absSubtraction(
-                ICurvePoolLike(pool).balances(i) * rates[i] * shares / totalSupply,
-                depositAmounts[i] * rates[i]
-            );
-        }
-        totalSwapped /= 1e18;
-
-        // Convert the total value moved into an aggregated swap "amount in" by dividing it by 2.
-        _decreaseRateLimit(rateLimits, LIMIT_SWAP, pool, totalSwapped / 2);
+        _applySwapRateLimit(
+            pool,
+            depositAmounts,
+            rates,
+            $.rateLimits,
+            shares
+        );
     }
 
     function removeLiquidity(
@@ -303,6 +290,43 @@ contract CurveFacet is ICurveFacet, FacetBase {
     /**********************************************************************************************/
     /*** Helper functions                                                                       ***/
     /**********************************************************************************************/
+
+    function _getSwapNormalizedValues(
+        address pool,
+        uint256 inputIndex,
+        uint256 outputIndex,
+        uint256 amountIn
+    ) internal view returns (uint256 valueIn, uint256 equivalentAmountOut) {
+        // Normalized to provide 36 decimal precision when multiplied by asset amount.
+        uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
+
+        // Makes the assumption that value in should equal value out.
+        valueIn             = _toNormalizedAmount(amountIn,  rates[inputIndex]);
+        equivalentAmountOut = _fromNormalizedAmount(valueIn, rates[outputIndex]);
+    }
+
+    function _applySwapRateLimit(
+        address            pool,
+        uint256[] calldata depositAmounts,
+        uint256[] memory   rates,
+        address            rateLimits,
+        uint256            shares
+    ) internal returns (uint256 totalSwapped) {
+        uint256 totalSupply = ICurvePoolLike(pool).totalSupply();
+
+        // Compute the swap value by taking the difference of the current underlying asset values
+        // from minted shares vs the deposited funds.
+        for (uint256 i; i < depositAmounts.length; ++i) {
+            totalSwapped += _absSubtraction(
+                ICurvePoolLike(pool).balances(i) * rates[i] * shares / totalSupply,
+                depositAmounts[i] * rates[i]
+            );
+        }
+        totalSwapped /= 1e18;
+
+        // Convert the total value moved into an aggregated swap "amount in" by dividing it by 2.
+        _decreaseRateLimit(rateLimits, LIMIT_SWAP, pool, totalSwapped / 2);
+    }
 
     function _getMaxSlippageKey(address pool) internal pure returns (string memory) {
         return combineKeyComponents(
