@@ -16,12 +16,12 @@ import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { CCTPForwarder }         from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Domain, DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
-import { ALMProxy }              from "../../src/ALMProxy.sol";
-import { ForeignController }     from "../../src/ForeignController.sol";
-import { makeAddressUint32Key }  from "../../src/RateLimitHelpers.sol";
-import { RateLimits }            from "../../src/RateLimits.sol";
-import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
-import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { ALMProxy }             from "../../src/ALMProxy.sol";
+import { ForeignController }    from "../../src/ForeignController.sol";
+import { makeAddressUint32Key } from "../../src/RateLimitHelpers.sol";
+import { RateLimits }           from "../../src/RateLimits.sol";
+import { AccessControls }       from "../../src/AccessControls.sol";
+import { Parameters }           from "../../src/Parameters.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -436,23 +436,18 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
         foreignAlmProxy   = new ALMProxy(SPARK_EXECUTOR);
         foreignRateLimits = new RateLimits(SPARK_EXECUTOR);
 
-        address accessControlRegistry = address(new AccessControlRegistry(SPARK_EXECUTOR));
-
-        address[] memory admins = new address[](1);
-
-        admins[0] = SPARK_EXECUTOR;
-
-        address parameterRegistry = address(new ParameterRegistry(admins));
+        address accessControls = address(new AccessControls(SPARK_EXECUTOR));
+        address parameters     = address(new Parameters(SPARK_EXECUTOR));
 
         foreignController = new ForeignController({
-            admin_                 : SPARK_EXECUTOR,
-            proxy_                 : address(foreignAlmProxy),
-            rateLimits_            : address(foreignRateLimits),
-            accessControlRegistry_ : accessControlRegistry,
-            parameterRegistry_     : parameterRegistry,
-            psm_                   : address(psmArb),
-            usdc_                  : Arbitrum.USDC,
-            cctp_                  : CCTP_MESSENGER_ARB
+            admin_          : SPARK_EXECUTOR,
+            proxy_          : address(foreignAlmProxy),
+            rateLimits_     : address(foreignRateLimits),
+            accessControls_ : accessControls,
+            parameters_     : parameters,
+            psm_            : address(psmArb),
+            usdc_           : Arbitrum.USDC,
+            cctp_           : CCTP_MESSENGER_ARB
         });
 
         address[] memory relayers = new address[](1);

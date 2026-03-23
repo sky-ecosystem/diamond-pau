@@ -13,12 +13,12 @@ import { Domain, DomainHelpers } from "../../lib/grove-xchain-helpers/src/testin
 
 import { CCTPLib } from "../../src/libraries/CCTPLib.sol";
 
-import { ALMProxy }              from "../../src/ALMProxy.sol";
-import { ForeignController }     from "../../src/ForeignController.sol";
-import { makeUint32Key }         from "../../src/RateLimitHelpers.sol";
-import { RateLimits }            from "../../src/RateLimits.sol";
-import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
-import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { makeUint32Key }     from "../../src/RateLimitHelpers.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControls }    from "../../src/AccessControls.sol";
+import { Parameters }        from "../../src/Parameters.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -445,23 +445,18 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         foreignAlmProxy   = new ALMProxy(Base.SPARK_EXECUTOR);
         foreignRateLimits = new RateLimits(Base.SPARK_EXECUTOR);
 
-        address accessControlRegistry = address(new AccessControlRegistry(Base.SPARK_EXECUTOR));
-
-        address[] memory admins = new address[](1);
-
-        admins[0] = Base.SPARK_EXECUTOR;
-
-        address parameterRegistry = address(new ParameterRegistry(admins));
+        address accessControls = address(new AccessControls(Base.SPARK_EXECUTOR));
+        address parameters     = address(new Parameters(Base.SPARK_EXECUTOR));
 
         foreignController = new ForeignController({
-            admin_                 : Base.SPARK_EXECUTOR,
-            proxy_                 : address(foreignAlmProxy),
-            rateLimits_            : address(foreignRateLimits),
-            accessControlRegistry_ : accessControlRegistry,
-            parameterRegistry_     : parameterRegistry,
-            psm_                   : address(0),
-            usdc_                  : Base.USDC,
-            cctp_                  : BASE_CCTP_TOKEN_MESSENGER
+            admin_          : Base.SPARK_EXECUTOR,
+            proxy_          : address(foreignAlmProxy),
+            rateLimits_     : address(foreignRateLimits),
+            accessControls_ : accessControls,
+            parameters_     : parameters,
+            psm_            : address(0),
+            usdc_           : Base.USDC,
+            cctp_           : BASE_CCTP_TOKEN_MESSENGER
         });
 
         address[] memory relayers = new address[](1);

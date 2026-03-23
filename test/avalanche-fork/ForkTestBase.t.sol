@@ -14,11 +14,11 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPv2Forwarder as CCTPForwarder } from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
 
-import { ALMProxy }              from "../../src/ALMProxy.sol";
-import { ForeignController }     from "../../src/ForeignController.sol";
-import { RateLimits }            from "../../src/RateLimits.sol";
-import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
-import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControls }    from "../../src/AccessControls.sol";
+import { Parameters }        from "../../src/Parameters.sol";
 
 import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
 
@@ -115,24 +115,18 @@ contract ForkTestBase is Test {
         almProxy   = new ALMProxy(GROVE_EXECUTOR);
         rateLimits = new RateLimits(GROVE_EXECUTOR);
 
-        address accessControlRegistry = address(new AccessControlRegistry(GROVE_EXECUTOR));
-
-        address[] memory admins = new address[](1);
-
-        admins[0] = GROVE_EXECUTOR;
-
-        address parameterRegistry = address(new ParameterRegistry(admins));
-
+        address accessControls = address(new AccessControls(GROVE_EXECUTOR));
+        address parameters     = address(new Parameters(GROVE_EXECUTOR));
 
         foreignController = new ForeignController({
-            admin_                 : GROVE_EXECUTOR,
-            proxy_                 : address(almProxy),
-            rateLimits_            : address(rateLimits),
-            accessControlRegistry_ : accessControlRegistry,
-            parameterRegistry_     : parameterRegistry,
-            psm_                   : address(psmAvalanche),
-            usdc_                  : USDC_AVALANCHE,
-            cctp_                  : CCTP_TOKEN_MESSENGER
+            admin_          : GROVE_EXECUTOR,
+            proxy_          : address(almProxy),
+            rateLimits_     : address(rateLimits),
+            accessControls_ : accessControls,
+            parameters_     : parameters,
+            psm_            : address(psmAvalanche),
+            usdc_           : USDC_AVALANCHE,
+            cctp_           : CCTP_TOKEN_MESSENGER
         });
 
         CONTROLLER = almProxy.CONTROLLER();

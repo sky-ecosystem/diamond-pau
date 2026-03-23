@@ -21,12 +21,12 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
-import { ALMProxy }              from "../../src/ALMProxy.sol";
-import { MainnetController }     from "../../src/MainnetController.sol";
-import { RateLimitHelpers }      from "../../src/RateLimitHelpers.sol";
-import { RateLimits }            from "../../src/RateLimits.sol";
-import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
-import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { MainnetController } from "../../src/MainnetController.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControls }    from "../../src/AccessControls.sol";
+import { Parameters }        from "../../src/Parameters.sol";
 
 interface IChainlogLike {
 
@@ -132,11 +132,11 @@ abstract contract ForkTestBase is DssTest {
     /*** ALM system and allocation system deployments                                           ***/
     /**********************************************************************************************/
 
-    ALMProxy              almProxy;
-    RateLimits            rateLimits;
-    MainnetController     mainnetController;
-    AccessControlRegistry accessControlRegistry;
-    ParameterRegistry     parameterRegistry;
+    ALMProxy          almProxy;
+    RateLimits        rateLimits;
+    MainnetController mainnetController;
+    AccessControls    accessControls;
+    Parameters        parameters;
 
     address buffer;
     address vault;
@@ -212,24 +212,19 @@ abstract contract ForkTestBase is DssTest {
         almProxy   = new ALMProxy(Ethereum.SPARK_PROXY);
         rateLimits = new RateLimits(Ethereum.SPARK_PROXY);
 
-        accessControlRegistry = new AccessControlRegistry(Ethereum.SPARK_PROXY);
-
-        address[] memory admins = new address[](1);
-
-        admins[0] = Ethereum.SPARK_PROXY;
-    
-        parameterRegistry = new ParameterRegistry(admins);
+        accessControls = new AccessControls(Ethereum.SPARK_PROXY);
+        parameters     = new Parameters(Ethereum.SPARK_PROXY);
 
         mainnetController = new MainnetController({
-            admin_                 : Ethereum.SPARK_PROXY,
-            proxy_                 : address(almProxy),
-            rateLimits_            : address(rateLimits),
-            accessControlRegistry_ : address(accessControlRegistry),
-            parameterRegistry_     : address(parameterRegistry),
-            vault_                 : ilkInst.vault,
-            psm_                   : Ethereum.PSM,
-            daiUsds_               : Ethereum.DAI_USDS,
-            cctp_                  : CCTP_MESSENGER
+            admin_          : Ethereum.SPARK_PROXY,
+            proxy_          : address(almProxy),
+            rateLimits_     : address(rateLimits),
+            accessControls_ : address(accessControls),
+            parameters_     : address(parameters),
+            vault_          : ilkInst.vault,
+            psm_            : Ethereum.PSM,
+            daiUsds_        : Ethereum.DAI_USDS,
+            cctp_           : CCTP_MESSENGER
         });
 
         CONTROLLER = almProxy.CONTROLLER();

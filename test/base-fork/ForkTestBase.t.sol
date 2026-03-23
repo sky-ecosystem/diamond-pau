@@ -18,12 +18,12 @@ import { ForeignControllerDeploy }       from "../../deploy/ControllerDeploy.sol
 import { ControllerInstance }            from "../../deploy/ControllerInstance.sol";
 import { ForeignControllerInit as Init } from "../../deploy/ForeignControllerInit.sol";
 
-import { ALMProxy }              from "../../src/ALMProxy.sol";
-import { ForeignController }     from "../../src/ForeignController.sol";
-import { RateLimitHelpers }      from "../../src/RateLimitHelpers.sol";
-import { RateLimits }            from "../../src/RateLimits.sol";
-import { AccessControlRegistry } from "../../src/AccessControlRegistry.sol";
-import { ParameterRegistry }     from "../../src/ParameterRegistry.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { AccessControls }    from "../../src/AccessControls.sol";
+import { Parameters }        from "../../src/Parameters.sol";
 
 abstract contract ForkTestBase is Test {
 
@@ -118,23 +118,18 @@ abstract contract ForkTestBase is Test {
         almProxy   = new ALMProxy(SPARK_EXECUTOR);
         rateLimits = new RateLimits(SPARK_EXECUTOR);
 
-        address accessControlRegistry = address(new AccessControlRegistry(SPARK_EXECUTOR));
-
-        address[] memory admins = new address[](1);
-
-        admins[0] = SPARK_EXECUTOR;
-
-        address parameterRegistry = address(new ParameterRegistry(admins));
+        address accessControls = address(new AccessControls(SPARK_EXECUTOR));
+        address parameters     = address(new Parameters(SPARK_EXECUTOR));
 
         foreignController = new ForeignController({
-            admin_                 : SPARK_EXECUTOR,
-            proxy_                 : address(almProxy),
-            rateLimits_            : address(rateLimits),
-            accessControlRegistry_ : accessControlRegistry,
-            parameterRegistry_     : parameterRegistry,
-            psm_                   : address(psmBase),
-            usdc_                  : Base.USDC,
-            cctp_                  : CCTP_MESSENGER_BASE
+            admin_          : SPARK_EXECUTOR,
+            proxy_          : address(almProxy),
+            rateLimits_     : address(rateLimits),
+            accessControls_ : accessControls,
+            parameters_     : parameters,
+            psm_            : address(psmBase),
+            usdc_           : Base.USDC,
+            cctp_           : CCTP_MESSENGER_BASE
         });
 
         CONTROLLER = almProxy.CONTROLLER();
