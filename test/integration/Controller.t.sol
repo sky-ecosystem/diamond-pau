@@ -9,17 +9,33 @@ import { AccessControls } from "../../src/AccessControls.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { Parameters }     from "../../src/Parameters.sol";
 
-contract MockFacet {
+contract MockFacet1 {
 
-    function foo(uint256 arg) external pure returns (uint256) {
+    function divide(uint256 arg) external pure returns (uint256) {
         return arg / 2;
+    }
+
+    function multiply(uint256 arg) external pure returns (uint256) {
+        return arg * 2;
+    }
+
+}
+
+contract MockFacet2 {
+
+    function divide(uint256 arg) external pure returns (uint256) {
+        return arg / 4;
+    }
+
+    function multiply(uint256 arg) external pure returns (uint256) {
+        return arg * 4;
     }
 
 }
 
 interface IMockController {
 
-    function facetFoo(uint256 arg) external pure returns (uint256);
+    function foo(uint256 arg) external pure returns (uint256);
 
 }
 
@@ -87,29 +103,45 @@ contract ControllerIntegration_Tests is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IController.FacetNotFound.selector,
-                IMockController.facetFoo.selector
+                IMockController.foo.selector
             )
         );
 
-        IMockController(address(controller)).facetFoo(10);
+        IMockController(address(controller)).foo(10);
 
-        address facet = address(new MockFacet());
-
-        vm.prank(admin);
-        controller.setFacet(IMockController.facetFoo.selector, facet, MockFacet.foo.selector);
-
-        assertEq(IMockController(address(controller)).facetFoo(10), 5);
+        address facet1 = address(new MockFacet1());
+        address facet2 = address(new MockFacet2());
 
         vm.prank(admin);
-        controller.setFacet(IMockController.facetFoo.selector, address(0), bytes4(0));
+        controller.setFacet(IMockController.foo.selector, facet1, MockFacet1.divide.selector);
+
+        assertEq(IMockController(address(controller)).foo(12), 6);
+
+        vm.prank(admin);
+        controller.setFacet(IMockController.foo.selector, facet1, MockFacet1.multiply.selector);
+
+        assertEq(IMockController(address(controller)).foo(12), 24);
+
+        vm.prank(admin);
+        controller.setFacet(IMockController.foo.selector, facet2, MockFacet2.multiply.selector);
+
+        assertEq(IMockController(address(controller)).foo(12), 48);
+
+        vm.prank(admin);
+        controller.setFacet(IMockController.foo.selector, facet2, MockFacet2.divide.selector);
+
+        assertEq(IMockController(address(controller)).foo(12), 3);
+
+        vm.prank(admin);
+        controller.setFacet(IMockController.foo.selector, address(0), bytes4(0));
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IController.FacetNotFound.selector,
-                IMockController.facetFoo.selector
+                IMockController.foo.selector
             )
         );
 
-        IMockController(address(controller)).facetFoo(10);
+        IMockController(address(controller)).foo(10);
     }
 }

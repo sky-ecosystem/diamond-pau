@@ -12,6 +12,8 @@ import { IParameters }     from "./interfaces/IParameters.sol";
 
 contract Controller is IController, ReentrancyGuard {
 
+    string internal constant FACET_PARAMETER_KEY_PREFIX = "sky.pau.controller.facet";
+
     /**********************************************************************************************/
     /*** Domain storage                                                                         ***/
     /**********************************************************************************************/
@@ -63,9 +65,14 @@ contract Controller is IController, ReentrancyGuard {
     /**********************************************************************************************/
 
     function setFacet(bytes4 callSelector, address facet, bytes4 delegateSelector) external {
-        _revertIfNotAdmin();
+        ControllerStorage storage $ = _getControllerStorage();
 
-        IParameters(_getControllerStorage().parameters).set(
+        require(
+            IAccessControls($.accessControls).hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
+            NotAdmin(msg.sender)
+        );
+
+        IParameters($.parameters).set(
             _getFacetKey(callSelector),
             ParameterHelpers.fromBytes24(bytes24(abi.encodePacked(facet, delegateSelector)))
         );
@@ -95,22 +102,11 @@ contract Controller is IController, ReentrancyGuard {
     receive() external payable {}
 
     /**********************************************************************************************/
-    /*** View/Pure Functions                                                                    ***/
-    /**********************************************************************************************/
-
-    function FACET_PARAMETER_KEY_PREFIX() public pure returns (string memory key) {
-        return "sky.pau.controller.facet";
-    }
-
-    /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
     function _getFacetKey(bytes4 callSelector) internal pure returns (string memory key) {
-        return combineKeyComponents(
-            FACET_PARAMETER_KEY_PREFIX(),
-            bytes4ToKeyComponent(callSelector)
-        );
+        return combineKeyComponents(FACET_PARAMETER_KEY_PREFIX, bytes4ToKeyComponent(callSelector));
     }
 
     function _getFacet(bytes4 callSelector)
@@ -119,21 +115,10 @@ contract Controller is IController, ReentrancyGuard {
         returns (address facet, bytes4 delegateSelector)
     {
         bytes24 data = ParameterHelpers.toBytes24(
-            IParameters(_getControllerStorage().parameters).get(
-                _getFacetKey(callSelector)
-            )
+            IParameters(_getControllerStorage().parameters).get(_getFacetKey(callSelector))
         );
 
         return ( address(bytes20(data)), bytes4(data << 160) );
-    }
-
-    function _revertIfNotAdmin() internal view {
-        address accessControls = _getControllerStorage().accessControls;
-
-        require(
-            IAccessControls(accessControls).hasRole(_DEFAULT_ADMIN_ROLE, msg.sender),
-            NotAdmin(msg.sender)
-        );
     }
 
 }
