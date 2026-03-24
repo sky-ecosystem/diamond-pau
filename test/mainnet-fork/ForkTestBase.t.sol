@@ -23,10 +23,16 @@ import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+import { IUSDEFacet }          from "../../src/interfaces/facets/IUSDEFacet.sol";
+import { IUSDSFacet }          from "../../src/interfaces/facets/IUSDSFacet.sol";
+import { IWrapProxyETHFacet }  from "../../src/interfaces/facets/IWrapProxyETHFacet.sol";
 import { IWSTETHFacet }        from "../../src/interfaces/facets/IWSTETHFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+import { USDEFacet }          from "../../src/libraries/USDELib.sol";
+import { USDSFacet }          from "../../src/libraries/USDSLib.sol";
+import { WrapProxyETHFacet }  from "../../src/libraries/WrapProxyETHLib.sol";
 import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -248,8 +254,12 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
 
         // Facet wiring
+
         _wireDAIUSDSFacet();
         _wireTransferAssetFacet();
+        _wireUSDEFacet();
+        _wireUSDSFacet();
+        _wireWrapProxyETHFacet();
         _wireWSTETHFacet();
 
         vm.stopPrank();
@@ -378,7 +388,6 @@ abstract contract ForkTestBase is DssTest {
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
-
     }
 
     function _wireTransferAssetFacet() internal {
@@ -443,6 +452,127 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_WSTETH_REQUEST_WITHDRAW.selector,
             wstethFacet,
             IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
+        );
+    }
+
+    function _wireUSDEFacet() internal {
+        address usdeFacet = address(new USDEFacet(
+            ETHENA_MINTER,
+            address(susde),
+            address(usdc),
+            address(usde)
+        ));
+
+        vm.label(usdeFacet, "USDEFacet");
+
+        // "Controller.cooldownAssetsSUSDe()" -> "IUSDEFacet.cooldownAssets()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownAssetsSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownAssets.selector
+        );
+
+        // "Controller.cooldownSharesSUSDe()" -> "IUSDEFacet.cooldownShares()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownSharesSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownShares.selector
+        );
+
+        // "Controller.prepareUSDeMint()" -> "IUSDEFacet.prepareMint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeMint.selector,
+            usdeFacet,
+            IUSDEFacet.prepareMint.selector
+        );
+
+        // "Controller.prepareUSDeBurn()" -> "IUSDEFacet.prepareBurn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeBurn.selector,
+            usdeFacet,
+            IUSDEFacet.prepareBurn.selector
+        );
+
+        // "Controller.removeDelegatedSigner()" -> "IUSDEFacet.removeDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.removeDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.removeDelegatedSigner.selector
+        );
+
+        // "Controller.setDelegatedSigner()" -> "IUSDEFacet.setDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.setDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.setDelegatedSigner.selector
+        );
+
+        // "Controller.unstakeSUSDe()" -> "IUSDEFacet.unstakeSUSDE()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.unstakeSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.unstakeSUSDE.selector
+        );
+
+        // "Controller.LIMIT_USDE_BURN()" -> "IUSDEFacet.LIMIT_USDE_BURN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_BURN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_BURN.selector
+        );
+
+        // "Controller.LIMIT_USDE_MINT()" -> "IUSDEFacet.LIMIT_USDE_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_MINT.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_MINT.selector
+        );
+
+        // "Controller.LIMIT_SUSDE_COOLDOWN()" -> "IUSDEFacet.LIMIT_SUSDE_COOLDOWN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
+        );
+    }
+
+    function _wireWrapProxyETHFacet() internal {
+        address wrapProxyETHFacet = address(new WrapProxyETHFacet(Ethereum.WETH));
+
+        vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
+
+        // "Controller.wrapAllProxyETH()" -> "WrapProxyETHFacet.wrapAll()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.wrapAllProxyETH.selector,
+            wrapProxyETHFacet,
+            IWrapProxyETHFacet.wrapAll.selector
+        );
+    }
+
+    function _wireUSDSFacet() internal {
+        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+
+        vm.label(usdsFacet, "USDSFacet");
+
+        // "Controller.mintUSDS()" -> "USDSFacet.mint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.mintUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.mint.selector
+        );
+
+        // "Controller.burnUSDS()" -> "USDSFacet.burn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.burnUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.burn.selector
+        );
+
+        // "Controller.LIMIT_USDS_MINT()" -> "USDSFacet.LIMIT_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDS_MINT.selector,
+            usdsFacet,
+            IUSDSFacet.LIMIT_MINT.selector
         );
     }
 
