@@ -34,8 +34,10 @@ import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
+import { CCTPFacet }    from "../../src/libraries/CCTPLib.sol";
 import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
 
+import { ICCTPFacet }    from "../../src/interfaces/facets/ICCTPFacet.sol";
 import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
@@ -288,6 +290,18 @@ abstract contract ForkTestBase is DssTest {
             mainnetController.grantRole(mainnetController.RELAYER(), relayers[i]);
         }
 
+        // Grant CONTROLLER_ROLE to mainnetController on Parameters to call set
+        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
+
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+
+        // Facet wiring
+
+        _wireCCTPFacet();
+        _wireERC4626Facet();
+
+        // CCTP config (must be after facet wiring since setMintRecipient is now on CCTPFacet)
         for (uint256 i; i < mintRecipients.length; ++i) {
             mainnetController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
@@ -384,6 +398,53 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.swapDAIToUSDS.selector,
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
+        );
+    }
+
+    function _wireCCTPFacet() internal virtual {
+        address cctpFacet = address(new CCTPFacet(CCTP_MESSENGER, Ethereum.USDC));
+
+        vm.label(cctpFacet, "CCTPFacet");
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setCCTPMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.setCCTPMaxFeeCap.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.setMintRecipient.selector,
+            cctpFacet,
+            ICCTPFacet.setMintRecipient.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.cctpMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.cctpMaxFeeCap.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.mintRecipients.selector,
+            cctpFacet,
+            ICCTPFacet.mintRecipients.selector
+        );
+        mainnetController.setFacet(
+            bytes4(keccak256("transferUSDCToCCTP(uint256,uint32)")),
+            cctpFacet,
+            bytes4(keccak256("transfer(uint256,uint32)"))
+        );
+        mainnetController.setFacet(
+            bytes4(keccak256("transferUSDCToCCTP(uint256,uint256,uint32)")),
+            cctpFacet,
+            bytes4(keccak256("transfer(uint256,uint256,uint32)"))
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDC_TO_CCTP.selector,
+            cctpFacet,
+            ICCTPFacet.LIMIT_TO_CCTP.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
+            cctpFacet,
+            ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
     }
 

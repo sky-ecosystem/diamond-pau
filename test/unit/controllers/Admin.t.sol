@@ -10,9 +10,10 @@ import { ForeignController }                           from "../../../src/Foreig
 import { MainnetController }                           from "../../../src/MainnetController.sol";
 import { Parameters }                                  from "../../../src/Parameters.sol";
 import { ParameterHelpers }                            from "../../../src/ParameterHelpers.sol";
+import { ICCTPFacet }                                  from "../../../src/interfaces/facets/ICCTPFacet.sol";
 import { IERC4626Facet }                               from "../../../src/interfaces/facets/IERC4626Facet.sol";
 
-import { CCTPLib }       from "../../../src/libraries/CCTPLib.sol";
+import { CCTPFacet }    from "../../../src/libraries/CCTPLib.sol";
 import { ERC4626Facet } from "../../../src/libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
@@ -64,9 +65,36 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
         // Facet wiring
 
+        _wireCCTPFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
+    }
+
+    // NOTE: Only wires admin-relevant CCTPFacet functions for unit tests.
+    function _wireCCTPFacet() internal {
+        address cctpFacet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
+
+        mainnetController.setFacet(
+            IMainnetControllerFull.setCCTPMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.setCCTPMaxFeeCap.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.cctpMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.cctpMaxFeeCap.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.setMintRecipient.selector,
+            cctpFacet,
+            ICCTPFacet.setMintRecipient.selector
+        );
+        mainnetController.setFacet(
+            IMainnetControllerFull.mintRecipients.selector,
+            cctpFacet,
+            ICCTPFacet.mintRecipients.selector
+        );
     }
 
     // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
@@ -123,7 +151,7 @@ contract MainnetController_Admin_SetCCTPMaxFeeCap_Tests is MainnetController_Adm
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit MainnetController.CCTPMaxFeeCapSet(1e18);
+        emit ICCTPFacet.CCTPMaxFeeCapSet(1e18);
 
         vm.prank(admin);
         mainnetController.setCCTPMaxFeeCap(1e18);
@@ -165,7 +193,7 @@ contract MainnetController_Admin_SetMintRecipient_Tests is MainnetController_Adm
         assertEq(mainnetController.mintRecipients(2), bytes32(0));
 
         vm.expectEmit(address(mainnetController));
-        emit CCTPLib.MintRecipientSet(1, mintRecipient1);
+        emit ICCTPFacet.MintRecipientSet(1, mintRecipient1);
 
         vm.prank(admin);
         mainnetController.setMintRecipient(1, mintRecipient1);
@@ -173,7 +201,7 @@ contract MainnetController_Admin_SetMintRecipient_Tests is MainnetController_Adm
         assertEq(mainnetController.mintRecipients(1), mintRecipient1);
 
         vm.expectEmit(address(mainnetController));
-        emit CCTPLib.MintRecipientSet(2, mintRecipient2);
+        emit ICCTPFacet.MintRecipientSet(2, mintRecipient2);
 
         vm.prank(admin);
         mainnetController.setMintRecipient(2, mintRecipient2);
@@ -183,7 +211,7 @@ contract MainnetController_Admin_SetMintRecipient_Tests is MainnetController_Adm
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit CCTPLib.MintRecipientSet(1, mintRecipient2);
+        emit ICCTPFacet.MintRecipientSet(1, mintRecipient2);
 
         vm.prank(admin);
         mainnetController.setMintRecipient(1, mintRecipient2);
@@ -1068,9 +1096,36 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         // Facet wiring
 
+        _wireCCTPFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
+    }
+
+    // NOTE: Only wires admin-relevant CCTPFacet functions for unit tests.
+    function _wireCCTPFacet() internal {
+        address cctpFacet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
+
+        foreignController.setFacet(
+            IForeignControllerFull.setCCTPMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.setCCTPMaxFeeCap.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.cctpMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.cctpMaxFeeCap.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.setMintRecipient.selector,
+            cctpFacet,
+            ICCTPFacet.setMintRecipient.selector
+        );
+        foreignController.setFacet(
+            IForeignControllerFull.mintRecipients.selector,
+            cctpFacet,
+            ICCTPFacet.mintRecipients.selector
+        );
     }
 
     // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
@@ -1174,7 +1229,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit ForeignController.CCTPMaxFeeCapSet(1e18);
+        emit ICCTPFacet.CCTPMaxFeeCapSet(1e18);
 
         vm.prank(admin);
         foreignController.setCCTPMaxFeeCap(1e18);
@@ -1212,7 +1267,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.mintRecipients(2), bytes32(0));
 
         vm.expectEmit(address(foreignController));
-        emit CCTPLib.MintRecipientSet(1, mintRecipient1);
+        emit ICCTPFacet.MintRecipientSet(1, mintRecipient1);
 
         vm.prank(admin);
         foreignController.setMintRecipient(1, mintRecipient1);
@@ -1220,7 +1275,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.mintRecipients(1), mintRecipient1);
 
         vm.expectEmit(address(foreignController));
-        emit CCTPLib.MintRecipientSet(2, mintRecipient2);
+        emit ICCTPFacet.MintRecipientSet(2, mintRecipient2);
 
         vm.prank(admin);
         foreignController.setMintRecipient(2, mintRecipient2);
@@ -1230,7 +1285,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit CCTPLib.MintRecipientSet(1, mintRecipient2);
+        emit ICCTPFacet.MintRecipientSet(1, mintRecipient2);
 
         vm.prank(admin);
         foreignController.setMintRecipient(1, mintRecipient2);
