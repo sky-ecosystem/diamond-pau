@@ -25,9 +25,7 @@ import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 import { UniswapV4Lib }     from "./libraries/UniswapV4Lib.sol";
-import { USDSLib }          from "./libraries/USDSLib.sol";
 import { WEETHLib }         from "./libraries/WEETHLib.sol";
-import { WrapProxyETHLib }  from "./libraries/WrapProxyETHLib.sol";
 import { WSTETHLib }        from "./libraries/WSTETHLib.sol";
 
 import { Controller } from "./Controller.sol";
@@ -101,7 +99,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_UNISWAP_V4_SWAP         = UniswapV4Lib.LIMIT_SWAP;
     bytes32 public LIMIT_USDC_TO_CCTP            = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public LIMIT_USDC_TO_DOMAIN          = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
     bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
@@ -363,18 +360,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Relayer vault functions                                                                ***/
-    /**********************************************************************************************/
-
-    function mintUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.mint(address(proxy), address(rateLimits), vault, usds, usdsAmount);
-    }
-
-    function burnUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.burn(address(proxy), address(rateLimits), vault, usds, usdsAmount);
-    }
-
-    /**********************************************************************************************/
     /*** wstETH Integration                                                                     ***/
     /**********************************************************************************************/
 
@@ -456,14 +441,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             weethModule,
             requestId
         );
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer wrap ETH function                                                              ***/
-    /**********************************************************************************************/
-
-    function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
-        WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
     }
 
     /**********************************************************************************************/

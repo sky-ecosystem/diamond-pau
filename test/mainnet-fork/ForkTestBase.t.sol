@@ -24,10 +24,14 @@ import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 import { IUSDEFacet }          from "../../src/interfaces/facets/IUSDEFacet.sol";
+import { IUSDSFacet }          from "../../src/interfaces/facets/IUSDSFacet.sol";
+import { IWrapProxyETHFacet }  from "../../src/interfaces/facets/IWrapProxyETHFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 import { USDEFacet }          from "../../src/libraries/USDELib.sol";
+import { USDSFacet }          from "../../src/libraries/USDSLib.sol";
+import { WrapProxyETHFacet }  from "../../src/libraries/WrapProxyETHLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
@@ -252,6 +256,8 @@ abstract contract ForkTestBase is DssTest {
         _wireDAIUSDSFacet();
         _wireTransferAssetFacet();
         _wireUSDEFacet();
+        _wireUSDSFacet();
+        _wireWrapProxyETHFacet();
 
         vm.stopPrank();
 
@@ -379,7 +385,6 @@ abstract contract ForkTestBase is DssTest {
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
-
     }
 
     function _wireTransferAssetFacet() internal {
@@ -480,6 +485,46 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
             usdeFacet,
             IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
+        );
+    }
+
+    function _wireWrapProxyETHFacet() internal {
+        address wrapProxyETHFacet = address(new WrapProxyETHFacet(Ethereum.WETH));
+
+        vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
+
+        // "Controller.wrapAllProxyETH()" -> "WrapProxyETHFacet.wrapAll()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.wrapAllProxyETH.selector,
+            wrapProxyETHFacet,
+            IWrapProxyETHFacet.wrapAll.selector
+        );
+    }
+
+    function _wireUSDSFacet() internal {
+        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+
+        vm.label(usdsFacet, "USDSFacet");
+
+        // "Controller.mintUSDS()" -> "USDSFacet.mint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.mintUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.mint.selector
+        );
+
+        // "Controller.burnUSDS()" -> "USDSFacet.burn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.burnUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.burn.selector
+        );
+
+        // "Controller.LIMIT_USDS_MINT()" -> "USDSFacet.LIMIT_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDS_MINT.selector,
+            usdsFacet,
+            IUSDSFacet.LIMIT_MINT.selector
         );
     }
 
