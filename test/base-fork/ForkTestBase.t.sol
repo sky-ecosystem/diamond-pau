@@ -155,13 +155,6 @@ abstract contract ForkTestBase is Test {
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
 
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
-        });
-
         vm.startPrank(SPARK_EXECUTOR);
 
         almProxy.grantRole(almProxy.CONTROLLER(),                address(foreignController));
@@ -172,9 +165,14 @@ abstract contract ForkTestBase is Test {
             foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
         }
 
-        for (uint256 i; i < mintRecipients.length; ++i) {
-            foreignController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
-        }
+        // Grant CONTROLLER_ROLE to foreignController on Parameters to call set
+        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
+
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+
+        _wireERC4626Facet();
 
         uint256 usdcMaxAmount = 5_000_000e6;
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
@@ -184,21 +182,18 @@ abstract contract ForkTestBase is Test {
         bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-        bytes32 domainKeyEthereum = RateLimitHelpers.makeUint32Key(
-            foreignController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-        );
-
         // NOTE: Using minimal config for test base setup
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(usdcBase)),  usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdcBase)),  usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(usdsBase)),  usdsMaxAmount, usdsSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(susdsBase)), usdsMaxAmount, usdsSlope);
-        rateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(),                           usdcMaxAmount, usdcSlope);
-        rateLimits.setRateLimitData(domainKeyEthereum,                                                usdcMaxAmount, usdcSlope);
 
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdsBase)));
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(susdsBase)));
+
+        // Facet wiring
+
+        _wireTransferAssetFacet();
 
         vm.stopPrank();
     }
