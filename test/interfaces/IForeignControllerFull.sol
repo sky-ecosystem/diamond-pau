@@ -24,11 +24,19 @@ abstract contract IForeignControllerFull is IController, ForeignController {
     function LIMIT_7540_REDEEM() external pure virtual returns (bytes32);
 
     /**********************************************************************************************/
+    /*** SparkVaultFacet actions                                                                ***/
+    /**********************************************************************************************/
+
+    function LIMIT_SPARK_VAULT_TAKE() external pure virtual returns (bytes32);
+
+    function takeFromSparkVault(address sparkVault, uint256 assetAmount) external virtual;
+
+    /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
 
-    function transferAsset(address asset, address destination, uint256 amount) external virtual;
-
     function LIMIT_ASSET_TRANSFER() external pure virtual returns (bytes32);
+    
+    function transferAsset(address asset, address destination, uint256 amount) external virtual;
 
 }

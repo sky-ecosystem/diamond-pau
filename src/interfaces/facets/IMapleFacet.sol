@@ -3,18 +3,20 @@ pragma solidity ^0.8.21;
 
 import { IFacetBase } from "./IFacetBase.sol";
 
-interface ITransferAssetFacet is IFacetBase {
+interface IMapleFacet is IFacetBase {
 
     /**********************************************************************************************/
     /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    function transfer(address asset, address destination, uint256 amount) external;
+    function cancelRedemption(address mapleToken, uint256 shares) external;
+
+    function requestRedemption(address mapleToken, uint256 shares) external;
 
     /**********************************************************************************************/
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_TRANSFER() external pure returns (bytes32);
+    function LIMIT_REDEEM() external pure returns (bytes32);
 
 }

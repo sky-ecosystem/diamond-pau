@@ -13,22 +13,13 @@ import { CCTPLib }          from "./libraries/CCTPLib.sol";
 import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
 import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
-import { FarmLib }          from "./libraries/FarmLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
-import { MapleLib }         from "./libraries/MapleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
 import { OTCLib }           from "./libraries/OTCLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
 import { PSMLib }           from "./libraries/PSMLib.sol";
-import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
-import { SuperstateLib }    from "./libraries/SuperstateLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 import { UniswapV4Lib }     from "./libraries/UniswapV4Lib.sol";
-import { USDELib }          from "./libraries/USDELib.sol";
-import { USDSLib }          from "./libraries/USDSLib.sol";
-import { WEETHLib }         from "./libraries/WEETHLib.sol";
-import { WrapProxyETHLib }  from "./libraries/WrapProxyETHLib.sol";
-import { WSTETHLib }        from "./libraries/WSTETHLib.sol";
 
 import { Controller } from "./Controller.sol";
 
@@ -84,14 +75,8 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
     bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
-    bytes32 public LIMIT_FARM_DEPOSIT            = FarmLib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_FARM_WITHDRAW           = FarmLib.LIMIT_WITHDRAW;
     bytes32 public LIMIT_LAYERZERO_TRANSFER      = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public LIMIT_MAPLE_REDEEM            = MapleLib.LIMIT_REDEEM;
     bytes32 public LIMIT_OTC_SWAP                = OTCLib.LIMIT_SWAP;
-    bytes32 public LIMIT_SPARK_VAULT_TAKE        = SparkVaultLib.LIMIT_TAKE;
-    bytes32 public LIMIT_SUPERSTATE_SUBSCRIBE    = SuperstateLib.LIMIT_SUBSCRIBE;
-    bytes32 public LIMIT_SUSDE_COOLDOWN          = USDELib.LIMIT_SUSDE_COOLDOWN;
     bytes32 public LIMIT_UNISWAP_V3_DEPOSIT      = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V3_SWAP         = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public LIMIT_UNISWAP_V3_WITHDRAW     = UniswapV3Lib.LIMIT_WITHDRAW;
@@ -100,14 +85,7 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_UNISWAP_V4_SWAP         = UniswapV4Lib.LIMIT_SWAP;
     bytes32 public LIMIT_USDC_TO_CCTP            = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public LIMIT_USDC_TO_DOMAIN          = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public LIMIT_USDE_BURN               = USDELib.LIMIT_USDE_BURN;
-    bytes32 public LIMIT_USDE_MINT               = USDELib.LIMIT_USDE_MINT;
-    bytes32 public LIMIT_USDS_MINT               = USDSLib.LIMIT_MINT;
     bytes32 public LIMIT_USDS_TO_USDC            = PSMLib.LIMIT_USDS_TO_USDC;
-    bytes32 public LIMIT_WEETH_DEPOSIT           = WEETHLib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_WEETH_REQUEST_WITHDRAW  = WEETHLib.LIMIT_REQUEST_WITHDRAW;
-    bytes32 public LIMIT_WSTETH_DEPOSIT          = WSTETHLib.LIMIT_DEPOSIT;
-    bytes32 public LIMIT_WSTETH_REQUEST_WITHDRAW = WSTETHLib.LIMIT_REQUEST_WITHDRAW;
     bytes32 public LIMIT_PENDLE_PT_REDEEM        = PendleLib.LIMIT_REDEEM;
 
     address public buffer;
@@ -361,110 +339,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     function removeRelayer(address relayer) external nonReentrant onlyRole(FREEZER) {
         _revokeRole(RELAYER, relayer);
         emit RelayerRemoved(relayer);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer vault functions                                                                ***/
-    /**********************************************************************************************/
-
-    function mintUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.mint(address(proxy), address(rateLimits), vault, usds, usdsAmount);
-    }
-
-    function burnUSDS(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER) {
-        USDSLib.burn(address(proxy), address(rateLimits), vault, usds, usdsAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** wstETH Integration                                                                     ***/
-    /**********************************************************************************************/
-
-    function depositToWstETH(uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        WSTETHLib.deposit({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            weth       : Ethereum.WETH,
-            wsteth     : Ethereum.WSTETH,
-            amount     : amount
-        });
-    }
-
-    function requestWithdrawFromWstETH(uint256 amountToRedeem)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256[] memory requestIds)
-    {
-        return WSTETHLib.requestWithdraw({
-            proxy          : address(proxy),
-            rateLimits     : address(rateLimits),
-            wsteth         : Ethereum.WSTETH,
-            withdrawQueue  : Ethereum.WSTETH_WITHDRAW_QUEUE,
-            amountToRedeem : amountToRedeem
-        });
-    }
-
-    function claimWithdrawalFromWstETH(uint256 requestId) external nonReentrant onlyRole(RELAYER) {
-        WSTETHLib.claimWithdrawal({
-            proxy         : address(proxy),
-            withdrawQueue : Ethereum.WSTETH_WITHDRAW_QUEUE,
-            weth          : Ethereum.WETH,
-            requestId     : requestId
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** weETH Integration                                                                      ***/
-    /**********************************************************************************************/
-
-    function depositToWeETH(uint256 amount, uint256 minSharesOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return WEETHLib.deposit(address(proxy), address(rateLimits), amount, minSharesOut);
-    }
-
-    function requestWithdrawFromWeETH(
-        address weethModule,
-        uint256 weethShares,
-        uint256 minEETHShares
-    )
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 requestId)
-    {
-        return WEETHLib.requestWithdraw(
-            address(proxy),
-            address(rateLimits),
-            weethModule,
-            weethShares,
-            minEETHShares
-        );
-    }
-
-    function claimWithdrawalFromWeETH(address weethModule, uint256 requestId)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 ethReceived)
-    {
-        return WEETHLib.claimWithdrawal(
-            address(proxy),
-            address(rateLimits),
-            weethModule,
-            requestId
-        );
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer wrap ETH function                                                              ***/
-    /**********************************************************************************************/
-
-    function wrapAllProxyETH() external nonReentrant onlyRole(RELAYER) {
-        WrapProxyETHLib.wrapAll(address(proxy), Ethereum.WETH);
     }
 
     /**********************************************************************************************/
@@ -768,79 +642,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Relayer Ethena functions                                                               ***/
-    /**********************************************************************************************/
-
-    function setDelegatedSigner(address delegatedSigner) external nonReentrant onlyRole(RELAYER) {
-        USDELib.setDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
-    }
-
-    function removeDelegatedSigner(address delegatedSigner)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        USDELib.removeDelegatedSigner(address(proxy), ethenaMinter, delegatedSigner);
-    }
-
-    // Note that Ethena's mint/redeem per-block limits include other users.
-    function prepareUSDeMint(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        USDELib.prepareMint({
-            proxy      : address(proxy),
-            rateLimits : address(rateLimits),
-            usdc       : usdc,
-            minter     : ethenaMinter,
-            usdcAmount : usdcAmount
-        });
-    }
-
-    function prepareUSDeBurn(uint256 usdeAmount) external nonReentrant onlyRole(RELAYER) {
-        USDELib.prepareBurn(address(proxy), address(rateLimits), usde, ethenaMinter, usdeAmount);
-    }
-
-    function cooldownAssetsSUSDe(uint256 usdeAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 cooldownShares)
-    {
-        return USDELib.cooldownAssets(address(proxy), address(rateLimits), susde, usdeAmount);
-    }
-
-    function cooldownSharesSUSDe(uint256 susdeAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 cooldownAssets)
-    {
-        return USDELib.cooldownShares(address(proxy), address(rateLimits), susde, susdeAmount);
-    }
-
-    function unstakeSUSDe() external nonReentrant onlyRole(RELAYER) {
-        USDELib.unstakeSUSDE(address(proxy), susde);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Maple functions                                                                ***/
-    /**********************************************************************************************/
-
-    function requestMapleRedemption(address mapleToken, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        MapleLib.requestRedemption(address(proxy), address(rateLimits), mapleToken, shares);
-    }
-
-    function cancelMapleRedemption(address mapleToken, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        MapleLib.cancelRedemption(address(proxy), address(rateLimits), mapleToken, shares);
-    }
-
-    /**********************************************************************************************/
     /*** Relayer Pendle functions                                                               ***/
     /**********************************************************************************************/
 
@@ -873,14 +674,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             distributor : merklDistributor,
             operator    : operator
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Superstate functions                                                           ***/
-    /**********************************************************************************************/
-
-    function subscribeSuperstate(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER) {
-        SuperstateLib.subscribe(address(proxy), address(rateLimits), usdc, ustb, usdcAmount);
     }
 
     /**********************************************************************************************/
@@ -978,34 +771,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             cctpMaxFeeCap     : cctpMaxFeeCap,
             mintRecipients    : mintRecipients
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer SPK Farm functions                                                             ***/
-    /**********************************************************************************************/
-
-    function depositToFarm(address farm, uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        FarmLib.deposit(address(proxy), address(rateLimits), farm, amount);
-    }
-
-    function withdrawFromFarm(address farm, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        FarmLib.withdraw(address(proxy), address(rateLimits), farm, amount);
-    }
-
-    /**********************************************************************************************/
-    /*** Spark Vault functions                                                                  ***/
-    /**********************************************************************************************/
-
-    function takeFromSparkVault(address sparkVault, uint256 assetAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        SparkVaultLib.take(address(proxy), address(rateLimits), sparkVault, assetAmount);
     }
 
     /**********************************************************************************************/
