@@ -3,18 +3,22 @@ pragma solidity ^0.8.21;
 
 import { IFacetBase } from "./IFacetBase.sol";
 
-interface ITransferAssetFacet is IFacetBase {
+interface ISuperstateFacet is IFacetBase {
 
     /**********************************************************************************************/
     /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    function transfer(address asset, address destination, uint256 amount) external;
+    function subscribe(uint256 usdcAmount) external;
 
     /**********************************************************************************************/
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_TRANSFER() external pure returns (bytes32);
+    function LIMIT_SUBSCRIBE() external pure returns (bytes32);
+
+    function usdc() external view returns (address);
+
+    function ustb() external view returns (address);
 
 }
