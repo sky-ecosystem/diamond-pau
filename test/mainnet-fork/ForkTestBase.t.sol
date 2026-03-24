@@ -401,7 +401,7 @@ abstract contract ForkTestBase is DssTest {
         );
     }
 
-    function _wireCCTPFacet() internal virtual {
+    function _wireCCTPFacet() internal {
         address cctpFacet = address(new CCTPFacet(CCTP_MESSENGER, Ethereum.USDC));
 
         vm.label(cctpFacet, "CCTPFacet");
