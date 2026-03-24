@@ -17,9 +17,11 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { IMerklFacet }         from "../../src/interfaces/facets/IMerklFacet.sol";
+import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
 
 import { MerklFacet }         from "../../src/libraries/MerklLib.sol";
+import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -145,6 +147,7 @@ abstract contract ForkTestBase is Test {
 
         // Facet wiring
         _wireMerklFacet();
+        _wireSparkVaultFacet();
         _wireTransferAssetFacet();
 
         vm.stopPrank();
@@ -244,6 +247,26 @@ abstract contract ForkTestBase is Test {
             IForeignControllerFull.toggleOperatorMerkl.selector,
             merklFacet,
             IMerklFacet.toggleOperator.selector
+        );
+    }
+    
+    function _wireSparkVaultFacet() internal {
+        address sparkVaultFacet = address(new SparkVaultFacet());
+
+        vm.label(sparkVaultFacet, "SparkVaultFacet");
+
+        // "Controller.takeFromSparkVault()" -> "SparkVaultFacet.take()"
+        foreignController.setFacet(
+            IForeignControllerFull.takeFromSparkVault.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.take.selector
+        );
+
+        // "Controller.LIMIT_SPARK_VAULT_TAKE()" -> "SparkVaultFacet.LIMIT_TAKE()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.LIMIT_TAKE.selector
         );
     }
 

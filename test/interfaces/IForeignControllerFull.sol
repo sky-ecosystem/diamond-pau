@@ -14,11 +14,19 @@ abstract contract IForeignControllerFull is IController, ForeignController {
     function toggleOperatorMerkl(address operator) external virtual;
 
     /**********************************************************************************************/
+    /*** SparkVaultFacet actions                                                                ***/
+    /**********************************************************************************************/
+
+    function LIMIT_SPARK_VAULT_TAKE() external pure virtual returns (bytes32);
+
+    function takeFromSparkVault(address sparkVault, uint256 assetAmount) external virtual;
+
+
+    /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
 
     function LIMIT_ASSET_TRANSFER() external pure virtual returns (bytes32);
 
     function transferAsset(address asset, address destination, uint256 amount) external virtual;
-
 }
