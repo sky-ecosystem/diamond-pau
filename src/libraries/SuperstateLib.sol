@@ -14,7 +14,7 @@ interface IUSTBLike {
 
 }
 
-// NOTE: This contract only compatible with USTB and USDC.
+// NOTE: This contract is only compatible with USTB and USDC.
 contract SuperstateFacet is ISuperstateFacet, FacetBase {
 
     /**********************************************************************************************/
