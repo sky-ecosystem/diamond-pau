@@ -274,6 +274,7 @@ abstract contract ForkTestBase is DssTest {
         _wireERC7540Facet();
         _wireFarmFacet();
         _wireMapleFacet();
+        _wirePSMFacet();
         _wireSparkVaultFacet();
         _wireSuperstateFacet();
         _wireTransferAssetFacet();
@@ -295,16 +296,6 @@ abstract contract ForkTestBase is DssTest {
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
-
-        // Facet wiring
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        _wireDAIUSDSFacet();
-        _wirePSMFacet();
-        _wireTransferAssetFacet();
-
-        vm.stopPrank();
 
         // Step 4: Initialize through Sky governance (Sky spell payload)
 
