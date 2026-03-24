@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IRateLimits } from "../interfaces/IRateLimits.sol";
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
+import { ICCTPFacet }  from "../interfaces/facets/ICCTPFacet.sol";
+import { IParameters } from "../interfaces/IParameters.sol";
+import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
-import { makeUint32Key } from "../RateLimitHelpers.sol";
+import { FacetBase }                                   from "./FacetBase.sol";
+import { combineKeyComponents, uint256ToKeyComponent } from "../ParameterKeys.sol";
+import { ParameterHelpers }                            from "../ParameterHelpers.sol";
+import { makeUint32Key }                               from "../RateLimitHelpers.sol";
 
 interface ICCTPLike {
 
@@ -34,25 +39,16 @@ interface IERC20Like {
 
 }
 
-// NOTE: This library makes the assumption that the token is USDC.
-library CCTPLib {
+// NOTE: This contract makes the assumption that the token is USDC.
+contract CCTPFacet is ICCTPFacet, FacetBase {
 
     /**********************************************************************************************/
-    /*** Events                                                                                 ***/
+    /*** Declarations and Constructor                                                           ***/
     /**********************************************************************************************/
 
-    // NOTE: Used to track individual transfers for off-chain processing of CCTP transactions.
-    event CCTPTransferInitiated(
-        uint32  indexed destinationDomain,
-        bytes32 indexed mintRecipient,
-        uint256         usdcAmount
-    );
-
-    event MintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
-
-    /**********************************************************************************************/
-    /*** Constants                                                                              ***/
-    /**********************************************************************************************/
+    string public constant DOMAIN                = "sky.pau.cctp";
+    string public constant CCTP_MAX_FEE_CAP_KEY  = "cctpMaxFeeCap";
+    string public constant MINT_RECIPIENT_PREFIX = "mintRecipient";
 
     bytes32 public constant LIMIT_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
@@ -61,46 +57,108 @@ library CCTPLib {
     uint256 public constant MAX_FEE                = 0;      // 0 for standard burns (no fast burn fee)
     uint32  public constant MAX_FINALITY_THRESHOLD = 2_000;  // 2_000 for standard (finalized) messages
 
+    address public immutable cctp;
+    address public immutable usdc;
+
+    constructor(address cctp_, address usdc_) {
+        cctp = cctp_;
+        usdc = usdc_;
+    }
+
+    /**********************************************************************************************/
+    /*** Admin functions                                                                        ***/
+    /**********************************************************************************************/
+
+    function setCCTPMaxFeeCap(uint256 maxFeeCap)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        IParameters(_getControllerStorage().parameters).set(
+            _getCCTPMaxFeeCapKey(),
+            ParameterHelpers.fromUint256(maxFeeCap)
+        );
+
+        emit CCTPMaxFeeCapSet(maxFeeCap);
+    }
+
+    function setMintRecipient(uint32 destinationDomain, bytes32 recipient)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        IParameters(_getControllerStorage().parameters).set(
+            _getMintRecipientKey(destinationDomain),
+            recipient
+        );
+
+        emit MintRecipientSet(destinationDomain, recipient);
+    }
+
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
 
-    function setMintRecipient(
-        mapping (uint32 => bytes32) storage mintRecipients,
-        bytes32 recipient,
-        uint32  destinationDomain
-    ) external {
-        emit MintRecipientSet(destinationDomain, mintRecipients[destinationDomain] = recipient);
+    function transfer(uint256 usdcAmount, uint32 destinationDomain)
+        external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        _transfer(usdcAmount, MAX_FEE, destinationDomain);
     }
 
-    function transfer(
-        address proxy,
-        address rateLimits,
-        address cctp,
-        address usdc,
-        uint32  destinationDomain,
-        uint256 usdcAmount,
-        uint256 maxFee,
-        uint256 cctpMaxFeeCap,
-        mapping (uint32 => bytes32) storage mintRecipients
-    )
+    function transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
         external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
     {
-        _decreaseRateLimit(rateLimits, LIMIT_TO_CCTP, usdcAmount);
+        _transfer(usdcAmount, maxFee, destinationDomain);
+    }
+
+    /**********************************************************************************************/
+    /*** View functions                                                                         ***/
+    /**********************************************************************************************/
+
+    function cctpMaxFeeCap() external view returns (uint256) {
+        return ParameterHelpers.toUint256(
+            IParameters(_getControllerStorage().parameters).get(_getCCTPMaxFeeCapKey())
+        );
+    }
+
+    function mintRecipients(uint32 destinationDomain) external view returns (bytes32) {
+        return IParameters(_getControllerStorage().parameters).get(
+            _getMintRecipientKey(destinationDomain)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Internal functions                                                                     ***/
+    /**********************************************************************************************/
+
+    function _transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain) internal {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        _decreaseRateLimit($.rateLimits, LIMIT_TO_CCTP, usdcAmount);
 
         _decreaseRateLimit(
-            rateLimits,
+            $.rateLimits,
             makeUint32Key(LIMIT_TO_DOMAIN, destinationDomain),
             usdcAmount
         );
 
-        bytes32 recipient = mintRecipients[destinationDomain];
+        uint256 _cctpMaxFeeCap = ParameterHelpers.toUint256(
+            IParameters($.parameters).get(_getCCTPMaxFeeCapKey())
+        );
 
-        require(recipient != 0,          "CCTPLib/domain-not-configured");
-        require(maxFee <= cctpMaxFeeCap, "CCTPLib/max-fee-exceeds-cap");
+        bytes32 recipient = IParameters($.parameters).get(
+            _getMintRecipientKey(destinationDomain)
+        );
+
+        require(recipient != 0,           "CCTPFacet/domain-not-configured");
+        require(maxFee <= _cctpMaxFeeCap, "CCTPFacet/max-fee-exceeds-cap");
 
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
-        _approve(usdc, proxy, cctp, usdcAmount);
+        _approve(usdc, $.proxy, cctp, usdcAmount);
 
         // If amount is larger than limit it must be split into multiple calls.
         uint256 burnLimit =
@@ -111,12 +169,10 @@ library CCTPLib {
 
             // NOTE: When amount is split into chunks, the last chunk may be
             //       smaller than maxFee causing a revert.
-            require(maxFee < amount, "CCTPLib/incorrect-max-fee");
+            require(maxFee < amount, "CCTPFacet/incorrect-max-fee");
 
             _initiateTransfer(
-                proxy,
-                cctp,
-                usdc,
+                $.proxy,
                 amount,
                 maxFee,
                 recipient,
@@ -127,10 +183,6 @@ library CCTPLib {
         }
     }
 
-    /**********************************************************************************************/
-    /*** Relayer helper functions                                                               ***/
-    /**********************************************************************************************/
-
     // NOTE: As USDC is the only asset transferred using CCTP, `ApproveLib` is unnecessary.
     function _approve(address token, address proxy, address spender, uint256 amount) internal {
         IALMProxy(proxy).doCall(token, abi.encodeCall(IERC20Like.approve, (spender, amount)));
@@ -138,8 +190,6 @@ library CCTPLib {
 
     function _initiateTransfer(
         address proxy,
-        address cctp,
-        address usdc,
         uint256 usdcAmount,
         uint256 maxFee,
         bytes32 mintRecipient,
@@ -164,6 +214,17 @@ library CCTPLib {
         );
 
         emit CCTPTransferInitiated(destinationDomain, mintRecipient, usdcAmount);
+    }
+
+    function _getCCTPMaxFeeCapKey() internal pure returns (string memory) {
+        return combineKeyComponents(DOMAIN, CCTP_MAX_FEE_CAP_KEY);
+    }
+
+    function _getMintRecipientKey(uint32 destinationDomain) internal pure returns (string memory) {
+        return combineKeyComponents(
+            combineKeyComponents(DOMAIN, MINT_RECIPIENT_PREFIX),
+            uint256ToKeyComponent(uint256(destinationDomain))
+        );
     }
 
     /**********************************************************************************************/
