@@ -36,7 +36,7 @@ abstract contract IForeignControllerFull is IController, ForeignController {
     /**********************************************************************************************/
 
     function LIMIT_ASSET_TRANSFER() external pure virtual returns (bytes32);
-    
+
     function transferAsset(address asset, address destination, uint256 amount) external virtual;
 
 }
