@@ -11,10 +11,10 @@ abstract contract ControllerBase is ReentrancyGuard {
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        address proxy;
-        address rateLimits;
         address accessControls;
         address parameters;
+        address proxy;
+        address rateLimits;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.Controller")) - 1)) & ~bytes32(uint256(0xff))
