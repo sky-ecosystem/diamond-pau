@@ -145,6 +145,4 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function subscribeSuperstate(uint256 usdcAmount) external virtual;
 
-    function LIMIT_ASSET_TRANSFER() external pure virtual returns (bytes32);
-
 }

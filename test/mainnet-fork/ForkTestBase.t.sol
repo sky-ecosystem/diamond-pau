@@ -314,9 +314,6 @@ abstract contract ForkTestBase is DssTest {
         IVaultLike(ilkInst.vault).rely(address(almProxy));
         IBufferLike(IVaultLike(ilkInst.vault).buffer()).approve(address(usds), address(almProxy), type(uint256).max);
 
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-
         uint256 usdsMaxAmount = 5_000_000e18;
         uint256 usdsSlope     = uint256(1_000_000e18) / 4 hours;
         uint256 usdcMaxAmount = 5_000_000e6;
