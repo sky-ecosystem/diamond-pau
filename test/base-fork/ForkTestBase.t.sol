@@ -245,31 +245,42 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
+        // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
         foreignController.setFacet(
             IForeignControllerFull.setAaveMaxSlippage.selector,
             aaveFacet,
             IAaveFacet.setMaxSlippage.selector
         );
+
+        // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
         foreignController.setFacet(
             IForeignControllerFull.aaveMaxSlippages.selector,
             aaveFacet,
             IAaveFacet.maxSlippages.selector
         );
+
+        // Controller.depositAave() -> AaveFacet.deposit()
         foreignController.setFacet(
             IForeignControllerFull.depositAave.selector,
             aaveFacet,
             IAaveFacet.deposit.selector
         );
+
+        // Controller.withdrawAave() -> AaveFacet.withdraw()
         foreignController.setFacet(
             IForeignControllerFull.withdrawAave.selector,
             aaveFacet,
             IAaveFacet.withdraw.selector
         );
+
+        // Controller.LIMIT_AAVE_DEPOSIT() -> AaveFacet.LIMIT_DEPOSIT()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             aaveFacet,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
+
+        // Controller.LIMIT_AAVE_WITHDRAW() -> AaveFacet.LIMIT_WITHDRAW()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             aaveFacet,

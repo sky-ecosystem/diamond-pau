@@ -42,8 +42,7 @@ interface IPoolLike {
 
 contract AaveFacet is IAaveFacet, FacetBase {
 
-    string public constant DOMAIN              = "sky.pau.aave";
-    string public constant MAX_SLIPPAGE_PREFIX = "maxSlippage";
+    string public constant MAX_SLIPPAGE_PREFIX = "sky.pau.aave.maxSlippage";
 
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_AAVE_DEPOSIT");
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_AAVE_WITHDRAW");
@@ -134,10 +133,7 @@ contract AaveFacet is IAaveFacet, FacetBase {
     }
 
     function _getMaxSlippageKey(address aToken) internal pure returns (string memory) {
-        return combineKeyComponents(
-            combineKeyComponents(DOMAIN, MAX_SLIPPAGE_PREFIX),
-            addressToKeyComponent(aToken)
-        );
+        return combineKeyComponents(MAX_SLIPPAGE_PREFIX, addressToKeyComponent(aToken));
     }
 
     function _decreaseRateLimit(address rateLimits, bytes32 key, address aToken, uint256 amount)
