@@ -22,6 +22,7 @@ import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwa
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
+import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
 import { IERC7540Facet }       from "../../src/interfaces/facets/IERC7540Facet.sol";
 import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol";
 import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
@@ -36,6 +37,7 @@ import { IWrapProxyETHFacet }  from "../../src/interfaces/facets/IWrapProxyETHFa
 import { IWSTETHFacet }        from "../../src/interfaces/facets/IWSTETHFacet.sol";
 
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
+import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
 import { ERC7540Facet }       from "../../src/libraries/ERC7540Lib.sol";
 import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
 import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
@@ -52,18 +54,8 @@ import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
-import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
-
-import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
-
-import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
-
-import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
-import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
-
-import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
@@ -174,7 +166,6 @@ abstract contract ForkTestBase is DssTest {
     AccessControls         accessControls;
     ALMProxy               almProxy;
     IMainnetControllerFull mainnetController;
-    Parameters             parameters;
     RateLimits             rateLimits;
 
     address buffer;
@@ -248,17 +239,16 @@ abstract contract ForkTestBase is DssTest {
 
         /*** Step 3: Deploy ALM system ***/
 
+        almProxy   = new ALMProxy(Ethereum.SPARK_PROXY);
+        rateLimits = new RateLimits(Ethereum.SPARK_PROXY);
+
         accessControls = new AccessControls(Ethereum.SPARK_PROXY);
-        almProxy       = new ALMProxy(Ethereum.SPARK_PROXY);
-        parameters     = new Parameters(Ethereum.SPARK_PROXY);
-        rateLimits     = new RateLimits(Ethereum.SPARK_PROXY);
 
         mainnetController = IMainnetControllerFull(payable(new MainnetController({
             admin_          : Ethereum.SPARK_PROXY,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls),
-            parameters_     : address(parameters),
             vault_          : ilkInst.vault,
             psm_            : Ethereum.PSM,
             daiUsds_        : Ethereum.DAI_USDS,
@@ -271,7 +261,6 @@ abstract contract ForkTestBase is DssTest {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
@@ -407,14 +396,14 @@ abstract contract ForkTestBase is DssTest {
         vm.label(daiUSDSFacet, "DAIUSDSFacet");
 
         // "Controller.swapUSDSToDAI()" -> "DAIUSDSFacet.swapUSDSToDAI()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.swapUSDSToDAI.selector,
             daiUSDSFacet,
             IDAIUSDSFacet.swapUSDSToDAI.selector
         );
 
         // "Controller.swapDAIToUSDS()" -> "DAIUSDSFacet.swapDAIToUSDS()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.swapDAIToUSDS.selector,
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
@@ -489,42 +478,42 @@ abstract contract ForkTestBase is DssTest {
         vm.label(erc7540Facet, "ERC7540Facet");
 
         // "Controller.requestDepositERC7540()" -> "ERC7540Facet.requestDeposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.requestDepositERC7540.selector,
             erc7540Facet,
             IERC7540Facet.requestDeposit.selector
         );
 
         // "Controller.claimDepositERC7540()" -> "ERC7540Facet.claimDeposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimDepositERC7540.selector,
             erc7540Facet,
             IERC7540Facet.claimDeposit.selector
         );
 
         // "Controller.requestRedeemERC7540()" -> "ERC7540Facet.requestRedeem()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.requestRedeemERC7540.selector,
             erc7540Facet,
             IERC7540Facet.requestRedeem.selector
         );
 
         // "Controller.claimRedeemERC7540()" -> "ERC7540Facet.claimRedeem()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimRedeemERC7540.selector,
             erc7540Facet,
             IERC7540Facet.claimRedeem.selector
         );
 
         // "Controller.LIMIT_7540_DEPOSIT()" -> "ERC7540Facet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_7540_DEPOSIT.selector,
             erc7540Facet,
             IERC7540Facet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_7540_REDEEM()" -> "ERC7540Facet.LIMIT_REDEEM()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_7540_REDEEM.selector,
             erc7540Facet,
             IERC7540Facet.LIMIT_REDEEM.selector
@@ -537,28 +526,28 @@ abstract contract ForkTestBase is DssTest {
         vm.label(farmFacet, "FarmFacet");
 
         // "Controller.depositToFarm()" -> "FarmFacet.deposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.depositToFarm.selector,
             farmFacet,
             IFarmFacet.deposit.selector
         );
 
         // "Controller.withdrawFromFarm()" -> "FarmFacet.withdraw()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.withdrawFromFarm.selector,
             farmFacet,
             IFarmFacet.withdraw.selector
         );
 
         // "Controller.LIMIT_FARM_DEPOSIT()" -> "FarmFacet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_FARM_DEPOSIT.selector,
             farmFacet,
             IFarmFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_FARM_WITHDRAW()" -> "FarmFacet.LIMIT_WITHDRAW()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
             farmFacet,
             IFarmFacet.LIMIT_WITHDRAW.selector
@@ -571,14 +560,14 @@ abstract contract ForkTestBase is DssTest {
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
         // "Controller.takeFromSparkVault()" -> "SparkVaultFacet.take()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.takeFromSparkVault.selector,
             sparkVaultFacet,
             ISparkVaultFacet.take.selector
         );
 
         // "Controller.LIMIT_SPARK_VAULT_TAKE()" -> "SparkVaultFacet.LIMIT_TAKE()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
             sparkVaultFacet,
             ISparkVaultFacet.LIMIT_TAKE.selector
@@ -597,28 +586,28 @@ abstract contract ForkTestBase is DssTest {
         vm.label(psmFacet, "PSMFacet");
 
         // "Controller.swapUSDSToUSDC()" -> "PSMFacet.swapUSDSToUSDC()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.swapUSDSToUSDC.selector,
             psmFacet,
             IPSMFacet.swapUSDSToUSDC.selector
         );
 
         // "Controller.swapUSDCToUSDS()" -> "PSMFacet.swapUSDCToUSDS()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.swapUSDCToUSDS.selector,
             psmFacet,
             IPSMFacet.swapUSDCToUSDS.selector
         );
 
         // "Controller.psmTo18ConversionFactor()" -> "PSMFacet.to18ConversionFactor()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.psmTo18ConversionFactor.selector,
             psmFacet,
             IPSMFacet.to18ConversionFactor.selector
         );
 
         // "Controller.LIMIT_USDS_TO_USDC()" -> "PSMFacet.LIMIT_USDS_TO_USDC()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_USDS_TO_USDC.selector,
             psmFacet,
             IPSMFacet.LIMIT_USDS_TO_USDC.selector
@@ -631,14 +620,14 @@ abstract contract ForkTestBase is DssTest {
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
         // "Controller.transferAsset()" -> "TransferAssetFacet.transfer()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.transferAsset.selector,
             transferAssetFacet,
             ITransferAssetFacet.transfer.selector
         );
 
         // "Controller.LIMIT_ASSET_TRANSFER()" -> "TransferAssetFacet.LIMIT_TRANSFER()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
@@ -651,21 +640,21 @@ abstract contract ForkTestBase is DssTest {
         vm.label(mapleFacet, "MapleFacet");
 
         // "Controller.requestMapleRedemption()" -> "MapleFacet.requestRedemption()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.requestMapleRedemption.selector,
             mapleFacet,
             IMapleFacet.requestRedemption.selector
         );
 
         // "Controller.cancelMapleRedemption()" -> "MapleFacet.cancelRedemption()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.cancelMapleRedemption.selector,
             mapleFacet,
             IMapleFacet.cancelRedemption.selector
         );
 
         // "Controller.LIMIT_MAPLE_REDEEM()" -> "MapleFacet.LIMIT_REDEEM()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_MAPLE_REDEEM.selector,
             mapleFacet,
             IMapleFacet.LIMIT_REDEEM.selector
@@ -678,14 +667,14 @@ abstract contract ForkTestBase is DssTest {
         vm.label(superstateFacet, "SuperstateFacet");
 
         // "Controller.subscribeSuperstate()" -> "SuperstateFacet.subscribe()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.subscribeSuperstate.selector,
             superstateFacet,
             ISuperstateFacet.subscribe.selector
         );
 
         // "Controller.LIMIT_SUPERSTATE_SUBSCRIBE()" -> "SuperstateFacet.LIMIT_SUBSCRIBE()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_SUPERSTATE_SUBSCRIBE.selector,
             superstateFacet,
             ISuperstateFacet.LIMIT_SUBSCRIBE.selector
@@ -698,35 +687,35 @@ abstract contract ForkTestBase is DssTest {
         vm.label(weethFacet, "WEETHFacet");
 
         // "Controller.depositToWeETH()" -> "WEETHFacet.deposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.depositToWeETH.selector,
             weethFacet,
             IWEETHFacet.deposit.selector
         );
 
         // "Controller.requestWithdrawFromWeETH()" -> "WEETHFacet.requestWithdraw()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.requestWithdrawFromWeETH.selector,
             weethFacet,
             IWEETHFacet.requestWithdraw.selector
         );
 
         // "Controller.claimWithdrawalFromWeETH()" -> "WEETHFacet.claimWithdrawal()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimWithdrawalFromWeETH.selector,
             weethFacet,
             IWEETHFacet.claimWithdrawal.selector
         );
 
         // "Controller.LIMIT_WEETH_DEPOSIT()" -> "WEETHFacet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_WEETH_DEPOSIT.selector,
             weethFacet,
             IWEETHFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_WEETH_REQUEST_WITHDRAW()" -> "WEETHFacet.LIMIT_REQUEST_WITHDRAW()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_WEETH_REQUEST_WITHDRAW.selector,
             weethFacet,
             IWEETHFacet.LIMIT_REQUEST_WITHDRAW.selector
@@ -743,35 +732,35 @@ abstract contract ForkTestBase is DssTest {
         vm.label(wstethFacet, "WSTETHFacet");
 
         // "Controller.depositToWstETH()" -> "WSTETHFacet.deposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.depositToWstETH.selector,
             wstethFacet,
             IWSTETHFacet.deposit.selector
         );
 
         // "Controller.requestWithdrawFromWstETH()" -> "WSTETHFacet.requestWithdraw()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.requestWithdrawFromWstETH.selector,
             wstethFacet,
             IWSTETHFacet.requestWithdraw.selector
         );
 
         // "Controller.claimWithdrawalFromWstETH()" -> "WSTETHFacet.claimWithdrawal()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimWithdrawalFromWstETH.selector,
             wstethFacet,
             IWSTETHFacet.claimWithdrawal.selector
         );
 
         // "Controller.LIMIT_WSTETH_DEPOSIT()" -> "WSTETHFacet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_WSTETH_DEPOSIT.selector,
             wstethFacet,
             IWSTETHFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_WSTETH_REQUEST_WITHDRAW()" -> "WSTETHFacet.LIMIT_REQUEST_WITHDRAW()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_WSTETH_REQUEST_WITHDRAW.selector,
             wstethFacet,
             IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
@@ -789,70 +778,70 @@ abstract contract ForkTestBase is DssTest {
         vm.label(usdeFacet, "USDEFacet");
 
         // "Controller.cooldownAssetsSUSDe()" -> "IUSDEFacet.cooldownAssets()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.cooldownAssetsSUSDe.selector,
             usdeFacet,
             IUSDEFacet.cooldownAssets.selector
         );
 
         // "Controller.cooldownSharesSUSDe()" -> "IUSDEFacet.cooldownShares()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.cooldownSharesSUSDe.selector,
             usdeFacet,
             IUSDEFacet.cooldownShares.selector
         );
 
         // "Controller.prepareUSDeMint()" -> "IUSDEFacet.prepareMint()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.prepareUSDeMint.selector,
             usdeFacet,
             IUSDEFacet.prepareMint.selector
         );
 
         // "Controller.prepareUSDeBurn()" -> "IUSDEFacet.prepareBurn()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.prepareUSDeBurn.selector,
             usdeFacet,
             IUSDEFacet.prepareBurn.selector
         );
 
         // "Controller.removeDelegatedSigner()" -> "IUSDEFacet.removeDelegatedSigner()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.removeDelegatedSigner.selector,
             usdeFacet,
             IUSDEFacet.removeDelegatedSigner.selector
         );
 
         // "Controller.setDelegatedSigner()" -> "IUSDEFacet.setDelegatedSigner()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.setDelegatedSigner.selector,
             usdeFacet,
             IUSDEFacet.setDelegatedSigner.selector
         );
 
         // "Controller.unstakeSUSDe()" -> "IUSDEFacet.unstakeSUSDE()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.unstakeSUSDe.selector,
             usdeFacet,
             IUSDEFacet.unstakeSUSDE.selector
         );
 
         // "Controller.LIMIT_USDE_BURN()" -> "IUSDEFacet.LIMIT_USDE_BURN()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_USDE_BURN.selector,
             usdeFacet,
             IUSDEFacet.LIMIT_USDE_BURN.selector
         );
 
         // "Controller.LIMIT_USDE_MINT()" -> "IUSDEFacet.LIMIT_USDE_MINT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_USDE_MINT.selector,
             usdeFacet,
             IUSDEFacet.LIMIT_USDE_MINT.selector
         );
 
         // "Controller.LIMIT_SUSDE_COOLDOWN()" -> "IUSDEFacet.LIMIT_SUSDE_COOLDOWN()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
             usdeFacet,
             IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
@@ -865,7 +854,7 @@ abstract contract ForkTestBase is DssTest {
         vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
 
         // "Controller.wrapAllProxyETH()" -> "WrapProxyETHFacet.wrapAll()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.wrapAllProxyETH.selector,
             wrapProxyETHFacet,
             IWrapProxyETHFacet.wrapAll.selector
@@ -878,21 +867,21 @@ abstract contract ForkTestBase is DssTest {
         vm.label(usdsFacet, "USDSFacet");
 
         // "Controller.mintUSDS()" -> "USDSFacet.mint()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.mintUSDS.selector,
             usdsFacet,
             IUSDSFacet.mint.selector
         );
 
         // "Controller.burnUSDS()" -> "USDSFacet.burn()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.burnUSDS.selector,
             usdsFacet,
             IUSDSFacet.burn.selector
         );
 
         // "Controller.LIMIT_USDS_MINT()" -> "USDSFacet.LIMIT_MINT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_USDS_MINT.selector,
             usdsFacet,
             IUSDSFacet.LIMIT_MINT.selector
