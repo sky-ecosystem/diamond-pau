@@ -43,7 +43,6 @@ contract ControllerIntegration_Tests is ControllerTestBase {
         super.setUp();
 
         controller = IController(controllerAddress);
-
     }
 
     /**********************************************************************************************/
