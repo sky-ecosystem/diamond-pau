@@ -9,6 +9,8 @@ import { AccessControls } from "../../src/AccessControls.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { Parameters }     from "../../src/Parameters.sol";
 
+import { ControllerTestBase } from "./ControllerTestBase.t.sol";
+
 contract MockFacet1 {
 
     function divide(uint256 arg) external pure returns (uint256) {
@@ -39,26 +41,7 @@ interface IMockController {
 
 }
 
-contract ControllerIntegration_Tests is Test {
-
-    AccessControls internal accessControls;
-    Controller     internal controller;
-    Parameters     internal parameters;
-
-    address internal admin        = makeAddr("admin");
-    address internal proxy        = makeAddr("proxy");
-    address internal rateLimits   = makeAddr("rateLimits");
-    address internal unauthorized = makeAddr("unauthorized");
-
-    function setUp() external {
-        accessControls = new AccessControls(admin);
-        parameters     = new Parameters(admin);
-        controller     = new Controller(address(accessControls), address(parameters), proxy, rateLimits);
-
-        vm.startPrank(admin);
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(controller));
-        vm.stopPrank();
-    }
+contract ControllerIntegration_Tests is ControllerTestBase {
 
     /**********************************************************************************************/
     /*** setFacet Tests                                                                         ***/
