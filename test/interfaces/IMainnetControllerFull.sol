@@ -312,7 +312,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
         uint256 amountIn,
         uint256 minAmountOut
     ) external virtual returns (uint256 amountOut);
-    
+
     /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
     /**********************************************************************************************/
@@ -376,5 +376,35 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
         view
         virtual
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+
+    /**********************************************************************************************/
+    /*** OTCFacet actions                                                                       ***/
+    /**********************************************************************************************/
+
+    function setOTCMaxSlippage(address exchange, uint256 maxSlippage) external virtual;
+
+    function setOTCBuffer(address exchange, address otcBuffer) external virtual;
+
+    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external virtual;
+
+    function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted) external virtual;
+
+    function otcSend(address exchange, address assetToSend, uint256 amount) external virtual;
+
+    function otcClaim(address exchange, address assetToClaim) external virtual;
+
+    function LIMIT_OTC_SWAP() external pure virtual returns (bytes32);
+
+    function getOtcClaimWithRecharge(address exchange) external view virtual returns (uint256);
+
+    function isOtcSwapReady(address exchange) external view virtual returns (bool);
+
+    function otcs(address exchange) external view virtual returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
+
+    function otcBuffer(address exchange) external view virtual returns (address);
+
+    function otcRechargeRate(address exchange) external view virtual returns (uint256);
+
+    function otcWhitelistedAsset(address exchange, address asset) external view virtual returns (bool);
 
 }

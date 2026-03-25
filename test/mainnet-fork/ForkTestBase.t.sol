@@ -33,6 +33,7 @@ import { IERC7540Facet }       from "../../src/interfaces/facets/IERC7540Facet.s
 import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol";
 import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
 import { IMerklFacet }         from "../../src/interfaces/facets/IMerklFacet.sol";
+import { IOTCFacet }           from "../../src/interfaces/facets/IOTCFacet.sol";
 import { IPendleFacet }        from "../../src/interfaces/facets/IPendleFacet.sol";
 import { IPSMFacet }           from "../../src/interfaces/facets/IPSMFacet.sol";
 import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
@@ -55,6 +56,7 @@ import { ERC7540Facet }       from "../../src/libraries/ERC7540Lib.sol";
 import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
 import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
 import { MerklFacet }         from "../../src/libraries/MerklLib.sol";
+import { OTCFacet }           from "../../src/libraries/OTCLib.sol";
 import { PendleFacet }        from "../../src/libraries/PendleLib.sol";
 import { PSMFacet }           from "../../src/libraries/PSMLib.sol";
 import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
@@ -287,7 +289,6 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
 
         // Facet wiring
-
         _wireAaveFacet();
         _wireCCTPFacet();
         _wireCentrifugeFacet();
@@ -298,14 +299,15 @@ abstract contract ForkTestBase is DssTest {
         _wireFarmFacet();
         _wireMapleFacet();
         _wireMerklFacet();
+        _wireOTCFacet();
         _wirePendleFacet();
         _wirePSMFacet();
         _wireSparkVaultFacet();
         _wireSuperstateFacet();
         _wireTransferAssetFacet();
+        _wireUniswapV4Facet();
         _wireUSDEFacet();
         _wireUSDSFacet();
-        _wireUniswapV4Facet();
         _wireWEETHFacet();
         _wireWrapProxyETHFacet();
         _wireWSTETHFacet();
@@ -828,6 +830,82 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
             farmFacet,
             IFarmFacet.LIMIT_WITHDRAW.selector
+        );
+    }
+
+    function _wireOTCFacet() internal {
+        address otcFacet = address(new OTCFacet());
+
+        vm.label(otcFacet, "OTCFacet");
+
+        // Controller.setOTCMaxSlippage -> OTCFacet.setMaxSlippage
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCMaxSlippage.selector,
+            otcFacet,
+            IOTCFacet.setMaxSlippage.selector
+        );
+
+        // Controller.setOTCBuffer -> OTCFacet.setBuffer
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCBuffer.selector,
+            otcFacet,
+            IOTCFacet.setBuffer.selector
+        );
+
+        // Controller.setOTCRechargeRate -> OTCFacet.setRechargeRate
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCRechargeRate.selector,
+            otcFacet,
+            IOTCFacet.setRechargeRate.selector
+        );
+
+        // Controller.setOTCWhitelistedAsset -> OTCFacet.setIsWhitelisted
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCWhitelistedAsset.selector,
+            otcFacet,
+            IOTCFacet.setIsWhitelisted.selector
+        );
+
+        // Controller.otcSend -> OTCFacet.send
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcSend.selector,
+            otcFacet,
+            IOTCFacet.send.selector
+        );
+
+        // Controller.otcClaim -> OTCFacet.claim
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcClaim.selector,
+            otcFacet,
+            IOTCFacet.claim.selector
+        );
+
+        // Controller.getOtcClaimWithRecharge -> OTCFacet.getClaimWithRecharge
+        mainnetController.setDispatch(
+            IMainnetControllerFull.getOtcClaimWithRecharge.selector,
+            otcFacet,
+            IOTCFacet.getClaimWithRecharge.selector
+        );
+
+        // Controller.isOtcSwapReady -> OTCFacet.isSwapReady
+        mainnetController.setDispatch(
+            IMainnetControllerFull.isOtcSwapReady.selector,
+            otcFacet,
+            IOTCFacet.isSwapReady.selector
+        );
+
+        // Controller.LIMIT_OTC_SWAP -> OTCFacet.LIMIT_SWAP
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_OTC_SWAP.selector,
+            otcFacet,
+            IOTCFacet.LIMIT_SWAP.selector
+        );
+
+        // Controller.otcs -> OTCFacet.getState
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcs.selector,
+            otcFacet,
+            IOTCFacet.getState.selector
         );
     }
 

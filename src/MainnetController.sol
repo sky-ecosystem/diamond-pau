@@ -8,9 +8,8 @@ import { Ethereum } from "../lib/spark-address-registry/src/Ethereum.sol";
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { LayerZeroLib }  from "./libraries/LayerZeroLib.sol";
-import { OTCLib }        from "./libraries/OTCLib.sol";
-import { UniswapV3Lib }  from "./libraries/UniswapV3Lib.sol";
+import { LayerZeroLib } from "./libraries/LayerZeroLib.sol";
+import { UniswapV3Lib } from "./libraries/UniswapV3Lib.sol";
 
 import { Controller } from "./Controller.sol";
 
@@ -53,7 +52,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public RELAYER = keccak256("RELAYER");
 
     bytes32 public LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public LIMIT_OTC_SWAP            = OTCLib.LIMIT_SWAP;
     bytes32 public LIMIT_UNISWAP_V3_DEPOSIT  = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V3_SWAP     = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public LIMIT_UNISWAP_V3_WITHDRAW = UniswapV3Lib.LIMIT_WITHDRAW;
@@ -80,11 +78,7 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
-    mapping(uint32 destinationEndpointId   => bytes32 layerZeroRecipient)  public layerZeroRecipients;
-    // OTC swap (also uses maxSlippages)
-    mapping(address exchange => OTCLib.OTC otcData) public otcs;
-
-    mapping(address exchange => mapping(address asset => bool)) public otcWhitelistedAssets;
+    mapping(uint32 destinationEndpointId => bytes32 layerZeroRecipient) public layerZeroRecipients;
 
     // Uniswap V3 pool params
     mapping(address pool => UniswapV3Lib.PoolParams params) public uniswapV3PoolParams;
@@ -144,30 +138,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
         maxSlippages[pool] = maxSlippage;
         emit MaxSlippageSet(pool, maxSlippage);
-    }
-
-    function setOTCBuffer(address exchange, address otcBuffer)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        OTCLib.setBuffer(exchange, otcBuffer, otcs, maxSlippages);
-    }
-
-    function setOTCRechargeRate(address exchange, uint256 rechargeRate18)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        OTCLib.setRechargeRate(exchange, rechargeRate18, otcs);
-    }
-
-    function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        OTCLib.setWhitelistedAsset(exchange, asset, isWhitelisted, otcWhitelistedAssets, otcs);
     }
 
     function setUniswapV3PositionManager(address manager)
@@ -330,49 +300,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             destinationEndpointId : destinationEndpointId,
             layerZeroRecipients   : layerZeroRecipients
         });
-    }
-
-    /**********************************************************************************************/
-    /*** OTC swap functions                                                                     ***/
-    /**********************************************************************************************/
-
-    function otcSend(address exchange, address assetToSend, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        OTCLib.send({
-            proxy             : address(proxy),
-            rateLimits        : address(rateLimits),
-            exchange          : exchange,
-            assetToSend       : assetToSend,
-            amount            : amount,
-            whitelistedAssets : otcWhitelistedAssets,
-            otcs              : otcs,
-            maxSlippages      : maxSlippages
-        });
-    }
-
-    function otcClaim(address exchange, address assetToClaim)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        OTCLib.claim({
-            proxy             : address(proxy),
-            exchange          : exchange,
-            assetToClaim      : assetToClaim,
-            whitelistedAssets : otcWhitelistedAssets,
-            otcs              : otcs
-        });
-    }
-
-    function getOtcClaimWithRecharge(address exchange) external view returns (uint256) {
-        return OTCLib.getClaimWithRecharge(exchange, otcs);
-    }
-
-    function isOtcSwapReady(address exchange) external view returns (bool) {
-        return OTCLib.isSwapReady(exchange, otcs, maxSlippages);
     }
 
 }
