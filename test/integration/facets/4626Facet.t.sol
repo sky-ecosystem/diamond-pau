@@ -44,14 +44,14 @@ contract ERC4626Facet_Base is ControllerTestBase {
         vm.label(erc4626Facet, "ERC4626Facet");
 
         // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
-        controller.setFacet(
+        controller.setDispatch(
             IControllerLike.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
         // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
-        controller.setFacet(
+        controller.setDispatch(
             IControllerLike.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector

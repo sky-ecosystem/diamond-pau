@@ -416,56 +416,56 @@ abstract contract ForkTestBase is DssTest {
         vm.label(erc4626Facet, "ERC4626Facet");
 
         // "Controller.setMaxExchangeRate()" -> "ERC4626Facet.setMaxExchangeRate()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
         // "Controller.maxExchangeRates()" -> "ERC4626Facet.maxExchangeRates()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
         );
 
         // "Controller.depositERC4626()" -> "ERC4626Facet.deposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
 
         // "Controller.withdrawERC4626()" -> "ERC4626Facet.withdraw()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
 
         // "Controller.redeemERC4626()" -> "ERC4626Facet.redeem()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
 
         // "Controller.LIMIT_4626_DEPOSIT()" -> "ERC4626Facet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_4626_WITHDRAW()" -> "ERC4626Facet.LIMIT_WITHDRAW()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
         // "Controller.EXCHANGE_RATE_PRECISION()" -> "ERC4626Facet.EXCHANGE_RATE_PRECISION()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector

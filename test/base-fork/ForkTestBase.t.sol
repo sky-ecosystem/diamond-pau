@@ -30,9 +30,6 @@ import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 
-import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
-import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
-
 import { IForeignControllerFull }  from "../interfaces/IForeignControllerFull.sol";
 
 abstract contract ForkTestBase is Test {
@@ -242,56 +239,56 @@ abstract contract ForkTestBase is Test {
         vm.label(erc4626Facet, "ERC4626Facet");
 
         // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
         // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
         );
 
         // Controller.depositERC4626() -> ERC4626Facet.deposit()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
 
         // Controller.withdrawERC4626() -> ERC4626Facet.withdraw()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
 
         // Controller.redeemERC4626() -> ERC4626Facet.redeem()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
 
         // Controller.LIMIT_4626_DEPOSIT() -> ERC4626Facet.LIMIT_DEPOSIT()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
         // Controller.LIMIT_4626_WITHDRAW() -> ERC4626Facet.LIMIT_WITHDRAW()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
         // Controller.EXCHANGE_RATE_PRECISION() -> ERC4626Facet.EXCHANGE_RATE_PRECISION()
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
