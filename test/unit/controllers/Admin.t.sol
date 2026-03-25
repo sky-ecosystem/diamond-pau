@@ -4,23 +4,14 @@ pragma solidity ^0.8.34;
 import { IAccessControl }  from "../../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { AccessControls }                              from "../../../src/AccessControls.sol";
-import { addressToKeyComponent, combineKeyComponents } from "../../../src/ParameterKeys.sol";
-import { ForeignController }                           from "../../../src/ForeignController.sol";
-import { MainnetController }                           from "../../../src/MainnetController.sol";
-import { Parameters }                                  from "../../../src/Parameters.sol";
-import { ParameterHelpers }                            from "../../../src/ParameterHelpers.sol";
-import { IERC4626Facet }                               from "../../../src/interfaces/facets/IERC4626Facet.sol";
-
-import { CCTPLib }       from "../../../src/libraries/CCTPLib.sol";
-import { ERC4626Facet } from "../../../src/libraries/ERC4626Lib.sol";
+import { CCTPLib }      from "../../../src/libraries/CCTPLib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
 import { UniswapV3Lib } from "../../../src/libraries/UniswapV3Lib.sol";
 import { UniswapV4Lib } from "../../../src/libraries/UniswapV4Lib.sol";
 
-import { IForeignControllerFull } from "../../interfaces/IForeignControllerFull.sol";
-import { IMainnetControllerFull } from "../../interfaces/IMainnetControllerFull.sol";
+import { ForeignController } from "../../../src/ForeignController.sol";
+import { MainnetController } from "../../../src/MainnetController.sol";
 
 import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
@@ -35,58 +26,23 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
     bytes32 internal mintRecipient1      = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 internal mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
-    IMainnetControllerFull internal mainnetController;
+    MainnetController internal mainnetController;
 
-    function setUp() public virtual {
+    function setUp() public {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
-        AccessControls accessControls = new AccessControls(admin);
-        Parameters     parameters     = new Parameters(admin);
-
-        mainnetController = IMainnetControllerFull(payable(address(new MainnetController(
+        mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            address(accessControls),
-            address(parameters),
+            makeAddr("accessControls"),
+            makeAddr("parameters"),
             address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp")
-        ))));
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to mainnetController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
-
-        // Facet wiring
-
-        _wireERC4626Facet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
-    function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
-
-        vm.label(erc4626Facet, "ERC4626Facet");
-
-        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
-        mainnetController.setFacet(
-            IMainnetControllerFull.setMaxExchangeRate.selector,
-            erc4626Facet,
-            IERC4626Facet.setMaxExchangeRate.selector
-        );
-
-        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
-        mainnetController.setFacet(
-            IMainnetControllerFull.maxExchangeRates.selector,
-            erc4626Facet,
-            IERC4626Facet.maxExchangeRates.selector
         );
     }
 
@@ -485,65 +441,6 @@ contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetControll
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(mainnetController.otcWhitelistedAssets(exchange, asset), false);
-    }
-
-}
-
-contract MainnetController_Admin_SetMaxExchangeRate_Tests is MainnetController_Admin_TestBase {
-
-    function test_setMaxExchangeRate_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_tokenZeroAddress() external {
-        vm.expectRevert("ERC4626Facet/token-zero-address");
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(address(0), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(mainnetController.maxExchangeRates(token), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(mainnetController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e36);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e36);
-
-        vm.expectEmit(address(mainnetController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e24);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e6);
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e24);
-
-        vm.expectEmit(address(mainnetController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e48);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e6, 1e18);
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e48);
     }
 
 }
@@ -1044,7 +941,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     address internal immutable _swapRouter      = makeAddr("swapRouter");
     address internal immutable _unauthorized    = makeAddr("unauthorized");
 
-    IForeignControllerFull foreignController;
+    ForeignController foreignController;
 
     bytes32 layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
     bytes32 layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
@@ -1052,50 +949,15 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     bytes32 mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
     function setUp() public {
-        AccessControls accessControls = new AccessControls(admin);
-        Parameters     parameters     = new Parameters(admin);
-
-        foreignController = IForeignControllerFull(payable(address(new ForeignController(
+        foreignController = new ForeignController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            address(accessControls),
-            address(parameters),
+            makeAddr("accessControls"),
+            makeAddr("parameters"),
             makeAddr("psm"),
             makeAddr("usdc"),
             makeAddr("cctp")
-        ))));
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to foreignController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
-
-        // Facet wiring
-
-        _wireERC4626Facet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
-    function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
-
-        vm.label(erc4626Facet, "ERC4626Facet");
-
-        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
-        foreignController.setFacet(
-            IForeignControllerFull.setMaxExchangeRate.selector,
-            erc4626Facet,
-            IERC4626Facet.setMaxExchangeRate.selector
-        );
-
-        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
-        foreignController.setFacet(
-            IForeignControllerFull.maxExchangeRates.selector,
-            erc4626Facet,
-            IERC4626Facet.maxExchangeRates.selector
         );
     }
 
@@ -1304,61 +1166,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.layerZeroRecipients(1), layerZeroRecipient2);
 
         _assertReentrancyGuardWrittenToTwice();
-    }
-
-    function test_setMaxExchangeRate_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_tokenZeroAddress() external {
-        vm.expectRevert("ERC4626Facet/token-zero-address");
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(address(0), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(foreignController.maxExchangeRates(token), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e36);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(foreignController.maxExchangeRates(token), 1e36);
-
-        vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e24);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e6);
-
-        assertEq(foreignController.maxExchangeRates(token), 1e24);
-
-        vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.MaxExchangeRateSet(token, 1e48);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e6, 1e18);
-
-        assertEq(foreignController.maxExchangeRates(token), 1e48);
     }
 
     function test_setUniswapV3PositionManager_reentrancy() external {
