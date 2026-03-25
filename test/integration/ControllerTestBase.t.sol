@@ -7,8 +7,6 @@ import { AccessControls } from "../../src/AccessControls.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { Parameters }     from "../../src/Parameters.sol";
 
-import { IControllerFull } from "../interfaces/IControllerFull.sol";
-
 contract ControllerTestBase is Test {
 
     /**********************************************************************************************/
@@ -21,9 +19,9 @@ contract ControllerTestBase is Test {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    AccessControls  internal accessControls;
-    IControllerFull internal controller;
-    Parameters      internal parameters;
+    AccessControls internal accessControls;
+    Controller     internal controller;
+    Parameters     internal parameters;
 
     address internal admin        = makeAddr("admin");
     address internal proxy        = makeAddr("proxy");
@@ -36,9 +34,7 @@ contract ControllerTestBase is Test {
         accessControls = new AccessControls(admin);
         parameters     = new Parameters(admin);
 
-        controller = IControllerFull(
-            payable(new Controller(address(accessControls), address(parameters), proxy, rateLimits))
-        );
+        controller = new Controller(address(accessControls), address(parameters), proxy, rateLimits);
 
         // Step-2: Grant the necessary access control permissions.
 
@@ -47,6 +43,16 @@ contract ControllerTestBase is Test {
         parameters.grantRole(parameters.CONTROLLER_ROLE(), address(controller));
 
         vm.stopPrank();
+
+        // Step-3: Label addresses.
+
+        vm.label(address(accessControls), "AccessControls");
+        vm.label(admin,                   "Admin");
+        vm.label(address(controller),     "Controller");
+        vm.label(address(parameters),     "Parameters");
+        vm.label(proxy,                   "Proxy");
+        vm.label(rateLimits,              "RateLimits");
+        vm.label(unauthorized,            "Unauthorized");
     }
 
     /**********************************************************************************************/
