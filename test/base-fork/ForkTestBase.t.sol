@@ -248,41 +248,56 @@ abstract contract ForkTestBase is Test {
 
         vm.label(curveFacet, "CurveFacet");
 
+        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
         foreignController.setFacet(
             IForeignControllerFull.setCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.setMaxSlippage.selector
         );
+
+        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
         foreignController.setFacet(
             IForeignControllerFull.curveMaxSlippages.selector,
             curveFacet,
             ICurveFacet.maxSlippages.selector
         );
+
+        // Controller.swapCurve() -> CurveFacet.swap()
         foreignController.setFacet(
             IForeignControllerFull.swapCurve.selector,
             curveFacet,
             ICurveFacet.swap.selector
         );
+
+        // Controller.addLiquidityCurve() -> CurveFacet.addLiquidity()
         foreignController.setFacet(
             IForeignControllerFull.addLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.addLiquidity.selector
         );
+
+        // Controller.removeLiquidityCurve() -> CurveFacet.removeLiquidity()
         foreignController.setFacet(
             IForeignControllerFull.removeLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.removeLiquidity.selector
         );
+
+        // Controller.LIMIT_CURVE_DEPOSIT() -> CurveFacet.LIMIT_DEPOSIT()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             curveFacet,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
+
+        // Controller.LIMIT_CURVE_SWAP() -> CurveFacet.LIMIT_SWAP()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_CURVE_SWAP.selector,
             curveFacet,
             ICurveFacet.LIMIT_SWAP.selector
         );
+
+        // Controller.LIMIT_CURVE_WITHDRAW() -> CurveFacet.LIMIT_WITHDRAW()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             curveFacet,

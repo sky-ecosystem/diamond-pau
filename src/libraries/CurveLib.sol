@@ -58,8 +58,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    string public constant DOMAIN              = "sky.pau.curve";
-    string public constant MAX_SLIPPAGE_PREFIX = "maxSlippage";
+    string public constant MAX_SLIPPAGE_PREFIX = "sky.pau.curve.maxSlippage";
 
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_CURVE_DEPOSIT");
     bytes32 public constant LIMIT_SWAP     = keccak256("LIMIT_CURVE_SWAP");
@@ -329,10 +328,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
     }
 
     function _getMaxSlippageKey(address pool) internal pure returns (string memory) {
-        return combineKeyComponents(
-            combineKeyComponents(DOMAIN, MAX_SLIPPAGE_PREFIX),
-            addressToKeyComponent(pool)
-        );
+        return combineKeyComponents(MAX_SLIPPAGE_PREFIX, addressToKeyComponent(pool));
     }
 
     function _absSubtraction(uint256 a, uint256 b) internal pure returns (uint256) {

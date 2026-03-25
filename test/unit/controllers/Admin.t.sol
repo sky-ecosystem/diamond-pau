@@ -76,11 +76,14 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
     function _wireCurveFacet() internal {
         address curveFacet = address(new CurveFacet());
 
+        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
         mainnetController.setFacet(
             IMainnetControllerFull.setCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.setMaxSlippage.selector
         );
+
+        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
         mainnetController.setFacet(
             IMainnetControllerFull.curveMaxSlippages.selector,
             curveFacet,
@@ -1148,11 +1151,14 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     function _wireCurveFacet() internal {
         address curveFacet = address(new CurveFacet());
 
+        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
         foreignController.setFacet(
             IForeignControllerFull.setCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.setMaxSlippage.selector
         );
+
+        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
         foreignController.setFacet(
             IForeignControllerFull.curveMaxSlippages.selector,
             curveFacet,
