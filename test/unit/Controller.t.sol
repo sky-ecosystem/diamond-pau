@@ -5,6 +5,8 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { IController } from "../../src/interfaces/IController.sol";
 
 import { Controller } from "../../src/Controller.sol";
@@ -96,6 +98,10 @@ contract ControllerHarness is Controller {
 
 contract Controller_Tests is Test {
 
+    bytes32 internal constant _REENTRANCY_GUARD_SLOT        = bytes32(uint256(0));
+    bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
+    bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
+
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
     address internal accessControls = makeAddr("accessControls");
@@ -124,6 +130,13 @@ contract Controller_Tests is Test {
     /**********************************************************************************************/
     /*** setDispatch Tests                                                                      ***/
     /**********************************************************************************************/
+
+    function test_setDispatch_reentrancy() external {
+        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
+
+        vm.expectRevert(abi.encodeWithSelector(ReentrancyGuard.ReentrancyGuardReentrantCall.selector));
+        controller.setDispatch(bytes4(0), address(0), bytes4(0));
+    }
 
     function test_setDispatch_notAdmin() external {
         vm.mockCall(

@@ -29,7 +29,7 @@ interface IController {
     /// @notice Thrown when the caller is not an admin.
     error NotAdmin(address caller);
 
-    /// @notice Thrown when a facet is not found for a given call selector.
+    /// @notice Thrown when a dispatch is not found for a given call selector.
     error DispatchNotFound(bytes4 callSelector);
 
     /**********************************************************************************************/

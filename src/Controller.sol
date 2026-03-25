@@ -51,7 +51,10 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external {
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector)
+        external
+        nonReentrant
+    {
         require(
             IAccessControls(_getSharedControllerStorage().accessControls).hasRole(
                 _DEFAULT_ADMIN_ROLE,
