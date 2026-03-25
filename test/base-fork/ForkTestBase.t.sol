@@ -14,21 +14,24 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
+import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
+import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
+import { IPSM3Facet }          from "../../src/interfaces/facets/IPSM3Facet.sol";
+import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
+import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+
+import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
+import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
+import { PSM3Facet }          from "../../src/libraries/PSM3Lib.sol";
+import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
+import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
-
-import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
-import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
-import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
-
-import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
-import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
-import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
-
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
 import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
@@ -151,6 +154,8 @@ abstract contract ForkTestBase is Test {
 
         _wireAaveFacet();
         _wireERC4626Facet();
+        _wirePSM3Facet();
+        _wireSparkVaultFacet();
         _wireTransferAssetFacet();
 
         vm.stopPrank();
@@ -293,45 +298,80 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
+        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
         foreignController.setFacet(
             IForeignControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
+
+        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
         foreignController.setFacet(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
         );
+
+        // Controller.depositERC4626() -> ERC4626Facet.deposit()
         foreignController.setFacet(
             IForeignControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
+
+        // Controller.withdrawERC4626() -> ERC4626Facet.withdraw()
         foreignController.setFacet(
             IForeignControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
+
+        // Controller.redeemERC4626() -> ERC4626Facet.redeem()
         foreignController.setFacet(
             IForeignControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
+
+        // Controller.LIMIT_4626_DEPOSIT() -> ERC4626Facet.LIMIT_DEPOSIT()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
+
+        // Controller.LIMIT_4626_WITHDRAW() -> ERC4626Facet.LIMIT_WITHDRAW()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
+
+        // Controller.EXCHANGE_RATE_PRECISION() -> ERC4626Facet.EXCHANGE_RATE_PRECISION()
         foreignController.setFacet(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
+        );
+    }
+
+    function _wireSparkVaultFacet() internal {
+        address sparkVaultFacet = address(new SparkVaultFacet());
+
+        vm.label(sparkVaultFacet, "SparkVaultFacet");
+
+        // "Controller.takeFromSparkVault()" -> "SparkVaultFacet.take()"
+        foreignController.setFacet(
+            IForeignControllerFull.takeFromSparkVault.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.take.selector
+        );
+
+        // "Controller.LIMIT_SPARK_VAULT_TAKE()" -> "SparkVaultFacet.LIMIT_TAKE()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.LIMIT_TAKE.selector
         );
     }
 
@@ -352,6 +392,40 @@ abstract contract ForkTestBase is Test {
             IForeignControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
+        );
+    }
+
+    function _wirePSM3Facet() internal {
+        address psm3Facet = address(new PSM3Facet(address(psmBase)));
+
+        vm.label(psm3Facet, "PSM3Facet");
+
+        // "Controller.depositPSM()" -> "PSM3Facet.deposit()"
+        foreignController.setFacet(
+            IForeignControllerFull.depositPSM.selector,
+            psm3Facet,
+            IPSM3Facet.deposit.selector
+        );
+
+        // "Controller.withdrawPSM()" -> "PSM3Facet.withdraw()"
+        foreignController.setFacet(
+            IForeignControllerFull.withdrawPSM.selector,
+            psm3Facet,
+            IPSM3Facet.withdraw.selector
+        );
+
+        // "Controller.LIMIT_PSM_DEPOSIT()" -> "PSM3Facet.LIMIT_DEPOSIT()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_PSM_DEPOSIT.selector,
+            psm3Facet,
+            IPSM3Facet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_PSM_WITHDRAW()" -> "PSM3Facet.LIMIT_WITHDRAW()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_PSM_WITHDRAW.selector,
+            psm3Facet,
+            IPSM3Facet.LIMIT_WITHDRAW.selector
         );
     }
 

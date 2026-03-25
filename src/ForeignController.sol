@@ -6,12 +6,9 @@ import { AccessControlEnumerable } from "../lib/openzeppelin-contracts/contracts
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
 import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
-import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { PendleLib }        from "./libraries/PendleLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
-import { PSM3Lib }          from "./libraries/PSM3Lib.sol";
-import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
@@ -46,16 +43,11 @@ contract ForeignController is Controller, AccessControlEnumerable {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_7540_DEPOSIT        = ERC7540Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_7540_REDEEM         = ERC7540Lib.LIMIT_REDEEM;
     bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = CentrifugeLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_CURVE_DEPOSIT       = CurveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_CURVE_SWAP          = CurveLib.LIMIT_SWAP;
     bytes32 public constant LIMIT_CURVE_WITHDRAW      = CurveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public constant LIMIT_PSM_DEPOSIT         = PSM3Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_PSM_WITHDRAW        = PSM3Lib.LIMIT_WITHDRAW;
-    bytes32 public constant LIMIT_SPARK_VAULT_TAKE    = SparkVaultLib.LIMIT_TAKE;
     bytes32 public constant LIMIT_USDC_TO_CCTP        = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public constant LIMIT_USDC_TO_DOMAIN      = CCTPLib.LIMIT_TO_DOMAIN;
     bytes32 public constant LIMIT_PENDLE_PT_REDEEM    = PendleLib.LIMIT_REDEEM;
@@ -317,28 +309,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Relayer PSM functions                                                                  ***/
-    /**********************************************************************************************/
-
-    function depositPSM(address asset, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return PSM3Lib.deposit(address(proxy), address(rateLimits), psm, asset, amount);
-    }
-
-    function withdrawPSM(address asset, uint256 maxAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 assetsWithdrawn)
-    {
-        return PSM3Lib.withdraw(address(proxy), address(rateLimits), psm, asset, maxAmount);
-    }
-
-    /**********************************************************************************************/
     /*** Relayer bridging functions                                                             ***/
     /**********************************************************************************************/
 
@@ -478,18 +448,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Spark Vault functions                                                                  ***/
-    /**********************************************************************************************/
-
-    function takeFromSparkVault(address sparkVault, uint256 assetAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        SparkVaultLib.take(address(proxy), address(rateLimits), sparkVault, assetAmount);
-    }
-
-    /**********************************************************************************************/
     /*** Relayer Pendle functions                                                               ***/
     /**********************************************************************************************/
 
@@ -506,34 +464,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
             pyAmountIn   : pyAmountIn,
             minAmountOut : minAmountOut
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer ERC7540 functions                                                              ***/
-    /**********************************************************************************************/
-
-    function requestDepositERC7540(address token, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.requestDeposit(address(proxy), address(rateLimits), token, amount);
-    }
-
-    function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {
-        ERC7540Lib.claimDeposit(address(proxy), address(rateLimits), token);
-    }
-
-    function requestRedeemERC7540(address token, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.requestRedeem(address(proxy), address(rateLimits), token, shares);
-    }
-
-    function claimRedeemERC7540(address token) external nonReentrant onlyRole(RELAYER) {
-        ERC7540Lib.claimRedeem(address(proxy), address(rateLimits), token);
     }
 
     /**********************************************************************************************/

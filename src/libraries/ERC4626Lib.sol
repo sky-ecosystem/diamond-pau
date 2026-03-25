@@ -6,11 +6,12 @@ import { IERC4626Facet } from "../interfaces/facets/IERC4626Facet.sol";
 import { IParameters }   from "../interfaces/IParameters.sol";
 import { IRateLimits }   from "../interfaces/IRateLimits.sol";
 
-import { ApproveLib }                                  from "./ApproveLib.sol";
-import { FacetBase }                                   from "./FacetBase.sol";
 import { addressToKeyComponent, combineKeyComponents } from "../ParameterKeys.sol";
 import { ParameterHelpers }                            from "../ParameterHelpers.sol";
 import { makeAddressKey }                              from "../RateLimitHelpers.sol";
+
+import { ApproveLib } from "./ApproveLib.sol";
+import { FacetBase }  from "./FacetBase.sol";
 
 interface IERC4626Like {
 
@@ -34,8 +35,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    string public constant DOMAIN                   = "sky.pau.erc4626";
-    string public constant MAX_EXCHANGE_RATE_PREFIX = "maxExchangeRate";
+    string public constant MAX_EXCHANGE_RATE_PREFIX = "sky.pau.erc4626.maxExchangeRate";
 
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_4626_DEPOSIT");
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_4626_WITHDRAW");
@@ -87,12 +87,8 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
 
         require(shares >= minSharesOut, "ERC4626Facet/min-shares-out-not-met");
 
-        uint256 maxExchangeRate = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxExchangeRateKey(token))
-        );
-
         require(
-            _getExchangeRate(shares, amount) <= maxExchangeRate,
+            _getExchangeRate(shares, amount) <= maxExchangeRates(token),
             "ERC4626Facet/exchange-rate-too-high"
         );
     }
@@ -147,10 +143,10 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** External view/pure functions                                                           ***/
+    /*** Public view/pure functions                                                             ***/
     /**********************************************************************************************/
 
-    function maxExchangeRates(address token) external view returns (uint256) {
+    function maxExchangeRates(address token) public view returns (uint256) {
         return ParameterHelpers.toUint256(
             IParameters(_getControllerStorage().parameters).get(_getMaxExchangeRateKey(token))
         );
@@ -187,10 +183,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
     }
 
     function _getMaxExchangeRateKey(address token) internal pure returns (string memory) {
-        return combineKeyComponents(
-            combineKeyComponents(DOMAIN, MAX_EXCHANGE_RATE_PREFIX),
-            addressToKeyComponent(token)
-        );
+        return combineKeyComponents(MAX_EXCHANGE_RATE_PREFIX, addressToKeyComponent(token));
     }
 
 }

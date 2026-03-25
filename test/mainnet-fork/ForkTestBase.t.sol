@@ -21,11 +21,37 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
+import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
+import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
+import { IERC7540Facet }       from "../../src/interfaces/facets/IERC7540Facet.sol";
+import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol";
+import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
+import { IPSMFacet }           from "../../src/interfaces/facets/IPSMFacet.sol";
+import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
+import { ISuperstateFacet }    from "../../src/interfaces/facets/ISuperstateFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
+import { IUSDEFacet }          from "../../src/interfaces/facets/IUSDEFacet.sol";
+import { IUSDSFacet }          from "../../src/interfaces/facets/IUSDSFacet.sol";
+import { IWEETHFacet }         from "../../src/interfaces/facets/IWEETHFacet.sol";
+import { IWrapProxyETHFacet }  from "../../src/interfaces/facets/IWrapProxyETHFacet.sol";
+import { IWSTETHFacet }        from "../../src/interfaces/facets/IWSTETHFacet.sol";
 
+import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
+import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
+import { ERC7540Facet }       from "../../src/libraries/ERC7540Lib.sol";
+import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
+import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
+import { PSMFacet }           from "../../src/libraries/PSMLib.sol";
+import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
+import { SuperstateFacet }    from "../../src/libraries/SuperstateLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
+import { USDEFacet }          from "../../src/libraries/USDELib.sol";
+import { USDSFacet }          from "../../src/libraries/USDSLib.sol";
+import { WEETHFacet }         from "../../src/libraries/WEETHLib.sol";
+import { WrapProxyETHFacet }  from "../../src/libraries/WrapProxyETHLib.sol";
+import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { ALMProxy }          from "../../src/ALMProxy.sol";
@@ -33,12 +59,6 @@ import { MainnetController } from "../../src/MainnetController.sol";
 import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
-
-import { AaveFacet }    from "../../src/libraries/AaveLib.sol";
-import { ERC4626Facet } from "../../src/libraries/ERC4626Lib.sol";
-
-import { IAaveFacet }    from "../../src/interfaces/facets/IAaveFacet.sol";
-import { IERC4626Facet } from "../../src/interfaces/facets/IERC4626Facet.sol";
 
 import { addressToKeyComponent, combineKeyComponents } from "../../src/ParameterKeys.sol";
 import { ParameterHelpers }                            from "../../src/ParameterHelpers.sol";
@@ -261,7 +281,18 @@ abstract contract ForkTestBase is DssTest {
         _wireAaveFacet();
         _wireDAIUSDSFacet();
         _wireERC4626Facet();
+        _wireERC7540Facet();
+        _wireFarmFacet();
+        _wireMapleFacet();
+        _wirePSMFacet();
+        _wireSparkVaultFacet();
+        _wireSuperstateFacet();
         _wireTransferAssetFacet();
+        _wireUSDEFacet();
+        _wireUSDSFacet();
+        _wireWEETHFacet();
+        _wireWrapProxyETHFacet();
+        _wireWSTETHFacet();
 
         vm.stopPrank();
 
@@ -364,7 +395,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     /**********************************************************************************************/
-    /*** Facet wiring helpers.                                                                  ***/
+    /*** Facet wiring helpers                                                                   ***/
     /**********************************************************************************************/
 
     function _wireAaveFacet() internal {
@@ -444,45 +475,202 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
+        // "Controller.setMaxExchangeRate()" -> "ERC4626Facet.setMaxExchangeRate()"
         mainnetController.setFacet(
             IMainnetControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
+
+        // "Controller.maxExchangeRates()" -> "ERC4626Facet.maxExchangeRates()"
         mainnetController.setFacet(
             IMainnetControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
         );
+
+        // "Controller.depositERC4626()" -> "ERC4626Facet.deposit()"
         mainnetController.setFacet(
             IMainnetControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
+
+        // "Controller.withdrawERC4626()" -> "ERC4626Facet.withdraw()"
         mainnetController.setFacet(
             IMainnetControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
+
+        // "Controller.redeemERC4626()" -> "ERC4626Facet.redeem()"
         mainnetController.setFacet(
             IMainnetControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
+
+        // "Controller.LIMIT_4626_DEPOSIT()" -> "ERC4626Facet.LIMIT_DEPOSIT()"
         mainnetController.setFacet(
             IMainnetControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
+
+        // "Controller.LIMIT_4626_WITHDRAW()" -> "ERC4626Facet.LIMIT_WITHDRAW()"
         mainnetController.setFacet(
             IMainnetControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
+
+        // "Controller.EXCHANGE_RATE_PRECISION()" -> "ERC4626Facet.EXCHANGE_RATE_PRECISION()"
         mainnetController.setFacet(
             IMainnetControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
+        );
+    }
+
+    function _wireERC7540Facet() internal {
+        address erc7540Facet = address(new ERC7540Facet());
+
+        vm.label(erc7540Facet, "ERC7540Facet");
+
+        // "Controller.requestDepositERC7540()" -> "ERC7540Facet.requestDeposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestDeposit.selector
+        );
+
+        // "Controller.claimDepositERC7540()" -> "ERC7540Facet.claimDeposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.claimDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimDeposit.selector
+        );
+
+        // "Controller.requestRedeemERC7540()" -> "ERC7540Facet.requestRedeem()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestRedeem.selector
+        );
+
+        // "Controller.claimRedeemERC7540()" -> "ERC7540Facet.claimRedeem()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.claimRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimRedeem.selector
+        );
+
+        // "Controller.LIMIT_7540_DEPOSIT()" -> "ERC7540Facet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_7540_DEPOSIT.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_7540_REDEEM()" -> "ERC7540Facet.LIMIT_REDEEM()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_7540_REDEEM.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_REDEEM.selector
+        );
+    }
+
+    function _wireFarmFacet() internal {
+        address farmFacet = address(new FarmFacet());
+
+        vm.label(farmFacet, "FarmFacet");
+
+        // "Controller.depositToFarm()" -> "FarmFacet.deposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositToFarm.selector,
+            farmFacet,
+            IFarmFacet.deposit.selector
+        );
+
+        // "Controller.withdrawFromFarm()" -> "FarmFacet.withdraw()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.withdrawFromFarm.selector,
+            farmFacet,
+            IFarmFacet.withdraw.selector
+        );
+
+        // "Controller.LIMIT_FARM_DEPOSIT()" -> "FarmFacet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_FARM_DEPOSIT.selector,
+            farmFacet,
+            IFarmFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_FARM_WITHDRAW()" -> "FarmFacet.LIMIT_WITHDRAW()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
+            farmFacet,
+            IFarmFacet.LIMIT_WITHDRAW.selector
+        );
+    }
+
+    function _wireSparkVaultFacet() internal {
+        address sparkVaultFacet = address(new SparkVaultFacet());
+
+        vm.label(sparkVaultFacet, "SparkVaultFacet");
+
+        // "Controller.takeFromSparkVault()" -> "SparkVaultFacet.take()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.takeFromSparkVault.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.take.selector
+        );
+
+        // "Controller.LIMIT_SPARK_VAULT_TAKE()" -> "SparkVaultFacet.LIMIT_TAKE()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
+            sparkVaultFacet,
+            ISparkVaultFacet.LIMIT_TAKE.selector
+        );
+    }
+
+    function _wirePSMFacet() internal {
+        address psmFacet = address(new PSMFacet(
+            Ethereum.DAI,
+            Ethereum.DAI_USDS,
+            Ethereum.PSM,
+            Ethereum.USDC,
+            Ethereum.USDS
+        ));
+
+        vm.label(psmFacet, "PSMFacet");
+
+        // "Controller.swapUSDSToUSDC()" -> "PSMFacet.swapUSDSToUSDC()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.swapUSDSToUSDC.selector,
+            psmFacet,
+            IPSMFacet.swapUSDSToUSDC.selector
+        );
+
+        // "Controller.swapUSDCToUSDS()" -> "PSMFacet.swapUSDCToUSDS()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.swapUSDCToUSDS.selector,
+            psmFacet,
+            IPSMFacet.swapUSDCToUSDS.selector
+        );
+
+        // "Controller.psmTo18ConversionFactor()" -> "PSMFacet.to18ConversionFactor()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.psmTo18ConversionFactor.selector,
+            psmFacet,
+            IPSMFacet.to18ConversionFactor.selector
+        );
+
+        // "Controller.LIMIT_USDS_TO_USDC()" -> "PSMFacet.LIMIT_USDS_TO_USDC()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDS_TO_USDC.selector,
+            psmFacet,
+            IPSMFacet.LIMIT_USDS_TO_USDC.selector
         );
     }
 
@@ -503,6 +691,260 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
+        );
+    }
+
+    function _wireMapleFacet() internal {
+        address mapleFacet = address(new MapleFacet());
+
+        vm.label(mapleFacet, "MapleFacet");
+
+        // "Controller.requestMapleRedemption()" -> "MapleFacet.requestRedemption()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestMapleRedemption.selector,
+            mapleFacet,
+            IMapleFacet.requestRedemption.selector
+        );
+
+        // "Controller.cancelMapleRedemption()" -> "MapleFacet.cancelRedemption()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cancelMapleRedemption.selector,
+            mapleFacet,
+            IMapleFacet.cancelRedemption.selector
+        );
+
+        // "Controller.LIMIT_MAPLE_REDEEM()" -> "MapleFacet.LIMIT_REDEEM()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_MAPLE_REDEEM.selector,
+            mapleFacet,
+            IMapleFacet.LIMIT_REDEEM.selector
+        );
+    }
+
+    function _wireSuperstateFacet() internal {
+        address superstateFacet = address(new SuperstateFacet(Ethereum.USDC, Ethereum.USTB));
+
+        vm.label(superstateFacet, "SuperstateFacet");
+
+        // "Controller.subscribeSuperstate()" -> "SuperstateFacet.subscribe()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.subscribeSuperstate.selector,
+            superstateFacet,
+            ISuperstateFacet.subscribe.selector
+        );
+
+        // "Controller.LIMIT_SUPERSTATE_SUBSCRIBE()" -> "SuperstateFacet.LIMIT_SUBSCRIBE()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_SUPERSTATE_SUBSCRIBE.selector,
+            superstateFacet,
+            ISuperstateFacet.LIMIT_SUBSCRIBE.selector
+        );
+    }
+
+    function _wireWEETHFacet() internal {
+        address weethFacet = address(new WEETHFacet(Ethereum.WETH, Ethereum.WEETH));
+
+        vm.label(weethFacet, "WEETHFacet");
+
+        // "Controller.depositToWeETH()" -> "WEETHFacet.deposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositToWeETH.selector,
+            weethFacet,
+            IWEETHFacet.deposit.selector
+        );
+
+        // "Controller.requestWithdrawFromWeETH()" -> "WEETHFacet.requestWithdraw()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestWithdrawFromWeETH.selector,
+            weethFacet,
+            IWEETHFacet.requestWithdraw.selector
+        );
+
+        // "Controller.claimWithdrawalFromWeETH()" -> "WEETHFacet.claimWithdrawal()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.claimWithdrawalFromWeETH.selector,
+            weethFacet,
+            IWEETHFacet.claimWithdrawal.selector
+        );
+
+        // "Controller.LIMIT_WEETH_DEPOSIT()" -> "WEETHFacet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WEETH_DEPOSIT.selector,
+            weethFacet,
+            IWEETHFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_WEETH_REQUEST_WITHDRAW()" -> "WEETHFacet.LIMIT_REQUEST_WITHDRAW()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WEETH_REQUEST_WITHDRAW.selector,
+            weethFacet,
+            IWEETHFacet.LIMIT_REQUEST_WITHDRAW.selector
+        );
+    }
+
+    function _wireWSTETHFacet() internal {
+        address wstethFacet = address(new WSTETHFacet(
+            Ethereum.WETH,
+            Ethereum.WSTETH_WITHDRAW_QUEUE,
+            Ethereum.WSTETH
+        ));
+
+        vm.label(wstethFacet, "WSTETHFacet");
+
+        // "Controller.depositToWstETH()" -> "WSTETHFacet.deposit()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.depositToWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.deposit.selector
+        );
+
+        // "Controller.requestWithdrawFromWstETH()" -> "WSTETHFacet.requestWithdraw()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.requestWithdrawFromWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.requestWithdraw.selector
+        );
+
+        // "Controller.claimWithdrawalFromWstETH()" -> "WSTETHFacet.claimWithdrawal()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.claimWithdrawalFromWstETH.selector,
+            wstethFacet,
+            IWSTETHFacet.claimWithdrawal.selector
+        );
+
+        // "Controller.LIMIT_WSTETH_DEPOSIT()" -> "WSTETHFacet.LIMIT_DEPOSIT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WSTETH_DEPOSIT.selector,
+            wstethFacet,
+            IWSTETHFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_WSTETH_REQUEST_WITHDRAW()" -> "WSTETHFacet.LIMIT_REQUEST_WITHDRAW()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_WSTETH_REQUEST_WITHDRAW.selector,
+            wstethFacet,
+            IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
+        );
+    }
+
+    function _wireUSDEFacet() internal {
+        address usdeFacet = address(new USDEFacet(
+            ETHENA_MINTER,
+            address(susde),
+            address(usdc),
+            address(usde)
+        ));
+
+        vm.label(usdeFacet, "USDEFacet");
+
+        // "Controller.cooldownAssetsSUSDe()" -> "IUSDEFacet.cooldownAssets()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownAssetsSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownAssets.selector
+        );
+
+        // "Controller.cooldownSharesSUSDe()" -> "IUSDEFacet.cooldownShares()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.cooldownSharesSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.cooldownShares.selector
+        );
+
+        // "Controller.prepareUSDeMint()" -> "IUSDEFacet.prepareMint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeMint.selector,
+            usdeFacet,
+            IUSDEFacet.prepareMint.selector
+        );
+
+        // "Controller.prepareUSDeBurn()" -> "IUSDEFacet.prepareBurn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.prepareUSDeBurn.selector,
+            usdeFacet,
+            IUSDEFacet.prepareBurn.selector
+        );
+
+        // "Controller.removeDelegatedSigner()" -> "IUSDEFacet.removeDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.removeDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.removeDelegatedSigner.selector
+        );
+
+        // "Controller.setDelegatedSigner()" -> "IUSDEFacet.setDelegatedSigner()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.setDelegatedSigner.selector,
+            usdeFacet,
+            IUSDEFacet.setDelegatedSigner.selector
+        );
+
+        // "Controller.unstakeSUSDe()" -> "IUSDEFacet.unstakeSUSDE()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.unstakeSUSDe.selector,
+            usdeFacet,
+            IUSDEFacet.unstakeSUSDE.selector
+        );
+
+        // "Controller.LIMIT_USDE_BURN()" -> "IUSDEFacet.LIMIT_USDE_BURN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_BURN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_BURN.selector
+        );
+
+        // "Controller.LIMIT_USDE_MINT()" -> "IUSDEFacet.LIMIT_USDE_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDE_MINT.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_USDE_MINT.selector
+        );
+
+        // "Controller.LIMIT_SUSDE_COOLDOWN()" -> "IUSDEFacet.LIMIT_SUSDE_COOLDOWN()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
+            usdeFacet,
+            IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
+        );
+    }
+
+    function _wireWrapProxyETHFacet() internal {
+        address wrapProxyETHFacet = address(new WrapProxyETHFacet(Ethereum.WETH));
+
+        vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
+
+        // "Controller.wrapAllProxyETH()" -> "WrapProxyETHFacet.wrapAll()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.wrapAllProxyETH.selector,
+            wrapProxyETHFacet,
+            IWrapProxyETHFacet.wrapAll.selector
+        );
+    }
+
+    function _wireUSDSFacet() internal {
+        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+
+        vm.label(usdsFacet, "USDSFacet");
+
+        // "Controller.mintUSDS()" -> "USDSFacet.mint()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.mintUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.mint.selector
+        );
+
+        // "Controller.burnUSDS()" -> "USDSFacet.burn()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.burnUSDS.selector,
+            usdsFacet,
+            IUSDSFacet.burn.selector
+        );
+
+        // "Controller.LIMIT_USDS_MINT()" -> "USDSFacet.LIMIT_MINT()"
+        mainnetController.setFacet(
+            IMainnetControllerFull.LIMIT_USDS_MINT.selector,
+            usdsFacet,
+            IUSDSFacet.LIMIT_MINT.selector
         );
     }
 
