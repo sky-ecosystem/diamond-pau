@@ -73,11 +73,16 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
     function _wireERC4626Facet() internal {
         address erc4626Facet = address(new ERC4626Facet());
 
+        vm.label(erc4626Facet, "ERC4626Facet");
+
+        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
         mainnetController.setFacet(
             IMainnetControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
+
+        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
         mainnetController.setFacet(
             IMainnetControllerFull.maxExchangeRates.selector,
             erc4626Facet,
@@ -1077,11 +1082,16 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     function _wireERC4626Facet() internal {
         address erc4626Facet = address(new ERC4626Facet());
 
+        vm.label(erc4626Facet, "ERC4626Facet");
+
+        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
         foreignController.setFacet(
             IForeignControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
+
+        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
         foreignController.setFacet(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,

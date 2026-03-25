@@ -33,8 +33,6 @@ interface IERC4626Facet is IFacetBase {
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function DOMAIN() external pure returns (string memory);
-
     function EXCHANGE_RATE_PRECISION() external pure returns (uint256);
 
     function LIMIT_DEPOSIT() external pure returns (bytes32);

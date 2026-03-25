@@ -246,41 +246,56 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
+        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
         foreignController.setFacet(
             IForeignControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
+
+        // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
         foreignController.setFacet(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
         );
+
+        // Controller.depositERC4626() -> ERC4626Facet.deposit()
         foreignController.setFacet(
             IForeignControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
+
+        // Controller.withdrawERC4626() -> ERC4626Facet.withdraw()
         foreignController.setFacet(
             IForeignControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
+
+        // Controller.redeemERC4626() -> ERC4626Facet.redeem()
         foreignController.setFacet(
             IForeignControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
+
+        // Controller.LIMIT_4626_DEPOSIT() -> ERC4626Facet.LIMIT_DEPOSIT()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
+
+        // Controller.LIMIT_4626_WITHDRAW() -> ERC4626Facet.LIMIT_WITHDRAW()
         foreignController.setFacet(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
+
+        // Controller.EXCHANGE_RATE_PRECISION() -> ERC4626Facet.EXCHANGE_RATE_PRECISION()
         foreignController.setFacet(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
