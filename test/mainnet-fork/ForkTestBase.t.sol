@@ -406,41 +406,56 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(cctpFacet, "CCTPFacet");
 
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setCCTPMaxFeeCap()
         mainnetController.setFacet(
             IMainnetControllerFull.setCCTPMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.setCCTPMaxFeeCap.selector
         );
+
+        // Controller.setMintRecipient() -> CCTPFacet.setMintRecipient()
         mainnetController.setFacet(
             IMainnetControllerFull.setMintRecipient.selector,
             cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
+
+        // Controller.cctpMaxFeeCap() -> CCTPFacet.cctpMaxFeeCap()
         mainnetController.setFacet(
             IMainnetControllerFull.cctpMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.cctpMaxFeeCap.selector
         );
+
+        // Controller.mintRecipients() -> CCTPFacet.mintRecipients()
         mainnetController.setFacet(
             IMainnetControllerFull.mintRecipients.selector,
             cctpFacet,
             ICCTPFacet.mintRecipients.selector
         );
+
+        // Controller.transferUSDCToCCTP(uint256,uint32) -> CCTPFacet.transfer(uint256,uint32)
         mainnetController.setFacet(
             bytes4(keccak256("transferUSDCToCCTP(uint256,uint32)")),
             cctpFacet,
             bytes4(keccak256("transfer(uint256,uint32)"))
         );
+
+        // Controller.transferUSDCToCCTP(uint256,uint256,uint32) -> CCTPFacet.transfer(uint256,uint256,uint32)
         mainnetController.setFacet(
             bytes4(keccak256("transferUSDCToCCTP(uint256,uint256,uint32)")),
             cctpFacet,
             bytes4(keccak256("transfer(uint256,uint256,uint32)"))
         );
+
+        // Controller.LIMIT_USDC_TO_CCTP() -> CCTPFacet.LIMIT_TO_CCTP()
         mainnetController.setFacet(
             IMainnetControllerFull.LIMIT_USDC_TO_CCTP.selector,
             cctpFacet,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
+
+        // Controller.LIMIT_USDC_TO_DOMAIN() -> CCTPFacet.LIMIT_TO_DOMAIN()
         mainnetController.setFacet(
             IMainnetControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
             cctpFacet,

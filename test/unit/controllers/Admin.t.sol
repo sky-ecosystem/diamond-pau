@@ -75,21 +75,28 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
     function _wireCCTPFacet() internal {
         address cctpFacet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setCCTPMaxFeeCap()
         mainnetController.setFacet(
             IMainnetControllerFull.setCCTPMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.setCCTPMaxFeeCap.selector
         );
+
+        // Controller.cctpMaxFeeCap() -> CCTPFacet.cctpMaxFeeCap()
         mainnetController.setFacet(
             IMainnetControllerFull.cctpMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.cctpMaxFeeCap.selector
         );
+
+        // Controller.setMintRecipient() -> CCTPFacet.setMintRecipient()
         mainnetController.setFacet(
             IMainnetControllerFull.setMintRecipient.selector,
             cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
+
+        // Controller.mintRecipients() -> CCTPFacet.mintRecipients()
         mainnetController.setFacet(
             IMainnetControllerFull.mintRecipients.selector,
             cctpFacet,
@@ -1106,21 +1113,28 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     function _wireCCTPFacet() internal {
         address cctpFacet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setCCTPMaxFeeCap()
         foreignController.setFacet(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.setCCTPMaxFeeCap.selector
         );
+
+        // Controller.cctpMaxFeeCap() -> CCTPFacet.cctpMaxFeeCap()
         foreignController.setFacet(
             IForeignControllerFull.cctpMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.cctpMaxFeeCap.selector
         );
+
+        // Controller.setMintRecipient() -> CCTPFacet.setMintRecipient()
         foreignController.setFacet(
             IForeignControllerFull.setMintRecipient.selector,
             cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
+
+        // Controller.mintRecipients() -> CCTPFacet.mintRecipients()
         foreignController.setFacet(
             IForeignControllerFull.mintRecipients.selector,
             cctpFacet,

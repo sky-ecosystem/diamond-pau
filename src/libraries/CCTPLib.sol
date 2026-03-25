@@ -46,9 +46,8 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     /*** Declarations and Constructor                                                           ***/
     /**********************************************************************************************/
 
-    string public constant DOMAIN                = "sky.pau.cctp";
-    string public constant CCTP_MAX_FEE_CAP_KEY  = "cctpMaxFeeCap";
-    string public constant MINT_RECIPIENT_PREFIX = "mintRecipient";
+    string public constant CCTP_MAX_FEE_CAP_KEY  = "sky.pau.cctp.cctpMaxFeeCap";
+    string public constant MINT_RECIPIENT_PREFIX = "sky.pau.cctp.mintRecipient";
 
     bytes32 public constant LIMIT_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
@@ -75,7 +74,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         IParameters(_getControllerStorage().parameters).set(
-            _getCCTPMaxFeeCapKey(),
+            CCTP_MAX_FEE_CAP_KEY,
             ParameterHelpers.fromUint256(maxFeeCap)
         );
 
@@ -121,7 +120,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
 
     function cctpMaxFeeCap() external view returns (uint256) {
         return ParameterHelpers.toUint256(
-            IParameters(_getControllerStorage().parameters).get(_getCCTPMaxFeeCapKey())
+            IParameters(_getControllerStorage().parameters).get(CCTP_MAX_FEE_CAP_KEY)
         );
     }
 
@@ -147,7 +146,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         );
 
         uint256 _cctpMaxFeeCap = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getCCTPMaxFeeCapKey())
+            IParameters($.parameters).get(CCTP_MAX_FEE_CAP_KEY)
         );
 
         bytes32 recipient = IParameters($.parameters).get(
@@ -216,13 +215,9 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         emit CCTPTransferInitiated(destinationDomain, mintRecipient, usdcAmount);
     }
 
-    function _getCCTPMaxFeeCapKey() internal pure returns (string memory) {
-        return combineKeyComponents(DOMAIN, CCTP_MAX_FEE_CAP_KEY);
-    }
-
     function _getMintRecipientKey(uint32 destinationDomain) internal pure returns (string memory) {
         return combineKeyComponents(
-            combineKeyComponents(DOMAIN, MINT_RECIPIENT_PREFIX),
+            MINT_RECIPIENT_PREFIX,
             uint256ToKeyComponent(uint256(destinationDomain))
         );
     }

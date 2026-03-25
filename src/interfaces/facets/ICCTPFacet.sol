@@ -49,8 +49,6 @@ interface ICCTPFacet is IFacetBase {
 
     function mintRecipients(uint32 destinationDomain) external view returns (bytes32);
 
-    function DOMAIN() external pure returns (string memory);
-
     function LIMIT_TO_CCTP() external pure returns (bytes32);
 
     function LIMIT_TO_DOMAIN() external pure returns (bytes32);
