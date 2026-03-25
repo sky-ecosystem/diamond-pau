@@ -20,12 +20,12 @@ interface IControllerLike is IController {
 
 contract ERC4626Facet_Base is ControllerTestBase {
 
-    IControllerLike internal _controller;
+    IControllerLike internal controller;
 
     function setUp() public override {
         super.setUp();
 
-        _controller = IControllerLike(address(controller));
+        controller = IControllerLike(controllerAddress);
 
         // Wire the ERC4626facet.
 
@@ -44,14 +44,14 @@ contract ERC4626Facet_Base is ControllerTestBase {
         vm.label(erc4626Facet, "ERC4626Facet");
 
         // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
-        _controller.setFacet(
+        controller.setFacet(
             IControllerLike.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
         // Controller.maxExchangeRates() -> ERC4626Facet.maxExchangeRates()
-        _controller.setFacet(
+        controller.setFacet(
             IControllerLike.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
@@ -67,7 +67,7 @@ contract ControllerIntegration_ERC4626Facet_SetMaxExchangeRate_Tests is ERC4626F
     function test_setMaxExchangeRate_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        _controller.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        controller.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_unauthorizedAccount() external {
@@ -78,13 +78,13 @@ contract ControllerIntegration_ERC4626Facet_SetMaxExchangeRate_Tests is ERC4626F
         ));
 
         vm.prank(unauthorized);
-        _controller.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
+        controller.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
     }
 
     function test_setMaxExchangeRate_tokenZeroAddress() external {
         vm.expectRevert("ERC4626Facet/token-zero-address");
         vm.prank(admin);
-        _controller.setMaxExchangeRate(address(0), 1e18, 1e18);
+        controller.setMaxExchangeRate(address(0), 1e18, 1e18);
     }
 
     // Success tests
@@ -92,7 +92,7 @@ contract ControllerIntegration_ERC4626Facet_SetMaxExchangeRate_Tests is ERC4626F
     function test_setMaxExchangeRate() external {
         address token = makeAddr("token");
 
-        assertEq(_controller.maxExchangeRates(token), 0);
+        assertEq(controller.maxExchangeRates(token), 0);
 
         vm.record();
 
@@ -100,27 +100,27 @@ contract ControllerIntegration_ERC4626Facet_SetMaxExchangeRate_Tests is ERC4626F
         emit IERC4626Facet.MaxExchangeRateSet(token, 1e36);
 
         vm.prank(admin);
-        _controller.setMaxExchangeRate(token, 1e18, 1e18);
+        controller.setMaxExchangeRate(token, 1e18, 1e18);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(_controller.maxExchangeRates(token), 1e36);
+        assertEq(controller.maxExchangeRates(token), 1e36);
 
         vm.expectEmit(address(controller));
         emit IERC4626Facet.MaxExchangeRateSet(token, 1e24);
 
         vm.prank(admin);
-        _controller.setMaxExchangeRate(token, 1e18, 1e6);
+        controller.setMaxExchangeRate(token, 1e18, 1e6);
 
-        assertEq(_controller.maxExchangeRates(token), 1e24);
+        assertEq(controller.maxExchangeRates(token), 1e24);
 
         vm.expectEmit(address(controller));
         emit IERC4626Facet.MaxExchangeRateSet(token, 1e48);
 
         vm.prank(admin);
-        _controller.setMaxExchangeRate(token, 1e6, 1e18);
+        controller.setMaxExchangeRate(token, 1e6, 1e18);
 
-        assertEq(_controller.maxExchangeRates(token), 1e48);
+        assertEq(controller.maxExchangeRates(token), 1e48);
     }
 
 }

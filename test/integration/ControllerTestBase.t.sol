@@ -20,8 +20,9 @@ contract ControllerTestBase is Test {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     AccessControls internal accessControls;
-    Controller     internal controller;
     Parameters     internal parameters;
+
+    address internal controllerAddress;
 
     address internal admin        = makeAddr("admin");
     address internal proxy        = makeAddr("proxy");
@@ -34,13 +35,13 @@ contract ControllerTestBase is Test {
         accessControls = new AccessControls(admin);
         parameters     = new Parameters(admin);
 
-        controller = new Controller(address(accessControls), address(parameters), proxy, rateLimits);
+        controllerAddress = address(new Controller(address(accessControls), address(parameters), proxy, rateLimits));
 
         // Step-2: Grant the necessary access control permissions.
 
         vm.startPrank(admin);
 
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(controller));
+        parameters.grantRole(parameters.CONTROLLER_ROLE(), controllerAddress);
 
         vm.stopPrank();
 
@@ -48,7 +49,7 @@ contract ControllerTestBase is Test {
 
         vm.label(address(accessControls), "AccessControls");
         vm.label(admin,                   "Admin");
-        vm.label(address(controller),     "Controller");
+        vm.label(controllerAddress,       "Controller");
         vm.label(address(parameters),     "Parameters");
         vm.label(proxy,                   "Proxy");
         vm.label(rateLimits,              "RateLimits");
@@ -60,11 +61,11 @@ contract ControllerTestBase is Test {
     /**********************************************************************************************/
 
     function _setControllerEntered() internal virtual {
-        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
+        vm.store(controllerAddress, _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
     }
 
     function _assertReentrancyGuardWrittenToTwice() internal {
-        _assertReentrancyGuardWrittenToTwice(address(controller));
+        _assertReentrancyGuardWrittenToTwice(controllerAddress);
     }
 
     function _assertReentrancyGuardWrittenToTwice(address controller_) internal {

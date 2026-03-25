@@ -87,12 +87,8 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
 
         require(shares >= minSharesOut, "ERC4626Facet/min-shares-out-not-met");
 
-        uint256 maxExchangeRate = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxExchangeRateKey(token))
-        );
-
         require(
-            _getExchangeRate(shares, amount) <= maxExchangeRate,
+            _getExchangeRate(shares, amount) <= maxExchangeRates(token),
             "ERC4626Facet/exchange-rate-too-high"
         );
     }
@@ -147,10 +143,10 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** External view/pure functions                                                           ***/
+    /*** Public view/pure functions                                                             ***/
     /**********************************************************************************************/
 
-    function maxExchangeRates(address token) external view returns (uint256) {
+    function maxExchangeRates(address token) public view returns (uint256) {
         return ParameterHelpers.toUint256(
             IParameters(_getControllerStorage().parameters).get(_getMaxExchangeRateKey(token))
         );
