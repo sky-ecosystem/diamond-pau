@@ -20,7 +20,11 @@ import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { Parameters }        from "../../src/Parameters.sol";
 
-import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+import { ICentrifugeFacet } from "../../src/interfaces/facets/ICentrifugeFacet.sol";
+
+import { CentrifugeFacet } from "../../src/libraries/CentrifugeLib.sol";
+
+import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
 contract MockSSROracle {
 
@@ -65,11 +69,11 @@ contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    AccessControls    accessControls;
-    ALMProxy          almProxy;
-    ForeignController foreignController;
-    Parameters        parameters;
-    RateLimits        rateLimits;
+    AccessControls         accessControls;
+    ALMProxy               almProxy;
+    IForeignControllerFull foreignController;
+    Parameters             parameters;
+    RateLimits             rateLimits;
 
     /**********************************************************************************************/
     /*** Addresses for testing                                                                  ***/
@@ -120,7 +124,7 @@ contract ForkTestBase is Test {
         accessControls = new AccessControls(GROVE_EXECUTOR);
         parameters     = new Parameters(GROVE_EXECUTOR);
 
-        foreignController = new ForeignController({
+        foreignController = IForeignControllerFull(payable(new ForeignController({
             admin_          : GROVE_EXECUTOR,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
@@ -129,7 +133,7 @@ contract ForkTestBase is Test {
             psm_            : address(psmAvalanche),
             usdc_           : USDC_AVALANCHE,
             cctp_           : CCTP_TOKEN_MESSENGER
-        });
+        })));
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = foreignController.FREEZER();
@@ -152,6 +156,13 @@ contract ForkTestBase is Test {
         almProxy.grantRole(almProxy.CONTROLLER(),                address(foreignController));
         foreignController.grantRole(foreignController.FREEZER(), ALM_FREEZER);
         rateLimits.grantRole(rateLimits.CONTROLLER(),            address(foreignController));
+        parameters.grantRole(parameters.CONTROLLER_ROLE(),       address(foreignController));
+
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
+
+        // Facet wiring
+
+        _wireCentrifugeFacet();
 
         for (uint256 i; i < relayers.length; ++i) {
             foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
@@ -167,6 +178,86 @@ contract ForkTestBase is Test {
     // Default configuration for the fork, can be overridden in inheriting tests
     function _getBlock() internal virtual pure returns (uint256) {
         return 65896755;  // July 22, 2025
+    }
+
+    /**********************************************************************************************/
+    /*** Facet wiring helpers.                                                                  ***/
+    /**********************************************************************************************/
+
+    function _wireCentrifugeFacet() internal {
+        address centrifugeFacet = address(new CentrifugeFacet());
+
+        vm.label(centrifugeFacet, "CentrifugeFacet");
+
+        // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setCentrifugeRecipient()"
+        foreignController.setFacet(
+            IForeignControllerFull.setCentrifugeRecipient.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.setCentrifugeRecipient.selector
+        );
+
+        // "Controller.cancelCentrifugeDepositRequest()" -> "CentrifugeFacet.cancelDepositRequest()"
+        foreignController.setFacet(
+            IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.cancelDepositRequest.selector
+        );
+
+        // "Controller.claimCentrifugeCancelDepositRequest()" -> "CentrifugeFacet.claimCancelDepositRequest()"
+        foreignController.setFacet(
+            IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.claimCancelDepositRequest.selector
+        );
+
+        // "Controller.cancelCentrifugeRedeemRequest()" -> "CentrifugeFacet.cancelRedeemRequest()"
+        foreignController.setFacet(
+            IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.cancelRedeemRequest.selector
+        );
+
+        // "Controller.claimCentrifugeCancelRedeemRequest()" -> "CentrifugeFacet.claimCancelRedeemRequest()"
+        foreignController.setFacet(
+            IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.claimCancelRedeemRequest.selector
+        );
+
+        // "Controller.transferSharesCentrifuge()" -> "CentrifugeFacet.transferShares()"
+        foreignController.setFacet(
+            IForeignControllerFull.transferSharesCentrifuge.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.transferShares.selector
+        );
+
+        // "Controller.LIMIT_CENTRIFUGE_DEPOSIT()" -> "CentrifugeFacet.LIMIT_DEPOSIT()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CENTRIFUGE_DEPOSIT.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_CENTRIFUGE_REDEEM()" -> "CentrifugeFacet.LIMIT_REDEEM()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CENTRIFUGE_REDEEM.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.LIMIT_REDEEM.selector
+        );
+
+        // "Controller.LIMIT_CENTRIFUGE_TRANSFER()" -> "CentrifugeFacet.LIMIT_TRANSFER()"
+        foreignController.setFacet(
+            IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.LIMIT_TRANSFER.selector
+        );
+
+        // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
+        foreignController.setFacet(
+            IForeignControllerFull.centrifugeRecipients.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.centrifugeRecipients.selector
+        );
     }
 
 }

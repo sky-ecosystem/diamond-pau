@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IALMProxy }   from "../interfaces/IALMProxy.sol";
-import { IRateLimits } from "../interfaces/IRateLimits.sol";
+import { IALMProxy }        from "../interfaces/IALMProxy.sol";
+import { ICentrifugeFacet } from "../interfaces/facets/ICentrifugeFacet.sol";
+import { IParameters }      from "../interfaces/IParameters.sol";
+import { IRateLimits }      from "../interfaces/IRateLimits.sol";
 
-import { makeAddressKey, makeAddressUint16Key } from "../RateLimitHelpers.sol";
+import { combineKeyComponents, uint256ToKeyComponent } from "../ParameterKeys.sol";
+import { makeAddressKey, makeAddressUint16Key }        from "../RateLimitHelpers.sol";
 
-import { ERC7540Lib } from "./ERC7540Lib.sol";
+import { FacetBase } from "./FacetBase.sol";
 
 interface IAsyncRedeemManagerLike {
 
@@ -49,21 +52,17 @@ interface ISpokeLike {
 
 }
 
-library CentrifugeLib {
-
-    /**********************************************************************************************/
-    /*** Events                                                                                 ***/
-    /**********************************************************************************************/
-
-    event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 indexed recipient);
+contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    string public constant CENTRIFUGE_RECIPIENT_PREFIX = "sky.pau.centrifuge.recipient";
+
     bytes32 public constant LIMIT_TRANSFER = keccak256("LIMIT_CENTRIFUGE_TRANSFER");
-    bytes32 public constant LIMIT_DEPOSIT  = ERC7540Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_REDEEM   = ERC7540Lib.LIMIT_REDEEM;
+    bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_7540_DEPOSIT");
+    bytes32 public constant LIMIT_REDEEM   = keccak256("LIMIT_7540_REDEEM");
 
     // Requests for Centrifuge pools are non-fungible and all have ID = 0.
     uint256 public constant REQUEST_ID = 0;
@@ -72,79 +71,108 @@ library CentrifugeLib {
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function setCentrifugeRecipient(
-        mapping (uint16 centrifugeId => bytes32 recipient) storage recipients,
-        uint16  centrifugeId,
-        bytes32 recipient
-    ) external {
-        emit CentrifugeRecipientSet(centrifugeId, recipients[centrifugeId] = recipient);
+    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
+        external
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        IParameters(_getControllerStorage().parameters).set(
+            _getCentrifugeRecipientKey(centrifugeId),
+            recipient
+        );
+
+        emit CentrifugeRecipientSet(centrifugeId, recipient);
     }
 
-    function cancelDepositRequest(address proxy, address rateLimits, address token) external {
-        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_DEPOSIT, token));
+    function cancelDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
 
         // NOTE: While the cancellation is pending, no new deposit request can be submitted.
-        IALMProxy(proxy).doCall(
+        IALMProxy($.proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, $.proxy))
         );
     }
 
-    function claimCancelDepositRequest(address proxy, address rateLimits, address token) external {
-        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_DEPOSIT, token));
+    function claimCancelDepositRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        ControllerStorage storage $ = _getControllerStorage();
 
-        IALMProxy(proxy).doCall(
+        _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
+
+        IALMProxy($.proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelDepositRequest,
-                (REQUEST_ID, proxy, proxy)
+                (REQUEST_ID, $.proxy, $.proxy)
             )
         );
     }
 
-    function cancelRedeemRequest(address proxy, address rateLimits, address token) external {
-        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_REDEEM, token));
+    function cancelRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
 
         // NOTE: While the cancellation is pending, no new redeem request can be submitted.
-        IALMProxy(proxy).doCall(
+        IALMProxy($.proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, $.proxy))
         );
     }
 
-    function claimCancelRedeemRequest(address proxy, address rateLimits, address token) external {
-        _rateLimitExists(IRateLimits(rateLimits), makeAddressKey(LIMIT_REDEEM, token));
+    function claimCancelRedeemRequest(address token)
+        external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        ControllerStorage storage $ = _getControllerStorage();
 
-        IALMProxy(proxy).doCall(
+        _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
+
+        IALMProxy($.proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelRedeemRequest,
-                (REQUEST_ID, proxy, proxy)
+                (REQUEST_ID, $.proxy, $.proxy)
             )
         );
     }
 
-    function transferShares(
-        address proxy,
-        address rateLimits,
-        address token,
-        uint16  centrifugeId,
-        uint128 amount,
-        mapping (uint16 centrifugeId => bytes32 recipient) storage recipients
-    ) external {
-        IRateLimits(rateLimits).triggerRateLimitDecrease(
+    function transferShares(address token, uint128 amount, uint16 centrifugeId)
+        external
+        payable
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressUint16Key(LIMIT_TRANSFER, token, centrifugeId),
             amount
         );
 
-        bytes32 recipient = recipients[centrifugeId];
+        bytes32 recipient = IParameters($.parameters).get(_getCentrifugeRecipientKey(centrifugeId));
 
-        require(recipient != 0, "CentrifugeLib/id-not-configured");
+        require(recipient != 0, "CentrifugeFacet/id-not-configured");
 
         address spoke = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
 
         // Initiate cross-chain transfer via the specific spoke address
-        IALMProxy(proxy).doCallWithValue{value: msg.value}(
+        IALMProxy($.proxy).doCallWithValue{value: msg.value}(
             spoke,
             abi.encodeCall(
                 ISpokeLike.crosschainTransferShares,
@@ -162,13 +190,34 @@ library CentrifugeLib {
     }
 
     /**********************************************************************************************/
+    /*** External view/pure functions                                                           ***/
+    /**********************************************************************************************/
+
+    function centrifugeRecipients(uint16 centrifugeId) external view returns (bytes32) {
+        return IParameters(_getControllerStorage().parameters).get(
+            _getCentrifugeRecipientKey(centrifugeId)
+        );
+    }
+
+    /**********************************************************************************************/
     /*** Internal view/pure functions                                                           ***/
     /**********************************************************************************************/
 
-    function _rateLimitExists(IRateLimits rateLimits, bytes32 key) internal view {
+    function _rateLimitExists(address rateLimits, bytes32 key) internal view {
         require(
-            rateLimits.getRateLimitData(key).maxAmount > 0,
-            "CentrifugeLib/invalid-action"
+            IRateLimits(rateLimits).getRateLimitData(key).maxAmount > 0,
+            "CentrifugeFacet/invalid-action"
+        );
+    }
+
+    function _getCentrifugeRecipientKey(uint16 centrifugeId)
+        internal
+        pure
+        returns (string memory)
+    {
+        return combineKeyComponents(
+            CENTRIFUGE_RECIPIENT_PREFIX,
+            uint256ToKeyComponent(uint256(centrifugeId))
         );
     }
 

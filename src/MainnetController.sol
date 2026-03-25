@@ -10,7 +10,6 @@ import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
 import { AaveLib }          from "./libraries/AaveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
-import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
 import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { FarmLib }          from "./libraries/FarmLib.sol";
@@ -80,7 +79,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_7540_REDEEM             = ERC7540Lib.LIMIT_REDEEM;
     bytes32 public LIMIT_AAVE_DEPOSIT            = AaveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_AAVE_WITHDRAW           = AaveLib.LIMIT_WITHDRAW;
-    bytes32 public LIMIT_CENTRIFUGE_TRANSFER     = CentrifugeLib.LIMIT_TRANSFER;
     bytes32 public LIMIT_CURVE_DEPOSIT           = CurveLib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_CURVE_SWAP              = CurveLib.LIMIT_SWAP;
     bytes32 public LIMIT_CURVE_WITHDRAW          = CurveLib.LIMIT_WITHDRAW;
@@ -139,8 +137,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     mapping(uint32 destinationDomain       => bytes32 mintRecipient)       public mintRecipients;  // CCTP mint recipients
     mapping(uint32 destinationEndpointId   => bytes32 layerZeroRecipient)  public layerZeroRecipients;
-    mapping(uint16 destinationCentrifugeId => bytes32 centrifugeRecipient) public centrifugeRecipients;
-
     // OTC swap (also uses maxSlippages)
     mapping(address exchange => OTCLib.OTC otcData) public otcs;
 
@@ -333,14 +329,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             maxTickSpacing,
             uniswapV4TickLimits
         );
-    }
-
-    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        CentrifugeLib.setCentrifugeRecipient(centrifugeRecipients, centrifugeId, recipient);
     }
 
     /**********************************************************************************************/
@@ -1024,64 +1012,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
     function claimRedeemERC7540(address token) external nonReentrant onlyRole(RELAYER) {
         ERC7540Lib.claimRedeem(address(proxy), address(rateLimits), token);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Centrifuge functions                                                           ***/
-    /**********************************************************************************************/
-
-    // NOTE: These cancellation methods are compatible with ERC-7887
-
-    function cancelCentrifugeDepositRequest(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CentrifugeLib.cancelDepositRequest(address(proxy), address(rateLimits), token);
-    }
-
-    function claimCentrifugeCancelDepositRequest(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CentrifugeLib.claimCancelDepositRequest(address(proxy), address(rateLimits), token);
-    }
-
-    function cancelCentrifugeRedeemRequest(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CentrifugeLib.cancelRedeemRequest(address(proxy), address(rateLimits), token);
-    }
-
-    function claimCentrifugeCancelRedeemRequest(address token)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CentrifugeLib.claimCancelRedeemRequest(address(proxy), address(rateLimits), token);
-    }
-
-    function transferSharesCentrifuge(
-        address token,
-        uint128 amount,
-        uint16  centrifugeId
-    )
-        external
-        payable
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CentrifugeLib.transferShares({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            token        : token,
-            centrifugeId : centrifugeId,
-            amount       : amount,
-            recipients   : centrifugeRecipients
-        });
     }
 
 }

@@ -10,10 +10,12 @@ import { ForeignController }                           from "../../../src/Foreig
 import { MainnetController }                           from "../../../src/MainnetController.sol";
 import { Parameters }                                  from "../../../src/Parameters.sol";
 import { ParameterHelpers }                            from "../../../src/ParameterHelpers.sol";
+import { ICentrifugeFacet }                            from "../../../src/interfaces/facets/ICentrifugeFacet.sol";
 import { IERC4626Facet }                               from "../../../src/interfaces/facets/IERC4626Facet.sol";
 
-import { CCTPLib }       from "../../../src/libraries/CCTPLib.sol";
-import { ERC4626Facet } from "../../../src/libraries/ERC4626Lib.sol";
+import { CCTPLib }         from "../../../src/libraries/CCTPLib.sol";
+import { CentrifugeFacet } from "../../../src/libraries/CentrifugeLib.sol";
+import { ERC4626Facet }    from "../../../src/libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
 import { UniswapV3Lib } from "../../../src/libraries/UniswapV3Lib.sol";
@@ -64,6 +66,7 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
         // Facet wiring
 
+        _wireCentrifugeFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
@@ -85,12 +88,90 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
         );
     }
 
+    // NOTE: Only wires admin-relevant CentrifugeFacet functions for unit tests.
+    function _wireCentrifugeFacet() internal {
+        address centrifugeFacet = address(new CentrifugeFacet());
+
+        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setCentrifugeRecipient()
+        mainnetController.setFacet(
+            IMainnetControllerFull.setCentrifugeRecipient.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.setCentrifugeRecipient.selector
+        );
+
+        // Controller.centrifugeRecipients() -> CentrifugeFacet.centrifugeRecipients()
+        mainnetController.setFacet(
+            IMainnetControllerFull.centrifugeRecipients.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.centrifugeRecipients.selector
+        );
+    }
+
     function _setControllerEntered() internal {
         vm.store(address(mainnetController), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
     }
 
     function _assertReentrancyGuardWrittenToTwice() internal {
         _assertReentrancyGuardWrittenToTwice(address(mainnetController));
+    }
+
+}
+
+contract MainnetController_Admin_SetCentrifugeRecipient_Tests is MainnetController_Admin_TestBase {
+
+    address internal immutable _unauthorized = makeAddr("unauthorized");
+
+    bytes32 internal centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
+    bytes32 internal centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
+
+    function test_setCentrifugeRecipient_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            _unauthorized,
+            DEFAULT_ADMIN_ROLE
+        ));
+
+        vm.prank(_unauthorized);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+    }
+
+    function test_setCentrifugeRecipient() external {
+        assertEq(mainnetController.centrifugeRecipients(1), bytes32(0));
+        assertEq(mainnetController.centrifugeRecipients(2), bytes32(0));
+
+        vm.expectEmit(address(mainnetController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient1);
+
+        vm.prank(admin);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
+
+        assertEq(mainnetController.centrifugeRecipients(1), centrifugeRecipient1);
+
+        vm.expectEmit(address(mainnetController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(2, centrifugeRecipient2);
+
+        vm.prank(admin);
+        mainnetController.setCentrifugeRecipient(2, centrifugeRecipient2);
+
+        assertEq(mainnetController.centrifugeRecipients(2), centrifugeRecipient2);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient2);
+
+        vm.prank(admin);
+        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient2);
+
+        assertEq(mainnetController.centrifugeRecipients(1), centrifugeRecipient2);
+
+        _assertReentrancyGuardWrittenToTwice();
     }
 
 }
@@ -1068,6 +1149,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
 
         // Facet wiring
 
+        _wireCentrifugeFacet();
         _wireERC4626Facet();
 
         vm.stopPrank();
@@ -1086,6 +1168,25 @@ contract ForeignController_Admin_Tests is UnitTestBase {
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.maxExchangeRates.selector
+        );
+    }
+
+    // NOTE: Only wires admin-relevant CentrifugeFacet functions for unit tests.
+    function _wireCentrifugeFacet() internal {
+        address centrifugeFacet = address(new CentrifugeFacet());
+
+        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setCentrifugeRecipient()
+        foreignController.setFacet(
+            IForeignControllerFull.setCentrifugeRecipient.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.setCentrifugeRecipient.selector
+        );
+
+        // Controller.centrifugeRecipients() -> CentrifugeFacet.centrifugeRecipients()
+        foreignController.setFacet(
+            IForeignControllerFull.centrifugeRecipients.selector,
+            centrifugeFacet,
+            ICentrifugeFacet.centrifugeRecipients.selector
         );
     }
 
@@ -1710,6 +1811,59 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         foreignController.setMerklDistributor(merklDistributor);
 
         assertEq(address(foreignController.merklDistributor()), merklDistributor);
+    }
+
+    function test_setCentrifugeRecipient_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        foreignController.setCentrifugeRecipient(1, mintRecipient1);
+    }
+
+    function test_setCentrifugeRecipient_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            _unauthorized,
+            DEFAULT_ADMIN_ROLE
+        ));
+
+        vm.prank(_unauthorized);
+        foreignController.setCentrifugeRecipient(1, mintRecipient1);
+    }
+
+    function test_setCentrifugeRecipient() external {
+        bytes32 centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
+        bytes32 centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
+
+        assertEq(foreignController.centrifugeRecipients(1), bytes32(0));
+        assertEq(foreignController.centrifugeRecipients(2), bytes32(0));
+
+        vm.expectEmit(address(foreignController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient1);
+
+        vm.prank(admin);
+        foreignController.setCentrifugeRecipient(1, centrifugeRecipient1);
+
+        assertEq(foreignController.centrifugeRecipients(1), centrifugeRecipient1);
+
+        vm.expectEmit(address(foreignController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(2, centrifugeRecipient2);
+
+        vm.prank(admin);
+        foreignController.setCentrifugeRecipient(2, centrifugeRecipient2);
+
+        assertEq(foreignController.centrifugeRecipients(2), centrifugeRecipient2);
+
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient2);
+
+        vm.prank(admin);
+        foreignController.setCentrifugeRecipient(1, centrifugeRecipient2);
+
+        assertEq(foreignController.centrifugeRecipients(1), centrifugeRecipient2);
+
+        _assertReentrancyGuardWrittenToTwice();
     }
 
 }
