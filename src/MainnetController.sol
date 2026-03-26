@@ -8,12 +8,10 @@ import { Ethereum } from "../lib/spark-address-registry/src/Ethereum.sol";
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { CCTPLib }       from "./libraries/CCTPLib.sol";
 import { CentrifugeLib } from "./libraries/CentrifugeLib.sol";
 import { CurveLib }      from "./libraries/CurveLib.sol";
 import { LayerZeroLib }  from "./libraries/LayerZeroLib.sol";
 import { OTCLib }        from "./libraries/OTCLib.sol";
-import { PendleLib }     from "./libraries/PendleLib.sol";
 import { UniswapV3Lib }  from "./libraries/UniswapV3Lib.sol";
 
 import { Controller } from "./Controller.sol";
@@ -41,13 +39,9 @@ contract MainnetController is Controller, AccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event CCTPMaxFeeCapSet(uint256 maxFeeCap);
-
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
-
-    event PendleRouterSet(address indexed pendleRouter);
 
     event UniswapV3SwapRouterSet(address indexed swapRouter);
 
@@ -69,9 +63,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     bytes32 public LIMIT_UNISWAP_V3_DEPOSIT  = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public LIMIT_UNISWAP_V3_SWAP     = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public LIMIT_UNISWAP_V3_WITHDRAW = UniswapV3Lib.LIMIT_WITHDRAW;
-    bytes32 public LIMIT_USDC_TO_CCTP        = CCTPLib.LIMIT_TO_CCTP;
-    bytes32 public LIMIT_USDC_TO_DOMAIN      = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public LIMIT_PENDLE_PT_REDEEM    = PendleLib.LIMIT_REDEEM;
 
     address public buffer;
 
@@ -89,17 +80,12 @@ contract MainnetController is Controller, AccessControlEnumerable {
     address public usdc;
     address public ustb;
     address public susde;
-    address public pendleRouter;
 
     address public uniswapV3PositionManager;
     address public uniswapV3Router;
 
-    // NOTE : Nominal maxFee cap for all cctp supported domains
-    uint256 public cctpMaxFeeCap;
-
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
-    mapping(uint32 destinationDomain       => bytes32 mintRecipient)       public mintRecipients;  // CCTP mint recipients
     mapping(uint32 destinationEndpointId   => bytes32 layerZeroRecipient)  public layerZeroRecipients;
     mapping(uint16 destinationCentrifugeId => bytes32 centrifugeRecipient) public centrifugeRecipients;
 
@@ -149,22 +135,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
     /*** Admin functions                                                                        ***/
     /**********************************************************************************************/
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        emit CCTPMaxFeeCapSet(cctpMaxFeeCap = maxFeeCap);
-    }
-
-    function setMintRecipient(uint32 destinationDomain, bytes32 recipient)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        CCTPLib.setMintRecipient(mintRecipients, recipient, destinationDomain);
-    }
-
     function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
         external
         nonReentrant
@@ -182,15 +152,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
 
         maxSlippages[pool] = maxSlippage;
         emit MaxSlippageSet(pool, maxSlippage);
-    }
-
-    function setPendleRouter(address pendleRouter_)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        pendleRouter = pendleRouter_;
-        emit PendleRouterSet(pendleRouter_);
     }
 
     function setOTCBuffer(address exchange, address otcBuffer)
@@ -428,25 +389,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
         });
     }
 
-    /**********************************************************************************************/
-    /*** Relayer Pendle functions                                                               ***/
-    /**********************************************************************************************/
-
-    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        PendleLib.redeem({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            market       : pendleMarket,
-            router       : pendleRouter,
-            pyAmountIn   : pyAmountIn,
-            minAmountOut : minAmountOut
-        });
-    }
-
     // NOTE: !!! This function was deployed without integration testing !!!
     //       KEEP RATE LIMIT AT ZERO until LayerZero dependencies are live and
     //       all functionality has been thoroughly integration tested.
@@ -467,46 +409,6 @@ contract MainnetController is Controller, AccessControlEnumerable {
             amount                : amount,
             destinationEndpointId : destinationEndpointId,
             layerZeroRecipients   : layerZeroRecipients
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer bridging functions                                                             ***/
-    /**********************************************************************************************/
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CCTPLib.transfer({
-            proxy             : address(proxy),
-            rateLimits        : address(rateLimits),
-            cctp              : cctp,
-            usdc              : usdc,
-            destinationDomain : destinationDomain,
-            usdcAmount        : usdcAmount,
-            maxFee            : CCTPLib.MAX_FEE,
-            cctpMaxFeeCap     : cctpMaxFeeCap,
-            mintRecipients    : mintRecipients
-        });
-    }
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CCTPLib.transfer({
-            proxy             : address(proxy),
-            rateLimits        : address(rateLimits),
-            cctp              : cctp,
-            usdc              : usdc,
-            destinationDomain : destinationDomain,
-            usdcAmount        : usdcAmount,
-            maxFee            : maxFee,
-            cctpMaxFeeCap     : cctpMaxFeeCap,
-            mintRecipients    : mintRecipients
         });
     }
 
