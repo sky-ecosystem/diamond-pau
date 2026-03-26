@@ -45,22 +45,18 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     /**********************************************************************************************/
 
     /// @custom:storage-location erc7201:sky.pau.storage.CCTPFacet
-    struct CCTPFacetStorage {
-        uint256 cctpMaxFeeCap;
-        mapping(uint32 => bytes32) mintRecipients;
+    struct FacetStorage {
+        uint256 maxFeeCap;
+        mapping(uint32 destinationDomain => bytes32 mintRecipient) mintRecipients;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CCTPFacet")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 internal constant CCTPFACET_STORAGE_LOCATION =
+    bytes32 internal constant FACET_STORAGE_LOCATION =
         0xd2297bc3b0b57b4cc880bf81d7f396bae29a02c9b84df07ff5f86bd65479da00;
 
-    function _getCCTPFacetStorage()
-        internal
-        pure
-        returns (CCTPFacetStorage storage $)
-    {
+    function _getFacetStorage() internal pure returns (FacetStorage storage $) {
         assembly {
-            $.slot := CCTPFACET_STORAGE_LOCATION
+            $.slot := FACET_STORAGE_LOCATION
         }
     }
 
@@ -87,12 +83,12 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap)
+    function setMaxFeeCap(uint256 maxFeeCap)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        emit CCTPMaxFeeCapSet(_getCCTPFacetStorage().cctpMaxFeeCap = maxFeeCap);
+        emit CCTPMaxFeeCapSet(_getFacetStorage().maxFeeCap = maxFeeCap);
     }
 
     function setMintRecipient(uint32 destinationDomain, bytes32 recipient)
@@ -100,9 +96,9 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        emit MintRecipientSet(
+        emit CCTPMintRecipientSet(
             destinationDomain,
-            _getCCTPFacetStorage().mintRecipients[destinationDomain] = recipient
+            _getFacetStorage().mintRecipients[destinationDomain] = recipient
         );
     }
 
@@ -126,12 +122,12 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     /*** Public view/pure functions                                                             ***/
     /**********************************************************************************************/
 
-    function cctpMaxFeeCap() public view returns (uint256) {
-        return _getCCTPFacetStorage().cctpMaxFeeCap;
+    function getMaxFeeCap() external view returns (uint256) {
+        return _getFacetStorage().maxFeeCap;
     }
 
-    function mintRecipients(uint32 destinationDomain) public view returns (bytes32) {
-        return _getCCTPFacetStorage().mintRecipients[destinationDomain];
+    function getMintRecipient(uint32 destinationDomain) external view returns (bytes32) {
+        return _getFacetStorage().mintRecipients[destinationDomain];
     }
 
     /**********************************************************************************************/
@@ -141,21 +137,26 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     function _transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain) internal {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        _decreaseRateLimit($.rateLimits, LIMIT_TO_CCTP, usdcAmount);
+        address proxy      = $.proxy;
+        address rateLimits = $.rateLimits;
+
+        _decreaseRateLimit(rateLimits, LIMIT_TO_CCTP, usdcAmount);
 
         _decreaseRateLimit(
-            $.rateLimits,
+            rateLimits,
             makeUint32Key(LIMIT_TO_DOMAIN, destinationDomain),
             usdcAmount
         );
 
-        bytes32 recipient = mintRecipients(destinationDomain);
+        FacetStorage storage fs = _getFacetStorage();
 
-        require(recipient != 0,            "CCTPFacet/domain-not-configured");
-        require(maxFee <= cctpMaxFeeCap(), "CCTPFacet/max-fee-exceeds-cap");
+        bytes32 recipient = fs.mintRecipients[destinationDomain];
+
+        require(recipient != 0,         "CCTPFacet/domain-not-configured");
+        require(maxFee <= fs.maxFeeCap, "CCTPFacet/max-fee-exceeds-cap");
 
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
-        _approve(usdc, $.proxy, cctp, usdcAmount);
+        _approve(usdc, proxy, cctp, usdcAmount);
 
         // If amount is larger than limit it must be split into multiple calls.
         uint256 burnLimit =
@@ -169,7 +170,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
             require(maxFee < amount, "CCTPFacet/incorrect-max-fee");
 
             _initiateTransfer(
-                $.proxy,
+                proxy,
                 amount,
                 maxFee,
                 recipient,

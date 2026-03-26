@@ -16,7 +16,7 @@ interface ICCTPFacet is IFacetBase {
         uint256         usdcAmount
     );
 
-    event MintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
+    event CCTPMintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
 
     event CCTPMaxFeeCapSet(uint256 maxFeeCap);
 
@@ -24,7 +24,7 @@ interface ICCTPFacet is IFacetBase {
     /*** Admin functions                                                                        ***/
     /**********************************************************************************************/
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
+    function setMaxFeeCap(uint256 maxFeeCap) external;
 
     function setMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
 
@@ -45,9 +45,9 @@ interface ICCTPFacet is IFacetBase {
 
     function usdc() external view returns (address);
 
-    function cctpMaxFeeCap() external view returns (uint256);
+    function getMaxFeeCap() external view returns (uint256);
 
-    function mintRecipients(uint32 destinationDomain) external view returns (bytes32);
+    function getMintRecipient(uint32 destinationDomain) external view returns (bytes32);
 
     function LIMIT_TO_CCTP() external pure returns (bytes32);
 

@@ -211,17 +211,17 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     /*** CCTPFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function cctpMaxFeeCap() external view virtual returns (uint256);
+    function getCCTPMaxFeeCap() external view virtual returns (uint256);
 
     function LIMIT_USDC_TO_CCTP() external pure virtual returns (bytes32);
 
     function LIMIT_USDC_TO_DOMAIN() external pure virtual returns (bytes32);
 
-    function mintRecipients(uint32 destinationDomain) external view virtual returns (bytes32);
+    function getCCTPMintRecipient(uint32 destinationDomain) external view virtual returns (bytes32);
 
     function setCCTPMaxFeeCap(uint256 maxFeeCap) external virtual;
 
-    function setMintRecipient(uint32 destinationDomain, bytes32 recipient) external virtual;
+    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external virtual;
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external virtual;
 

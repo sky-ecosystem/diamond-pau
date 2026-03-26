@@ -315,7 +315,7 @@ abstract contract ForkTestBase is DssTest {
         }
 
         for (uint256 i; i < mintRecipients.length; ++i) {
-            mainnetController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
+            mainnetController.setCCTPMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
 
         IVaultLike(ilkInst.vault).rely(address(almProxy));
@@ -394,32 +394,32 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setCCTPMaxFeeCap()
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
         mainnetController.setDispatch(
             IMainnetControllerFull.setCCTPMaxFeeCap.selector,
             cctpFacet,
-            ICCTPFacet.setCCTPMaxFeeCap.selector
+            ICCTPFacet.setMaxFeeCap.selector
         );
 
-        // Controller.setMintRecipient() -> CCTPFacet.setMintRecipient()
+        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
         mainnetController.setDispatch(
-            IMainnetControllerFull.setMintRecipient.selector,
+            IMainnetControllerFull.setCCTPMintRecipient.selector,
             cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        // Controller.cctpMaxFeeCap() -> CCTPFacet.cctpMaxFeeCap()
+        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.getMaxFeeCap()
         mainnetController.setDispatch(
-            IMainnetControllerFull.cctpMaxFeeCap.selector,
+            IMainnetControllerFull.getCCTPMaxFeeCap.selector,
             cctpFacet,
-            ICCTPFacet.cctpMaxFeeCap.selector
+            ICCTPFacet.getMaxFeeCap.selector
         );
 
-        // Controller.mintRecipients() -> CCTPFacet.mintRecipients()
+        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
         mainnetController.setDispatch(
-            IMainnetControllerFull.mintRecipients.selector,
+            IMainnetControllerFull.getCCTPMintRecipient.selector,
             cctpFacet,
-            ICCTPFacet.mintRecipients.selector
+            ICCTPFacet.getMintRecipient.selector
         );
 
         // Controller.transferUSDCToCCTP(uint256,uint32) -> CCTPFacet.transfer(uint256,uint32)
