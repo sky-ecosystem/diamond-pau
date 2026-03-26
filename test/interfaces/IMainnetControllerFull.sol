@@ -242,7 +242,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external virtual;
 
-    function transferUSDCToCCTP(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+    function transferUSDCToCCTPWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
         external virtual;
     
     /**********************************************************************************************/

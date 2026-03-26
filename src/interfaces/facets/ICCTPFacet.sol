@@ -34,7 +34,7 @@ interface ICCTPFacet is IFacetBase {
 
     function transfer(uint256 usdcAmount, uint32 destinationDomain) external;
 
-    function transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+    function transferWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
         external;
 
     /**********************************************************************************************/

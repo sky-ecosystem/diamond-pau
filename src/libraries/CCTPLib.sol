@@ -110,7 +110,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         _transfer(usdcAmount, MAX_FEE, destinationDomain);
     }
 
-    function transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+    function transferWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
         external
         nonReentrant
         onlyRole(RELAYER_ROLE)

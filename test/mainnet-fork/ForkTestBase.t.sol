@@ -435,16 +435,16 @@ abstract contract ForkTestBase is DssTest {
 
         // Controller.transferUSDCToCCTP(uint256,uint32) -> CCTPFacet.transfer(uint256,uint32)
         mainnetController.setDispatch(
-            bytes4(keccak256("transferUSDCToCCTP(uint256,uint32)")),
+            IMainnetControllerFull.transferUSDCToCCTP.selector,
             cctpFacet,
-            bytes4(keccak256("transfer(uint256,uint32)"))
+            ICCTPFacet.transfer.selector
         );
 
-        // Controller.transferUSDCToCCTP(uint256,uint256,uint32) -> CCTPFacet.transfer(uint256,uint256,uint32)
+        // Controller.transferUSDCToCCTPWithFee(uint256,uint256,uint32) -> CCTPFacet.transferWithFee(uint256,uint256,uint32)
         mainnetController.setDispatch(
-            bytes4(keccak256("transferUSDCToCCTP(uint256,uint256,uint32)")),
+            IMainnetControllerFull.transferUSDCToCCTPWithFee.selector,
             cctpFacet,
-            bytes4(keccak256("transfer(uint256,uint256,uint32)"))
+            ICCTPFacet.transferWithFee.selector
         );
 
         // Controller.LIMIT_USDC_TO_CCTP() -> CCTPFacet.LIMIT_TO_CCTP()
