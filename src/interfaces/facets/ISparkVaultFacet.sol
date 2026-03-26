@@ -3,18 +3,18 @@ pragma solidity ^0.8.21;
 
 import { IFacetBase } from "./IFacetBase.sol";
 
-interface ITransferAssetFacet is IFacetBase {
+interface ISparkVaultFacet is IFacetBase {
 
     /**********************************************************************************************/
     /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    function transfer(address asset, address destination, uint256 amount) external;
+    function take(address sparkVault, uint256 assetAmount) external;
 
     /**********************************************************************************************/
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_TRANSFER() external pure returns (bytes32);
+    function LIMIT_TAKE() external pure returns (bytes32);
 
 }

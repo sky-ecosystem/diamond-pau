@@ -3,18 +3,22 @@ pragma solidity ^0.8.21;
 
 import { IFacetBase } from "./IFacetBase.sol";
 
-interface ITransferAssetFacet is IFacetBase {
+interface IFarmFacet is IFacetBase {
 
     /**********************************************************************************************/
     /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    function transfer(address asset, address destination, uint256 amount) external;
+    function deposit(address farm, uint256 amount) external;
+
+    function withdraw(address farm, uint256 amount) external;
 
     /**********************************************************************************************/
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_TRANSFER() external pure returns (bytes32);
+    function LIMIT_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_WITHDRAW() external pure returns (bytes32);
 
 }

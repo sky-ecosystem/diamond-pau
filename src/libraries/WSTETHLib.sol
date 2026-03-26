@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IALMProxy }   from "../interfaces/IALMProxy.sol";
-import { IRateLimits } from "../interfaces/IRateLimits.sol";
+import { IALMProxy }    from "../interfaces/IALMProxy.sol";
+import { IRateLimits }  from "../interfaces/IRateLimits.sol";
+import { IWSTETHFacet } from "../interfaces/facets/IWSTETHFacet.sol";
+
+import { FacetBase } from "./FacetBase.sol";
 
 interface IERC20Like {
 
@@ -32,44 +35,62 @@ interface IWSTETHLike {
 
 }
 
-library WSTETHLib {
+contract WSTETHFacet is IWSTETHFacet, FacetBase {
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_DEPOSIT          = keccak256("LIMIT_WSTETH_DEPOSIT");
     bytes32 public constant LIMIT_REQUEST_WITHDRAW = keccak256("LIMIT_WSTETH_REQUEST_WITHDRAW");
 
     /**********************************************************************************************/
+    /*** Declarations                                                                           ***/
+    /**********************************************************************************************/
+
+    address public immutable weth;
+    address public immutable withdrawQueue;
+    address public immutable wsteth;
+
+    /**********************************************************************************************/
+    /*** Constructor                                                                            ***/
+    /**********************************************************************************************/
+
+    constructor(address weth_, address withdrawQueue_, address wsteth_) {
+        weth          = weth_;
+        withdrawQueue = withdrawQueue_;
+        wsteth        = wsteth_;
+    }
+
+    /**********************************************************************************************/
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
 
-    function deposit(
-        address proxy,
-        address rateLimits,
-        address weth,
-        address wsteth,
-        uint256 amount
-    )
-        external
-    {
-        _decreaseRateLimit(rateLimits, LIMIT_DEPOSIT, amount);
+    function deposit(uint256 amount) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        _decreaseRateLimit($.rateLimits, LIMIT_DEPOSIT, amount);
+
+        address proxy = $.proxy;
 
         IALMProxy(proxy).doCall(weth, abi.encodeCall(IWETHLike.withdraw, (amount)));
 
         IALMProxy(proxy).doCallWithValue(wsteth, "", amount);
     }
 
-    function requestWithdraw(
-        address proxy,
-        address rateLimits,
-        address wsteth,
-        address withdrawQueue,
-        uint256 amountToRedeem
-    )
+    function requestWithdraw(uint256 amountToRedeem)
         external
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
         returns (uint256[] memory requestIds)
     {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
         uint256 stethAmount = IWSTETHLike(wsteth).getStETHByWstETH(amountToRedeem);
 
-        _decreaseRateLimit(rateLimits, LIMIT_REQUEST_WITHDRAW, stethAmount);
+        _decreaseRateLimit($.rateLimits, LIMIT_REQUEST_WITHDRAW, stethAmount);
+
+        address proxy = $.proxy;
 
         IALMProxy(proxy).doCall(
             wsteth,
@@ -91,22 +112,18 @@ library WSTETHLib {
         );
     }
 
-    function claimWithdrawal(
-        address proxy,
-        address withdrawQueue,
-        address weth,
-        uint256 requestId
-    )
-        external
-    {
-        uint256 initialETHBalance = address(proxy).balance;
+    function claimWithdrawal(uint256 requestId) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        address proxy             = $.proxy;
+        uint256 initialETHBalance = proxy.balance;
 
         IALMProxy(proxy).doCall(
             withdrawQueue,
             abi.encodeCall(IWithdrawalQueueLike.claimWithdrawal, (requestId))
         );
 
-        IALMProxy(proxy).doCallWithValue(weth, "", address(proxy).balance - initialETHBalance);
+        IALMProxy(proxy).doCallWithValue(weth, "", proxy.balance - initialETHBalance);
     }
 
     function _decreaseRateLimit(address rateLimits, bytes32 key, uint256 amount) internal {

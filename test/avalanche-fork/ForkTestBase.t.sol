@@ -14,13 +14,17 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPv2Forwarder as CCTPForwarder } from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
 
+import { IERC7540Facet } from "../../src/interfaces/facets/IERC7540Facet.sol";
+
+import { ERC7540Facet } from "../../src/libraries/ERC7540Lib.sol";
+
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
-import { Parameters }        from "../../src/Parameters.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 
-import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
 contract MockSSROracle {
 
@@ -65,11 +69,10 @@ contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    AccessControls    accessControls;
-    ALMProxy          almProxy;
-    ForeignController foreignController;
-    Parameters        parameters;
-    RateLimits        rateLimits;
+    AccessControls         accessControls;
+    ALMProxy               almProxy;
+    IForeignControllerFull foreignController;
+    RateLimits             rateLimits;
 
     /**********************************************************************************************/
     /*** Addresses for testing                                                                  ***/
@@ -118,22 +121,29 @@ contract ForkTestBase is Test {
         rateLimits = new RateLimits(GROVE_EXECUTOR);
 
         accessControls = new AccessControls(GROVE_EXECUTOR);
-        parameters     = new Parameters(GROVE_EXECUTOR);
 
-        foreignController = new ForeignController({
+        foreignController = IForeignControllerFull(payable(new ForeignController({
             admin_          : GROVE_EXECUTOR,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls),
-            parameters_     : address(parameters),
             psm_            : address(psmAvalanche),
             usdc_           : USDC_AVALANCHE,
             cctp_           : CCTP_TOKEN_MESSENGER
-        });
+        })));
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = foreignController.FREEZER();
         RELAYER    = foreignController.RELAYER();
+
+        vm.startPrank(GROVE_EXECUTOR);
+
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
+
+        // Facet wiring
+        _wireERC7540Facet();
+
+        vm.stopPrank();
 
         /*** Step 3: Configure ALM system through Grove governance (Grove spell payload) ***/
 
@@ -167,6 +177,58 @@ contract ForkTestBase is Test {
     // Default configuration for the fork, can be overridden in inheriting tests
     function _getBlock() internal virtual pure returns (uint256) {
         return 65896755;  // July 22, 2025
+    }
+
+    /**********************************************************************************************/
+    /*** Facet wiring helpers                                                                   ***/
+    /**********************************************************************************************/
+
+    function _wireERC7540Facet() internal {
+        address erc7540Facet = address(new ERC7540Facet());
+
+        vm.label(erc7540Facet, "ERC7540Facet");
+
+        // "Controller.requestDepositERC7540()" -> "ERC7540Facet.requestDeposit()"
+        foreignController.setDispatch(
+            IForeignControllerFull.requestDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestDeposit.selector
+        );
+
+        // "Controller.claimDepositERC7540()" -> "ERC7540Facet.claimDeposit()"
+        foreignController.setDispatch(
+            IForeignControllerFull.claimDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimDeposit.selector
+        );
+
+        // "Controller.requestRedeemERC7540()" -> "ERC7540Facet.requestRedeem()"
+        foreignController.setDispatch(
+            IForeignControllerFull.requestRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestRedeem.selector
+        );
+
+        // "Controller.claimRedeemERC7540()" -> "ERC7540Facet.claimRedeem()"
+        foreignController.setDispatch(
+            IForeignControllerFull.claimRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimRedeem.selector
+        );
+
+        // "Controller.LIMIT_7540_DEPOSIT()" -> "ERC7540Facet.LIMIT_DEPOSIT()"
+        foreignController.setDispatch(
+            IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_7540_REDEEM()" -> "ERC7540Facet.LIMIT_REDEEM()"
+        foreignController.setDispatch(
+            IForeignControllerFull.LIMIT_7540_REDEEM.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_REDEEM.selector
+        );
     }
 
 }
