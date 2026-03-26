@@ -3,14 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IALMProxy }     from "../interfaces/IALMProxy.sol";
 import { IERC4626Facet } from "../interfaces/facets/IERC4626Facet.sol";
-import { IParameters }   from "../interfaces/IParameters.sol";
 import { IRateLimits }   from "../interfaces/IRateLimits.sol";
 
-import { ApproveLib }                                  from "./ApproveLib.sol";
-import { FacetBase }                                   from "./FacetBase.sol";
-import { addressToKeyComponent, combineKeyComponents } from "../ParameterKeys.sol";
-import { ParameterHelpers }                            from "../ParameterHelpers.sol";
-import { makeAddressKey }                              from "../RateLimitHelpers.sol";
+import { makeAddressKey } from "../RateLimitHelpers.sol";
+
+import { ApproveLib } from "./ApproveLib.sol";
+import { FacetBase }  from "./FacetBase.sol";
 
 interface IERC4626Like {
 
@@ -31,11 +29,31 @@ interface IERC4626Like {
 contract ERC4626Facet is IERC4626Facet, FacetBase {
 
     /**********************************************************************************************/
-    /*** Constants                                                                              ***/
+    /*** ERC4626Facet Storage Domain                                                            ***/
     /**********************************************************************************************/
 
-    string public constant DOMAIN                   = "sky.pau.erc4626";
-    string public constant MAX_EXCHANGE_RATE_PREFIX = "maxExchangeRate";
+    /// @custom:storage-location erc7201:sky.pau.storage.ERC4626Facet
+    struct ERC4626FacetStorage {
+        mapping(address => uint256) maxExchangeRates;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.ERC4626Facet")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant ERC4626FACET_STORAGE_LOCATION =
+        0x2d0a40172b84813d0e50253809f3803008e18680eae5581bd5ffdf3dfdf76f00;
+
+    function _getERC4626FacetStorage()
+        internal
+        pure
+        returns (ERC4626FacetStorage storage $)
+    {
+        assembly {
+            $.slot := ERC4626FACET_STORAGE_LOCATION
+        }
+    }
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_4626_DEPOSIT");
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_4626_WITHDRAW");
@@ -55,10 +73,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
 
         uint256 exchangeRate = _getExchangeRate(shares, maxExpectedAssets);
 
-        IParameters(_getControllerStorage().parameters).set(
-            _getMaxExchangeRateKey(token),
-            ParameterHelpers.fromUint256(exchangeRate)
-        );
+        _getERC4626FacetStorage().maxExchangeRates[token] = exchangeRate;
 
         emit MaxExchangeRateSet(token, exchangeRate);
     }
@@ -69,7 +84,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _decreaseRateLimit($.rateLimits, LIMIT_DEPOSIT, token, amount);
 
@@ -87,12 +102,8 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
 
         require(shares >= minSharesOut, "ERC4626Facet/min-shares-out-not-met");
 
-        uint256 maxExchangeRate = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxExchangeRateKey(token))
-        );
-
         require(
-            _getExchangeRate(shares, amount) <= maxExchangeRate,
+            _getExchangeRate(shares, amount) <= maxExchangeRates(token),
             "ERC4626Facet/exchange-rate-too-high"
         );
     }
@@ -103,7 +114,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _decreaseRateLimit($.rateLimits, LIMIT_WITHDRAW, token, amount);
 
@@ -128,7 +139,7 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 assets)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         // Redeem shares for assets from the token, decode the resulting assets.
         // Assumes proxy has adequate token shares.
@@ -147,13 +158,11 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** External view/pure functions                                                           ***/
+    /*** Public view/pure functions                                                             ***/
     /**********************************************************************************************/
 
-    function maxExchangeRates(address token) external view returns (uint256) {
-        return ParameterHelpers.toUint256(
-            IParameters(_getControllerStorage().parameters).get(_getMaxExchangeRateKey(token))
-        );
+    function maxExchangeRates(address token) public view returns (uint256) {
+        return _getERC4626FacetStorage().maxExchangeRates[token];
     }
 
     /**********************************************************************************************/
@@ -184,13 +193,6 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
         require(shares > 0, "ERC4626Facet/zero-shares");
 
         return (EXCHANGE_RATE_PRECISION * assets) / shares;
-    }
-
-    function _getMaxExchangeRateKey(address token) internal pure returns (string memory) {
-        return combineKeyComponents(
-            combineKeyComponents(DOMAIN, MAX_EXCHANGE_RATE_PREFIX),
-            addressToKeyComponent(token)
-        );
     }
 
 }

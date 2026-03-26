@@ -14,15 +14,17 @@ import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
 import { CCTPv2Forwarder as CCTPForwarder } from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
 
+import { ICentrifugeFacet } from "../../src/interfaces/facets/ICentrifugeFacet.sol";
+import { IERC7540Facet }    from "../../src/interfaces/facets/IERC7540Facet.sol";
+
+import { CentrifugeFacet } from "../../src/libraries/CentrifugeLib.sol";
+import { ERC7540Facet }    from "../../src/libraries/ERC7540Lib.sol";
+
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
-import { Parameters }        from "../../src/Parameters.sol";
-
-import { ICentrifugeFacet } from "../../src/interfaces/facets/ICentrifugeFacet.sol";
-
-import { CentrifugeFacet } from "../../src/libraries/CentrifugeLib.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -72,7 +74,6 @@ contract ForkTestBase is Test {
     AccessControls         accessControls;
     ALMProxy               almProxy;
     IForeignControllerFull foreignController;
-    Parameters             parameters;
     RateLimits             rateLimits;
 
     /**********************************************************************************************/
@@ -122,14 +123,12 @@ contract ForkTestBase is Test {
         rateLimits = new RateLimits(GROVE_EXECUTOR);
 
         accessControls = new AccessControls(GROVE_EXECUTOR);
-        parameters     = new Parameters(GROVE_EXECUTOR);
 
         foreignController = IForeignControllerFull(payable(new ForeignController({
             admin_          : GROVE_EXECUTOR,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls),
-            parameters_     : address(parameters),
             psm_            : address(psmAvalanche),
             usdc_           : USDC_AVALANCHE,
             cctp_           : CCTP_TOKEN_MESSENGER
@@ -138,6 +137,16 @@ contract ForkTestBase is Test {
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = foreignController.FREEZER();
         RELAYER    = foreignController.RELAYER();
+
+        vm.startPrank(GROVE_EXECUTOR);
+
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
+
+        // Facet wiring
+
+        _wireCentrifugeFacet();
+
+        vm.stopPrank();
 
         /*** Step 3: Configure ALM system through Grove governance (Grove spell payload) ***/
 
@@ -156,13 +165,6 @@ contract ForkTestBase is Test {
         almProxy.grantRole(almProxy.CONTROLLER(),                address(foreignController));
         foreignController.grantRole(foreignController.FREEZER(), ALM_FREEZER);
         rateLimits.grantRole(rateLimits.CONTROLLER(),            address(foreignController));
-        parameters.grantRole(parameters.CONTROLLER_ROLE(),       address(foreignController));
-
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
-
-        // Facet wiring
-
-        _wireCentrifugeFacet();
 
         for (uint256 i; i < relayers.length; ++i) {
             foreignController.grantRole(foreignController.RELAYER(), relayers[i]);

@@ -3,13 +3,9 @@ pragma solidity ^0.8.34;
 
 import { IALMProxy }        from "../interfaces/IALMProxy.sol";
 import { ICentrifugeFacet } from "../interfaces/facets/ICentrifugeFacet.sol";
-import { IParameters }      from "../interfaces/IParameters.sol";
 import { IRateLimits }      from "../interfaces/IRateLimits.sol";
 
-import { combineKeyComponents, uint256ToKeyComponent } from "../ParameterKeys.sol";
-import { makeAddressKey, makeAddressUint16Key }        from "../RateLimitHelpers.sol";
-
-import { FacetBase } from "./FacetBase.sol";
+import { makeAddressKey, makeAddressUint16Key } from "../RateLimitHelpers.sol";
 
 interface IAsyncRedeemManagerLike {
 
