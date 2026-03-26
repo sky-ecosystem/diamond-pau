@@ -226,7 +226,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
         payable
         virtual;
 
-    function LIMIT_CENTRIFUGE_TRANSFER() external pure virtual returns (bytes32); // NOTE: DEPOSIT, REDEEM keys will be reused form ERC7450Facet wiring
+    function LIMIT_CENTRIFUGE_TRANSFER() external pure virtual returns (bytes32); // NOTE: DEPOSIT, REDEEM keys will be reused from ERC7450Facet wiring
 
     function getCentrifugeRecipient(uint16 centrifugeId) external view virtual returns (bytes32);
 
