@@ -214,7 +214,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     function addLiquidityCurve(address pool, uint256[] calldata depositAmounts, uint256 minLpAmount)
         external virtual returns (uint256 shares);
 
-    function curveMaxSlippages(address pool) external view virtual returns (uint256);
+    function getCurveMaxSlippage(address pool) external view virtual returns (uint256);
 
     function LIMIT_CURVE_DEPOSIT() external pure virtual returns (bytes32);
 

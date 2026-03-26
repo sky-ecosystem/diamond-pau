@@ -57,21 +57,17 @@ contract CurveFacet is ICurveFacet, FacetBase {
     /**********************************************************************************************/
 
     /// @custom:storage-location erc7201:sky.pau.storage.CurveFacet
-    struct CurveFacetStorage {
-        mapping(address => uint256) maxSlippages; // 1e18 precision
+    struct FacetStorage {
+        mapping(address pool => uint256 maxSlippage) maxSlippages;  // 1e18 precision
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CurveFacet")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 internal constant CURVEFACET_STORAGE_LOCATION =
+    bytes32 internal constant FACET_STORAGE_LOCATION =
         0x9bdc08d6fd054b5f8e5cf1735222ac93f34c8b6269da6b61f2bf1558f810b000;
 
-    function _getCurveFacetStorage()
-        internal
-        pure
-        returns (CurveFacetStorage storage $)
-    {
+    function _getFacetStorage() internal pure returns (FacetStorage storage $) {
         assembly {
-            $.slot := CURVEFACET_STORAGE_LOCATION
+            $.slot := FACET_STORAGE_LOCATION
         }
     }
 
@@ -94,10 +90,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         require(pool != address(0), "CurveFacet/pool-zero-address");
 
-        emit MaxSlippageSet(
-            pool,
-            _getCurveFacetStorage().maxSlippages[pool] = maxSlippage
-        );
+        emit CurveMaxSlippageSet(pool, _getFacetStorage().maxSlippages[pool] = maxSlippage);
     }
 
     function swap(
@@ -114,7 +107,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = maxSlippages(pool);
+        uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
 
         require(inputIndex  != outputIndex, "CurveFacet/invalid-indices");
         require(maxSlippage != 0,           "CurveFacet/max-slippage-not-set");
@@ -123,7 +116,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
 
         require(inputIndex < numCoins && outputIndex < numCoins,"CurveFacet/index-too-high");
 
-        ( 
+        (
             uint256 valueIn,
             uint256 equivalentAmountOut
         ) = _getSwapNormalizedValues(pool, inputIndex, outputIndex, amountIn);
@@ -159,7 +152,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = maxSlippages(pool);
+        address proxy = $.proxy;
+
+        uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
 
         require(maxSlippage != 0, "CurveFacet/max-slippage-not-set");
 
@@ -176,7 +171,7 @@ contract CurveFacet is ICurveFacet, FacetBase {
         for (uint256 i = 0; i < depositAmounts.length; ++i) {
             ApproveLib.approve(
                 ICurvePoolLike(pool).coins(i),
-                $.proxy,
+                proxy,
                 pool,
                 depositAmounts[i]
             );
@@ -198,9 +193,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
         _decreaseRateLimit($.rateLimits, LIMIT_DEPOSIT, pool, valueDeposited);
 
         shares = abi.decode(
-            IALMProxy($.proxy).doCall(
+            IALMProxy(proxy).doCall(
                 pool,
-                abi.encodeCall(ICurvePoolLike.add_liquidity, (depositAmounts, minLpAmount, $.proxy))
+                abi.encodeCall(ICurvePoolLike.add_liquidity, (depositAmounts, minLpAmount, proxy))
             ),
             (uint256)
         );
@@ -226,7 +221,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = maxSlippages(pool);
+        address proxy = $.proxy;
+
+        uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
 
         require(maxSlippage != 0, "CurveFacet/max-slippage-not-set");
 
@@ -253,11 +250,11 @@ contract CurveFacet is ICurveFacet, FacetBase {
         );
 
         withdrawnTokens = abi.decode(
-            IALMProxy($.proxy).doCall(
+            IALMProxy(proxy).doCall(
                 pool,
                 abi.encodeCall(
                     ICurvePoolLike.remove_liquidity,
-                    (lpBurnAmount, minWithdrawAmounts, $.proxy)
+                    (lpBurnAmount, minWithdrawAmounts, proxy)
                 )
             ),
             (uint256[])
@@ -277,8 +274,8 @@ contract CurveFacet is ICurveFacet, FacetBase {
     /*** View functions                                                                         ***/
     /**********************************************************************************************/
 
-    function maxSlippages(address pool) public view returns (uint256) {
-        return _getCurveFacetStorage().maxSlippages[pool];
+    function getMaxSlippage(address pool) external view returns (uint256) {
+        return _getFacetStorage().maxSlippages[pool];
     }
 
     /**********************************************************************************************/

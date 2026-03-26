@@ -8,62 +8,54 @@ import { IController } from "../../../src/interfaces/IController.sol";
 
 import { CurveFacet } from "../../../src/libraries/CurveLib.sol";
 
-import { ControllerTestBase } from "../ControllerTestBase.t.sol";
+import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike is IController {
 
-    function curveMaxSlippages(address pool) external view returns (uint256);
+    function getCurveMaxSlippage(address pool) external view returns (uint256);
 
     function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
 
 }
 
-contract CurveFacet_Base is ControllerTestBase {
+contract CurveFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() external {
+        controller = IControllerLike(_deploy());
 
-        controller = IControllerLike(controllerAddress);
-
-        // Wire the Curve facet.
+        // NOTE: Only wires the functions needed for the tests.
+        //       If more functions are needed in future tests, they should be wired here.
+        address facet = address(new CurveFacet());
 
         vm.startPrank(admin);
 
-        _wireCurveFacet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires the functions needed for the tests.
-    //       If more functions are needed in future tests, they should be wired here.
-    function _wireCurveFacet() internal {
-        address curveFacet = address(new CurveFacet());
-
-        vm.label(curveFacet, "CurveFacet");
+        vm.label(facet, "CurveFacet");
 
         // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
         controller.setDispatch(
             IControllerLike.setCurveMaxSlippage.selector,
-            curveFacet,
+            facet,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
+        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
         controller.setDispatch(
-            IControllerLike.curveMaxSlippages.selector,
-            curveFacet,
-            ICurveFacet.maxSlippages.selector
+            IControllerLike.getCurveMaxSlippage.selector,
+            facet,
+            ICurveFacet.getMaxSlippage.selector
         );
+
+        vm.stopPrank();
     }
 
 }
 
-contract ControllerIntegration_CurveFacet_SetCurveMaxSlippage_Tests is CurveFacet_Base {
+contract Controller_CurveFacet_Admin_Tests is CurveFacet_TestBase {
 
     function test_setCurveMaxSlippage_reentrancy() external {
-        _setControllerEntered();
+        _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         controller.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
     }
@@ -86,27 +78,27 @@ contract ControllerIntegration_CurveFacet_SetCurveMaxSlippage_Tests is CurveFace
     function test_setCurveMaxSlippage() external {
         address pool = makeAddr("pool");
 
-        assertEq(controller.curveMaxSlippages(pool), 0);
+        assertEq(controller.getCurveMaxSlippage(pool), 0);
 
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit ICurveFacet.MaxSlippageSet(pool, 0.98e18);
+        emit ICurveFacet.CurveMaxSlippageSet(pool, 0.98e18);
 
         vm.prank(admin);
         controller.setCurveMaxSlippage(pool, 0.98e18);
 
-        _assertReentrancyGuardWrittenToTwice();
+        _assertReentrancyGuardWrittenToTwice(address(controller));
 
-        assertEq(controller.curveMaxSlippages(pool), 0.98e18);
+        assertEq(controller.getCurveMaxSlippage(pool), 0.98e18);
 
         vm.expectEmit(address(controller));
-        emit ICurveFacet.MaxSlippageSet(pool, 0.99e18);
+        emit ICurveFacet.CurveMaxSlippageSet(pool, 0.99e18);
 
         vm.prank(admin);
         controller.setCurveMaxSlippage(pool, 0.99e18);
 
-        assertEq(controller.curveMaxSlippages(pool), 0.99e18);
+        assertEq(controller.getCurveMaxSlippage(pool), 0.99e18);
     }
 
 }

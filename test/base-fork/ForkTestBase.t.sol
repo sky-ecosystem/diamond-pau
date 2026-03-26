@@ -249,11 +249,11 @@ abstract contract ForkTestBase is Test {
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
+        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
         foreignController.setDispatch(
-            IForeignControllerFull.curveMaxSlippages.selector,
+            IForeignControllerFull.getCurveMaxSlippage.selector,
             curveFacet,
-            ICurveFacet.maxSlippages.selector
+            ICurveFacet.getMaxSlippage.selector
         );
 
         // Controller.swapCurve() -> CurveFacet.swap()

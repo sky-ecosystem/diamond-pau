@@ -9,7 +9,7 @@ interface ICurveFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
+    event CurveMaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
@@ -47,6 +47,6 @@ interface ICurveFacet is IFacetBase {
 
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
-    function maxSlippages(address pool) external view returns (uint256);
+    function getMaxSlippage(address pool) external view returns (uint256);
 
 }

@@ -401,11 +401,11 @@ abstract contract ForkTestBase is DssTest {
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
+        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
         mainnetController.setDispatch(
-            IMainnetControllerFull.curveMaxSlippages.selector,
+            IMainnetControllerFull.getCurveMaxSlippage.selector,
             curveFacet,
-            ICurveFacet.maxSlippages.selector
+            ICurveFacet.getMaxSlippage.selector
         );
 
         // Controller.swapCurve() -> CurveFacet.swap()
