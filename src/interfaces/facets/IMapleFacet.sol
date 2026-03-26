@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.34;
+pragma solidity ^0.8.21;
 
-interface IFacetBase {
+import { IFacetBase } from "./IFacetBase.sol";
+
+interface IMapleFacet is IFacetBase {
 
     /**********************************************************************************************/
-    /*** Errors                                                                                 ***/
+    /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    error AccessControlUnauthorizedAccount(address caller, bytes32 role);
+    function cancelRedemption(address mapleToken, uint256 shares) external;
+
+    function requestRedemption(address mapleToken, uint256 shares) external;
 
     /**********************************************************************************************/
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function DEFAULT_ADMIN_ROLE() external pure returns (bytes32);
-
-    function RELAYER_ROLE() external pure returns (bytes32);
+    function LIMIT_REDEEM() external pure returns (bytes32);
 
 }

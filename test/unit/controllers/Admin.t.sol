@@ -5,11 +5,9 @@ import { IAccessControl }  from "../../../lib/openzeppelin-contracts/contracts/a
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { CCTPLib }      from "../../../src/libraries/CCTPLib.sol";
-import { ERC4626Lib }   from "../../../src/libraries/ERC4626Lib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
 import { UniswapV3Lib } from "../../../src/libraries/UniswapV3Lib.sol";
-import { UniswapV4Lib } from "../../../src/libraries/UniswapV4Lib.sol";
 
 import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
@@ -29,7 +27,7 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
     MainnetController internal mainnetController;
 
-    function setUp() public {
+    function setUp() public virtual {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
@@ -39,7 +37,6 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("accessControls"),
-            makeAddr("parameters"),
             address(vault),
             address(psm),
             address(daiUsds),
@@ -446,65 +443,6 @@ contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetControll
 
 }
 
-contract MainnetController_Admin_SetMaxExchangeRate_Tests is MainnetController_Admin_TestBase {
-
-    function test_setMaxExchangeRate_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_tokenZeroAddress() external {
-        vm.expectRevert("ERC4626Lib/token-zero-address");
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(address(0), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(mainnetController.maxExchangeRates(token), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e36);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e36);
-
-        vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e24);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e18, 1e6);
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e24);
-
-        vm.expectEmit(address(mainnetController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e48);
-
-        vm.prank(admin);
-        mainnetController.setMaxExchangeRate(token, 1e6, 1e18);
-
-        assertEq(mainnetController.maxExchangeRates(token), 1e48);
-    }
-
-}
-
 contract MainnetController_Admin_SetUniswapV3PositionManager_Tests is MainnetController_Admin_TestBase {
 
     address internal immutable _positionManager = makeAddr("positionManager");
@@ -886,70 +824,7 @@ contract MainnetController_Admin_SetUniswapV3TWAPSecondsAgo_Tests is MainnetCont
 
 }
 
-contract MainnetController_Admin_SetUniswapV4TickLimits_Tests is MainnetController_Admin_TestBase {
-
-    bytes32 internal constant _POOL_ID = 0x8aa4e11cbdf30eedc92100f4c8a31ff748e201d44712cc8c90d189edaa8e4e47;
-
-    address internal immutable _unauthorized = makeAddr("unauthorized");
-
-    function test_setUniswapV4TickLimits_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 0, 0, 0);
-    }
-
-    function test_setUniswapV4TickLimits_revertsForNonAdmin() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                _unauthorized,
-                DEFAULT_ADMIN_ROLE
-            )
-        );
-
-        vm.prank(_unauthorized);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 0, 0, 0);
-    }
-
-    function test_setUniswapV4TickLimits_revertsWhenInvalidTicks() external {
-        vm.expectRevert("UniswapV4Lib/invalid-ticks");
-        vm.prank(admin);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 1, 1, 1); // Reverts when lower >= upper
-
-        vm.prank(admin);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 0, 1, 1); // lower must be less than upper
-
-        vm.expectRevert("UniswapV4Lib/invalid-ticks");
-        vm.prank(admin);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 0, 1, 0); // Reverts when maxTickSpacing is zero
-
-        vm.prank(admin);
-        mainnetController.setUniswapV4TickLimits(bytes32(0), 0, 0, 0); // maxTickSpacing can only be 0 if all 0
-    }
-
-    function test_setUniswapV4TickLimits() external {
-        vm.expectEmit(address(mainnetController));
-        emit UniswapV4Lib.UniswapV4TickLimitsSet(_POOL_ID, -60, 60, 20);
-
-        vm.record();
-
-        vm.prank(admin);
-        mainnetController.setUniswapV4TickLimits(_POOL_ID, -60, 60, 20);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        ( int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing ) = mainnetController.uniswapV4TickLimits(_POOL_ID);
-
-        assertEq(tickLowerMin,   -60);
-        assertEq(tickUpperMax,   60);
-        assertEq(maxTickSpacing, 20);
-    }
-
-}
-
 contract ForeignController_Admin_Tests is UnitTestBase {
-
-    event MerklDistributorSet(address indexed merklDistributor);
 
     uint24 internal constant _MAX_TICK_DELTA = 887272;
 
@@ -974,7 +849,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("accessControls"),
-            makeAddr("parameters"),
             makeAddr("psm"),
             makeAddr("usdc"),
             makeAddr("cctp")
@@ -1186,61 +1060,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.layerZeroRecipients(1), layerZeroRecipient2);
 
         _assertReentrancyGuardWrittenToTwice();
-    }
-
-    function test_setMaxExchangeRate_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setMaxExchangeRate(makeAddr("token"), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate_tokenZeroAddress() external {
-        vm.expectRevert("ERC4626Lib/token-zero-address");
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(address(0), 1e18, 1e18);
-    }
-
-    function test_setMaxExchangeRate() external {
-        address token = makeAddr("token");
-
-        assertEq(foreignController.maxExchangeRates(token), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e36);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(foreignController.maxExchangeRates(token), 1e36);
-
-        vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e24);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e18, 1e6);
-
-        assertEq(foreignController.maxExchangeRates(token), 1e24);
-
-        vm.expectEmit(address(foreignController));
-        emit ERC4626Lib.MaxExchangeRateSet(token, 1e48);
-
-        vm.prank(admin);
-        foreignController.setMaxExchangeRate(token, 1e6, 1e18);
-
-        assertEq(foreignController.maxExchangeRates(token), 1e48);
     }
 
     function test_setUniswapV3PositionManager_reentrancy() external {
