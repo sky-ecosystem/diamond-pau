@@ -13,27 +13,29 @@ import { makeAddressAddressKey } from "../RateLimitHelpers.sol";
 
 contract TransferAssetFacet is ITransferAssetFacet, FacetBase {
 
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
+
     bytes32 public constant LIMIT_TRANSFER = keccak256("LIMIT_ASSET_TRANSFER");
 
     /**********************************************************************************************/
-    /*** External functions                                                                     ***/
+    /*** External Interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function transfer(
-        address asset,
-        address destination,
-        uint256 amount
-    )
+    function transfer(address asset, address destination, uint256 amount)
         external
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        IRateLimits(_getControllerStorage().rateLimits).triggerRateLimitDecrease(
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressAddressKey(LIMIT_TRANSFER, asset, destination),
             amount
         );
 
-        bytes memory returnData = IALMProxy(_getControllerStorage().proxy).doCall(
+        bytes memory returnData = IALMProxy($.proxy).doCall(
             asset,
             abi.encodeCall(IERC20.transfer, (destination, amount))
         );
