@@ -418,10 +418,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    AccessControls         internal foreignAccessControls;
     ALMProxy               internal foreignAlmProxy;
     IForeignControllerFull internal foreignController;
-    Parameters             internal foreignParameters;
     RateLimits             internal foreignRateLimits;
 
     /**********************************************************************************************/
@@ -445,22 +443,33 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         destination = getChain("base").createSelectFork(37589683);  // November 1, 2025
 
-        /*** Step 3: Deploy and configure ALM system ***/
+        // Deploy and configure ALM system
 
         foreignAlmProxy   = new ALMProxy(Base.SPARK_EXECUTOR);
         foreignRateLimits = new RateLimits(Base.SPARK_EXECUTOR);
 
-        address accessControls = address(new AccessControls(Base.SPARK_EXECUTOR));
+        AccessControls accessControls = new AccessControls(Base.SPARK_EXECUTOR);
 
-        foreignController = new ForeignController({
+        foreignController = IForeignControllerFull(payable(new ForeignController({
             admin_          : Base.SPARK_EXECUTOR,
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
-            accessControls_ : accessControls,
+            accessControls_ : address(accessControls),
             psm_            : address(0),
             usdc_           : Base.USDC,
             cctp_           : BASE_CCTP_TOKEN_MESSENGER
-        });
+        })));
+
+        vm.startPrank(Base.SPARK_EXECUTOR);
+
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        // Facet wiring
+
+        _wireForeignCCTPFacet();
+
+        vm.stopPrank();
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -472,6 +481,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             mintRecipient : bytes32(uint256(uint160(address(almProxy))))
         });
 
+        // Grant access controls
+
         vm.startPrank(Base.SPARK_EXECUTOR);
 
         foreignAlmProxy.grantRole(foreignAlmProxy.CONTROLLER(),     address(foreignController));
@@ -482,15 +493,6 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
         }
 
-        // Grant CONTROLLER_ROLE to foreignController on Parameters to call set
-        foreignParameters.grantRole(foreignParameters.CONTROLLER_ROLE(), address(foreignController));
-
-        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
-
-        // Facet wiring
-        _wireForeignCCTPFacet();
-
-        // CCTP config (must be after facet wiring)
         for (uint256 i; i < mintRecipients.length; ++i) {
             foreignController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
@@ -536,42 +538,42 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.setCCTPMaxFeeCap.selector
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.setMintRecipient.selector,
             cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.cctpMaxFeeCap.selector,
             cctpFacet,
             ICCTPFacet.cctpMaxFeeCap.selector
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.mintRecipients.selector,
             cctpFacet,
             ICCTPFacet.mintRecipients.selector
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             bytes4(keccak256("transferUSDCToCCTP(uint256,uint32)")),
             cctpFacet,
             bytes4(keccak256("transfer(uint256,uint32)"))
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             bytes4(keccak256("transferUSDCToCCTP(uint256,uint256,uint32)")),
             cctpFacet,
             bytes4(keccak256("transfer(uint256,uint256,uint32)"))
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_USDC_TO_CCTP.selector,
             cctpFacet,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
             cctpFacet,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector

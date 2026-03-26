@@ -3,13 +3,11 @@ pragma solidity ^0.8.34;
 
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
 import { ICCTPFacet }  from "../interfaces/facets/ICCTPFacet.sol";
-import { IParameters } from "../interfaces/IParameters.sol";
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
-import { FacetBase }                                   from "./FacetBase.sol";
-import { combineKeyComponents, uint256ToKeyComponent } from "../ParameterKeys.sol";
-import { ParameterHelpers }                            from "../ParameterHelpers.sol";
-import { makeUint32Key }                               from "../RateLimitHelpers.sol";
+import { makeUint32Key } from "../RateLimitHelpers.sol";
+
+import { FacetBase } from "./FacetBase.sol";
 
 interface ICCTPLike {
 
@@ -43,11 +41,32 @@ interface IERC20Like {
 contract CCTPFacet is ICCTPFacet, FacetBase {
 
     /**********************************************************************************************/
-    /*** Declarations and Constructor                                                           ***/
+    /*** CCTPFacet Storage Domain                                                               ***/
     /**********************************************************************************************/
 
-    string public constant CCTP_MAX_FEE_CAP_KEY  = "sky.pau.cctp.cctpMaxFeeCap";
-    string public constant MINT_RECIPIENT_PREFIX = "sky.pau.cctp.mintRecipient";
+    /// @custom:storage-location erc7201:sky.pau.storage.CCTPFacet
+    struct CCTPFacetStorage {
+        uint256 cctpMaxFeeCap;
+        mapping(uint32 => bytes32) mintRecipients;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CCTPFacet")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant CCTPFACET_STORAGE_LOCATION =
+        0xd2297bc3b0b57b4cc880bf81d7f396bae29a02c9b84df07ff5f86bd65479da00;
+
+    function _getCCTPFacetStorage()
+        internal
+        pure
+        returns (CCTPFacetStorage storage $)
+    {
+        assembly {
+            $.slot := CCTPFACET_STORAGE_LOCATION
+        }
+    }
+
+    /**********************************************************************************************/
+    /*** Declarations and Constructor                                                           ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
@@ -65,7 +84,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** Admin functions                                                                        ***/
+    /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
     function setCCTPMaxFeeCap(uint256 maxFeeCap)
@@ -73,12 +92,7 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        IParameters(_getControllerStorage().parameters).set(
-            CCTP_MAX_FEE_CAP_KEY,
-            ParameterHelpers.fromUint256(maxFeeCap)
-        );
-
-        emit CCTPMaxFeeCapSet(maxFeeCap);
+        emit CCTPMaxFeeCapSet(_getCCTPFacetStorage().cctpMaxFeeCap = maxFeeCap);
     }
 
     function setMintRecipient(uint32 destinationDomain, bytes32 recipient)
@@ -86,17 +100,11 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        IParameters(_getControllerStorage().parameters).set(
-            _getMintRecipientKey(destinationDomain),
-            recipient
+        emit MintRecipientSet(
+            destinationDomain,
+            _getCCTPFacetStorage().mintRecipients[destinationDomain] = recipient
         );
-
-        emit MintRecipientSet(destinationDomain, recipient);
     }
-
-    /**********************************************************************************************/
-    /*** External functions                                                                     ***/
-    /**********************************************************************************************/
 
     function transfer(uint256 usdcAmount, uint32 destinationDomain)
         external
@@ -115,27 +123,23 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** View functions                                                                         ***/
+    /*** Public view/pure functions                                                             ***/
     /**********************************************************************************************/
 
-    function cctpMaxFeeCap() external view returns (uint256) {
-        return ParameterHelpers.toUint256(
-            IParameters(_getControllerStorage().parameters).get(CCTP_MAX_FEE_CAP_KEY)
-        );
+    function cctpMaxFeeCap() public view returns (uint256) {
+        return _getCCTPFacetStorage().cctpMaxFeeCap;
     }
 
-    function mintRecipients(uint32 destinationDomain) external view returns (bytes32) {
-        return IParameters(_getControllerStorage().parameters).get(
-            _getMintRecipientKey(destinationDomain)
-        );
+    function mintRecipients(uint32 destinationDomain) public view returns (bytes32) {
+        return _getCCTPFacetStorage().mintRecipients[destinationDomain];
     }
 
     /**********************************************************************************************/
-    /*** Internal functions                                                                     ***/
+    /*** Internal interactive functions                                                         ***/
     /**********************************************************************************************/
 
     function _transfer(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain) internal {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _decreaseRateLimit($.rateLimits, LIMIT_TO_CCTP, usdcAmount);
 
@@ -145,16 +149,10 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
             usdcAmount
         );
 
-        uint256 _cctpMaxFeeCap = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(CCTP_MAX_FEE_CAP_KEY)
-        );
+        bytes32 recipient = mintRecipients(destinationDomain);
 
-        bytes32 recipient = IParameters($.parameters).get(
-            _getMintRecipientKey(destinationDomain)
-        );
-
-        require(recipient != 0,           "CCTPFacet/domain-not-configured");
-        require(maxFee <= _cctpMaxFeeCap, "CCTPFacet/max-fee-exceeds-cap");
+        require(recipient != 0,            "CCTPFacet/domain-not-configured");
+        require(maxFee <= cctpMaxFeeCap(), "CCTPFacet/max-fee-exceeds-cap");
 
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
         _approve(usdc, $.proxy, cctp, usdcAmount);
@@ -214,17 +212,6 @@ contract CCTPFacet is ICCTPFacet, FacetBase {
 
         emit CCTPTransferInitiated(destinationDomain, mintRecipient, usdcAmount);
     }
-
-    function _getMintRecipientKey(uint32 destinationDomain) internal pure returns (string memory) {
-        return combineKeyComponents(
-            MINT_RECIPIENT_PREFIX,
-            uint256ToKeyComponent(uint256(destinationDomain))
-        );
-    }
-
-    /**********************************************************************************************/
-    /*** Rate Limit helper functions                                                            ***/
-    /**********************************************************************************************/
 
     function _decreaseRateLimit(address rateLimits, bytes32 key, uint256 amount) internal {
         IRateLimits(rateLimits).triggerRateLimitDecrease(key, amount);
