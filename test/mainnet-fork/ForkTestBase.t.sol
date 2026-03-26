@@ -731,14 +731,14 @@ abstract contract ForkTestBase is DssTest {
         vm.label(pendleFacet, "PendleFacet");
 
         // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.redeemPendlePT.selector,
             pendleFacet,
             IPendleFacet.redeem.selector
         );
 
         // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             pendleFacet,
             IPendleFacet.LIMIT_REDEEM.selector

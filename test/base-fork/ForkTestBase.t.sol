@@ -247,14 +247,14 @@ abstract contract ForkTestBase is Test {
         vm.label(pendleFacet, "PendleFacet");
 
         // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.redeemPendlePT.selector,
             pendleFacet,
             IPendleFacet.redeem.selector
         );
 
         // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             pendleFacet,
             IPendleFacet.LIMIT_REDEEM.selector

@@ -107,7 +107,7 @@ contract PendleFacet is IPendleFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         require(IPendleMarketLike(market).isExpired(), "PendleFacet/market-not-expired");
         require(minAmountOut != 0,                     "PendleFacet/min-amount-out-not-set");
