@@ -33,7 +33,7 @@ contract MerklFacet is IMerklFacet, FacetBase {
     /**********************************************************************************************/
 
     function toggleOperator(address operator) external nonReentrant onlyRole(RELAYER_ROLE) {
-        address proxy = _getControllerStorage().proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(
             distributor,

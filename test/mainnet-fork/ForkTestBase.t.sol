@@ -480,7 +480,7 @@ abstract contract ForkTestBase is DssTest {
         vm.label(merklFacet, "MerklFacet");
 
         // "Controller.toggleOperatorMerkl()" -> "MerklFacet.toggleOperator()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.toggleOperatorMerkl.selector,
             merklFacet,
             IMerklFacet.toggleOperator.selector

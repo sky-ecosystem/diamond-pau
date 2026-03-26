@@ -247,7 +247,7 @@ abstract contract ForkTestBase is Test {
         vm.label(merklFacet, "MerklFacet");
 
         // "Controller.toggleOperatorMerkl()" -> "MerklFacet.toggleOperator()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.toggleOperatorMerkl.selector,
             merklFacet,
             IMerklFacet.toggleOperator.selector
