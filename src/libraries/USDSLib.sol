@@ -3,6 +3,9 @@ pragma solidity ^0.8.34;
 
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
+import { IUSDSFacet }  from "../interfaces/facets/IUSDSFacet.sol";
+
+import { FacetBase } from "./FacetBase.sol";
 
 interface IERC20Like {
 
@@ -22,20 +25,36 @@ interface IVaultLike {
 
 }
 
-library USDSLib {
+contract USDSFacet is IUSDSFacet, FacetBase {
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_MINT = keccak256("LIMIT_USDS_MINT");
 
-    function mint(
-        address proxy,
-        address rateLimits,
-        address vault,
-        address usds,
-        uint256 usdsAmount
-    )
-        external
-    {
-        IRateLimits(rateLimits).triggerRateLimitDecrease(LIMIT_MINT, usdsAmount);
+    /**********************************************************************************************/
+    /*** Declarations                                                                           ***/
+    /**********************************************************************************************/
+
+    address public immutable vault;
+    address public immutable usds;
+
+    /**********************************************************************************************/
+    /*** Constructor                                                                            ***/
+    /**********************************************************************************************/
+
+    constructor(address vault_, address usds_) {
+        vault = vault_;
+        usds  = usds_;
+    }
+
+    function mint(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_MINT, usdsAmount);
+
+        address proxy = $.proxy;
 
         // Mint USDS into the buffer.
         IALMProxy(proxy).doCall(vault, abi.encodeCall(IVaultLike.draw, (usdsAmount)));
@@ -51,16 +70,12 @@ library USDSLib {
         );
     }
 
-    function burn(
-        address proxy,
-        address rateLimits,
-        address vault,
-        address usds,
-        uint256 usdsAmount
-    )
-        external
-    {
-        IRateLimits(rateLimits).triggerRateLimitIncrease(LIMIT_MINT, usdsAmount);
+    function burn(uint256 usdsAmount) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_MINT, usdsAmount);
+
+        address proxy = $.proxy;
 
         // Transfer USDS from the proxy to the buffer.
         // Not need for ApproveLib as we are transferring USDS with an expected transfer function.

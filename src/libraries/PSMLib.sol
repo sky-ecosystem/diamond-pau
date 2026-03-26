@@ -3,6 +3,9 @@ pragma solidity ^0.8.34;
 
 import { IRateLimits } from "../interfaces/IRateLimits.sol";
 import { IALMProxy }   from "../interfaces/IALMProxy.sol";
+import { IPSMFacet }   from "../interfaces/facets/IPSMFacet.sol";
+
+import { FacetBase } from "./FacetBase.sol";
 
 interface IDAIUSDSLike {
 
@@ -34,33 +37,42 @@ interface IPSMLike {
 
 }
 
-library PSMLib {
+contract PSMFacet is IPSMFacet, FacetBase {
 
     bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
+
+    address public immutable dai;
+    address public immutable daiUSDS;
+    address public immutable psm;
+    address public immutable usdc;
+    address public immutable usds;
+
+    constructor(address dai_, address daiUSDS_, address psm_, address usdc_, address usds_) {
+        dai     = dai_;
+        daiUSDS = daiUSDS_;
+        psm     = psm_;
+        usdc    = usdc_;
+        usds    = usds_;
+    }
 
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
     /**********************************************************************************************/
 
-    function swapUSDSToUSDC(
-        address proxy,
-        address rateLimits,
-        address daiUSDS,
-        address psm,
-        address usds,
-        address dai,
-        uint256 usdcAmount
-    )
-        external
-    {
-        IRateLimits(rateLimits).triggerRateLimitDecrease(LIMIT_USDS_TO_USDC, usdcAmount);
+    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
+    //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
+    function swapUSDSToUSDC(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_USDS_TO_USDC, usdcAmount);
 
         uint256 usdsAmount = usdcAmount * IPSMLike(psm).to18ConversionFactor();
+        address proxy      = $.proxy;
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS).
         _approve(usds, proxy, daiUSDS, usdsAmount);
 
-        // Swap USDS to DAI 1:1
+        // Swap USDS to DAI 1:1.
         IALMProxy(proxy).doCall(
             daiUSDS,
             abi.encodeCall(IDAIUSDSLike.usdsToDai, (proxy, usdsAmount))
@@ -73,18 +85,12 @@ library PSMLib {
         IALMProxy(proxy).doCall(psm, abi.encodeCall(IPSMLike.buyGemNoFee, (proxy, usdcAmount)));
     }
 
-    function swapUSDCToUSDS(
-        address proxy,
-        address rateLimits,
-        address daiUSDS,
-        address psm,
-        address dai,
-        address usdc,
-        uint256 usdcAmount
-    )
-        external
-    {
-        IRateLimits(rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);
+    function swapUSDCToUSDS(uint256 usdcAmount) external nonReentrant onlyRole(RELAYER_ROLE) {
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);
+
+        address proxy = $.proxy;
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC).
         _approve(usdc, proxy, psm, usdcAmount);
@@ -124,7 +130,7 @@ library PSMLib {
         );
     }
 
-    function to18ConversionFactor(address psm) external view returns (uint256) {
+    function to18ConversionFactor() external view returns (uint256) {
         return IPSMLike(psm).to18ConversionFactor();
     }
 
@@ -137,11 +143,11 @@ library PSMLib {
         IALMProxy(proxy).doCall(token, abi.encodeCall(IERC20Like.approve, (spender, amount)));
     }
 
-    function _swapUSDCToDAI(address proxy, address psm, uint256 usdcAmount) internal {
+    function _swapUSDCToDAI(address proxy, address _psm, uint256 usdcAmount) internal {
         // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used).
         IALMProxy(proxy).doCall(
-            psm,
-            abi.encodeCall(IPSMLike.sellGemNoFee, (address(proxy), usdcAmount))
+            _psm,
+            abi.encodeCall(IPSMLike.sellGemNoFee, (proxy, usdcAmount))
         );
     }
 

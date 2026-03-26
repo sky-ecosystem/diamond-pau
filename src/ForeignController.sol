@@ -3,16 +3,11 @@ pragma solidity ^0.8.34;
 
 import { AccessControlEnumerable } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 
-import { AaveLib }          from "./libraries/AaveLib.sol";
 import { CCTPLib }          from "./libraries/CCTPLib.sol";
 import { CentrifugeLib }    from "./libraries/CentrifugeLib.sol";
 import { CurveLib }         from "./libraries/CurveLib.sol";
-import { ERC4626Lib }       from "./libraries/ERC4626Lib.sol";
-import { ERC7540Lib }       from "./libraries/ERC7540Lib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
 import { MerklLib }         from "./libraries/MerklLib.sol";
-import { PSM3Lib }          from "./libraries/PSM3Lib.sol";
-import { SparkVaultLib }    from "./libraries/SparkVaultLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
@@ -45,20 +40,11 @@ contract ForeignController is Controller, AccessControlEnumerable {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_4626_DEPOSIT        = ERC4626Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_4626_WITHDRAW       = ERC4626Lib.LIMIT_WITHDRAW;
-    bytes32 public constant LIMIT_7540_DEPOSIT        = ERC7540Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_7540_REDEEM         = ERC7540Lib.LIMIT_REDEEM;
-    bytes32 public constant LIMIT_AAVE_DEPOSIT        = AaveLib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_AAVE_WITHDRAW       = AaveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_CENTRIFUGE_TRANSFER = CentrifugeLib.LIMIT_TRANSFER;
     bytes32 public constant LIMIT_CURVE_DEPOSIT       = CurveLib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_CURVE_SWAP          = CurveLib.LIMIT_SWAP;
     bytes32 public constant LIMIT_CURVE_WITHDRAW      = CurveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public constant LIMIT_PSM_DEPOSIT         = PSM3Lib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_PSM_WITHDRAW        = PSM3Lib.LIMIT_WITHDRAW;
-    bytes32 public constant LIMIT_SPARK_VAULT_TAKE    = SparkVaultLib.LIMIT_TAKE;
     bytes32 public constant LIMIT_USDC_TO_CCTP        = CCTPLib.LIMIT_TO_CCTP;
     bytes32 public constant LIMIT_USDC_TO_DOMAIN      = CCTPLib.LIMIT_TO_DOMAIN;
     bytes32 public constant LIMIT_UNISWAP_V3_DEPOSIT  = UniswapV3Lib.LIMIT_DEPOSIT;
@@ -86,9 +72,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     mapping(uint32 destinationEndpointId => bytes32 layerZeroRecipient) public layerZeroRecipients;
     mapping(uint16 destinationCentrifugeId => bytes32 recipient)        public centrifugeRecipients;
 
-    // ERC4626 exchange rate thresholds (1e36 precision)
-    mapping(address token => uint256 maxExchangeRate) public maxExchangeRates;
-
     // Uniswap V3 pool params
     mapping(address pool => UniswapV3Lib.PoolParams params) public uniswapV3PoolParams;
 
@@ -101,11 +84,10 @@ contract ForeignController is Controller, AccessControlEnumerable {
         address proxy_,
         address rateLimits_,
         address accessControls_,
-        address parameters_,
         address psm_,
         address usdc_,
         address cctp_
-    ) Controller(accessControls_, parameters_, proxy_, rateLimits_) {
+    ) Controller(accessControls_, proxy_, rateLimits_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         proxy      = IALMProxy(proxy_);
@@ -152,14 +134,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         LayerZeroLib.setRecipient(layerZeroRecipients, destinationEndpointId, recipient);
-    }
-
-    function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        ERC4626Lib.setMaxExchangeRate(maxExchangeRates, token, shares, maxExpectedAssets);
     }
 
     function setMerklDistributor(address merklDistributor_)
@@ -319,28 +293,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
     }
 
     /**********************************************************************************************/
-    /*** Relayer PSM functions                                                                  ***/
-    /**********************************************************************************************/
-
-    function depositPSM(address asset, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return PSM3Lib.deposit(address(proxy), address(rateLimits), psm, asset, amount);
-    }
-
-    function withdrawPSM(address asset, uint256 maxAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 assetsWithdrawn)
-    {
-        return PSM3Lib.withdraw(address(proxy), address(rateLimits), psm, asset, maxAmount);
-    }
-
-    /**********************************************************************************************/
     /*** Relayer bridging functions                                                             ***/
     /**********************************************************************************************/
 
@@ -401,65 +353,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
             destinationEndpointId : destinationEndpointId,
             layerZeroRecipients   : layerZeroRecipients
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer ERC4626 functions                                                              ***/
-    /**********************************************************************************************/
-
-    function depositERC4626(address token, uint256 amount, uint256 minSharesOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return ERC4626Lib.deposit({
-            proxy            : address(proxy),
-            rateLimits       : address(rateLimits),
-            token            : token,
-            amount           : amount,
-            minSharesOut     : minSharesOut,
-            maxExchangeRates : maxExchangeRates
-        });
-    }
-
-    function withdrawERC4626(address token, uint256 amount, uint256 maxSharesIn)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return ERC4626Lib.withdraw(address(proxy), address(rateLimits), token, amount, maxSharesIn);
-    }
-
-    function redeemERC4626(address token, uint256 shares, uint256 minAssetsOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 assets)
-    {
-        return ERC4626Lib.redeem(address(proxy), address(rateLimits), token, shares, minAssetsOut);
-    }
-
-    function EXCHANGE_RATE_PRECISION() external pure returns (uint256) {
-        return ERC4626Lib.EXCHANGE_RATE_PRECISION;
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Aave functions                                                                 ***/
-    /**********************************************************************************************/
-
-    function depositAave(address aToken, uint256 amount) external nonReentrant onlyRole(RELAYER) {
-        AaveLib.deposit(address(proxy), address(rateLimits), aToken, amount, maxSlippages);
-    }
-
-    function withdrawAave(address aToken, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 amountWithdrawn)
-    {
-        return AaveLib.withdraw(address(proxy), address(rateLimits), aToken, amount);
     }
 
     /**********************************************************************************************/
@@ -536,46 +429,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
             distributor : merklDistributor,
             operator    : operator
         });
-    }
-
-    /**********************************************************************************************/
-    /*** Spark Vault functions                                                                  ***/
-    /**********************************************************************************************/
-
-    function takeFromSparkVault(address sparkVault, uint256 assetAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        SparkVaultLib.take(address(proxy), address(rateLimits), sparkVault, assetAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer ERC7540 functions                                                              ***/
-    /**********************************************************************************************/
-
-    function requestDepositERC7540(address token, uint256 amount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.requestDeposit(address(proxy), address(rateLimits), token, amount);
-    }
-
-    function claimDepositERC7540(address token) external nonReentrant onlyRole(RELAYER) {
-        ERC7540Lib.claimDeposit(address(proxy), address(rateLimits), token);
-    }
-
-    function requestRedeemERC7540(address token, uint256 shares)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        ERC7540Lib.requestRedeem(address(proxy), address(rateLimits), token, shares);
-    }
-
-    function claimRedeemERC7540(address token) external nonReentrant onlyRole(RELAYER) {
-        ERC7540Lib.claimRedeem(address(proxy), address(rateLimits), token);
     }
 
     /**********************************************************************************************/
