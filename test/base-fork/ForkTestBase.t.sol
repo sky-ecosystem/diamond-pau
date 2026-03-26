@@ -9,6 +9,8 @@ import { ERC20Mock } from "../../lib/openzeppelin-contracts/contracts/mocks/toke
 
 import { Base } from "../../lib/spark-address-registry/src/Base.sol";
 
+import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
+
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
@@ -17,6 +19,8 @@ import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwa
 import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
 import { ICurveFacet }         from "../../src/interfaces/facets/ICurveFacet.sol";
 import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
+import { IMerklFacet }         from "../../src/interfaces/facets/IMerklFacet.sol";
+import { IPendleFacet }        from "../../src/interfaces/facets/IPendleFacet.sol";
 import { IPSM3Facet }          from "../../src/interfaces/facets/IPSM3Facet.sol";
 import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
 import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetFacet.sol";
@@ -24,6 +28,8 @@ import { ITransferAssetFacet } from "../../src/interfaces/facets/ITransferAssetF
 import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
 import { CurveFacet }         from "../../src/libraries/CurveLib.sol";
 import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
+import { MerklFacet }         from "../../src/libraries/MerklLib.sol";
+import { PendleFacet }        from "../../src/libraries/PendleLib.sol";
 import { PSM3Facet }          from "../../src/libraries/PSM3Lib.sol";
 import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
 import { TransferAssetFacet } from "../../src/libraries/TransferAssetLib.sol";
@@ -145,27 +151,21 @@ abstract contract ForkTestBase is Test {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
 
         // Facet wiring
-
         _wireAaveFacet();
         _wireCurveFacet();
         _wireERC4626Facet();
+        _wireMerklFacet();
+        _wirePendleFacet();
         _wirePSM3Facet();
         _wireSparkVaultFacet();
         _wireTransferAssetFacet();
 
         vm.stopPrank();
 
-        /*** Step 3: Configure ALM system through Spark governance (Spark spell payload) ***/
+        /*** Step 4: Configure ALM system through Spark governance (Spark spell payload) ***/
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
-
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
-        });
 
         vm.startPrank(SPARK_EXECUTOR);
 
@@ -177,10 +177,6 @@ abstract contract ForkTestBase is Test {
             foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
         }
 
-        for (uint256 i; i < mintRecipients.length; ++i) {
-            foreignController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
-        }
-
         uint256 usdcMaxAmount = 5_000_000e6;
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
         uint256 usdsMaxAmount = 5_000_000e18;
@@ -189,18 +185,11 @@ abstract contract ForkTestBase is Test {
         bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-        bytes32 domainKeyEthereum = RateLimitHelpers.makeUint32Key(
-            foreignController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-        );
-
         // NOTE: Using minimal config for test base setup
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(usdcBase)),  usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdcBase)),  usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(usdsBase)),  usdsMaxAmount, usdsSlope);
         rateLimits.setRateLimitData(RateLimitHelpers.makeAddressKey(depositKey,  address(susdsBase)), usdsMaxAmount, usdsSlope);
-        rateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(),                           usdcMaxAmount, usdcSlope);
-        rateLimits.setRateLimitData(domainKeyEthereum,                                                usdcMaxAmount, usdcSlope);
 
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(usdsBase)));
         rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAddressKey(withdrawKey, address(susdsBase)));
@@ -299,6 +288,39 @@ abstract contract ForkTestBase is Test {
             IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             curveFacet,
             ICurveFacet.LIMIT_WITHDRAW.selector
+        );
+    }
+
+    function _wireMerklFacet() internal {
+        address merklFacet = address(new MerklFacet(GroveBase.MERKL_DISTRIBUTOR));
+
+        vm.label(merklFacet, "MerklFacet");
+
+        // "Controller.toggleOperatorMerkl()" -> "MerklFacet.toggleOperator()"
+        foreignController.setDispatch(
+            IForeignControllerFull.toggleOperatorMerkl.selector,
+            merklFacet,
+            IMerklFacet.toggleOperator.selector
+        );
+    }
+    
+    function _wirePendleFacet() internal {
+        address pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
+
+        vm.label(pendleFacet, "PendleFacet");
+
+        // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
+        foreignController.setDispatch(
+            IForeignControllerFull.redeemPendlePT.selector,
+            pendleFacet,
+            IPendleFacet.redeem.selector
+        );
+
+        // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
+        foreignController.setDispatch(
+            IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
+            pendleFacet,
+            IPendleFacet.LIMIT_REDEEM.selector
         );
     }
 

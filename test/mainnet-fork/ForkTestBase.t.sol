@@ -18,16 +18,21 @@ import { IERC4626 } from "../../lib/forge-std/src/interfaces/IERC4626.sol";
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
+import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
+
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IAaveFacet }          from "../../src/interfaces/facets/IAaveFacet.sol";
+import { ICCTPFacet }          from "../../src/interfaces/facets/ICCTPFacet.sol";
 import { ICurveFacet }         from "../../src/interfaces/facets/ICurveFacet.sol";
 import { IDAIUSDSFacet }       from "../../src/interfaces/facets/IDAIUSDSFacet.sol";
 import { IERC4626Facet }       from "../../src/interfaces/facets/IERC4626Facet.sol";
 import { IERC7540Facet }       from "../../src/interfaces/facets/IERC7540Facet.sol";
 import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol";
 import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
+import { IMerklFacet }         from "../../src/interfaces/facets/IMerklFacet.sol";
+import { IPendleFacet }        from "../../src/interfaces/facets/IPendleFacet.sol";
 import { IPSMFacet }           from "../../src/interfaces/facets/IPSMFacet.sol";
 import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
 import { ISuperstateFacet }    from "../../src/interfaces/facets/ISuperstateFacet.sol";
@@ -40,12 +45,15 @@ import { IWrapProxyETHFacet }  from "../../src/interfaces/facets/IWrapProxyETHFa
 import { IWSTETHFacet }        from "../../src/interfaces/facets/IWSTETHFacet.sol";
 
 import { AaveFacet }          from "../../src/libraries/AaveLib.sol";
+import { CCTPFacet }          from "../../src/libraries/CCTPLib.sol";
 import { CurveFacet }         from "../../src/libraries/CurveLib.sol";
 import { DAIUSDSFacet }       from "../../src/libraries/DAIUSDSLib.sol";
 import { ERC4626Facet }       from "../../src/libraries/ERC4626Lib.sol";
 import { ERC7540Facet }       from "../../src/libraries/ERC7540Lib.sol";
 import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
 import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
+import { MerklFacet }         from "../../src/libraries/MerklLib.sol";
+import { PendleFacet }        from "../../src/libraries/PendleLib.sol";
 import { PSMFacet }           from "../../src/libraries/PSMLib.sol";
 import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
 import { SuperstateFacet }    from "../../src/libraries/SuperstateLib.sol";
@@ -279,12 +287,15 @@ abstract contract ForkTestBase is DssTest {
         // Facet wiring
 
         _wireAaveFacet();
+        _wireCCTPFacet();
         _wireCurveFacet();
         _wireDAIUSDSFacet();
         _wireERC4626Facet();
         _wireERC7540Facet();
         _wireFarmFacet();
         _wireMapleFacet();
+        _wireMerklFacet();
+        _wirePendleFacet();
         _wirePSMFacet();
         _wireSparkVaultFacet();
         _wireSuperstateFacet();
@@ -326,7 +337,7 @@ abstract contract ForkTestBase is DssTest {
         }
 
         for (uint256 i; i < mintRecipients.length; ++i) {
-            mainnetController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
+            mainnetController.setCCTPMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
 
         IVaultLike(ilkInst.vault).rely(address(almProxy));
@@ -462,6 +473,68 @@ abstract contract ForkTestBase is DssTest {
         );
     }
 
+    function _wireCCTPFacet() internal {
+        address cctpFacet = address(new CCTPFacet(CCTP_MESSENGER, Ethereum.USDC));
+
+        vm.label(cctpFacet, "CCTPFacet");
+
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setCCTPMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.setMaxFeeCap.selector
+        );
+
+        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setCCTPMintRecipient.selector,
+            cctpFacet,
+            ICCTPFacet.setMintRecipient.selector
+        );
+
+        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.getMaxFeeCap()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.getCCTPMaxFeeCap.selector,
+            cctpFacet,
+            ICCTPFacet.getMaxFeeCap.selector
+        );
+
+        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.getCCTPMintRecipient.selector,
+            cctpFacet,
+            ICCTPFacet.getMintRecipient.selector
+        );
+
+        // Controller.transferUSDCToCCTP(uint256,uint32) -> CCTPFacet.transfer(uint256,uint32)
+        mainnetController.setDispatch(
+            IMainnetControllerFull.transferUSDCToCCTP.selector,
+            cctpFacet,
+            ICCTPFacet.transfer.selector
+        );
+
+        // Controller.transferUSDCToCCTPWithFee(uint256,uint256,uint32) -> CCTPFacet.transferWithFee(uint256,uint256,uint32)
+        mainnetController.setDispatch(
+            IMainnetControllerFull.transferUSDCToCCTPWithFee.selector,
+            cctpFacet,
+            ICCTPFacet.transferWithFee.selector
+        );
+
+        // Controller.LIMIT_USDC_TO_CCTP() -> CCTPFacet.LIMIT_TO_CCTP()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_USDC_TO_CCTP.selector,
+            cctpFacet,
+            ICCTPFacet.LIMIT_TO_CCTP.selector
+        );
+
+        // Controller.LIMIT_USDC_TO_DOMAIN() -> CCTPFacet.LIMIT_TO_DOMAIN()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
+            cctpFacet,
+            ICCTPFacet.LIMIT_TO_DOMAIN.selector
+        );
+    }
+
     function _wireAaveFacet() internal {
         address aaveFacet = address(new AaveFacet());
 
@@ -531,6 +604,19 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.swapDAIToUSDS.selector,
             daiUSDSFacet,
             IDAIUSDSFacet.swapDAIToUSDS.selector
+        );
+    }
+
+    function _wireMerklFacet() internal {
+        address merklFacet = address(new MerklFacet(GroveEthereum.MERKL_DISTRIBUTOR));
+
+        vm.label(merklFacet, "MerklFacet");
+
+        // "Controller.toggleOperatorMerkl()" -> "MerklFacet.toggleOperator()"
+        mainnetController.setDispatch(
+            IMainnetControllerFull.toggleOperatorMerkl.selector,
+            merklFacet,
+            IMerklFacet.toggleOperator.selector
         );
     }
 
@@ -782,6 +868,26 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_MAPLE_REDEEM.selector,
             mapleFacet,
             IMapleFacet.LIMIT_REDEEM.selector
+        );
+    }
+
+    function _wirePendleFacet() internal {
+        address pendleFacet = address(new PendleFacet(GroveEthereum.PENDLE_ROUTER));
+
+        vm.label(pendleFacet, "PendleFacet");
+
+        // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
+        mainnetController.setDispatch(
+            IMainnetControllerFull.redeemPendlePT.selector,
+            pendleFacet,
+            IPendleFacet.redeem.selector
+        );
+
+        // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
+            pendleFacet,
+            IPendleFacet.LIMIT_REDEEM.selector
         );
     }
 

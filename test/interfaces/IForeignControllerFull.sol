@@ -43,6 +43,20 @@ abstract contract IForeignControllerFull is IController, ForeignController {
     function maxExchangeRates(address token) external view virtual returns (uint256);
 
     /**********************************************************************************************/
+    /*** MerklFacet actions                                                                     ***/
+    /**********************************************************************************************/
+
+    function toggleOperatorMerkl(address operator) external virtual;
+
+    /**********************************************************************************************/
+    /*** PendleFacet actions                                                                    ***/
+    /**********************************************************************************************/
+
+    function LIMIT_PENDLE_PT_REDEEM() external pure virtual returns (bytes32);
+
+    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut) external virtual;
+
+    /**********************************************************************************************/
     /*** PSM3Facet actions                                                                      ***/
     /**********************************************************************************************/
 
@@ -133,5 +147,26 @@ abstract contract IForeignControllerFull is IController, ForeignController {
         uint256 amountIn,
         uint256 minAmountOut
     ) external virtual returns (uint256 amountOut);
+
+    /**********************************************************************************************/
+    /*** CCTPFacet actions                                                                      ***/
+    /**********************************************************************************************/
+
+    function getCCTPMaxFeeCap() external view virtual returns (uint256);
+
+    function LIMIT_USDC_TO_CCTP() external pure virtual returns (bytes32);
+
+    function LIMIT_USDC_TO_DOMAIN() external pure virtual returns (bytes32);
+
+    function getCCTPMintRecipient(uint32 destinationDomain) external view virtual returns (bytes32);
+
+    function setCCTPMaxFeeCap(uint256 maxFeeCap) external virtual;
+
+    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external virtual;
+
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external virtual;
+
+    function transferUSDCToCCTPWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+        external virtual;
 
 }
