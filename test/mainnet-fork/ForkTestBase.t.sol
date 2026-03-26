@@ -457,8 +457,6 @@ abstract contract ForkTestBase is DssTest {
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired 
-
         // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
         mainnetController.setDispatch(
             IMainnetControllerFull.centrifugeRecipients.selector,
