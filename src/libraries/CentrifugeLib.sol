@@ -192,7 +192,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
 
         require(recipient != 0, "CentrifugeFacet/id-not-configured");
 
-        address spoke = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
+        address spoke 
+            = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
 
         // Initiate cross-chain transfer via the specific spoke address
         IALMProxy(proxy).doCallWithValue{value: msg.value}(
