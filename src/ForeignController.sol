@@ -3,11 +3,7 @@ pragma solidity ^0.8.34;
 
 import { AccessControlEnumerable } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 
-import { CCTPLib }          from "./libraries/CCTPLib.sol";
-import { CurveLib }         from "./libraries/CurveLib.sol";
 import { LayerZeroLib }     from "./libraries/LayerZeroLib.sol";
-import { PendleLib }        from "./libraries/PendleLib.sol";
-import { MerklLib }         from "./libraries/MerklLib.sol";
 import { UniswapV3Lib }     from "./libraries/UniswapV3Lib.sol";
 
 import { IALMProxy }   from "./interfaces/IALMProxy.sol";
@@ -21,15 +17,9 @@ contract ForeignController is Controller, AccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event CCTPMaxFeeCapSet(uint256 maxFeeCap);
-
     event MaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     event RelayerRemoved(address indexed relayer);
-
-    event PendleRouterSet(address indexed pendleRouter);
-
-    event MerklDistributorSet(address indexed merklDistributor);
 
     event UniswapV3SwapRouterSet(address indexed swapRouter);
 
@@ -42,13 +32,7 @@ contract ForeignController is Controller, AccessControlEnumerable {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_CURVE_DEPOSIT       = CurveLib.LIMIT_DEPOSIT;
-    bytes32 public constant LIMIT_CURVE_SWAP          = CurveLib.LIMIT_SWAP;
-    bytes32 public constant LIMIT_CURVE_WITHDRAW      = CurveLib.LIMIT_WITHDRAW;
     bytes32 public constant LIMIT_LAYERZERO_TRANSFER  = LayerZeroLib.LIMIT_TRANSFER;
-    bytes32 public constant LIMIT_USDC_TO_CCTP        = CCTPLib.LIMIT_TO_CCTP;
-    bytes32 public constant LIMIT_USDC_TO_DOMAIN      = CCTPLib.LIMIT_TO_DOMAIN;
-    bytes32 public constant LIMIT_PENDLE_PT_REDEEM    = PendleLib.LIMIT_REDEEM;
     bytes32 public constant LIMIT_UNISWAP_V3_DEPOSIT  = UniswapV3Lib.LIMIT_DEPOSIT;
     bytes32 public constant LIMIT_UNISWAP_V3_SWAP     = UniswapV3Lib.LIMIT_SWAP;
     bytes32 public constant LIMIT_UNISWAP_V3_WITHDRAW = UniswapV3Lib.LIMIT_WITHDRAW;
@@ -63,16 +47,8 @@ contract ForeignController is Controller, AccessControlEnumerable {
 
     address public immutable usdc;
 
-    address public merklDistributor;
-
-    address public pendleRouter;
-
-    // NOTE : Nominal maxFee cap for all cctp supported domains
-    uint256 public cctpMaxFeeCap;
-
     mapping(address pool => uint256 maxSlippage) public maxSlippages;  // 1e18 precision
 
-    mapping(uint32 destinationDomain     => bytes32 mintRecipient)      public mintRecipients;
     mapping(uint32 destinationEndpointId => bytes32 layerZeroRecipient) public layerZeroRecipients;
 
     // Uniswap V3 pool params
@@ -115,46 +91,12 @@ contract ForeignController is Controller, AccessControlEnumerable {
         emit MaxSlippageSet(pool, maxSlippage);
     }
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        emit CCTPMaxFeeCapSet(cctpMaxFeeCap = maxFeeCap);
-    }
-
-    function setMintRecipient(uint32 destinationDomain, bytes32 recipient)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        CCTPLib.setMintRecipient(mintRecipients, recipient, destinationDomain);
-    }
-
     function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         LayerZeroLib.setRecipient(layerZeroRecipients, destinationEndpointId, recipient);
-    }
-
-    function setPendleRouter(address pendleRouter_)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        pendleRouter = pendleRouter_;
-        emit PendleRouterSet(pendleRouter_);
-    }
-
-    function setMerklDistributor(address merklDistributor_)
-        external
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        merklDistributor = merklDistributor_;
-        emit MerklDistributorSet(merklDistributor_);
     }
 
     function setUniswapV3PositionManager(address manager)
@@ -296,46 +238,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
         });
     }
 
-    /**********************************************************************************************/
-    /*** Relayer bridging functions                                                             ***/
-    /**********************************************************************************************/
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CCTPLib.transfer({
-            proxy             : address(proxy),
-            rateLimits        : address(rateLimits),
-            cctp              : cctp,
-            usdc              : usdc,
-            destinationDomain : destinationDomain,
-            usdcAmount        : usdcAmount,
-            maxFee            : CCTPLib.MAX_FEE,
-            cctpMaxFeeCap     : cctpMaxFeeCap,
-            mintRecipients    : mintRecipients
-        });
-    }
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        CCTPLib.transfer({
-            proxy             : address(proxy),
-            rateLimits        : address(rateLimits),
-            cctp              : cctp,
-            usdc              : usdc,
-            destinationDomain : destinationDomain,
-            usdcAmount        : usdcAmount,
-            maxFee            : maxFee,
-            cctpMaxFeeCap     : cctpMaxFeeCap,
-            mintRecipients    : mintRecipients
-        });
-    }
-
     // NOTE: !!! This function was deployed without integration testing !!!
     //       KEEP RATE LIMIT AT ZERO until LayerZero dependencies are live and
     //       all functionality has been thoroughly integration tested.
@@ -356,101 +258,6 @@ contract ForeignController is Controller, AccessControlEnumerable {
             amount                : amount,
             destinationEndpointId : destinationEndpointId,
             layerZeroRecipients   : layerZeroRecipients
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Curve StableSwap functions                                                     ***/
-    /**********************************************************************************************/
-
-    function swapCurve(
-        address pool,
-        uint256 inputIndex,
-        uint256 outputIndex,
-        uint256 amountIn,
-        uint256 minAmountOut
-    )
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 amountOut)
-    {
-        return CurveLib.swap({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            pool         : pool,
-            inputIndex   : inputIndex,
-            outputIndex  : outputIndex,
-            amountIn     : amountIn,
-            minAmountOut : minAmountOut,
-            maxSlippages : maxSlippages
-        });
-    }
-
-    function addLiquidityCurve(address pool, uint256[] memory depositAmounts, uint256 minLpAmount)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256 shares)
-    {
-        return CurveLib.addLiquidity({
-            proxy          : address(proxy),
-            rateLimits     : address(rateLimits),
-            pool           : pool,
-            minLpAmount    : minLpAmount,
-            depositAmounts : depositAmounts,
-            maxSlippages   : maxSlippages
-        });
-    }
-
-    function removeLiquidityCurve(
-        address   pool,
-        uint256   lpBurnAmount,
-        uint256[] memory minWithdrawAmounts
-    )
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-        returns (uint256[] memory withdrawnTokens)
-    {
-        return CurveLib.removeLiquidity({
-            proxy              : address(proxy),
-            rateLimits         : address(rateLimits),
-            pool               : pool,
-            lpBurnAmount       : lpBurnAmount,
-            minWithdrawAmounts : minWithdrawAmounts,
-            maxSlippages       : maxSlippages
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Merkl functions                                                                ***/
-    /**********************************************************************************************/
-
-    function toggleOperatorMerkl(address operator) external nonReentrant onlyRole(RELAYER) {
-        MerklLib.toggleOperator({
-            proxy       : address(proxy),
-            distributor : merklDistributor,
-            operator    : operator
-        });
-    }
-
-    /**********************************************************************************************/
-    /*** Relayer Pendle functions                                                               ***/
-    /**********************************************************************************************/
-
-    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
-        external
-        nonReentrant
-        onlyRole(RELAYER)
-    {
-        PendleLib.redeem({
-            proxy        : address(proxy),
-            rateLimits   : address(rateLimits),
-            market       : pendleMarket,
-            router       : pendleRouter,
-            pyAmountIn   : pyAmountIn,
-            minAmountOut : minAmountOut
         });
     }
 
