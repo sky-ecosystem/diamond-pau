@@ -90,6 +90,8 @@ contract AaveFacet is IAaveFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         _decreaseRateLimit($.rateLimits, LIMIT_DEPOSIT, aToken, amount);
 
         uint256 maxSlippage = _getFacetStorage().maxSlippages[aToken];
@@ -100,17 +102,17 @@ contract AaveFacet is IAaveFacet, FacetBase {
         address pool       = IATokenWithPoolLike(aToken).POOL();
 
         // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
-        ApproveLib.approve(underlying, $.proxy, pool, amount);
+        ApproveLib.approve(underlying, proxy, pool, amount);
 
-        uint256 aTokenBalance = IERC20Like(aToken).balanceOf($.proxy);
+        uint256 aTokenBalance = IERC20Like(aToken).balanceOf(proxy);
 
         // Deposit underlying into Aave pool, proxy receives aTokens
-        IALMProxy($.proxy).doCall(
+        IALMProxy(proxy).doCall(
             pool,
-            abi.encodeCall(IPoolLike.supply, (underlying, amount, $.proxy, 0))
+            abi.encodeCall(IPoolLike.supply, (underlying, amount, proxy, 0))
         );
 
-        uint256 newATokens = IERC20Like(aToken).balanceOf($.proxy) - aTokenBalance;
+        uint256 newATokens = IERC20Like(aToken).balanceOf(proxy) - aTokenBalance;
 
         require(newATokens >= amount * maxSlippage / 1e18, "AaveFacet/slippage-too-high");
     }
@@ -123,23 +125,26 @@ contract AaveFacet is IAaveFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy      = $.proxy;
+        address rateLimits = $.rateLimits;
+
         address pool = IATokenWithPoolLike(aToken).POOL();
 
         // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
         // Assumes proxy has adequate aTokens.
         amountWithdrawn = abi.decode(
-            IALMProxy($.proxy).doCall(
+            IALMProxy(proxy).doCall(
                 pool,
                 abi.encodeCall(
                     IPoolLike.withdraw,
-                    (IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS(), amount, $.proxy)
+                    (IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS(), amount, proxy)
                 )
             ),
             (uint256)
         );
 
-        _decreaseRateLimit($.rateLimits, LIMIT_WITHDRAW, aToken, amountWithdrawn);
-        _increaseRateLimit($.rateLimits, LIMIT_DEPOSIT,  aToken, amountWithdrawn);
+        _decreaseRateLimit(rateLimits, LIMIT_WITHDRAW, aToken, amountWithdrawn);
+        _increaseRateLimit(rateLimits, LIMIT_DEPOSIT,  aToken, amountWithdrawn);
     }
 
     /**********************************************************************************************/
