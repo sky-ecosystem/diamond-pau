@@ -12,9 +12,9 @@ import { ControllerTestBase } from "../ControllerTestBase.t.sol";
 
 interface IControllerLike is IController {
 
-    function aaveMaxSlippages(address aToken) external view virtual returns (uint256);
+    function aaveMaxSlippages(address aToken) external view returns (uint256);
 
-    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external virtual;
+    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
 }
 
