@@ -192,70 +192,70 @@ contract ForkTestBase is Test {
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
         // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setCentrifugeRecipient()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.setCentrifugeRecipient.selector,
             centrifugeFacet,
             ICentrifugeFacet.setCentrifugeRecipient.selector
         );
 
         // "Controller.cancelCentrifugeDepositRequest()" -> "CentrifugeFacet.cancelDepositRequest()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
         // "Controller.claimCentrifugeCancelDepositRequest()" -> "CentrifugeFacet.claimCancelDepositRequest()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
         // "Controller.cancelCentrifugeRedeemRequest()" -> "CentrifugeFacet.cancelRedeemRequest()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
         // "Controller.claimCentrifugeCancelRedeemRequest()" -> "CentrifugeFacet.claimCancelRedeemRequest()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
         // "Controller.transferSharesCentrifuge()" -> "CentrifugeFacet.transferShares()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.transferSharesCentrifuge.selector,
             centrifugeFacet,
             ICentrifugeFacet.transferShares.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_DEPOSIT()" -> "CentrifugeFacet.LIMIT_DEPOSIT()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CENTRIFUGE_DEPOSIT.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_REDEEM()" -> "CentrifugeFacet.LIMIT_REDEEM()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CENTRIFUGE_REDEEM.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_REDEEM.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_TRANSFER()" -> "CentrifugeFacet.LIMIT_TRANSFER()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
         // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
-        foreignController.setFacet(
+        foreignController.setDispatch(
             IForeignControllerFull.centrifugeRecipients.selector,
             centrifugeFacet,
             ICentrifugeFacet.centrifugeRecipients.selector

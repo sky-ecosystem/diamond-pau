@@ -10,8 +10,8 @@ import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
 import { UniswapV3Lib } from "../../../src/libraries/UniswapV3Lib.sol";
 import { UniswapV4Lib } from "../../../src/libraries/UniswapV4Lib.sol";
 
-import { IForeignControllerFull } from "../../interfaces/IForeignControllerFull.sol";
-import { IMainnetControllerFull } from "../../interfaces/IMainnetControllerFull.sol";
+import { ForeignController } from "../../../src/ForeignController.sol";
+import { MainnetController } from "../../../src/MainnetController.sol";
 
 import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
@@ -26,17 +26,14 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
     bytes32 internal mintRecipient1      = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 internal mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
-    IMainnetControllerFull internal mainnetController;
+    MainnetController internal mainnetController;
 
     function setUp() public virtual {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
-        AccessControls accessControls = new AccessControls(admin);
-        Parameters     parameters     = new Parameters(admin);
-
-        mainnetController = IMainnetControllerFull(payable(address(new MainnetController(
+        mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
@@ -45,36 +42,6 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
             address(psm),
             address(daiUsds),
             makeAddr("cctp")
-        ))));
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to mainnetController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
-
-        // Facet wiring
-
-        _wireCentrifugeFacet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant CentrifugeFacet functions for unit tests.
-    function _wireCentrifugeFacet() internal {
-        address centrifugeFacet = address(new CentrifugeFacet());
-
-        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setCentrifugeRecipient()
-        mainnetController.setFacet(
-            IMainnetControllerFull.setCentrifugeRecipient.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.setCentrifugeRecipient.selector
-        );
-
-        // Controller.centrifugeRecipients() -> CentrifugeFacet.centrifugeRecipients()
-        mainnetController.setFacet(
-            IMainnetControllerFull.centrifugeRecipients.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.centrifugeRecipients.selector
         );
     }
 
@@ -84,65 +51,6 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
     function _assertReentrancyGuardWrittenToTwice() internal {
         _assertReentrancyGuardWrittenToTwice(address(mainnetController));
-    }
-
-}
-
-contract MainnetController_Admin_SetCentrifugeRecipient_Tests is MainnetController_Admin_TestBase {
-
-    address internal immutable _unauthorized = makeAddr("unauthorized");
-
-    bytes32 internal centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
-    bytes32 internal centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
-
-    function test_setCentrifugeRecipient_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
-    }
-
-    function test_setCentrifugeRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            _unauthorized,
-            DEFAULT_ADMIN_ROLE
-        ));
-
-        vm.prank(_unauthorized);
-        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
-    }
-
-    function test_setCentrifugeRecipient() external {
-        assertEq(mainnetController.centrifugeRecipients(1), bytes32(0));
-        assertEq(mainnetController.centrifugeRecipients(2), bytes32(0));
-
-        vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient1);
-
-        vm.prank(admin);
-        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient1);
-
-        assertEq(mainnetController.centrifugeRecipients(1), centrifugeRecipient1);
-
-        vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(2, centrifugeRecipient2);
-
-        vm.prank(admin);
-        mainnetController.setCentrifugeRecipient(2, centrifugeRecipient2);
-
-        assertEq(mainnetController.centrifugeRecipients(2), centrifugeRecipient2);
-
-        vm.record();
-
-        vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient2);
-
-        vm.prank(admin);
-        mainnetController.setCentrifugeRecipient(1, centrifugeRecipient2);
-
-        assertEq(mainnetController.centrifugeRecipients(1), centrifugeRecipient2);
-
-        _assertReentrancyGuardWrittenToTwice();
     }
 
 }
@@ -1032,7 +940,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     address internal immutable _swapRouter      = makeAddr("swapRouter");
     address internal immutable _unauthorized    = makeAddr("unauthorized");
 
-    IForeignControllerFull foreignController;
+    ForeignController internal foreignController;
 
     bytes32 layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
     bytes32 layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
@@ -1040,10 +948,7 @@ contract ForeignController_Admin_Tests is UnitTestBase {
     bytes32 mintRecipient2      = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 
     function setUp() public {
-        AccessControls accessControls = new AccessControls(admin);
-        Parameters     parameters     = new Parameters(admin);
-
-        foreignController = IForeignControllerFull(payable(address(new ForeignController(
+        foreignController = new ForeignController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
@@ -1051,36 +956,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
             makeAddr("psm"),
             makeAddr("usdc"),
             makeAddr("cctp")
-        ))));
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to foreignController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
-
-        // Facet wiring
-
-        _wireCentrifugeFacet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant CentrifugeFacet functions for unit tests.
-    function _wireCentrifugeFacet() internal {
-        address centrifugeFacet = address(new CentrifugeFacet());
-
-        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setCentrifugeRecipient()
-        foreignController.setFacet(
-            IForeignControllerFull.setCentrifugeRecipient.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.setCentrifugeRecipient.selector
-        );
-
-        // Controller.centrifugeRecipients() -> CentrifugeFacet.centrifugeRecipients()
-        foreignController.setFacet(
-            IForeignControllerFull.centrifugeRecipients.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.centrifugeRecipients.selector
         );
     }
 
@@ -1650,59 +1525,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         foreignController.setMerklDistributor(merklDistributor);
 
         assertEq(address(foreignController.merklDistributor()), merklDistributor);
-    }
-
-    function test_setCentrifugeRecipient_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setCentrifugeRecipient(1, mintRecipient1);
-    }
-
-    function test_setCentrifugeRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            _unauthorized,
-            DEFAULT_ADMIN_ROLE
-        ));
-
-        vm.prank(_unauthorized);
-        foreignController.setCentrifugeRecipient(1, mintRecipient1);
-    }
-
-    function test_setCentrifugeRecipient() external {
-        bytes32 centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
-        bytes32 centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
-
-        assertEq(foreignController.centrifugeRecipients(1), bytes32(0));
-        assertEq(foreignController.centrifugeRecipients(2), bytes32(0));
-
-        vm.expectEmit(address(foreignController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient1);
-
-        vm.prank(admin);
-        foreignController.setCentrifugeRecipient(1, centrifugeRecipient1);
-
-        assertEq(foreignController.centrifugeRecipients(1), centrifugeRecipient1);
-
-        vm.expectEmit(address(foreignController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(2, centrifugeRecipient2);
-
-        vm.prank(admin);
-        foreignController.setCentrifugeRecipient(2, centrifugeRecipient2);
-
-        assertEq(foreignController.centrifugeRecipients(2), centrifugeRecipient2);
-
-        vm.record();
-
-        vm.expectEmit(address(foreignController));
-        emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient2);
-
-        vm.prank(admin);
-        foreignController.setCentrifugeRecipient(1, centrifugeRecipient2);
-
-        assertEq(foreignController.centrifugeRecipients(1), centrifugeRecipient2);
-
-        _assertReentrancyGuardWrittenToTwice();
     }
 
 }

@@ -56,7 +56,6 @@ import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
-import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
@@ -396,70 +395,72 @@ abstract contract ForkTestBase is DssTest {
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
         // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setCentrifugeRecipient()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.setCentrifugeRecipient.selector,
             centrifugeFacet,
             ICentrifugeFacet.setCentrifugeRecipient.selector
         );
 
         // "Controller.cancelCentrifugeDepositRequest()" -> "CentrifugeFacet.cancelDepositRequest()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.cancelCentrifugeDepositRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
         // "Controller.claimCentrifugeCancelDepositRequest()" -> "CentrifugeFacet.claimCancelDepositRequest()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimCentrifugeCancelDepositRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
         // "Controller.cancelCentrifugeRedeemRequest()" -> "CentrifugeFacet.cancelRedeemRequest()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.cancelCentrifugeRedeemRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
         // "Controller.claimCentrifugeCancelRedeemRequest()" -> "CentrifugeFacet.claimCancelRedeemRequest()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             centrifugeFacet,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
         // "Controller.transferSharesCentrifuge()" -> "CentrifugeFacet.transferShares()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.transferSharesCentrifuge.selector,
             centrifugeFacet,
             ICentrifugeFacet.transferShares.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_DEPOSIT()" -> "CentrifugeFacet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CENTRIFUGE_DEPOSIT.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_REDEEM()" -> "CentrifugeFacet.LIMIT_REDEEM()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CENTRIFUGE_REDEEM.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_REDEEM.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_TRANSFER()" -> "CentrifugeFacet.LIMIT_TRANSFER()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             centrifugeFacet,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
+        // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired 
+
         // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.centrifugeRecipients.selector,
             centrifugeFacet,
             ICentrifugeFacet.centrifugeRecipients.selector

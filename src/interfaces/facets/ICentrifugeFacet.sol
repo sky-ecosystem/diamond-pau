@@ -31,8 +31,6 @@ interface ICentrifugeFacet is IFacetBase {
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function CENTRIFUGE_RECIPIENT_PREFIX() external pure returns (string memory);
-
     function LIMIT_TRANSFER() external pure returns (bytes32);
 
     function LIMIT_DEPOSIT() external pure returns (bytes32);

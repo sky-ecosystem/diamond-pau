@@ -7,6 +7,8 @@ import { IRateLimits }      from "../interfaces/IRateLimits.sol";
 
 import { makeAddressKey, makeAddressUint16Key } from "../RateLimitHelpers.sol";
 
+import { FacetBase } from "./FacetBase.sol";
+
 interface IAsyncRedeemManagerLike {
 
     function spoke() external view returns (address);
@@ -51,10 +53,31 @@ interface ISpokeLike {
 contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
 
     /**********************************************************************************************/
-    /*** Constants                                                                              ***/
+    /*** CentrifugeFacet Storage Domain                                                         ***/
     /**********************************************************************************************/
 
-    string public constant CENTRIFUGE_RECIPIENT_PREFIX = "sky.pau.centrifuge.recipient";
+    /// @custom:storage-location erc7201:sky.pau.storage.CentrifugeFacet
+    struct CentrifugeFacetStorage {
+        mapping(uint16 => bytes32) centrifugeRecipients;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CentrifugeFacet")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant CENTRIFUGEFACET_STORAGE_LOCATION =
+        0xc069081c0c1d07d37b10d4b49109414316895d1a08146dc2106442b9fa4f7900;
+
+    function _getCentrifugeFacetStorage()
+        internal
+        pure
+        returns (CentrifugeFacetStorage storage $)
+    {
+        assembly {
+            $.slot := CENTRIFUGEFACET_STORAGE_LOCATION
+        }
+    }
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_TRANSFER = keccak256("LIMIT_CENTRIFUGE_TRANSFER");
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_7540_DEPOSIT");
@@ -72,12 +95,10 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        IParameters(_getControllerStorage().parameters).set(
-            _getCentrifugeRecipientKey(centrifugeId),
-            recipient
+        emit CentrifugeRecipientSet(
+            centrifugeId,
+            _getCentrifugeFacetStorage().centrifugeRecipients[centrifugeId] = recipient
         );
-
-        emit CentrifugeRecipientSet(centrifugeId, recipient);
     }
 
     function cancelDepositRequest(address token)
@@ -85,7 +106,7 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
 
@@ -101,7 +122,7 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
 
@@ -119,7 +140,7 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
 
@@ -135,7 +156,7 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
 
@@ -154,14 +175,14 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressUint16Key(LIMIT_TRANSFER, token, centrifugeId),
             amount
         );
 
-        bytes32 recipient = IParameters($.parameters).get(_getCentrifugeRecipientKey(centrifugeId));
+        bytes32 recipient = centrifugeRecipients(centrifugeId);
 
         require(recipient != 0, "CentrifugeFacet/id-not-configured");
 
@@ -186,13 +207,11 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** External view/pure functions                                                           ***/
+    /*** Public view/pure functions.                                                            ***/
     /**********************************************************************************************/
 
-    function centrifugeRecipients(uint16 centrifugeId) external view returns (bytes32) {
-        return IParameters(_getControllerStorage().parameters).get(
-            _getCentrifugeRecipientKey(centrifugeId)
-        );
+    function centrifugeRecipients(uint16 centrifugeId) public view returns (bytes32) {
+        return _getCentrifugeFacetStorage().centrifugeRecipients[centrifugeId];
     }
 
     /**********************************************************************************************/
@@ -203,17 +222,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         require(
             IRateLimits(rateLimits).getRateLimitData(key).maxAmount > 0,
             "CentrifugeFacet/invalid-action"
-        );
-    }
-
-    function _getCentrifugeRecipientKey(uint16 centrifugeId)
-        internal
-        pure
-        returns (string memory)
-    {
-        return combineKeyComponents(
-            CENTRIFUGE_RECIPIENT_PREFIX,
-            uint256ToKeyComponent(uint256(centrifugeId))
         );
     }
 
