@@ -245,7 +245,7 @@ abstract contract ForkTestBase is Test {
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        // Controller.maxExchangeRate() -> ERC4626Facet.getMaxExchangeRate()
+        // Controller.maxExchangeRates() -> ERC4626Facet.getMaxExchangeRate()
         foreignController.setDispatch(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
