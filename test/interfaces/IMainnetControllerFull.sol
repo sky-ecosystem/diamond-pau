@@ -211,7 +211,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function aaveMaxSlippages(address aToken) external view virtual returns (uint256);
+    function getAaveMaxSlippage(address aToken) external view virtual returns (uint256);
 
     function depositAave(address aToken, uint256 amount) external virtual;
 

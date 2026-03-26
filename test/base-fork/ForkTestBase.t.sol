@@ -249,11 +249,11 @@ abstract contract ForkTestBase is Test {
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
+        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
         foreignController.setDispatch(
-            IForeignControllerFull.aaveMaxSlippages.selector,
+            IForeignControllerFull.getAaveMaxSlippage.selector,
             aaveFacet,
-            IAaveFacet.maxSlippages.selector
+            IAaveFacet.getMaxSlippage.selector
         );
 
         // Controller.depositAave() -> AaveFacet.deposit()

@@ -8,62 +8,53 @@ import { IController } from "../../../src/interfaces/IController.sol";
 
 import { AaveFacet } from "../../../src/libraries/AaveLib.sol";
 
-import { ControllerTestBase } from "../ControllerTestBase.t.sol";
+import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike is IController {
 
-    function aaveMaxSlippages(address aToken) external view returns (uint256);
+    function getAaveMaxSlippage(address aToken) external view returns (uint256);
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
 }
 
-contract AaveFacet_Base is ControllerTestBase {
+contract AaveFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() external {
+        controller = IControllerLike(_deploy());
 
-        controller = IControllerLike(controllerAddress);
-
-        // Wire the Aave facet.
+        // NOTE: Only wires the functions needed for the tests.
+        //       If more functions are needed in future tests, they should be wired here.
+        address facet = address(new AaveFacet());
 
         vm.startPrank(admin);
 
-        _wireAaveFacet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires the functions needed for the tests.
-    //       If more functions are needed in future tests, they should be wired here.
-    function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
-
-        vm.label(aaveFacet, "AaveFacet");
+        vm.label(facet, "AaveFacet");
 
         // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
         controller.setDispatch(
             IControllerLike.setAaveMaxSlippage.selector,
-            aaveFacet,
+            facet,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
+        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
         controller.setDispatch(
-            IControllerLike.aaveMaxSlippages.selector,
-            aaveFacet,
-            IAaveFacet.maxSlippages.selector
+            IControllerLike.getAaveMaxSlippage.selector,
+            facet,
+            IAaveFacet.getMaxSlippage.selector
         );
+        vm.stopPrank();
     }
 
 }
 
-contract ControllerIntegration_AaveFacet_SetMaxExchangeRate_Tests is AaveFacet_Base {
+contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
 
     function test_setMaxSlippage_reentrancy() external {
-        _setControllerEntered();
+        _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         controller.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
     }
@@ -86,25 +77,25 @@ contract ControllerIntegration_AaveFacet_SetMaxExchangeRate_Tests is AaveFacet_B
     function test_setMaxSlippage() external {
         address aToken = makeAddr("aToken");
 
-        assertEq(controller.aaveMaxSlippages(aToken), 0);
+        assertEq(controller.getAaveMaxSlippage(aToken), 0);
 
         vm.prank(admin);
         vm.expectEmit(address(controller));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.98e18);
+        emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.98e18);
         controller.setAaveMaxSlippage(aToken, 0.98e18);
 
-        assertEq(controller.aaveMaxSlippages(aToken), 0.98e18);
+        assertEq(controller.getAaveMaxSlippage(aToken), 0.98e18);
 
         vm.record();
 
         vm.prank(admin);
         vm.expectEmit(address(controller));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.99e18);
+        emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.99e18);
         controller.setAaveMaxSlippage(aToken, 0.99e18);
 
-        assertEq(controller.aaveMaxSlippages(aToken), 0.99e18);
+        assertEq(controller.getAaveMaxSlippage(aToken), 0.99e18);
 
-        _assertReentrancyGuardWrittenToTwice();
+        _assertReentrancyGuardWrittenToTwice(address(controller));
     }
 
 }

@@ -9,7 +9,7 @@ interface IAaveFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event MaxSlippageSet(address indexed aToken, uint256 maxSlippage);
+    event AaveMaxSlippageSet(address indexed aToken, uint256 maxSlippage);
 
     /**********************************************************************************************/
     /*** External functions                                                                     ***/
@@ -25,7 +25,7 @@ interface IAaveFacet is IFacetBase {
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function maxSlippages(address aToken) external view returns (uint256);
+    function getMaxSlippage(address aToken) external view returns (uint256);
 
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 

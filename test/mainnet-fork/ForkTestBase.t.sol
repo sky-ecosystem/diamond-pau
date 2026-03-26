@@ -401,11 +401,11 @@ abstract contract ForkTestBase is DssTest {
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
+        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
         mainnetController.setDispatch(
-            IMainnetControllerFull.aaveMaxSlippages.selector,
+            IMainnetControllerFull.getAaveMaxSlippage.selector,
             aaveFacet,
-            IAaveFacet.maxSlippages.selector
+            IAaveFacet.getMaxSlippage.selector
         );
 
         // "Controller.depositAave()" -> "AaveFacet.deposit()"
