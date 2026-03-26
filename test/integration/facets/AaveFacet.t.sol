@@ -44,14 +44,14 @@ contract AaveFacet_Base is ControllerTestBase {
         vm.label(aaveFacet, "AaveFacet");
 
         // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
-        controller.setFacet(
+        controller.setDispatch(
             IControllerLike.setAaveMaxSlippage.selector,
             aaveFacet,
             IAaveFacet.setMaxSlippage.selector
         );
 
         // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
-        controller.setFacet(
+        controller.setDispatch(
             IControllerLike.aaveMaxSlippages.selector,
             aaveFacet,
             IAaveFacet.maxSlippages.selector

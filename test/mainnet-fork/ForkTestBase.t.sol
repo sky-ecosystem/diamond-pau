@@ -56,7 +56,6 @@ import { WSTETHFacet }        from "../../src/libraries/WSTETHLib.sol";
 import { AccessControls }    from "../../src/AccessControls.sol";
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
-import { Parameters }        from "../../src/Parameters.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 
@@ -396,42 +395,42 @@ abstract contract ForkTestBase is DssTest {
         vm.label(aaveFacet, "AaveFacet");
 
         // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.setAaveMaxSlippage.selector,
             aaveFacet,
             IAaveFacet.setMaxSlippage.selector
         );
 
         // Controller.aaveMaxSlippages() -> AaveFacet.maxSlippages()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.aaveMaxSlippages.selector,
             aaveFacet,
             IAaveFacet.maxSlippages.selector
         );
 
         // "Controller.depositAave()" -> "AaveFacet.deposit()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.depositAave.selector,
             aaveFacet,
             IAaveFacet.deposit.selector
         );
 
         // "Controller.withdrawAave()" -> "AaveFacet.withdraw()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.withdrawAave.selector,
             aaveFacet,
             IAaveFacet.withdraw.selector
         );
 
         // "Controller.LIMIT_AAVE_DEPOSIT()" -> "AaveFacet.LIMIT_DEPOSIT()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             aaveFacet,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
 
         // "Controller.LIMIT_AAVE_WITHDRAW()" -> "AaveFacet.LIMIT_WITHDRAW()"
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             aaveFacet,
             IAaveFacet.LIMIT_WITHDRAW.selector

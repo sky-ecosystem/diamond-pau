@@ -195,8 +195,4 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
         return (EXCHANGE_RATE_PRECISION * assets) / shares;
     }
 
-    function _getMaxExchangeRateKey(address token) internal pure returns (string memory) {
-        return combineKeyComponents(MAX_EXCHANGE_RATE_PREFIX, addressToKeyComponent(token));
-    }
-
 }
