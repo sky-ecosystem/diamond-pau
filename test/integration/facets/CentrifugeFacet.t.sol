@@ -8,66 +8,56 @@ import { IController }      from "../../../src/interfaces/IController.sol";
 
 import { CentrifugeFacet } from "../../../src/libraries/CentrifugeLib.sol";
 
-import { ControllerTestBase } from "../ControllerTestBase.t.sol";
+import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike is IController {
 
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
-    function centrifugeRecipients(uint16 centrifugeId) external view returns (bytes32);
+    function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
 
 }
 
-contract CentrifugeFacet_Base is ControllerTestBase {
+contract CentrifugeFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
     bytes32 internal centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
     bytes32 internal centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() external {
+        controller = IControllerLike(_deploy());
 
-        controller = IControllerLike(controllerAddress);
-
-        // Wire the CentrifugeFacet.
+        // NOTE: Only wires the functions needed for the tests.
+        //       If more functions are needed in future tests, they should be wired here.
+        address facet = address(new CentrifugeFacet());
 
         vm.startPrank(admin);
 
-        _wireCentrifugeFacet();
+        vm.label(facet, "CentrifugeFacet");
 
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires the functions needed for the tests.
-    //       If more functions are needed in future tests, they should be wired here.
-    function _wireCentrifugeFacet() internal {
-        address centrifugeFacet = address(new CentrifugeFacet());
-
-        vm.label(centrifugeFacet, "CentrifugeFacet");
-
-        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setCentrifugeRecipient()
+        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setRecipient()
         controller.setDispatch(
             IControllerLike.setCentrifugeRecipient.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.setCentrifugeRecipient.selector
+            facet,
+            ICentrifugeFacet.setRecipient.selector
         );
 
-        // Controller.centrifugeRecipients() -> CentrifugeFacet.centrifugeRecipients()
+        // Controller.getCentrifugeRecipient() -> CentrifugeFacet.getRecipient()
         controller.setDispatch(
-            IControllerLike.centrifugeRecipients.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.centrifugeRecipients.selector
+            IControllerLike.getCentrifugeRecipient.selector,
+            facet,
+            ICentrifugeFacet.getRecipient.selector
         );
+        vm.stopPrank();
     }
 
 }
 
-
-contract MainnetController_Admin_SetCentrifugeRecipient_Tests is CentrifugeFacet_Base {
+contract Controller_CentrifugeFacet_SetRecipient_Tests is CentrifugeFacet_TestBase {
 
     function test_setCentrifugeRecipient_reentrancy() external {
-        _setControllerEntered();
+        _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         controller.setCentrifugeRecipient(1, centrifugeRecipient1);
     }
@@ -84,8 +74,8 @@ contract MainnetController_Admin_SetCentrifugeRecipient_Tests is CentrifugeFacet
     }
 
     function test_setCentrifugeRecipient() external {
-        assertEq(controller.centrifugeRecipients(1), bytes32(0));
-        assertEq(controller.centrifugeRecipients(2), bytes32(0));
+        assertEq(controller.getCentrifugeRecipient(1), bytes32(0));
+        assertEq(controller.getCentrifugeRecipient(2), bytes32(0));
 
         vm.expectEmit(address(controller));
         emit ICentrifugeFacet.CentrifugeRecipientSet(1, centrifugeRecipient1);
@@ -93,7 +83,7 @@ contract MainnetController_Admin_SetCentrifugeRecipient_Tests is CentrifugeFacet
         vm.prank(admin);
         controller.setCentrifugeRecipient(1, centrifugeRecipient1);
 
-        assertEq(controller.centrifugeRecipients(1), centrifugeRecipient1);
+        assertEq(controller.getCentrifugeRecipient(1), centrifugeRecipient1);
 
         vm.expectEmit(address(controller));
         emit ICentrifugeFacet.CentrifugeRecipientSet(2, centrifugeRecipient2);
@@ -101,7 +91,7 @@ contract MainnetController_Admin_SetCentrifugeRecipient_Tests is CentrifugeFacet
         vm.prank(admin);
         controller.setCentrifugeRecipient(2, centrifugeRecipient2);
 
-        assertEq(controller.centrifugeRecipients(2), centrifugeRecipient2);
+        assertEq(controller.getCentrifugeRecipient(2), centrifugeRecipient2);
 
         vm.record();
 
@@ -111,9 +101,9 @@ contract MainnetController_Admin_SetCentrifugeRecipient_Tests is CentrifugeFacet
         vm.prank(admin);
         controller.setCentrifugeRecipient(1, centrifugeRecipient2);
 
-        assertEq(controller.centrifugeRecipients(1), centrifugeRecipient2);
+        assertEq(controller.getCentrifugeRecipient(1), centrifugeRecipient2);
 
-        _assertReentrancyGuardWrittenToTwice();
+        _assertReentrancyGuardWrittenToTwice(address(controller));
     }
 
 }

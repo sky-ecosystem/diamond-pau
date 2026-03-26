@@ -403,11 +403,11 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setCentrifugeRecipient()"
+        // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setRecipient()"
         mainnetController.setDispatch(
             IMainnetControllerFull.setCentrifugeRecipient.selector,
             centrifugeFacet,
-            ICentrifugeFacet.setCentrifugeRecipient.selector
+            ICentrifugeFacet.setRecipient.selector
         );
 
         // "Controller.cancelCentrifugeDepositRequest()" -> "CentrifugeFacet.cancelDepositRequest()"
@@ -452,11 +452,11 @@ abstract contract ForkTestBase is DssTest {
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
+        // "Controller.getCentrifugeRecipient()" -> "CentrifugeFacet.getRecipient()"
         mainnetController.setDispatch(
-            IMainnetControllerFull.centrifugeRecipients.selector,
+            IMainnetControllerFull.getCentrifugeRecipient.selector,
             centrifugeFacet,
-            ICentrifugeFacet.centrifugeRecipients.selector
+            ICentrifugeFacet.getRecipient.selector
         );
     }
 

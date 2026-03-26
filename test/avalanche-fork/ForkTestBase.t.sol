@@ -193,11 +193,11 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setCentrifugeRecipient()"
+        // "Controller.setCentrifugeRecipient()" -> "CentrifugeFacet.setRecipient()"
         foreignController.setDispatch(
             IForeignControllerFull.setCentrifugeRecipient.selector,
             centrifugeFacet,
-            ICentrifugeFacet.setCentrifugeRecipient.selector
+            ICentrifugeFacet.setRecipient.selector
         );
 
         // "Controller.cancelCentrifugeDepositRequest()" -> "CentrifugeFacet.cancelDepositRequest()"
@@ -242,11 +242,11 @@ contract ForkTestBase is Test {
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        // "Controller.centrifugeRecipients()" -> "CentrifugeFacet.centrifugeRecipients()"
+        // "Controller.getCentrifugeRecipient()" -> "CentrifugeFacet.getRecipient()"
         foreignController.setDispatch(
-            IForeignControllerFull.centrifugeRecipients.selector,
+            IForeignControllerFull.getCentrifugeRecipient.selector,
             centrifugeFacet,
-            ICentrifugeFacet.centrifugeRecipients.selector
+            ICentrifugeFacet.getRecipient.selector
         );
     }
 

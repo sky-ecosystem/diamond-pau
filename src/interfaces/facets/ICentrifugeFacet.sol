@@ -15,7 +15,7 @@ interface ICentrifugeFacet is IFacetBase {
     /*** Interactive functions                                                                  ***/
     /**********************************************************************************************/
 
-    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
+    function setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     function cancelDepositRequest(address token) external;
 
@@ -39,6 +39,6 @@ interface ICentrifugeFacet is IFacetBase {
 
     function REQUEST_ID() external pure returns (uint256);
 
-    function centrifugeRecipients(uint16 centrifugeId) external view returns (bytes32);
+    function getRecipient(uint16 centrifugeId) external view returns (bytes32);
 
 }

@@ -57,21 +57,17 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     /**********************************************************************************************/
 
     /// @custom:storage-location erc7201:sky.pau.storage.CentrifugeFacet
-    struct CentrifugeFacetStorage {
-        mapping(uint16 => bytes32) centrifugeRecipients;
+    struct FacetStorage {
+        mapping(uint16 centrifugeId => bytes32 recipient) recipients;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CentrifugeFacet")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 internal constant CENTRIFUGEFACET_STORAGE_LOCATION =
+    bytes32 internal constant FACET_STORAGE_LOCATION =
         0xc069081c0c1d07d37b10d4b49109414316895d1a08146dc2106442b9fa4f7900;
 
-    function _getCentrifugeFacetStorage()
-        internal
-        pure
-        returns (CentrifugeFacetStorage storage $)
-    {
+    function _getFacetStorage() internal pure returns (FacetStorage storage $) {
         assembly {
-            $.slot := CENTRIFUGEFACET_STORAGE_LOCATION
+            $.slot := FACET_STORAGE_LOCATION
         }
     }
 
@@ -90,14 +86,14 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
-    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient)
+    function setRecipient(uint16 centrifugeId, bytes32 recipient)
         external
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         emit CentrifugeRecipientSet(
             centrifugeId,
-            _getCentrifugeFacetStorage().centrifugeRecipients[centrifugeId] = recipient
+            _getFacetStorage().recipients[centrifugeId] = recipient
         );
     }
 
@@ -108,12 +104,14 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
 
         // NOTE: While the cancellation is pending, no new deposit request can be submitted.
-        IALMProxy($.proxy).doCall(
+        IALMProxy(proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, $.proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, proxy))
         );
     }
 
@@ -124,13 +122,15 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_DEPOSIT, token));
 
-        IALMProxy($.proxy).doCall(
+        IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelDepositRequest,
-                (REQUEST_ID, $.proxy, $.proxy)
+                (REQUEST_ID, proxy, proxy)
             )
         );
     }
@@ -142,12 +142,14 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
 
         // NOTE: While the cancellation is pending, no new redeem request can be submitted.
-        IALMProxy($.proxy).doCall(
+        IALMProxy(proxy).doCall(
             token,
-            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, $.proxy))
+            abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, proxy))
         );
     }
 
@@ -158,13 +160,15 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         _rateLimitExists($.rateLimits, makeAddressKey(LIMIT_REDEEM, token));
 
-        IALMProxy($.proxy).doCall(
+        IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelRedeemRequest,
-                (REQUEST_ID, $.proxy, $.proxy)
+                (REQUEST_ID, proxy, proxy)
             )
         );
     }
@@ -177,19 +181,21 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address proxy = $.proxy;
+
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressUint16Key(LIMIT_TRANSFER, token, centrifugeId),
             amount
         );
 
-        bytes32 recipient = centrifugeRecipients(centrifugeId);
+        bytes32 recipient = _getFacetStorage().recipients[centrifugeId];
 
         require(recipient != 0, "CentrifugeFacet/id-not-configured");
 
         address spoke = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
 
         // Initiate cross-chain transfer via the specific spoke address
-        IALMProxy($.proxy).doCallWithValue{value: msg.value}(
+        IALMProxy(proxy).doCallWithValue{value: msg.value}(
             spoke,
             abi.encodeCall(
                 ISpokeLike.crosschainTransferShares,
@@ -210,8 +216,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     /*** Public view/pure functions.                                                            ***/
     /**********************************************************************************************/
 
-    function centrifugeRecipients(uint16 centrifugeId) public view returns (bytes32) {
-        return _getCentrifugeFacetStorage().centrifugeRecipients[centrifugeId];
+    function getRecipient(uint16 centrifugeId) external view returns (bytes32) {
+        return _getFacetStorage().recipients[centrifugeId];
     }
 
     /**********************************************************************************************/
