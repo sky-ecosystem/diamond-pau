@@ -187,8 +187,9 @@ contract ForkTestBase is Test {
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
 
-    // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
     function _wireCentrifugeFacet() internal {
+        // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
+
         address centrifugeFacet = address(new CentrifugeFacet());
 
         vm.label(centrifugeFacet, "CentrifugeFacet");

@@ -231,6 +231,23 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     function getCentrifugeRecipient(uint16 centrifugeId) external view virtual returns (bytes32);
 
     /**********************************************************************************************/
+    /*** AaveFacet actions                                                                      ***/
+    /**********************************************************************************************/
+
+    function getAaveMaxSlippage(address aToken) external view virtual returns (uint256);
+
+    function depositAave(address aToken, uint256 amount) external virtual;
+
+    function LIMIT_AAVE_DEPOSIT() external pure virtual returns (bytes32);
+
+    function LIMIT_AAVE_WITHDRAW() external pure virtual returns (bytes32);
+
+    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external virtual;
+
+    function withdrawAave(address aToken, uint256 amount)
+        external virtual returns (uint256 amountWithdrawn);
+    
+    /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
     /**********************************************************************************************/
 
