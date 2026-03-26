@@ -4,7 +4,6 @@ pragma solidity ^0.8.34;
 import { IAccessControl }  from "../../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { AaveFacet }    from "../../../src/libraries/AaveLib.sol";
 import { CCTPLib }      from "../../../src/libraries/CCTPLib.sol";
 import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
 import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
@@ -44,50 +43,6 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
             address(psm),
             address(daiUsds),
             makeAddr("cctp")
-        );
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to mainnetController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(mainnetController));
-
-        // Facet wiring
-
-        _wireAaveFacet();
-        _wireERC4626Facet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant AaveFacet functions for unit tests.
-    function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
-
-        mainnetController.setFacet(
-            IMainnetControllerFull.setAaveMaxSlippage.selector,
-            aaveFacet,
-            IAaveFacet.setMaxSlippage.selector
-        );
-        mainnetController.setFacet(
-            IMainnetControllerFull.aaveMaxSlippages.selector,
-            aaveFacet,
-            IAaveFacet.maxSlippages.selector
-        );
-    }
-
-    // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
-    function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
-
-        mainnetController.setFacet(
-            IMainnetControllerFull.setMaxExchangeRate.selector,
-            erc4626Facet,
-            IERC4626Facet.setMaxExchangeRate.selector
-        );
-        mainnetController.setFacet(
-            IMainnetControllerFull.maxExchangeRates.selector,
-            erc4626Facet,
-            IERC4626Facet.maxExchangeRates.selector
         );
     }
 
@@ -486,57 +441,6 @@ contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetControll
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(mainnetController.otcWhitelistedAssets(exchange, asset), false);
-    }
-
-}
-
-contract MainnetController_Admin_SetAaveMaxSlippage_Tests is MainnetController_Admin_TestBase {
-
-    function test_setAaveMaxSlippage_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        mainnetController.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage_aTokenZeroAddress() external {
-        vm.expectRevert("AaveFacet/aToken-zero-address");
-        vm.prank(admin);
-        mainnetController.setAaveMaxSlippage(address(0), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage() external {
-        address aToken = makeAddr("aToken");
-
-        assertEq(mainnetController.aaveMaxSlippages(aToken), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(mainnetController));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.98e18);
-
-        vm.prank(admin);
-        mainnetController.setAaveMaxSlippage(aToken, 0.98e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(mainnetController.aaveMaxSlippages(aToken), 0.98e18);
-
-        vm.expectEmit(address(mainnetController));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.99e18);
-
-        vm.prank(admin);
-        mainnetController.setAaveMaxSlippage(aToken, 0.99e18);
-
-        assertEq(mainnetController.aaveMaxSlippages(aToken), 0.99e18);
     }
 
 }
@@ -1055,50 +959,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
             makeAddr("usdc"),
             makeAddr("cctp")
         );
-
-        vm.startPrank(admin);
-
-        // Grant CONTROLLER_ROLE to foreignController on Parameters to call set
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), address(foreignController));
-
-        // Facet wiring
-
-        _wireAaveFacet();
-        _wireERC4626Facet();
-
-        vm.stopPrank();
-    }
-
-    // NOTE: Only wires admin-relevant AaveFacet functions for unit tests.
-    function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
-
-        foreignController.setFacet(
-            IForeignControllerFull.setAaveMaxSlippage.selector,
-            aaveFacet,
-            IAaveFacet.setMaxSlippage.selector
-        );
-        foreignController.setFacet(
-            IForeignControllerFull.aaveMaxSlippages.selector,
-            aaveFacet,
-            IAaveFacet.maxSlippages.selector
-        );
-    }
-
-    // NOTE: Only wires admin-relevant ERC4626Facet functions for unit tests.
-    function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
-
-        foreignController.setFacet(
-            IForeignControllerFull.setMaxExchangeRate.selector,
-            erc4626Facet,
-            IERC4626Facet.setMaxExchangeRate.selector
-        );
-        foreignController.setFacet(
-            IForeignControllerFull.maxExchangeRates.selector,
-            erc4626Facet,
-            IERC4626Facet.maxExchangeRates.selector
-        );
     }
 
     function _setControllerEntered() internal {
@@ -1306,61 +1166,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
         assertEq(foreignController.layerZeroRecipients(1), layerZeroRecipient2);
 
         _assertReentrancyGuardWrittenToTwice();
-    }
-
-    function test_setAaveMaxSlippage_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
-
-        vm.prank(freezer);
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            freezer,
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage_aTokenZeroAddress() external {
-        vm.expectRevert("AaveFacet/aToken-zero-address");
-        vm.prank(admin);
-        foreignController.setAaveMaxSlippage(address(0), 0.98e18);
-    }
-
-    function test_setAaveMaxSlippage() external {
-        address aToken = makeAddr("aToken");
-
-        assertEq(foreignController.aaveMaxSlippages(aToken), 0);
-
-        vm.record();
-
-        vm.expectEmit(address(foreignController));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.98e18);
-
-        vm.prank(admin);
-        foreignController.setAaveMaxSlippage(aToken, 0.98e18);
-
-        _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(foreignController.aaveMaxSlippages(aToken), 0.98e18);
-
-        vm.expectEmit(address(foreignController));
-        emit IAaveFacet.MaxSlippageSet(aToken, 0.99e18);
-
-        vm.prank(admin);
-        foreignController.setAaveMaxSlippage(aToken, 0.99e18);
-
-        assertEq(foreignController.aaveMaxSlippages(aToken), 0.99e18);
     }
 
     function test_setUniswapV3PositionManager_reentrancy() external {
