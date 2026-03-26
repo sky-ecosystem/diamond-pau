@@ -748,7 +748,6 @@ contract ForeignController_Admin_Tests is UnitTestBase {
             makeAddr("usdc"),
             makeAddr("cctp")
         );
-
     }
 
     function _setControllerEntered() internal {
