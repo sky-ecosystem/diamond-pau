@@ -145,6 +145,7 @@ contract ForkTestBase is Test {
         // Facet wiring
 
         _wireCentrifugeFacet();
+        _wireERC7540Facet();
 
         vm.stopPrank();
 
@@ -186,6 +187,7 @@ contract ForkTestBase is Test {
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
 
+    // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
     function _wireCentrifugeFacet() internal {
         address centrifugeFacet = address(new CentrifugeFacet());
 
@@ -233,20 +235,6 @@ contract ForkTestBase is Test {
             ICentrifugeFacet.transferShares.selector
         );
 
-        // "Controller.LIMIT_CENTRIFUGE_DEPOSIT()" -> "CentrifugeFacet.LIMIT_DEPOSIT()"
-        foreignController.setDispatch(
-            IForeignControllerFull.LIMIT_CENTRIFUGE_DEPOSIT.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.LIMIT_DEPOSIT.selector
-        );
-
-        // "Controller.LIMIT_CENTRIFUGE_REDEEM()" -> "CentrifugeFacet.LIMIT_REDEEM()"
-        foreignController.setDispatch(
-            IForeignControllerFull.LIMIT_CENTRIFUGE_REDEEM.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.LIMIT_REDEEM.selector
-        );
-
         // "Controller.LIMIT_CENTRIFUGE_TRANSFER()" -> "CentrifugeFacet.LIMIT_TRANSFER()"
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
@@ -259,6 +247,54 @@ contract ForkTestBase is Test {
             IForeignControllerFull.centrifugeRecipients.selector,
             centrifugeFacet,
             ICentrifugeFacet.centrifugeRecipients.selector
+        );
+    }
+
+    function _wireERC7540Facet() internal {
+        address erc7540Facet = address(new ERC7540Facet());
+
+        vm.label(erc7540Facet, "ERC7540Facet");
+
+        // "Controller.requestDepositERC7540()" -> "ERC7540Facet.requestDeposit()"
+        foreignController.setDispatch(
+            IForeignControllerFull.requestDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestDeposit.selector
+        );
+
+        // "Controller.claimDepositERC7540()" -> "ERC7540Facet.claimDeposit()"
+        foreignController.setDispatch(
+            IForeignControllerFull.claimDepositERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimDeposit.selector
+        );
+
+        // "Controller.requestRedeemERC7540()" -> "ERC7540Facet.requestRedeem()"
+        foreignController.setDispatch(
+            IForeignControllerFull.requestRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.requestRedeem.selector
+        );
+
+        // "Controller.claimRedeemERC7540()" -> "ERC7540Facet.claimRedeem()"
+        foreignController.setDispatch(
+            IForeignControllerFull.claimRedeemERC7540.selector,
+            erc7540Facet,
+            IERC7540Facet.claimRedeem.selector
+        );
+
+        // "Controller.LIMIT_7540_DEPOSIT()" -> "ERC7540Facet.LIMIT_DEPOSIT()"
+        foreignController.setDispatch(
+            IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_DEPOSIT.selector
+        );
+
+        // "Controller.LIMIT_7540_REDEEM()" -> "ERC7540Facet.LIMIT_REDEEM()"
+        foreignController.setDispatch(
+            IForeignControllerFull.LIMIT_7540_REDEEM.selector,
+            erc7540Facet,
+            IERC7540Facet.LIMIT_REDEEM.selector
         );
     }
 

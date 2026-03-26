@@ -389,6 +389,7 @@ abstract contract ForkTestBase is DssTest {
     /*** Facet wiring helpers                                                                   ***/
     /**********************************************************************************************/
 
+    // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
     function _wireCentrifugeFacet() internal {
         address centrifugeFacet = address(new CentrifugeFacet());
 
@@ -434,20 +435,6 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.transferSharesCentrifuge.selector,
             centrifugeFacet,
             ICentrifugeFacet.transferShares.selector
-        );
-
-        // "Controller.LIMIT_CENTRIFUGE_DEPOSIT()" -> "CentrifugeFacet.LIMIT_DEPOSIT()"
-        mainnetController.setDispatch(
-            IMainnetControllerFull.LIMIT_CENTRIFUGE_DEPOSIT.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.LIMIT_DEPOSIT.selector
-        );
-
-        // "Controller.LIMIT_CENTRIFUGE_REDEEM()" -> "CentrifugeFacet.LIMIT_REDEEM()"
-        mainnetController.setDispatch(
-            IMainnetControllerFull.LIMIT_CENTRIFUGE_REDEEM.selector,
-            centrifugeFacet,
-            ICentrifugeFacet.LIMIT_REDEEM.selector
         );
 
         // "Controller.LIMIT_CENTRIFUGE_TRANSFER()" -> "CentrifugeFacet.LIMIT_TRANSFER()"
