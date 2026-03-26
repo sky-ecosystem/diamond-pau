@@ -69,7 +69,7 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Functions                                                         ***/
+    /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage)
@@ -104,6 +104,10 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
 
         emit UniswapV4TickLimitsSet(poolId, tickLowerMin, tickUpperMax, maxTickSpacing);
     }
+
+    /**********************************************************************************************/
+    /*** External Interactive Relayer Functions                                                 ***/
+    /**********************************************************************************************/
 
     function mintPosition(
         bytes32 poolId,
@@ -256,12 +260,20 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
             "UniswapV4Facet/amountOutMin-too-low"
         );
 
-        _swap(
-            poolId,
-            tokenIn,
-            amountIn,
-            _getSwapCallData(poolKey, tokenIn, tokenOut, amountIn, amountOutMin)
-        );
+        bytes memory callData = _getSwapCallData({
+            poolKey      : poolKey,
+            tokenIn      : tokenIn,
+            tokenOut     : tokenOut,
+            amountIn     : amountIn,
+            amountOutMin : amountOutMin
+        });
+
+        _swap({
+            poolId   : poolId,
+            tokenIn  : tokenIn,
+            amountIn : amountIn,
+            callData : callData
+        });
     }
 
     /**********************************************************************************************/
