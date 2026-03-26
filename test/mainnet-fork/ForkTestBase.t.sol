@@ -241,8 +241,8 @@ abstract contract ForkTestBase is DssTest {
 
         /*** Step 3: Deploy ALM system ***/
 
-        almProxy       = new ALMProxy(Ethereum.SPARK_PROXY);
-        rateLimits     = new RateLimits(Ethereum.SPARK_PROXY);
+        almProxy   = new ALMProxy(Ethereum.SPARK_PROXY);
+        rateLimits = new RateLimits(Ethereum.SPARK_PROXY);
 
         accessControls = new AccessControls(Ethereum.SPARK_PROXY);
 
