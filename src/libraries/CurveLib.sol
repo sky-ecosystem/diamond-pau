@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IALMProxy }    from "../interfaces/IALMProxy.sol";
-import { ICurveFacet }  from "../interfaces/facets/ICurveFacet.sol";
-import { IParameters }  from "../interfaces/IParameters.sol";
-import { IRateLimits }  from "../interfaces/IRateLimits.sol";
+import { IALMProxy }   from "../interfaces/IALMProxy.sol";
+import { ICurveFacet } from "../interfaces/facets/ICurveFacet.sol";
+import { IRateLimits } from "../interfaces/IRateLimits.sol";
 
-import { ApproveLib }                                  from "./ApproveLib.sol";
-import { FacetBase }                                   from "./FacetBase.sol";
-import { addressToKeyComponent, combineKeyComponents } from "../ParameterKeys.sol";
-import { ParameterHelpers }                            from "../ParameterHelpers.sol";
-import { makeAddressKey }                              from "../RateLimitHelpers.sol";
+import { makeAddressKey } from "../RateLimitHelpers.sol";
+
+import { ApproveLib } from "./ApproveLib.sol";
+import { FacetBase }  from "./FacetBase.sol";
 
 interface IERC20Like {
 
@@ -55,17 +53,38 @@ interface ICurvePoolLike is IERC20Like {
 contract CurveFacet is ICurveFacet, FacetBase {
 
     /**********************************************************************************************/
-    /*** Constants                                                                              ***/
+    /*** CurveFacet Storage Domain                                                              ***/
     /**********************************************************************************************/
 
-    string public constant MAX_SLIPPAGE_PREFIX = "sky.pau.curve.maxSlippage";
+    /// @custom:storage-location erc7201:sky.pau.storage.CurveFacet
+    struct CurveFacetStorage {
+        mapping(address => uint256) maxSlippages; // 1e18 precision
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.CurveFacet")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant CURVEFACET_STORAGE_LOCATION =
+        0x9bdc08d6fd054b5f8e5cf1735222ac93f34c8b6269da6b61f2bf1558f810b000;
+
+    function _getCurveFacetStorage()
+        internal
+        pure
+        returns (CurveFacetStorage storage $)
+    {
+        assembly {
+            $.slot := CURVEFACET_STORAGE_LOCATION
+        }
+    }
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
 
     bytes32 public constant LIMIT_DEPOSIT  = keccak256("LIMIT_CURVE_DEPOSIT");
     bytes32 public constant LIMIT_SWAP     = keccak256("LIMIT_CURVE_SWAP");
     bytes32 public constant LIMIT_WITHDRAW = keccak256("LIMIT_CURVE_WITHDRAW");
 
     /**********************************************************************************************/
-    /*** Admin functions                                                                        ***/
+    /*** External interactive functions                                                         ***/
     /**********************************************************************************************/
 
     function setMaxSlippage(address pool, uint256 maxSlippage)
@@ -75,17 +94,11 @@ contract CurveFacet is ICurveFacet, FacetBase {
     {
         require(pool != address(0), "CurveFacet/pool-zero-address");
 
-        IParameters(_getControllerStorage().parameters).set(
-            _getMaxSlippageKey(pool),
-            ParameterHelpers.fromUint256(maxSlippage)
+        emit MaxSlippageSet(
+            pool,
+            _getCurveFacetStorage().maxSlippages[pool] = maxSlippage
         );
-
-        emit MaxSlippageSet(pool, maxSlippage);
     }
-
-    /**********************************************************************************************/
-    /*** External functions                                                                     ***/
-    /**********************************************************************************************/
 
     function swap(
         address pool,
@@ -99,11 +112,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 amountOut)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxSlippageKey(pool))
-        );
+        uint256 maxSlippage = maxSlippages(pool);
 
         require(inputIndex  != outputIndex, "CurveFacet/invalid-indices");
         require(maxSlippage != 0,           "CurveFacet/max-slippage-not-set");
@@ -146,11 +157,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxSlippageKey(pool))
-        );
+        uint256 maxSlippage = maxSlippages(pool);
 
         require(maxSlippage != 0, "CurveFacet/max-slippage-not-set");
 
@@ -215,11 +224,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256[] memory withdrawnTokens)
     {
-        ControllerStorage storage $ = _getControllerStorage();
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        uint256 maxSlippage = ParameterHelpers.toUint256(
-            IParameters($.parameters).get(_getMaxSlippageKey(pool))
-        );
+        uint256 maxSlippage = maxSlippages(pool);
 
         require(maxSlippage != 0, "CurveFacet/max-slippage-not-set");
 
@@ -270,10 +277,8 @@ contract CurveFacet is ICurveFacet, FacetBase {
     /*** View functions                                                                         ***/
     /**********************************************************************************************/
 
-    function maxSlippages(address pool) external view returns (uint256) {
-        return ParameterHelpers.toUint256(
-            IParameters(_getControllerStorage().parameters).get(_getMaxSlippageKey(pool))
-        );
+    function maxSlippages(address pool) public view returns (uint256) {
+        return _getCurveFacetStorage().maxSlippages[pool];
     }
 
     /**********************************************************************************************/
@@ -325,10 +330,6 @@ contract CurveFacet is ICurveFacet, FacetBase {
 
         // Convert the total value moved into an aggregated swap "amount in" by dividing it by 2.
         _decreaseRateLimit(rateLimits, LIMIT_SWAP, pool, totalSwapped / 2);
-    }
-
-    function _getMaxSlippageKey(address pool) internal pure returns (string memory) {
-        return combineKeyComponents(MAX_SLIPPAGE_PREFIX, addressToKeyComponent(pool));
     }
 
     function _absSubtraction(uint256 a, uint256 b) internal pure returns (uint256) {

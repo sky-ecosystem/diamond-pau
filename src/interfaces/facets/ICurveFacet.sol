@@ -41,14 +41,12 @@ interface ICurveFacet is IFacetBase {
     /*** View/Pure functions                                                                    ***/
     /**********************************************************************************************/
 
-    function maxSlippages(address pool) external view returns (uint256);
-
-    function MAX_SLIPPAGE_PREFIX() external pure returns (string memory);
-
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     function LIMIT_SWAP() external pure returns (bytes32);
 
     function LIMIT_WITHDRAW() external pure returns (bytes32);
+
+    function maxSlippages(address pool) external view returns (uint256);
 
 }

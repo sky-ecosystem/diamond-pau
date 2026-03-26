@@ -395,56 +395,56 @@ abstract contract ForkTestBase is DssTest {
         vm.label(curveFacet, "CurveFacet");
 
         // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.setCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.setMaxSlippage.selector
         );
 
         // Controller.curveMaxSlippages() -> CurveFacet.maxSlippages()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.curveMaxSlippages.selector,
             curveFacet,
             ICurveFacet.maxSlippages.selector
         );
 
         // Controller.swapCurve() -> CurveFacet.swap()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.swapCurve.selector,
             curveFacet,
             ICurveFacet.swap.selector
         );
 
         // Controller.addLiquidityCurve() -> CurveFacet.addLiquidity()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.addLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.addLiquidity.selector
         );
 
         // Controller.removeLiquidityCurve() -> CurveFacet.removeLiquidity()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.removeLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.removeLiquidity.selector
         );
 
         // Controller.LIMIT_CURVE_DEPOSIT() -> CurveFacet.LIMIT_DEPOSIT()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             curveFacet,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
 
         // Controller.LIMIT_CURVE_SWAP() -> CurveFacet.LIMIT_SWAP()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CURVE_SWAP.selector,
             curveFacet,
             ICurveFacet.LIMIT_SWAP.selector
         );
 
         // Controller.LIMIT_CURVE_WITHDRAW() -> CurveFacet.LIMIT_WITHDRAW()
-        mainnetController.setFacet(
+        mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             curveFacet,
             ICurveFacet.LIMIT_WITHDRAW.selector
