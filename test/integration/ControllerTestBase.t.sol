@@ -5,7 +5,6 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 import { Controller }     from "../../src/Controller.sol";
-import { Parameters }     from "../../src/Parameters.sol";
 
 contract ControllerTestBase is Test {
 
@@ -20,7 +19,6 @@ contract ControllerTestBase is Test {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     AccessControls internal accessControls;
-    Parameters     internal parameters;
 
     address internal controllerAddress;
 
@@ -33,24 +31,14 @@ contract ControllerTestBase is Test {
         // Step-1: Deploy the controller and its dependencies.
 
         accessControls = new AccessControls(admin);
-        parameters     = new Parameters(admin);
 
-        controllerAddress = address(new Controller(address(accessControls), address(parameters), proxy, rateLimits));
+        controllerAddress = address(new Controller(address(accessControls), proxy, rateLimits));
 
-        // Step-2: Grant the necessary access control permissions.
-
-        vm.startPrank(admin);
-
-        parameters.grantRole(parameters.CONTROLLER_ROLE(), controllerAddress);
-
-        vm.stopPrank();
-
-        // Step-3: Label addresses.
+        // Step-2: Label addresses.
 
         vm.label(address(accessControls), "AccessControls");
         vm.label(admin,                   "Admin");
         vm.label(controllerAddress,       "Controller");
-        vm.label(address(parameters),     "Parameters");
         vm.label(proxy,                   "Proxy");
         vm.label(rateLimits,              "RateLimits");
         vm.label(unauthorized,            "Unauthorized");

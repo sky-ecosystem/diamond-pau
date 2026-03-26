@@ -39,8 +39,6 @@ interface IERC4626Facet is IFacetBase {
 
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
-    function MAX_EXCHANGE_RATE_PREFIX() external pure returns (string memory);
-
     function maxExchangeRates(address token) external view returns (uint256);
 
 }
