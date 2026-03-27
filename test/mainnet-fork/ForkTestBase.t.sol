@@ -34,6 +34,7 @@ import { IFarmFacet }          from "../../src/interfaces/facets/IFarmFacet.sol"
 import { ILayerZeroFacet }     from "../../src/interfaces/facets/ILayerZeroFacet.sol";
 import { IMapleFacet }         from "../../src/interfaces/facets/IMapleFacet.sol";
 import { IMerklFacet }         from "../../src/interfaces/facets/IMerklFacet.sol";
+import { IOTCFacet }           from "../../src/interfaces/facets/IOTCFacet.sol";
 import { IPendleFacet }        from "../../src/interfaces/facets/IPendleFacet.sol";
 import { IPSMFacet }           from "../../src/interfaces/facets/IPSMFacet.sol";
 import { ISparkVaultFacet }    from "../../src/interfaces/facets/ISparkVaultFacet.sol";
@@ -58,6 +59,7 @@ import { FarmFacet }          from "../../src/libraries/FarmLib.sol";
 import { LayerZeroFacet }     from "../../src/libraries/LayerZeroLib.sol";
 import { MapleFacet }         from "../../src/libraries/MapleLib.sol";
 import { MerklFacet }         from "../../src/libraries/MerklLib.sol";
+import { OTCFacet }           from "../../src/libraries/OTCLib.sol";
 import { PendleFacet }        from "../../src/libraries/PendleLib.sol";
 import { PSMFacet }           from "../../src/libraries/PSMLib.sol";
 import { SparkVaultFacet }    from "../../src/libraries/SparkVaultLib.sol";
@@ -137,8 +139,10 @@ abstract contract ForkTestBase is DssTest {
     bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
-    bytes32 constant ilk                = "ILK-A";
+    bytes32 constant ilk = "ILK-A";
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
 
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
@@ -155,10 +159,6 @@ abstract contract ForkTestBase is DssTest {
     address relayer = Ethereum.ALM_RELAYER_MULTISIG;
 
     address backstopRelayer = makeAddr("backstopRelayer");  // TODO: Replace with real backstop
-
-    bytes32 CONTROLLER;
-    bytes32 FREEZER;
-    bytes32 RELAYER;
 
     /**********************************************************************************************/
     /*** Mainnet addresses/constants                                                            ***/
@@ -279,10 +279,6 @@ abstract contract ForkTestBase is DssTest {
             accessControls_ : address(accessControls)
         })));
 
-        CONTROLLER = almProxy.CONTROLLER();
-        FREEZER    = mainnetController.FREEZER();
-        RELAYER    = mainnetController.RELAYER();
-
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
@@ -292,10 +288,6 @@ abstract contract ForkTestBase is DssTest {
         almProxy.grantRole(almProxy.CONTROLLER(), address(mainnetController));
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(mainnetController));
-
-        mainnetController.grantRole(mainnetController.FREEZER(), freezer);
-        mainnetController.grantRole(mainnetController.RELAYER(), relayer);
-        mainnetController.grantRole(mainnetController.RELAYER(), backstopRelayer);
 
         // Facet wiring
         _wireAaveFacet();
@@ -309,6 +301,7 @@ abstract contract ForkTestBase is DssTest {
         _wireLayerZeroFacet();
         _wireMapleFacet();
         _wireMerklFacet();
+        _wireOTCFacet();
         _wirePendleFacet();
         _wirePSMFacet();
         _wireSparkVaultFacet();
@@ -862,6 +855,89 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.layerZeroRecipients.selector,
             layerZeroFacet,
             ILayerZeroFacet.getRecipient.selector
+        );
+    }
+
+    function _wireOTCFacet() internal {
+        address otcFacet = address(new OTCFacet());
+
+        vm.label(otcFacet, "OTCFacet");
+
+        // Controller.setOTCMaxSlippage -> OTCFacet.setMaxSlippage
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCMaxSlippage.selector,
+            otcFacet,
+            IOTCFacet.setMaxSlippage.selector
+        );
+
+        // Controller.setOTCBuffer -> OTCFacet.setBuffer
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCBuffer.selector,
+            otcFacet,
+            IOTCFacet.setBuffer.selector
+        );
+
+        // Controller.setOTCRechargeRate -> OTCFacet.setRechargeRate
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCRechargeRate.selector,
+            otcFacet,
+            IOTCFacet.setRechargeRate.selector
+        );
+
+        // Controller.setOTCWhitelistedAsset -> OTCFacet.setIsWhitelisted
+        mainnetController.setDispatch(
+            IMainnetControllerFull.setOTCWhitelistedAsset.selector,
+            otcFacet,
+            IOTCFacet.setIsWhitelisted.selector
+        );
+
+        // Controller.otcSend -> OTCFacet.send
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcSend.selector,
+            otcFacet,
+            IOTCFacet.send.selector
+        );
+
+        // Controller.otcClaim -> OTCFacet.claim
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcClaim.selector,
+            otcFacet,
+            IOTCFacet.claim.selector
+        );
+
+        // Controller.LIMIT_OTC_SWAP -> OTCFacet.LIMIT_SWAP
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_OTC_SWAP.selector,
+            otcFacet,
+            IOTCFacet.LIMIT_SWAP.selector
+        );
+
+        // Controller.getOtcClaimWithRecharge -> OTCFacet.getClaimWithRecharge
+        mainnetController.setDispatch(
+            IMainnetControllerFull.getOtcClaimWithRecharge.selector,
+            otcFacet,
+            IOTCFacet.getClaimWithRecharge.selector
+        );
+
+        // Controller.isOtcSwapReady -> OTCFacet.isSwapReady
+        mainnetController.setDispatch(
+            IMainnetControllerFull.isOtcSwapReady.selector,
+            otcFacet,
+            IOTCFacet.isSwapReady.selector
+        );
+
+        // Controller.otcs -> OTCFacet.getState
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcs.selector,
+            otcFacet,
+            IOTCFacet.getState.selector
+        );
+
+        // Controller.otcWhitelistedAssets -> OTCFacet.isWhitelisted
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcWhitelistedAssets.selector,
+            otcFacet,
+            IOTCFacet.getIsWhitelisted.selector
         );
     }
 

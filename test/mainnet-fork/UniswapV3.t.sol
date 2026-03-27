@@ -284,7 +284,7 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER
+            RELAYER_ROLE
         ));
         mainnetController.swapUniswapV3(
             _getPool(),
@@ -793,7 +793,7 @@ contract MainnetController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
             abi.encodeWithSignature(
                 "AccessControlUnauthorizedAccount(address,bytes32)",
                 address(this),
-                RELAYER
+                RELAYER_ROLE
             )
         );
         mainnetController.addLiquidityUniswapV3(
@@ -1782,7 +1782,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
             abi.encodeWithSignature(
                 "AccessControlUnauthorizedAccount(address,bytes32)",
                 address(this),
-                RELAYER
+                RELAYER_ROLE
             )
         );
 

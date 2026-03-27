@@ -35,8 +35,8 @@ abstract contract Freezable_RemoveRelayer_TestBase is UnitTestBase {
         almProxyFreezable = new ALMProxyFreezable(admin);
 
         vm.startPrank(admin);
-        almProxyFreezable.grantRole(FREEZER, freezer);
-        almProxyFreezable.grantRole(RELAYER, relayer);
+        almProxyFreezable.grantRole(FREEZER_ROLE, freezer);
+        almProxyFreezable.grantRole(RELAYER_ROLE, relayer);
         vm.stopPrank();
 
         target = address(new MockTarget());
@@ -50,7 +50,7 @@ contract ALMProxy_Freezable_RemoveRelayer_FailureTests is Freezable_RemoveRelaye
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            FREEZER
+            FREEZER_ROLE
         ));
         almProxyFreezable.removeRelayer(relayer);
 
@@ -58,7 +58,7 @@ contract ALMProxy_Freezable_RemoveRelayer_FailureTests is Freezable_RemoveRelaye
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            FREEZER
+            FREEZER_ROLE
         ));
         almProxyFreezable.removeRelayer(relayer);
     }
@@ -77,7 +77,7 @@ contract ALMProxy_Freezable_RemoveRelayer_SuccessTests is Freezable_RemoveRelaye
         assertEq(abi.decode(returnData, (uint256)), 84);
 
         // Before has relayer role
-        assertTrue(almProxyFreezable.hasRole(RELAYER, relayer));
+        assertTrue(almProxyFreezable.hasRole(RELAYER_ROLE, relayer));
 
         // Freezer comes in and removes relayer.
         vm.prank(freezer);
@@ -86,14 +86,14 @@ contract ALMProxy_Freezable_RemoveRelayer_SuccessTests is Freezable_RemoveRelaye
         almProxyFreezable.removeRelayer(relayer);
 
         // After no longer has relayer role
-        assertFalse(almProxyFreezable.hasRole(RELAYER, relayer));
+        assertFalse(almProxyFreezable.hasRole(RELAYER_ROLE, relayer));
 
         // After can no longer call as relayer
         vm.prank(relayer);
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             relayer,
-            RELAYER
+            RELAYER_ROLE
         ));
         almProxyFreezable.doCall(target, data);
     }

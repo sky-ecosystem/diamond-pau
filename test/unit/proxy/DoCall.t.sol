@@ -35,7 +35,7 @@ abstract contract ALMProxy_Call_TestBase is UnitTestBase {
         almProxy = new ALMProxy(admin);
 
         vm.prank(admin);
-        almProxy.grantRole(CONTROLLER, controller);
+        almProxy.grantRole(CONTROLLER_ROLE, controller);
 
         target = address(new MockTarget());
     }
@@ -48,7 +48,7 @@ contract ALMProxy_DoCall_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doCall(target, data);
 
@@ -56,7 +56,7 @@ contract ALMProxy_DoCall_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doCall(target, data);
     }
@@ -83,7 +83,7 @@ contract ALMProxy_DoCallWithValue_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doCallWithValue(target, data, 1e18);
 
@@ -91,7 +91,7 @@ contract ALMProxy_DoCallWithValue_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doCallWithValue(target, data, 1e18);
     }
@@ -148,7 +148,7 @@ contract ALMProxy_DoDelegateCall_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doDelegateCall(target, data);
 
@@ -156,7 +156,7 @@ contract ALMProxy_DoDelegateCall_FailureTests is ALMProxy_Call_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            CONTROLLER
+            CONTROLLER_ROLE
         ));
         almProxy.doDelegateCall(target, data);
     }
@@ -204,7 +204,7 @@ abstract contract ALMProxyFreezable_Call_TestBase is UnitTestBase {
         almProxyFreezable = new ALMProxyFreezable(admin);
 
         vm.prank(admin);
-        almProxyFreezable.grantRole(RELAYER, relayer);
+        almProxyFreezable.grantRole(RELAYER_ROLE, relayer);
 
         target = address(new MockTarget());
     }
@@ -217,7 +217,7 @@ contract ALMProxyFreezable_DoCall_FailureTests is ALMProxyFreezable_Call_TestBas
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER
+            RELAYER_ROLE
         ));
         almProxyFreezable.doCall(target, data);
 
@@ -225,7 +225,7 @@ contract ALMProxyFreezable_DoCall_FailureTests is ALMProxyFreezable_Call_TestBas
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            RELAYER
+            RELAYER_ROLE
         ));
         almProxyFreezable.doCall(target, data);
     }
@@ -252,7 +252,7 @@ contract ALMProxyFreezable_DoCallWithValue_FailureTests is ALMProxyFreezable_Cal
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER
+            RELAYER_ROLE
         ));
         almProxyFreezable.doCallWithValue(target, data, 1e18);
 
@@ -260,7 +260,7 @@ contract ALMProxyFreezable_DoCallWithValue_FailureTests is ALMProxyFreezable_Cal
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
-            RELAYER
+            RELAYER_ROLE
         ));
         almProxyFreezable.doCallWithValue(target, data, 1e18);
     }

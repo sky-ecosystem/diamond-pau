@@ -441,6 +441,32 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
     function getUniswapV3TWAPSecondsAgo(address pool) external view virtual returns (uint32);
 
     /**********************************************************************************************/
+    /*** OTCFacet actions                                                                       ***/
+    /**********************************************************************************************/
+
+    function setOTCMaxSlippage(address exchange, uint256 maxSlippage) external virtual;
+
+    function setOTCBuffer(address exchange, address otcBuffer) external virtual;
+
+    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external virtual;
+
+    function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted) external virtual;
+
+    function otcSend(address exchange, address assetToSend, uint256 amount) external virtual;
+
+    function otcClaim(address exchange, address assetToClaim) external virtual;
+
+    function LIMIT_OTC_SWAP() external pure virtual returns (bytes32);
+
+    function getOtcClaimWithRecharge(address exchange) external view virtual returns (uint256);
+
+    function isOtcSwapReady(address exchange) external view virtual returns (bool);
+
+    function otcs(address exchange) external view virtual returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
+
+    function otcWhitelistedAssets(address exchange, address asset) external view virtual returns (bool);
+
+    /**********************************************************************************************/
     /*** LayerZero actions                                                                      ***/
     /**********************************************************************************************/
 
