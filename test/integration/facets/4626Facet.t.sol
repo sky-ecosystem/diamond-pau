@@ -4,10 +4,10 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IController }   from "../../../src/interfaces/IController.sol";
-import { IFacetBase }    from "../../../src/interfaces/facets/IFacetBase.sol";
-import { IERC4626Facet } from "../../../src/interfaces/facets/IERC4626Facet.sol";
+import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
+import { IERC4626Facet } from "../../../src/facets/erc4626/IERC4626Facet.sol";
 
-import { ERC4626Facet } from "../../../src/libraries/ERC4626Lib.sol";
+import { ERC4626Facet } from "../../../src/facets/erc4626/ERC4626Facet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 

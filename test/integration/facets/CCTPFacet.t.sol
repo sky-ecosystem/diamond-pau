@@ -3,10 +3,10 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { ICCTPFacet }  from "../../../src/interfaces/facets/ICCTPFacet.sol";
+import { ICCTPFacet }  from "../../../src/facets/cctp/ICCTPFacet.sol";
 import { IController } from "../../../src/interfaces/IController.sol";
 
-import { CCTPFacet } from "../../../src/libraries/CCTPLib.sol";
+import { CCTPFacet } from "../../../src/facets/cctp/CCTPFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
@@ -22,7 +22,7 @@ interface IControllerLike is IController {
 
 }
 
-contract CCTPFacet_TestBase is Controller_TestBase {
+abstract contract CCTPFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 

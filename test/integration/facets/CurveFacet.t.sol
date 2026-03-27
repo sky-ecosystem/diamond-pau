@@ -3,10 +3,10 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { ICurveFacet } from "../../../src/interfaces/facets/ICurveFacet.sol";
+import { ICurveFacet } from "../../../src/facets/curve/ICurveFacet.sol";
 import { IController } from "../../../src/interfaces/IController.sol";
 
-import { CurveFacet } from "../../../src/libraries/CurveLib.sol";
+import { CurveFacet } from "../../../src/facets/curve/CurveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
@@ -18,7 +18,7 @@ interface IControllerLike is IController {
 
 }
 
-contract CurveFacet_TestBase is Controller_TestBase {
+abstract contract CurveFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 

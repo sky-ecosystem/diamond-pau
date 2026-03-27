@@ -4,10 +4,10 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IController }     from "../../../src/interfaces/IController.sol";
-import { IFacetBase }      from "../../../src/interfaces/facets/IFacetBase.sol";
-import { ILayerZeroFacet } from "../../../src/interfaces/facets/ILayerZeroFacet.sol";
+import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
+import { ILayerZeroFacet } from "../../../src/facets/layer-zero/ILayerZeroFacet.sol";
 
-import { LayerZeroFacet } from "../../../src/libraries/LayerZeroLib.sol";
+import { LayerZeroFacet } from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
@@ -19,7 +19,7 @@ interface IControllerLike is IController {
 
 }
 
-contract LayerZeroFacet_TestBase is Controller_TestBase {
+abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 

@@ -4,10 +4,10 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IController }     from "../../../src/interfaces/IController.sol";
-import { IFacetBase }      from "../../../src/interfaces/facets/IFacetBase.sol";
-import { IUniswapV3Facet } from "../../../src/interfaces/facets/IUniswapV3Facet.sol";
+import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
+import { IUniswapV3Facet } from "../../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
-import { UniswapV3Facet } from "../../../src/libraries/UniswapV3Lib.sol";
+import { UniswapV3Facet } from "../../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
@@ -33,7 +33,7 @@ interface IControllerLike is IController {
 
 }
 
-contract UniswapV3Facet_TestBase is Controller_TestBase {
+abstract contract UniswapV3Facet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
