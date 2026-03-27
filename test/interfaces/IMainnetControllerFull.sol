@@ -401,11 +401,7 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function otcs(address exchange) external view virtual returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
 
-    function otcBuffer(address exchange) external view virtual returns (address);
-
-    function otcRechargeRate(address exchange) external view virtual returns (uint256);
-
-    function otcWhitelistedAsset(address exchange, address asset) external view virtual returns (bool);
+    function otcWhitelistedAssets(address exchange, address asset) external view virtual returns (bool);
 
     /**********************************************************************************************/
     /*** LayerZero actions                                                                      ***/

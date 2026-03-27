@@ -917,6 +917,13 @@ abstract contract ForkTestBase is DssTest {
             IOTCFacet.claim.selector
         );
 
+        // Controller.LIMIT_OTC_SWAP -> OTCFacet.LIMIT_SWAP
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_OTC_SWAP.selector,
+            otcFacet,
+            IOTCFacet.LIMIT_SWAP.selector
+        );
+
         // Controller.getOtcClaimWithRecharge -> OTCFacet.getClaimWithRecharge
         mainnetController.setDispatch(
             IMainnetControllerFull.getOtcClaimWithRecharge.selector,
@@ -931,18 +938,18 @@ abstract contract ForkTestBase is DssTest {
             IOTCFacet.isSwapReady.selector
         );
 
-        // Controller.LIMIT_OTC_SWAP -> OTCFacet.LIMIT_SWAP
-        mainnetController.setDispatch(
-            IMainnetControllerFull.LIMIT_OTC_SWAP.selector,
-            otcFacet,
-            IOTCFacet.LIMIT_SWAP.selector
-        );
-
         // Controller.otcs -> OTCFacet.getState
         mainnetController.setDispatch(
             IMainnetControllerFull.otcs.selector,
             otcFacet,
             IOTCFacet.getState.selector
+        );
+
+        // Controller.otcWhitelistedAssets -> OTCFacet.isWhitelisted
+        mainnetController.setDispatch(
+            IMainnetControllerFull.otcWhitelistedAssets.selector,
+            otcFacet,
+            IOTCFacet.isWhitelisted.selector
         );
     }
 
