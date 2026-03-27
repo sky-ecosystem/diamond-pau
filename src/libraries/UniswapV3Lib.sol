@@ -278,15 +278,21 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         require(poolParams.twapSecondsAgo != 0,           "UniswapV3Facet/zero-twap-seconds");
         require(minAmountOut > 0,                         "UniswapV3Facet/min-amount-not-set");
 
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
         _approve(tokenIn, router, amountIn);
+
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         address proxy = $.proxy;
 
         uint256 startingBalance = IERC20Like(tokenIn).balanceOf(proxy);
 
-        amountOut = _swap(pool, tokenIn, amountIn, minAmountOut, tickDelta);
+        amountOut = _swap({
+            pool         : pool,
+            tokenIn      : tokenIn,
+            amountIn     : amountIn,
+            minAmountOut : minAmountOut,
+            tickDelta    : tickDelta
+        });
 
         uint256 amountSpent = startingBalance - IERC20Like(tokenIn).balanceOf(proxy);
 
@@ -319,12 +325,24 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         _approve(token1, positionManager, target.amount1);
 
         if (tokenId == 0) {
-            ( tokenId, liquidity_, amounts_ ) = _mintLiquidity(pool, ticks, target, min, deadline);
+            ( tokenId_, liquidity_, amounts_ ) = _mintLiquidity({
+                pool     : pool,
+                ticks    : ticks,
+                target   : target,
+                min      : min,
+                deadline : deadline
+            });
         } else {
-            (
-                liquidity_,
-                amounts_
-            ) = _increaseLiquidity(pool, tokenId, ticks, target, min, deadline);
+            ( liquidity_, amounts_ ) = _increaseLiquidity({
+                pool     : pool,
+                tokenId  : tokenId,
+                ticks    : ticks,
+                target   : target,
+                min      : min,
+                deadline : deadline
+            });
+
+            tokenId_ = tokenId;
         }
 
         require(liquidity_ != 0, "UniswapV3Facet/no-liquidity-increased");
@@ -354,7 +372,13 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         address token0 = IUniswapV3PoolLike(pool).token0();
         address token1 = IUniswapV3PoolLike(pool).token1();
 
-        _validateRemoveLiquidityParams(pool, tokenId, token0, token1, liquidity);
+        _validateRemoveLiquidityParams({
+            pool      : pool,
+            tokenId   : tokenId,
+            token0    : token0,
+            token1    : token1,
+            liquidity : liquidity
+        });
 
         amounts = _callDecreaseLiquidity(tokenId, liquidity, min, deadline);
 
