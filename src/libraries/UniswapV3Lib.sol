@@ -335,7 +335,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         } else {
             ( liquidity_, amounts_ ) = _increaseLiquidity({
                 pool     : pool,
-                tokenId  : resultingTokenId,
+                tokenId  : tokenId,
                 ticks    : ticks,
                 target   : target,
                 min      : min,
@@ -353,8 +353,6 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts_.amount0);
         _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts_.amount1);
-
-        resultingTokenId = tokenId;
     }
 
     function removeLiquidity(
