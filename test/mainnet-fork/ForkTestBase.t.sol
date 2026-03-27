@@ -949,7 +949,7 @@ abstract contract ForkTestBase is DssTest {
         mainnetController.setDispatch(
             IMainnetControllerFull.otcWhitelistedAssets.selector,
             otcFacet,
-            IOTCFacet.isWhitelisted.selector
+            IOTCFacet.getIsWhitelisted.selector
         );
     }
 

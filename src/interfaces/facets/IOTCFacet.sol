@@ -9,14 +9,17 @@ interface IOTCFacet is IFacetBase {
     /*** Structs                                                                                ***/
     /**********************************************************************************************/
 
-    struct State {
+    struct Parameters {
         address buffer;
         uint256 rechargeRate18;
+        uint256 maxSlippage;
+        mapping (address asset => bool isWhitelisted) assetWhitelisted;
+    }
+
+    struct State {
         uint256 sent18;
         uint256 sentTimestamp;
         uint256 claimed18;
-        uint256 maxSlippage;
-        mapping (address asset => bool isWhitelisted) assetWhitelisted;
     }
 
     /**********************************************************************************************/
