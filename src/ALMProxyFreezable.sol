@@ -12,14 +12,14 @@ contract ALMProxyFreezable is AccessControl {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event ControllerRemoved(address indexed controller);
+    event RelayerRemoved(address indexed relayer);
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
-    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
-    bytes32 public constant FREEZER    = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
+    bytes32 public constant FREEZER = keccak256("FREEZER");
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -30,17 +30,21 @@ contract ALMProxyFreezable is AccessControl {
     }
 
     /**********************************************************************************************/
+    /*** Freezer functions                                                                         ***/
+    /**********************************************************************************************/
+
+    function removeRelayer(address relayer) external onlyRole(FREEZER) {
+        _revokeRole(RELAYER, relayer);
+        emit RelayerRemoved(relayer);
+    }
+
+    /**********************************************************************************************/
     /*** Call functions                                                                         ***/
     /**********************************************************************************************/
 
-    function removeController(address controller) external onlyRole(FREEZER) {
-        _revokeRole(CONTROLLER, controller);
-        emit ControllerRemoved(controller);
-    }
-
     function doCall(address target, bytes memory data)
         external
-        onlyRole(CONTROLLER)
+        onlyRole(RELAYER)
         returns (bytes memory result)
     {
         result = target.functionCall(data);
@@ -49,7 +53,7 @@ contract ALMProxyFreezable is AccessControl {
     function doCallWithValue(address target, bytes memory data, uint256 value)
         external
         payable
-        onlyRole(CONTROLLER)
+        onlyRole(RELAYER)
         returns (bytes memory result)
     {
         result = target.functionCallWithValue(data, value);
