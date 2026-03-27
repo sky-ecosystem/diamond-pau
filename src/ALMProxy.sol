@@ -14,7 +14,7 @@ contract ALMProxy is IALMProxy, AccessControl {
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
-    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 public override constant CONTROLLER = keccak256("CONTROLLER");
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -30,6 +30,7 @@ contract ALMProxy is IALMProxy, AccessControl {
 
     function doCall(address target, bytes memory data)
         external
+        override
         onlyRole(CONTROLLER)
         returns (bytes memory result)
     {
@@ -38,6 +39,7 @@ contract ALMProxy is IALMProxy, AccessControl {
 
     function doCallWithValue(address target, bytes memory data, uint256 value)
         external
+        override
         payable
         onlyRole(CONTROLLER)
         returns (bytes memory result)
@@ -47,6 +49,7 @@ contract ALMProxy is IALMProxy, AccessControl {
 
     function doDelegateCall(address target, bytes memory data)
         external
+        override
         onlyRole(CONTROLLER)
         returns (bytes memory result)
     {

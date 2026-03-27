@@ -112,5 +112,4 @@ interface IUniswapV3Facet is IFacetBase {
 
     function getTWAPSecondsAgo(address pool) external view returns (uint32);
 
-
 }

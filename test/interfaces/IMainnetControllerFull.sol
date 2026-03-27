@@ -432,4 +432,12 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function LIMIT_UNISWAP_V3_WITHDRAW() external pure virtual returns (bytes32);
 
+    function getUniswapV3MaxSlippage(address pool) external view virtual returns (uint256);
+
+    function getUniswapV3PoolMaxTickDelta(address pool) external view virtual returns (uint24);
+
+    function getUniswapV3AddLiquidityTickBounds(address pool) external view virtual returns (int24 lower, int24 upper);
+
+    function getUniswapV3TWAPSecondsAgo(address pool) external view virtual returns (uint32);
+
 }
