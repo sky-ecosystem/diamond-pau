@@ -441,10 +441,7 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
             admin_          : SPARK_EXECUTOR,
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
-            accessControls_ : accessControls,
-            psm_            : address(psmArb),
-            usdc_           : Arbitrum.USDC,
-            cctp_           : CCTP_MESSENGER_ARB
+            accessControls_ : accessControls
         });
 
         address[] memory relayers = new address[](1);

@@ -454,10 +454,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             admin_          : Base.SPARK_EXECUTOR,
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
-            accessControls_ : address(accessControls),
-            psm_            : address(0),
-            usdc_           : Base.USDC,
-            cctp_           : BASE_CCTP_TOKEN_MESSENGER
+            accessControls_ : address(accessControls)
         })));
 
         vm.startPrank(Base.SPARK_EXECUTOR);

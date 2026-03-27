@@ -1,15 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ALMProxy } from "./ALMProxy.sol";
+import { AccessControl } from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
+import { Address }       from "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
-contract ALMProxyFreezable is ALMProxy {
+contract ALMProxyFreezable is AccessControl {
+
+    using Address for address;
+
+    /**********************************************************************************************/
+    /*** Events                                                                                 ***/
+    /**********************************************************************************************/
 
     event ControllerRemoved(address indexed controller);
 
-    bytes32 public constant FREEZER = keccak256("FREEZER");
+    /**********************************************************************************************/
+    /*** State variables                                                                        ***/
+    /**********************************************************************************************/
 
-    constructor(address admin) ALMProxy(admin) {}
+    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 public constant FREEZER    = keccak256("FREEZER");
+
+    /**********************************************************************************************/
+    /*** Initialization                                                                         ***/
+    /**********************************************************************************************/
+
+    constructor(address admin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
 
     /**********************************************************************************************/
     /*** Call functions                                                                         ***/
@@ -19,5 +37,28 @@ contract ALMProxyFreezable is ALMProxy {
         _revokeRole(CONTROLLER, controller);
         emit ControllerRemoved(controller);
     }
+
+    function doCall(address target, bytes memory data)
+        external
+        onlyRole(CONTROLLER)
+        returns (bytes memory result)
+    {
+        result = target.functionCall(data);
+    }
+
+    function doCallWithValue(address target, bytes memory data, uint256 value)
+        external
+        payable
+        onlyRole(CONTROLLER)
+        returns (bytes memory result)
+    {
+        result = target.functionCallWithValue(data, value);
+    }
+
+    /**********************************************************************************************/
+    /*** Receive function                                                                       ***/
+    /**********************************************************************************************/
+
+    receive() external payable { }
 
 }

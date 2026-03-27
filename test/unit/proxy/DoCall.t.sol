@@ -181,16 +181,14 @@ contract ALMProxy_Freezable_Tests is
     ALMProxy_DoCall_FailureTests,
     ALMProxy_DoCall_SuccessTests,
     ALMProxy_DoCallWithValue_FailureTests,
-    ALMProxy_DoCallWithValue_SuccessTests,
-    ALMProxy_DoDelegateCall_FailureTests,
-    ALMProxy_DoDelegateCall_SuccessTests
+    ALMProxy_DoCallWithValue_SuccessTests
 {
 
     function setUp() public override {
         super.setUp();
 
         // Overwrite almProxy with ALMProxyFreezable to demonstrate equivalent functionality
-        almProxy = new ALMProxyFreezable(admin);
+        almProxy = ALMProxy(payable(new ALMProxyFreezable(admin)));
 
         vm.startPrank(admin);
         almProxy.grantRole(FREEZER,    freezer);

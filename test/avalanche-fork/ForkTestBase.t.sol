@@ -128,10 +128,7 @@ contract ForkTestBase is Test {
             admin_          : GROVE_EXECUTOR,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
-            accessControls_ : address(accessControls),
-            psm_            : address(psmAvalanche),
-            usdc_           : USDC_AVALANCHE,
-            cctp_           : CCTP_TOKEN_MESSENGER
+            accessControls_ : address(accessControls)
         })));
 
         CONTROLLER = almProxy.CONTROLLER();

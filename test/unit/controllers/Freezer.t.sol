@@ -6,11 +6,6 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 import { MainnetController } from "../../../src/MainnetController.sol";
 import { ForeignController } from "../../../src/ForeignController.sol";
 
-import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
-import { MockPSM }     from "../mocks/MockPSM.sol";
-import { MockPSM3 }    from "../mocks/MockPSM3.sol";
-import { MockVault }   from "../mocks/MockVault.sol";
-
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 contract MainnetController_RemoveRelayer_Tests is UnitTestBase {
@@ -23,19 +18,11 @@ contract MainnetController_RemoveRelayer_Tests is UnitTestBase {
     event RelayerRemoved(address indexed relayer);
 
     function setUp() public virtual {
-        MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
-        MockPSM     psm     = new MockPSM(makeAddr("usdc"));
-        MockVault   vault   = new MockVault(makeAddr("buffer"));
-
         controller = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("accessControls"),
-            address(vault),
-            address(psm),
-            address(daiUsds),
-            makeAddr("cctp")
+            makeAddr("accessControls")
         );
 
         vm.startPrank(admin);
@@ -103,23 +90,15 @@ contract ForeignController_RemoveRelayer_Tests is UnitTestBase {
 
     address relayer1 = makeAddr("relayer1");
     address relayer2 = makeAddr("relayer2");
-    address susds    = makeAddr("susds");
-    address usdc     = makeAddr("usdc");
-    address usds     = makeAddr("usds");
 
     event RelayerRemoved(address indexed relayer);
 
     function setUp() public {
-        MockPSM3 psm3 = new MockPSM3(usds, usdc, susds);
-
         controller = new ForeignController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("accessControls"),
-            address(psm3),
-            usdc,
-            makeAddr("cctp")
+            makeAddr("accessControls")
         );
 
         vm.startPrank(admin);
