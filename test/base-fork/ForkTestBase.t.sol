@@ -65,10 +65,7 @@ abstract contract ForkTestBase is Test {
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
-
-    bytes32 CONTROLLER;
-    bytes32 FREEZER;
-    bytes32 RELAYER;
+    bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
 
     address freezer = Base.ALM_FREEZER_MULTISIG;
     address relayer = Base.ALM_RELAYER_MULTISIG;
@@ -143,14 +140,14 @@ abstract contract ForkTestBase is Test {
             accessControls_ : address(accessControls)
         })));
 
-        CONTROLLER = almProxy.CONTROLLER();
-        FREEZER    = foreignController.FREEZER();
-        RELAYER    = foreignController.RELAYER();
-
         vm.startPrank(SPARK_EXECUTOR);
 
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        almProxy.grantRole(almProxy.CONTROLLER(), address(foreignController));
+
+        rateLimits.grantRole(rateLimits.CONTROLLER(), address(foreignController));
 
         // Facet wiring
         _wireAaveFacet();
@@ -165,20 +162,9 @@ abstract contract ForkTestBase is Test {
 
         vm.stopPrank();
 
-        /*** Step 4: Configure ALM system through Spark governance (Spark spell payload) ***/
-
-        address[] memory relayers = new address[](1);
-        relayers[0] = relayer;
+        /*** Step 4: Configure ALM system parameters through Spark governance ***/
 
         vm.startPrank(SPARK_EXECUTOR);
-
-        almProxy.grantRole(almProxy.CONTROLLER(),                address(foreignController));
-        foreignController.grantRole(foreignController.FREEZER(), freezer);
-        rateLimits.grantRole(rateLimits.CONTROLLER(),            address(foreignController));
-
-        for (uint256 i; i < relayers.length; ++i) {
-            foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
-        }
 
         uint256 usdcMaxAmount = 5_000_000e6;
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;

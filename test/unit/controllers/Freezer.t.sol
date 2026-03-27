@@ -4,7 +4,6 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { MainnetController } from "../../../src/MainnetController.sol";
-import { ForeignController } from "../../../src/ForeignController.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
@@ -19,82 +18,6 @@ contract MainnetController_RemoveRelayer_Tests is UnitTestBase {
 
     function setUp() public virtual {
         controller = new MainnetController(
-            admin,
-            makeAddr("almProxy"),
-            makeAddr("rateLimits"),
-            makeAddr("accessControls")
-        );
-
-        vm.startPrank(admin);
-
-        controller.grantRole(FREEZER, freezer);
-        controller.grantRole(RELAYER, relayer1);
-        controller.grantRole(RELAYER, relayer2);
-
-        vm.stopPrank();
-    }
-
-    function test_removeRelayer_reentrancy() external {
-        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.removeRelayer(relayer);
-    }
-
-    function test_removeRelayer_unauthorizedAccount() public {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            FREEZER
-        ));
-        controller.removeRelayer(relayer);
-
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            admin,
-            FREEZER
-        ));
-        controller.removeRelayer(relayer);
-    }
-
-    function test_removeRelayer() public {
-        assertEq(controller.hasRole(RELAYER, relayer1), true);
-        assertEq(controller.hasRole(RELAYER, relayer2), true);
-
-        vm.prank(freezer);
-        vm.expectEmit(address(controller));
-        emit RelayerRemoved(relayer1);
-        controller.removeRelayer(relayer1);
-
-        assertEq(controller.hasRole(RELAYER, relayer1), false);
-        assertEq(controller.hasRole(RELAYER, relayer2), true);
-
-        vm.record();
-
-        vm.prank(freezer);
-        vm.expectEmit(address(controller));
-        emit RelayerRemoved(relayer2);
-        controller.removeRelayer(relayer2);
-
-        _assertReentrancyGuardWrittenToTwice(address(controller));
-
-        assertEq(controller.hasRole(RELAYER, relayer1), false);
-        assertEq(controller.hasRole(RELAYER, relayer2), false);
-    }
-
-}
-
-contract ForeignController_RemoveRelayer_Tests is UnitTestBase {
-
-    ForeignController controller;
-
-    address relayer1 = makeAddr("relayer1");
-    address relayer2 = makeAddr("relayer2");
-
-    event RelayerRemoved(address indexed relayer);
-
-    function setUp() public {
-        controller = new ForeignController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),

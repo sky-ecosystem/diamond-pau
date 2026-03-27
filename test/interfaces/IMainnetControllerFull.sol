@@ -440,4 +440,18 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function getUniswapV3TWAPSecondsAgo(address pool) external view virtual returns (uint32);
 
+    /**********************************************************************************************/
+    /*** LayerZero actions                                                                      ***/
+    /**********************************************************************************************/
+
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
+        external virtual;
+
+    function transferTokenLayerZero(address oftAddress, uint256 amount, uint32 destinationEndpointId)
+        external payable virtual;
+
+    function LIMIT_LAYERZERO_TRANSFER() external pure virtual returns (bytes32);
+
+    function layerZeroRecipients(uint32 destinationEndpointId) external view virtual returns (bytes32);
+
 }

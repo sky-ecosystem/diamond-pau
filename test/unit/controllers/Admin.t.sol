@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IAccessControl }  from "../../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { LayerZeroLib } from "../../../src/libraries/LayerZeroLib.sol";
-import { OTCLib }       from "../../../src/libraries/OTCLib.sol";
+import { OTCLib } from "../../../src/libraries/OTCLib.sol";
 
-import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 abstract contract MainnetController_Admin_TestBase is UnitTestBase {
-
-    bytes32 internal layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
-    bytes32 internal layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
 
     MainnetController internal mainnetController;
 
@@ -37,60 +33,57 @@ abstract contract MainnetController_Admin_TestBase is UnitTestBase {
 
 }
 
-contract MainnetController_Admin_SetLayerZeroRecipient_Tests is MainnetController_Admin_TestBase {
+contract MainnetController_Admin_SetMaxSlippage_Tests is MainnetController_Admin_TestBase {
 
-    function test_setLayerZeroRecipient_reentrancy() external {
+    function test_setMaxSlippage_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
+        mainnetController.setMaxSlippage(makeAddr("pool"), 0.98e18);
     }
 
-    function test_setLayerZeroRecipient_unauthorizedAccount() external {
+    function test_setMaxSlippage_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
+        mainnetController.setMaxSlippage(makeAddr("pool"), 0.98e18);
 
+        vm.prank(freezer);
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             freezer,
             DEFAULT_ADMIN_ROLE
         ));
-        vm.prank(freezer);
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
+        mainnetController.setMaxSlippage(makeAddr("pool"), 0.98e18);
     }
 
-    function test_setLayerZeroRecipient() external {
-        assertEq(mainnetController.layerZeroRecipients(1), bytes32(0));
-        assertEq(mainnetController.layerZeroRecipients(2), bytes32(0));
+    function test_setMaxSlippage_poolZeroAddress() external {
+        vm.prank(admin);
+        vm.expectRevert("MC/pool-zero-address");
+        mainnetController.setMaxSlippage(address(0), 0.98e18);
+    }
 
-        vm.expectEmit(address(mainnetController));
-        emit LayerZeroLib.LayerZeroRecipientSet(1, layerZeroRecipient1);
+    function test_setMaxSlippage() external {
+        address pool = makeAddr("pool");
+
+        assertEq(mainnetController.maxSlippages(pool), 0);
 
         vm.prank(admin);
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient1);
-
-        assertEq(mainnetController.layerZeroRecipients(1), layerZeroRecipient1);
-
         vm.expectEmit(address(mainnetController));
-        emit LayerZeroLib.LayerZeroRecipientSet(2, layerZeroRecipient2);
+        emit MainnetController.MaxSlippageSet(pool, 0.98e18);
+        mainnetController.setMaxSlippage(pool, 0.98e18);
 
-        vm.prank(admin);
-        mainnetController.setLayerZeroRecipient(2, layerZeroRecipient2);
-
-        assertEq(mainnetController.layerZeroRecipients(2), layerZeroRecipient2);
+        assertEq(mainnetController.maxSlippages(pool), 0.98e18);
 
         vm.record();
 
-        vm.expectEmit(address(mainnetController));
-        emit LayerZeroLib.LayerZeroRecipientSet(1, layerZeroRecipient2);
-
         vm.prank(admin);
-        mainnetController.setLayerZeroRecipient(1, layerZeroRecipient2);
+        vm.expectEmit(address(mainnetController));
+        emit MainnetController.MaxSlippageSet(pool, 0.99e18);
+        mainnetController.setMaxSlippage(pool, 0.99e18);
 
-        assertEq(mainnetController.layerZeroRecipients(1), layerZeroRecipient2);
+        assertEq(mainnetController.maxSlippages(pool), 0.99e18);
 
         _assertReentrancyGuardWrittenToTwice();
     }
@@ -265,88 +258,6 @@ contract MainnetController_Admin_SetOTCWhitelistedAsset_Tests is MainnetControll
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(mainnetController.otcWhitelistedAssets(exchange, asset), false);
-    }
-
-}
-
-contract ForeignController_Admin_Tests is UnitTestBase {
-
-    ForeignController internal foreignController;
-
-    bytes32 layerZeroRecipient1 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient1"))));
-    bytes32 layerZeroRecipient2 = bytes32(uint256(uint160(makeAddr("layerZeroRecipient2"))));
-
-    function setUp() public {
-        foreignController = new ForeignController(
-            admin,
-            makeAddr("almProxy"),
-            makeAddr("rateLimits"),
-            makeAddr("accessControls")
-        );
-    }
-
-    function _setControllerEntered() internal {
-        vm.store(address(foreignController), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-    }
-
-    function _assertReentrancyGuardWrittenToTwice() internal {
-        _assertReentrancyGuardWrittenToTwice(address(foreignController));
-    }
-
-    function test_setLayerZeroRecipient_reentrancy() external {
-        _setControllerEntered();
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        foreignController.setLayerZeroRecipient(1, layerZeroRecipient1);
-    }
-
-    function test_setLayerZeroRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        foreignController.setLayerZeroRecipient(1, layerZeroRecipient1);
-
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            freezer,
-            DEFAULT_ADMIN_ROLE
-        ));
-        vm.prank(freezer);
-        foreignController.setLayerZeroRecipient(1, layerZeroRecipient1);
-    }
-
-    function test_setLayerZeroRecipient() external {
-        assertEq(foreignController.layerZeroRecipients(1), bytes32(0));
-        assertEq(foreignController.layerZeroRecipients(2), bytes32(0));
-
-        vm.expectEmit(address(foreignController));
-        emit LayerZeroLib.LayerZeroRecipientSet(1, layerZeroRecipient1);
-
-        vm.prank(admin);
-        foreignController.setLayerZeroRecipient(1, layerZeroRecipient1);
-
-        assertEq(foreignController.layerZeroRecipients(1), layerZeroRecipient1);
-
-        vm.expectEmit(address(foreignController));
-        emit LayerZeroLib.LayerZeroRecipientSet(2, layerZeroRecipient2);
-
-        vm.prank(admin);
-        foreignController.setLayerZeroRecipient(2, layerZeroRecipient2);
-
-        assertEq(foreignController.layerZeroRecipients(2), layerZeroRecipient2);
-
-        vm.record();
-
-        vm.expectEmit(address(foreignController));
-        emit LayerZeroLib.LayerZeroRecipientSet(1, layerZeroRecipient2);
-
-        vm.prank(admin);
-        foreignController.setLayerZeroRecipient(1, layerZeroRecipient2);
-
-        assertEq(foreignController.layerZeroRecipients(1), layerZeroRecipient2);
-
-        _assertReentrancyGuardWrittenToTwice();
     }
 
 }

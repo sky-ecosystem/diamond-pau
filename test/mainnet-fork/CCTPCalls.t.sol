@@ -462,14 +462,14 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
 
-        // Facet wiring
+        foreignAlmProxy.grantRole(foreignAlmProxy.CONTROLLER(), address(foreignController));
 
+        foreignRateLimits.grantRole(foreignRateLimits.CONTROLLER(), address(foreignController));
+
+        // Facet wiring
         _wireForeignCCTPFacet();
 
         vm.stopPrank();
-
-        address[] memory relayers = new address[](1);
-        relayers[0] = relayer;
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
 
@@ -478,17 +478,9 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             mintRecipient : bytes32(uint256(uint160(address(almProxy))))
         });
 
-        // Grant access controls
+        // Governance setting up parameters.
 
         vm.startPrank(Base.SPARK_EXECUTOR);
-
-        foreignAlmProxy.grantRole(foreignAlmProxy.CONTROLLER(),     address(foreignController));
-        foreignController.grantRole(foreignController.FREEZER(),    freezer);
-        foreignRateLimits.grantRole(foreignRateLimits.CONTROLLER(), address(foreignController));
-
-        for (uint256 i; i < relayers.length; ++i) {
-            foreignController.grantRole(foreignController.RELAYER(), relayers[i]);
-        }
 
         for (uint256 i; i < mintRecipients.length; ++i) {
             foreignController.setCCTPMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);

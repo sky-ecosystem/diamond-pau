@@ -309,7 +309,7 @@ contract ForeignController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER
+            RELAYER_ROLE
         ));
         foreignController.swapUniswapV3(
             _getPool(),
@@ -433,7 +433,7 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
             abi.encodeWithSignature(
                 "AccessControlUnauthorizedAccount(address,bytes32)",
                 address(this),
-                RELAYER
+                RELAYER_ROLE
             )
         );
         foreignController.addLiquidityUniswapV3(
@@ -1363,7 +1363,7 @@ contract ForeignController_UniswapV3_RemoveLiquidity_FailureTests  is UniswapV3_
             abi.encodeWithSignature(
                 "AccessControlUnauthorizedAccount(address,bytes32)",
                 address(this),
-                RELAYER
+                RELAYER_ROLE
             )
         );
 
