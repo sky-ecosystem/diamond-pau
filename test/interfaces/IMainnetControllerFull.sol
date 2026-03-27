@@ -407,4 +407,18 @@ abstract contract IMainnetControllerFull is IController, MainnetController {
 
     function otcWhitelistedAsset(address exchange, address asset) external view virtual returns (bool);
 
+    /**********************************************************************************************/
+    /*** LayerZero actions                                                                      ***/
+    /**********************************************************************************************/
+
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
+        external virtual;
+
+    function transferTokenLayerZero(address oftAddress, uint256 amount, uint32 destinationEndpointId)
+        external payable virtual;
+
+    function LIMIT_LAYERZERO_TRANSFER() external pure virtual returns (bytes32);
+
+    function layerZeroRecipients(uint32 destinationEndpointId) external view virtual returns (bytes32);
+
 }
