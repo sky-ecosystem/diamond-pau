@@ -314,7 +314,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         external
         nonReentrant
         onlyRole(RELAYER_ROLE)
-        returns (uint256 tokenId_, uint128 liquidity_, TokenAmounts memory amounts_)
+        returns (uint256 resultingTokenId, uint128 liquidity_, TokenAmounts memory amounts_)
     {
         _validateAddLiquidityParameters(pool, ticks, target, min);
 
@@ -325,7 +325,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         _approve(token1, positionManager, target.amount1);
 
         if (tokenId == 0) {
-            ( tokenId_, liquidity_, amounts_ ) = _mintLiquidity({
+            ( resultingTokenId, liquidity_, amounts_ ) = _mintLiquidity({
                 pool     : pool,
                 ticks    : ticks,
                 target   : target,
@@ -335,14 +335,14 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         } else {
             ( liquidity_, amounts_ ) = _increaseLiquidity({
                 pool     : pool,
-                tokenId  : tokenId,
+                tokenId  : resultingTokenId,
                 ticks    : ticks,
                 target   : target,
                 min      : min,
                 deadline : deadline
             });
 
-            tokenId_ = tokenId;
+            resultingTokenId = tokenId;
         }
 
         require(liquidity_ != 0, "UniswapV3Facet/no-liquidity-increased");
@@ -354,7 +354,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts_.amount0);
         _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts_.amount1);
 
-        tokenId_ = tokenId;
+        resultingTokenId = tokenId;
     }
 
     function removeLiquidity(
