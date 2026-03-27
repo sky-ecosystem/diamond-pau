@@ -472,22 +472,32 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
+        // Controller.setLayerZeroRecipient -> LayerZeroFacet.setRecipient
         foreignController.setDispatch(
             IForeignControllerFull.setLayerZeroRecipient.selector,
             layerZeroFacet,
             ILayerZeroFacet.setRecipient.selector
         );
 
+        // Controller.transferTokenLayerZero -> LayerZeroFacet.transfer
         foreignController.setDispatch(
             IForeignControllerFull.transferTokenLayerZero.selector,
             layerZeroFacet,
             ILayerZeroFacet.transfer.selector
         );
 
+        // Controller.LIMIT_LAYERZERO_TRANSFER -> LayerZeroFacet.LIMIT_TRANSFER
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             layerZeroFacet,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
+        );
+
+        // Controller.layerZeroRecipients -> LayerZeroFacet.getRecipient
+        foreignController.setDispatch(
+            IForeignControllerFull.layerZeroRecipients.selector,
+            layerZeroFacet,
+            ILayerZeroFacet.getRecipient.selector
         );
     }
 

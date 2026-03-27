@@ -838,22 +838,32 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
+        // Controller.setLayerZeroRecipient -> LayerZeroFacet.setRecipient
         mainnetController.setDispatch(
             IMainnetControllerFull.setLayerZeroRecipient.selector,
             layerZeroFacet,
             ILayerZeroFacet.setRecipient.selector
         );
 
+        // Controller.transferTokenLayerZero -> LayerZeroFacet.transfer
         mainnetController.setDispatch(
             IMainnetControllerFull.transferTokenLayerZero.selector,
             layerZeroFacet,
             ILayerZeroFacet.transfer.selector
         );
 
+        // Controller.LIMIT_LAYERZERO_TRANSFER -> LayerZeroFacet.LIMIT_TRANSFER
         mainnetController.setDispatch(
             IMainnetControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             layerZeroFacet,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
+        );
+
+        // Controller.layerZeroRecipients -> LayerZeroFacet.getRecipient
+        mainnetController.setDispatch(
+            IMainnetControllerFull.layerZeroRecipients.selector,
+            layerZeroFacet,
+            ILayerZeroFacet.getRecipient.selector
         );
     }
 
