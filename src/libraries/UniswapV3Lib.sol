@@ -280,9 +280,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         _approve(tokenIn, router, amountIn);
 
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        address proxy = $.proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         uint256 startingBalance = IERC20Like(tokenIn).balanceOf(proxy);
 
@@ -314,7 +312,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         external
         nonReentrant
         onlyRole(RELAYER_ROLE)
-        returns (uint256 resultingTokenId, uint128 liquidity_, TokenAmounts memory amounts_)
+        returns (uint256 resultingTokenId, uint128 liquidity, TokenAmounts memory amounts)
     {
         _validateAddLiquidityParameters(pool, ticks, target, min);
 
@@ -325,7 +323,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         _approve(token1, positionManager, target.amount1);
 
         if (tokenId == 0) {
-            ( resultingTokenId, liquidity_, amounts_ ) = _mintLiquidity({
+            ( resultingTokenId, liquidity, amounts ) = _mintLiquidity({
                 pool     : pool,
                 ticks    : ticks,
                 target   : target,
@@ -333,7 +331,7 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
                 deadline : deadline
             });
         } else {
-            ( liquidity_, amounts_ ) = _increaseLiquidity({
+            ( liquidity, amounts ) = _increaseLiquidity({
                 pool     : pool,
                 tokenId  : tokenId,
                 ticks    : ticks,
@@ -345,14 +343,14 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
             resultingTokenId = tokenId;
         }
 
-        require(liquidity_ != 0, "UniswapV3Facet/no-liquidity-increased");
+        require(liquidity != 0, "UniswapV3Facet/no-liquidity-increased");
 
         // Clear approvals of dust.
         _approve(token0, positionManager, 0);
         _approve(token1, positionManager, 0);
 
-        _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts_.amount0);
-        _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts_.amount1);
+        _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts.amount0);
+        _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts.amount1);
     }
 
     function removeLiquidity(

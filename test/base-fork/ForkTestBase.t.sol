@@ -593,28 +593,28 @@ abstract contract ForkTestBase is Test {
             IUniswapV3Facet.LIMIT_WITHDRAW.selector
         );
 
-        // Controller.getUniswapV3MaxSlippage() -> UniswapV3Facet.getMaxSlippage()
+        // Controller.getUniswapV3MaxSlippage -> UniswapV3Facet.getMaxSlippag
         foreignController.setDispatch(
             IForeignControllerFull.getUniswapV3MaxSlippage.selector,
             uniswapV3Facet,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        // Controller.getUniswapV3PoolMaxTickDelta() -> UniswapV3Facet.getMaxTickDelta()
+        // Controller.getUniswapV3PoolMaxTickDelta -> UniswapV3Facet.getMaxTickDelta
         foreignController.setDispatch(
             IForeignControllerFull.getUniswapV3PoolMaxTickDelta.selector,
             uniswapV3Facet,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        // Controller.getUniswapV3AddLiquidityTickBounds() -> UniswapV3Facet.getLiquidityTickBounds()
+        // Controller.getUniswapV3AddLiquidityTickBounds -> UniswapV3Facet.getLiquidityTickBounds
         foreignController.setDispatch(
             IForeignControllerFull.getUniswapV3AddLiquidityTickBounds.selector,
             uniswapV3Facet,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        // Controller.getUniswapV3TWAPSecondsAgo() -> UniswapV3Facet.getTWAPSecondsAgo()
+        // Controller.getUniswapV3TWAPSecondsAgo -> UniswapV3Facet.getTWAPSecondsAgo
         foreignController.setDispatch(
             IForeignControllerFull.getUniswapV3TWAPSecondsAgo.selector,
             uniswapV3Facet,

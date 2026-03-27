@@ -30,7 +30,7 @@ contract ALMProxyFreezable is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Freezer functions                                                                         ***/
+    /*** Freezer functions                                                                      ***/
     /**********************************************************************************************/
 
     function removeRelayer(address relayer) external onlyRole(FREEZER) {
