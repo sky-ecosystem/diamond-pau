@@ -156,7 +156,7 @@ contract Controller_UniswapV3Facet_Admin_Tests is UniswapV3Facet_TestBase {
     function test_setMaxSlippage_zeroAddress() external {
         vm.expectRevert("UniswapV3Facet/pool-zero-address");
         vm.prank(admin);
-        controller.setMaxSlippage(address(0), 0);
+        controller.setMaxSlippage(address(0), 0.98e18);
     }
 
     function test_setMaxSlippage() external {

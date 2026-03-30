@@ -77,7 +77,7 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(maxSlippage > 0, "UniswapV4Facet/max-slippage-zero");
+        require(poolId != bytes32(0), "UniswapV4Facet/zero-pool-id");
 
         emit UniswapV4MaxSlippageSet(poolId, _getFacetStorage().maxSlippages[poolId] = maxSlippage);
     }
