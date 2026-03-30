@@ -3,22 +3,22 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { ICCTPFacet }  from "../../../src/facets/cctp/ICCTPFacet.sol";
-import { IController } from "../../../src/interfaces/IController.sol";
-
-import { CCTPFacet } from "../../../src/facets/cctp/CCTPFacet.sol";
+import { ICCTPFacet } from "../../../src/facets/cctp/ICCTPFacet.sol";
+import { CCTPFacet }  from "../../../src/facets/cctp/CCTPFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
-
-    function getCCTPMaxFeeCap() external view returns (uint256);
-
-    function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
+interface IControllerLike {
 
     function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
 
     function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
+
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+
+    function getCCTPMaxFeeCap() external view returns (uint256);
+
+    function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
 
 }
 

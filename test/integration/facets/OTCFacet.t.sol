@@ -3,31 +3,31 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IController }   from "../../../src/interfaces/IController.sol";
-import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
-import { IOTCFacet } from "../../../src/facets/otc/IOTCFacet.sol";
-
-import { OTCFacet } from "../../../src/facets/otc/OTCFacet.sol";
+import { IFacetBase } from "../../../src/facets/IFacetBase.sol";
+import { IOTCFacet }  from "../../../src/facets/otc/IOTCFacet.sol";
+import { OTCFacet }   from "../../../src/facets/otc/OTCFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
+interface IControllerLike {
 
     function setBuffer(address exchange, address buffer) external;
+
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+
+    function setIsWhitelisted(address exchange, address asset, bool isWhitelisted) external;
 
     function setMaxSlippage(address exchange, uint256 maxSlippage) external;
 
     function setRechargeRate(address exchange, uint256 rechargeRate18) external;
 
-    function setIsWhitelisted(address exchange, address asset, bool isWhitelisted) external;
-
     function getBuffer(address exchange) external view returns (address);
+
+    function getIsWhitelisted(address exchange, address asset) external view returns (bool);
 
     function getMaxSlippage(address exchange) external view returns (uint256);
 
     function getRechargeRate(address exchange) external view returns (uint256);
-
-    function getIsWhitelisted(address exchange, address asset) external view returns (bool);
 
 }
 

@@ -3,15 +3,15 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IController }     from "../../../src/interfaces/IController.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { ILayerZeroFacet } from "../../../src/facets/layer-zero/ILayerZeroFacet.sol";
-
-import { LayerZeroFacet } from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
+import { LayerZeroFacet }  from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
+interface IControllerLike {
+
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
 
     function setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 

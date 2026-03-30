@@ -14,7 +14,7 @@ import {
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
-contract RateLimitHelpersWrapper {
+contract RateLimitHelpersHarness {
 
     function makeAddressKey(bytes32 key, address asset) public pure returns (bytes32) {
         return makeAddressKeyImplementation(key, asset);
@@ -50,11 +50,11 @@ contract RateLimitHelpers_Tests is UnitTestBase {
     address internal controller = makeAddr("controller");
 
     RateLimits              internal rateLimits;
-    RateLimitHelpersWrapper internal wrapper;
+    RateLimitHelpersHarness internal wrapper;
 
     function setUp() public {
         // Set wrapper as admin so it can set rate limits
-        wrapper    = new RateLimitHelpersWrapper();
+        wrapper    = new RateLimitHelpersHarness();
         rateLimits = new RateLimits(address(wrapper));
     }
 

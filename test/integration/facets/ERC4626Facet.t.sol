@@ -3,15 +3,15 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IController }   from "../../../src/interfaces/IController.sol";
 import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
 import { IERC4626Facet } from "../../../src/facets/erc4626/IERC4626Facet.sol";
-
-import { ERC4626Facet } from "../../../src/facets/erc4626/ERC4626Facet.sol";
+import { ERC4626Facet }  from "../../../src/facets/erc4626/ERC4626Facet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
+interface IControllerLike {
+
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
 
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
 

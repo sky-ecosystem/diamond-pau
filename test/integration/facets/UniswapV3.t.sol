@@ -3,31 +3,31 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IController }     from "../../../src/interfaces/IController.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { IUniswapV3Facet } from "../../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
-
-import { UniswapV3Facet } from "../../../src/facets/uniswap-v3/UniswapV3Facet.sol";
+import { UniswapV3Facet }  from "../../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
+interface IControllerLike {
 
-    function setMaxSlippage(address pool, uint256 maxSlippage) external;
-
-    function setMaxTickDelta(address pool, uint24 maxTickDelta) external;
+    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
 
     function setLiquidityLowerTickBound(address pool, int24 lowerTickBound) external;
 
     function setLiquidityUpperTickBound(address pool, int24 upperTickBound) external;
 
+    function setMaxSlippage(address pool, uint256 maxSlippage) external;
+
+    function setMaxTickDelta(address pool, uint24 maxTickDelta) external;
+
     function setTWAPSecondsAgo(address pool, uint32 twapSecondsAgo) external;
+
+    function getLiquidityTickBounds(address pool) external view returns (int24 lower, int24 upper);
 
     function getMaxSlippage(address pool) external view returns (uint256);
 
     function getMaxTickDelta(address pool) external view returns (uint24);
-
-    function getLiquidityTickBounds(address pool) external view returns (int24 lower, int24 upper);
 
     function getTWAPSecondsAgo(address pool) external view returns (uint32);
 
