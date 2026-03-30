@@ -39,8 +39,8 @@ contract ALMProxy is IALMProxy, AccessControl {
 
     function doCallWithValue(address target, bytes memory data, uint256 value)
         external
-        override
         payable
+        override
         onlyRole(CONTROLLER)
         returns (bytes memory result)
     {

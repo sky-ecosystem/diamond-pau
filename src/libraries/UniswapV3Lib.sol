@@ -194,6 +194,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         emit UniswapV3MaxSlippageSet(pool, _getFacetStorage().maxSlippages[pool] = maxSlippage);
     }
 
