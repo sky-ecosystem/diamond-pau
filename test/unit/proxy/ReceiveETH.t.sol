@@ -5,9 +5,9 @@ import { ALMProxy } from "../../../src/ALMProxy.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
-contract ALMProxy_ReceiveEth_Tests is UnitTestBase {
+contract ALMProxy_ReceiveETH_Tests is UnitTestBase {
 
-    function test_receiveEth() public {
+    function test_receiveETH() public {
         ALMProxy almProxy = new ALMProxy(admin);
 
         deal(address(this), 10 ether);
