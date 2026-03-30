@@ -94,6 +94,31 @@ contract OTCBuffer_Initialize_Tests is OTCBuffer_TestBase {
 
 }
 
+contract OTCBuffer_AuthorizeUpgrade_Tests is OTCBuffer_TestBase {
+
+    function test_authorizeUpgrade_notAuthorized() external {
+        address newImpl = address(new OTCBuffer());
+
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        buffer.upgradeToAndCall(newImpl, "");
+    }
+
+    function test_authorizeUpgrade() external {
+        address newImpl = address(new OTCBuffer());
+
+        vm.prank(admin);
+        buffer.upgradeToAndCall(newImpl, "");
+
+        // Verify the proxy still works after upgrade
+        assertEq(buffer.almProxy(), almProxy);
+    }
+
+}
+
 contract OTCBuffer_Approve_Tests is OTCBuffer_TestBase {
 
     function test_approve_notAuthorized() external {

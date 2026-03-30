@@ -87,3 +87,56 @@ contract WEETHModule_Initialize_Tests is WEETHModule_TestBase {
     }
 
 }
+
+contract WEETHModule_AuthorizeUpgrade_Tests is WEETHModule_TestBase {
+
+    function test_authorizeUpgrade_notAuthorized() external {
+        WEETHModule weethModule = WEETHModule(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(new WEETHModule()),
+                        abi.encodeCall(
+                            WEETHModule.initialize,
+                            (admin, almProxy)
+                        )
+                    )
+                )
+            )
+        );
+
+        address newImpl = address(new WEETHModule());
+
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        weethModule.upgradeToAndCall(newImpl, "");
+    }
+
+    function test_authorizeUpgrade() external {
+        WEETHModule weethModule = WEETHModule(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(new WEETHModule()),
+                        abi.encodeCall(
+                            WEETHModule.initialize,
+                            (admin, almProxy)
+                        )
+                    )
+                )
+            )
+        );
+
+        address newImpl = address(new WEETHModule());
+
+        vm.prank(admin);
+        weethModule.upgradeToAndCall(newImpl, "");
+
+        // Verify the proxy still works after upgrade
+        assertEq(weethModule.almProxy(), almProxy);
+    }
+
+}
