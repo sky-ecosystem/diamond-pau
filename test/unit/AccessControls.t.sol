@@ -11,6 +11,12 @@ import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 
+interface IAccessControlLike {
+
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
+
+}
+
 contract AccessControls_Tests is Test {
 
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -26,6 +32,11 @@ contract AccessControls_Tests is Test {
     function setUp() external {
         vm.prank(deployer);
         accessControls = new AccessControls(admin);
+
+        vm.startPrank(admin);
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        vm.stopPrank();
     }
 
     /**********************************************************************************************/
@@ -68,11 +79,6 @@ contract AccessControls_Tests is Test {
     }
 
     function test_removeRelayer() external {
-        vm.startPrank(admin);
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
-        vm.stopPrank();
-
         assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), relayer), true);
 
         vm.expectEmit(address(accessControls));
@@ -85,6 +91,44 @@ contract AccessControls_Tests is Test {
         accessControls.removeRelayer(relayer);
 
         assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), relayer), false);
+    }
+
+    /**********************************************************************************************/
+    /*** revokeRole Tests                                                                       ***/
+    /**********************************************************************************************/
+
+    function test_revokeRole_notFreezer() external {
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), freezer), true);
+
+        vm.startPrank(admin);
+        accessControls.revokeRole(accessControls.FREEZER_ROLE(), freezer);
+        vm.stopPrank();
+
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), freezer), false);
+    }
+
+    /**********************************************************************************************/
+    /*** hasRole Tests                                                                          ***/
+    /**********************************************************************************************/
+
+    function test_hasRole() external {
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, deployer),     false);
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, freezer),      false);
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, relayer),      false);
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, unauthorized), false);
+
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), admin),        false);
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), freezer),      true);
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), deployer),     false);
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), relayer),      false);
+        assertEq(accessControls.hasRole(accessControls.FREEZER_ROLE(), unauthorized), false);
+
+        assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), admin),        false);
+        assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), freezer),      false);
+        assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), deployer),     false);
+        assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), relayer),      true);
+        assertEq(accessControls.hasRole(accessControls.RELAYER_ROLE(), unauthorized), false);
     }
 
     /**********************************************************************************************/

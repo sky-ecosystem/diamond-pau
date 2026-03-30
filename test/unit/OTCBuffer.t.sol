@@ -1,117 +1,131 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ERC1967Proxy } from "../../lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ERC20Mock }    from "../../lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+import { IAccessControl }           from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControlEnumerable } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
+import { IERC165 }                  from "../../lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
-import { OTCBuffer } from "../../src/facets/otc/OTCBuffer.sol";
+import { ERC1967Proxy } from "../../lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
+import { IOTCBuffer } from "../../src/facets/otc/IOTCBuffer.sol";
+import { OTCBuffer }  from "../../src/facets/otc/OTCBuffer.sol";
 
 import { UnitTestBase } from "./UnitTestBase.t.sol";
 
-abstract contract OTCBuffer_TestBase is UnitTestBase {
+interface IAccessControlLike {
 
-    OTCBuffer internal buffer;
-    ERC20Mock internal usdt;
-
-    address internal almProxy = makeAddr("almProxy");
-
-    function setUp() public {
-        buffer = OTCBuffer(
-            address(
-                new ERC1967Proxy(
-                    address(new OTCBuffer()),
-                    abi.encodeCall(
-                        OTCBuffer.initialize,
-                        (admin, almProxy)
-                    )
-                )
-            )
-        );
-
-        usdt = new ERC20Mock();
-    }
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
 
 }
 
-contract OTCBuffer_Initialize_Tests is OTCBuffer_TestBase {
+interface IERC20Like {
+
+    function approve(address spender, uint256 amount) external returns (bool);
+
+}
+
+contract OTCBuffer_Tests is UnitTestBase {
+
+    address internal almProxy     = makeAddr("almProxy");
+    address internal asset        = makeAddr("asset");
+    address internal unauthorized = makeAddr("unauthorized");
+
+    OTCBuffer internal implementation;
+    OTCBuffer internal proxy;
+
+    function setUp() public {
+        implementation = new OTCBuffer();
+
+        proxy = OTCBuffer(
+            address(
+                new ERC1967Proxy(
+                    address(implementation),
+                    abi.encodeCall(OTCBuffer.initialize, (admin, almProxy))
+                )
+            )
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** initialize Tests                                                                       ***/
+    /**********************************************************************************************/
 
     function test_initialize_invalidAdmin() external {
-        address otcBuffer = address(new OTCBuffer());
-
         vm.expectRevert("OTCBuffer/invalid-admin");
         new ERC1967Proxy(
-            otcBuffer,
-            abi.encodeCall(
-                OTCBuffer.initialize,
-                (address(0), almProxy)
-            )
+            address(implementation),
+            abi.encodeCall(OTCBuffer.initialize, (address(0), almProxy))
         );
     }
 
     function test_initialize_invalidAlmProxy() external {
-        address otcBuffer = address(new OTCBuffer());
-
         vm.expectRevert("OTCBuffer/invalid-alm-proxy");
         new ERC1967Proxy(
-            otcBuffer,
-            abi.encodeCall(
-                OTCBuffer.initialize,
-                (admin, address(0))
-            )
+            address(implementation),
+            abi.encodeCall(OTCBuffer.initialize, (admin, address(0)))
         );
     }
 
     function test_initialize_cannotInitializeTwice() external {
         vm.expectRevert("InvalidInitialization()");
-        buffer.initialize(admin, almProxy);
+        proxy.initialize(admin, almProxy);
     }
 
     function test_initialize_cannotInitializeImplementation() external {
-        OTCBuffer newBuffer = new OTCBuffer();
-
         vm.expectRevert("InvalidInitialization()");
-        newBuffer.initialize(admin, almProxy);
+        implementation.initialize(admin, almProxy);
     }
 
-    function test_initialize() external {
-        address newAdmin = makeAddr("new-admin");
-
-        OTCBuffer newBuffer = OTCBuffer(
-            address(
-                new ERC1967Proxy(
-                    address(new OTCBuffer()),
-                    abi.encodeCall(
-                        OTCBuffer.initialize,
-                        (newAdmin, almProxy)
-                    )
-                )
-            )
-        );
-
-        assertEq(newBuffer.hasRole(DEFAULT_ADMIN_ROLE, newAdmin), true);
-        assertEq(newBuffer.almProxy(),                            almProxy);
+    function test_initializedState() external {
+        assertEq(proxy.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(proxy.almProxy(),                         almProxy);
     }
 
-}
-
-contract OTCBuffer_Approve_Tests is OTCBuffer_TestBase {
+    /**********************************************************************************************/
+    /*** approve Tests                                                                          ***/
+    /**********************************************************************************************/
 
     function test_approve_notAuthorized() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+        vm.expectRevert(abi.encodeWithSelector(
+            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+            unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
-        buffer.approve(address(usdt), 1_000_000e6);
+        vm.prank(unauthorized);
+        proxy.approve(asset, 1_000_000e6);
     }
 
     function test_approve() external {
-        assertEq(usdt.allowance(address(buffer), almProxy), 0);
+        _expectAndMockCall(
+            asset,
+            abi.encodeWithSelector(IERC20Like.approve.selector, almProxy, 1_000_000e6),
+            abi.encode(true)
+        );
 
         vm.prank(admin);
-        buffer.approve(address(usdt), 1_000_000e6);
+        proxy.approve(asset, 1_000_000e6);
+    }
 
-        assertEq(usdt.allowance(address(buffer), almProxy), 1_000_000e6);
+    /**********************************************************************************************/
+    /*** supportsInterface Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_supportsInterface() external view {
+        assertEq(proxy.supportsInterface(type(IOTCBuffer).interfaceId),               true);
+        assertEq(proxy.supportsInterface(type(IAccessControlEnumerable).interfaceId), true);
+        assertEq(proxy.supportsInterface(type(IAccessControl).interfaceId),           true);
+        assertEq(proxy.supportsInterface(type(IERC165).interfaceId),                  true);
+    }
+
+    /**********************************************************************************************/
+    /*** Helper Functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _expectAndMockCall(address callee, bytes memory data, bytes memory returnData)
+        internal
+    {
+        vm.expectCall(callee, data);
+        vm.mockCall(callee, data, returnData);
     }
 
 }

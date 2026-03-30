@@ -7,17 +7,20 @@ import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 contract ALMProxy_ReceiveETH_Tests is UnitTestBase {
 
-    function test_receiveETH() public {
+    function test_receiveETH() external {
         ALMProxy almProxy = new ALMProxy(admin);
 
-        deal(address(this), 10 ether);
+        address account = makeAddr("account");
 
-        assertEq(address(this).balance,     10 ether);
+        deal(account, 10 ether);
+
+        assertEq(account.balance,           10 ether);
         assertEq(address(almProxy).balance, 0);
 
+        vm.prank(account);
         payable(address(almProxy)).transfer(10 ether);
 
-        assertEq(address(this).balance,     0);
+        assertEq(account.balance,           0);
         assertEq(address(almProxy).balance, 10 ether);
     }
 

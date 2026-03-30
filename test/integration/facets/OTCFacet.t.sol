@@ -19,7 +19,7 @@ interface IControllerLike {
 
     function setMaxSlippage(address exchange, uint256 maxSlippage) external;
 
-    function setRechargeRate(address exchange, uint256 rechargeRate18) external;
+    function setRechargeRate(address exchange, uint256 normalizedRate) external;
 
     function getBuffer(address exchange) external view returns (address);
 
@@ -351,7 +351,7 @@ contract Controller_OTCFacet_Admin_Tests is OTCFacet_TestBase {
     }
 
     function test_setIsWhitelisted_bufferNoSet() external {
-        vm.expectRevert("OTCFacet/otc-buffer-not-set");
+        vm.expectRevert("OTCFacet/buffer-not-set");
         vm.prank(admin);
         controller.setIsWhitelisted(address(1), address(1), false);
     }

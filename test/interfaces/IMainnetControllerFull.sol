@@ -448,7 +448,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
 
     function setOTCBuffer(address exchange, address otcBuffer) external virtual;
 
-    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external virtual;
+    function setOTCRechargeRate(address exchange, uint256 normalizedRate) external virtual;
 
     function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted) external virtual;
 
@@ -462,7 +462,11 @@ abstract contract IMainnetControllerFull is IController, Controller {
 
     function isOtcSwapReady(address exchange) external view virtual returns (bool);
 
-    function otcs(address exchange) external view virtual returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
+    function otcs(address exchange)
+        external
+        view
+        virtual
+        returns (uint256 normalizedSent, uint256 sentTimestamp, uint256 normalizedClaimed);
 
     function otcWhitelistedAssets(address exchange, address asset) external view virtual returns (bool);
 

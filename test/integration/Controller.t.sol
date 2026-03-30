@@ -130,4 +130,5 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         IMockController(address(controller)).foo(10);
     }
+
 }

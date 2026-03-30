@@ -7,6 +7,12 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
+interface IAccessControlLike {
+
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
+
+}
+
 interface IERC20Like {
 
     function balanceOf(address account) external view returns (uint256);
@@ -17,6 +23,8 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
 
     IERC20Like internal constant WETH = IERC20Like(Ethereum.WETH);
 
+    address internal unauthorized = makeAddr("unauthorized");
+
     function test_wrapAllProxyETH_reentrancy() external {
         _setControllerEntered();
 
@@ -25,44 +33,45 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
     }
 
     function test_wrapAllProxyETH_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+        vm.expectRevert(abi.encodeWithSelector(
+            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+            unauthorized,
             RELAYER_ROLE
         ));
+        vm.prank(unauthorized);
         mainnetController.wrapAllProxyETH();
     }
 
     function test_wrapAllProxyETH_zeroBalance() external {
-        assertEq(address(almProxy).balance,         0);
-        assertEq(WETH.balanceOf(address(almProxy)), 0);
+        assertEq(almProxy.balance,         0);
+        assertEq(WETH.balanceOf(almProxy), 0);
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(RELAYER);
         mainnetController.wrapAllProxyETH();
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(address(almProxy).balance,         0);
-        assertEq(WETH.balanceOf(address(almProxy)), 0);
+        assertEq(almProxy.balance,         0);
+        assertEq(WETH.balanceOf(almProxy), 0);
     }
 
     function test_wrapAllProxyETH() external {
-        vm.deal(address(almProxy), 1 ether);
+        deal(almProxy, 1 ether);
 
-        assertEq(address(almProxy).balance,         1 ether);
-        assertEq(WETH.balanceOf(address(almProxy)), 0);
+        assertEq(almProxy.balance,         1 ether);
+        assertEq(WETH.balanceOf(almProxy), 0);
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(RELAYER);
         mainnetController.wrapAllProxyETH();
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(address(almProxy).balance,         0);
-        assertEq(WETH.balanceOf(address(almProxy)), 1 ether);
+        assertEq(almProxy.balance,         0);
+        assertEq(WETH.balanceOf(almProxy), 1 ether);
     }
 
 }

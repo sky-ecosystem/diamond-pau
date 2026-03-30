@@ -3,8 +3,6 @@ pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
 
-import { IERC20 } from "../../lib/forge-std/src/interfaces/IERC20.sol";
-
 import { ERC20Mock } from "../../lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
 import { Base } from "../../lib/spark-address-registry/src/Base.sol";
@@ -38,12 +36,24 @@ import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.s
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { IALMProxy } from "../../src/interfaces/IALMProxy.sol";
+
 import { ALMProxy }         from "../../src/ALMProxy.sol";
 import { Controller }       from "../../src/Controller.sol";
 import { RateLimits }       from "../../src/RateLimits.sol";
 import { AccessControls }   from "../../src/AccessControls.sol";
 
 import { IForeignControllerFull }  from "../interfaces/IForeignControllerFull.sol";
+
+interface IERC20Like {
+
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    function balanceOf(address owner) external view returns (uint256);
+
+}
 
 abstract contract ForkTestBase is Test {
 
@@ -55,7 +65,7 @@ abstract contract ForkTestBase is Test {
     }
 
     /**********************************************************************************************/
-    /*** Constants/state variables                                                              ***/
+    /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
     address internal constant UNISWAP_V3_ROUTER           = 0x2626664c2603336E57B271c5C0b26F421741e481;
@@ -65,40 +75,42 @@ abstract contract ForkTestBase is Test {
     bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
-    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
+    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 internal constant RELAYER_ROLE       = keccak256("RELAYER");
 
-    address freezer = Base.ALM_FREEZER_MULTISIG;
-    address relayer = Base.ALM_RELAYER_MULTISIG;
-
-    address pocket = makeAddr("pocket");
+    address internal constant FREEZER = Base.ALM_FREEZER_MULTISIG;
+    address internal constant RELAYER = Base.ALM_RELAYER_MULTISIG;
 
     /**********************************************************************************************/
     /*** Base addresses                                                                         ***/
     /**********************************************************************************************/
 
-    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
-    address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
-    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
+    address internal constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
+    address internal constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
+    address internal constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    AccessControls         accessControls;
-    ALMProxy               almProxy;
-    IForeignControllerFull foreignController;
-    RateLimits             rateLimits;
+    address internal almProxy;
+
+    AccessControls         internal accessControls;
+    IForeignControllerFull internal foreignController;
+    RateLimits             internal rateLimits;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
 
-    IERC20 usdsBase;
-    IERC20 susdsBase;
-    IERC20 usdcBase;
+    address internal deployer = makeAddr("deployer");
+    address internal pocket   = makeAddr("pocket");
 
-    IPSM3 psmBase;
+    IERC20Like internal usdsBase;
+    IERC20Like internal susdsBase;
+    IERC20Like internal usdcBase;
+
+    IPSM3 internal psmBase;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -109,17 +121,19 @@ abstract contract ForkTestBase is Test {
 
         vm.createSelectFork(getChain('base').rpcUrl, _getBlock());
 
-        usdsBase  = IERC20(address(new ERC20Mock()));
-        susdsBase = IERC20(address(new ERC20Mock()));
-        usdcBase  = IERC20(Base.USDC);
+        usdsBase  = IERC20Like(address(new ERC20Mock()));
+        susdsBase = IERC20Like(address(new ERC20Mock()));
+        usdcBase  = IERC20Like(Base.USDC);
 
         /*** Step 2: Deploy and configure PSM with a pocket ***/
 
-        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+        deal(address(usdsBase), deployer, 1e18);  // For seeding PSM during deployment
 
+        vm.startPrank(deployer);
         psmBase = IPSM3(PSM3Deploy.deploy(
             SPARK_EXECUTOR, Base.USDC, address(usdsBase), address(susdsBase), SSR_ORACLE
         ));
+        vm.stopPrank();
 
         vm.prank(SPARK_EXECUTOR);
         psmBase.setPocket(pocket);
@@ -129,23 +143,23 @@ abstract contract ForkTestBase is Test {
 
         /*** Step 3: Deploy ALM system ***/
 
-        almProxy   = new ALMProxy(SPARK_EXECUTOR);
+        almProxy   = address(new ALMProxy(SPARK_EXECUTOR));
         rateLimits = new RateLimits(SPARK_EXECUTOR);
 
         accessControls = new AccessControls(SPARK_EXECUTOR);
 
         foreignController = IForeignControllerFull(payable(new Controller({
-            proxy_          : address(almProxy),
+            proxy_          : almProxy,
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls)
         })));
 
         vm.startPrank(SPARK_EXECUTOR);
 
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), FREEZER);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), RELAYER);
 
-        almProxy.grantRole(almProxy.CONTROLLER(), address(foreignController));
+        IALMProxy(almProxy).grantRole(IALMProxy(almProxy).CONTROLLER(), address(foreignController));
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(foreignController));
 
@@ -164,8 +178,6 @@ abstract contract ForkTestBase is Test {
 
         /*** Step 4: Configure ALM system parameters through Spark governance ***/
 
-        vm.startPrank(SPARK_EXECUTOR);
-
         uint256 usdcMaxAmount = 5_000_000e6;
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
         uint256 usdsMaxAmount = 5_000_000e18;
@@ -173,6 +185,8 @@ abstract contract ForkTestBase is Test {
 
         bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
+
+        vm.startPrank(SPARK_EXECUTOR);
 
         // NOTE: Using minimal config for test base setup
         rateLimits.setRateLimitData(makeAddressKey(depositKey,  address(usdcBase)),  usdcMaxAmount, usdcSlope);
@@ -223,56 +237,56 @@ abstract contract ForkTestBase is Test {
 
         vm.label(curveFacet, "CurveFacet");
 
-        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
+        // Controller.setCurveMaxSlippage -> CurveFacet.setMaxSlippage
         foreignController.setDispatch(
             IForeignControllerFull.setCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
+        // Controller.getCurveMaxSlippage -> CurveFacet.getMaxSlippage
         foreignController.setDispatch(
             IForeignControllerFull.getCurveMaxSlippage.selector,
             curveFacet,
             ICurveFacet.getMaxSlippage.selector
         );
 
-        // Controller.swapCurve() -> CurveFacet.swap()
+        // Controller.swapCurve -> CurveFacet.swap
         foreignController.setDispatch(
             IForeignControllerFull.swapCurve.selector,
             curveFacet,
             ICurveFacet.swap.selector
         );
 
-        // Controller.addLiquidityCurve() -> CurveFacet.addLiquidity()
+        // Controller.addLiquidityCurve -> CurveFacet.addLiquidity
         foreignController.setDispatch(
             IForeignControllerFull.addLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.addLiquidity.selector
         );
 
-        // Controller.removeLiquidityCurve() -> CurveFacet.removeLiquidity()
+        // Controller.removeLiquidityCurve -> CurveFacet.removeLiquidity
         foreignController.setDispatch(
             IForeignControllerFull.removeLiquidityCurve.selector,
             curveFacet,
             ICurveFacet.removeLiquidity.selector
         );
 
-        // Controller.LIMIT_CURVE_DEPOSIT() -> CurveFacet.LIMIT_DEPOSIT()
+        // Controller.LIMIT_CURVE_DEPOSIT -> CurveFacet.LIMIT_DEPOSIT
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             curveFacet,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
 
-        // Controller.LIMIT_CURVE_SWAP() -> CurveFacet.LIMIT_SWAP()
+        // Controller.LIMIT_CURVE_SWAP -> CurveFacet.LIMIT_SWAP
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CURVE_SWAP.selector,
             curveFacet,
             ICurveFacet.LIMIT_SWAP.selector
         );
 
-        // Controller.LIMIT_CURVE_WITHDRAW() -> CurveFacet.LIMIT_WITHDRAW()
+        // Controller.LIMIT_CURVE_WITHDRAW -> CurveFacet.LIMIT_WITHDRAW
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             curveFacet,
@@ -285,7 +299,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(merklFacet, "MerklFacet");
 
-        // "Controller.toggleOperatorMerkl()" -> "MerklFacet.toggleOperator()"
+        // Controller.toggleOperatorMerkl -> MerklFacet.toggleOperator
         foreignController.setDispatch(
             IForeignControllerFull.toggleOperatorMerkl.selector,
             merklFacet,
@@ -298,14 +312,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(pendleFacet, "PendleFacet");
 
-        // "Controller.redeemPendlePT()" -> "PendleFacet.redeem()"
+        // Controller.redeemPendlePT -> PendleFacet.redeem
         foreignController.setDispatch(
             IForeignControllerFull.redeemPendlePT.selector,
             pendleFacet,
             IPendleFacet.redeem.selector
         );
 
-        // "Controller.LIMIT_PENDLE_PT_REDEEM()" -> "PendleFacet.LIMIT_REDEEM()"
+        // Controller.LIMIT_PENDLE_PT_REDEEM -> PendleFacet.LIMIT_REDEEM
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             pendleFacet,
@@ -318,42 +332,42 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
+        // Controller.setAaveMaxSlippage -> AaveFacet.setMaxSlippage
         foreignController.setDispatch(
             IForeignControllerFull.setAaveMaxSlippage.selector,
             aaveFacet,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
+        // Controller.getAaveMaxSlippage -> AaveFacet.getMaxSlippage
         foreignController.setDispatch(
             IForeignControllerFull.getAaveMaxSlippage.selector,
             aaveFacet,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        // Controller.depositAave() -> AaveFacet.deposit()
+        // Controller.depositAave -> AaveFacet.deposit
         foreignController.setDispatch(
             IForeignControllerFull.depositAave.selector,
             aaveFacet,
             IAaveFacet.deposit.selector
         );
 
-        // Controller.withdrawAave() -> AaveFacet.withdraw()
+        // Controller.withdrawAave -> AaveFacet.withdraw
         foreignController.setDispatch(
             IForeignControllerFull.withdrawAave.selector,
             aaveFacet,
             IAaveFacet.withdraw.selector
         );
 
-        // Controller.LIMIT_AAVE_DEPOSIT() -> AaveFacet.LIMIT_DEPOSIT()
+        // Controller.LIMIT_AAVE_DEPOSIT -> AaveFacet.LIMIT_DEPOSIT
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             aaveFacet,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
 
-        // Controller.LIMIT_AAVE_WITHDRAW() -> AaveFacet.LIMIT_WITHDRAW()
+        // Controller.LIMIT_AAVE_WITHDRAW -> AaveFacet.LIMIT_WITHDRAW
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             aaveFacet,
@@ -366,56 +380,56 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
-        // Controller.setMaxExchangeRate() -> ERC4626Facet.setMaxExchangeRate()
+        // Controller.setMaxExchangeRate -> ERC4626Facet.setMaxExchangeRate
         foreignController.setDispatch(
             IForeignControllerFull.setMaxExchangeRate.selector,
             erc4626Facet,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        // Controller.maxExchangeRates() -> ERC4626Facet.getMaxExchangeRate()
+        // Controller.maxExchangeRates -> ERC4626Facet.getMaxExchangeRate
         foreignController.setDispatch(
             IForeignControllerFull.maxExchangeRates.selector,
             erc4626Facet,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        // Controller.depositERC4626() -> ERC4626Facet.deposit()
+        // Controller.depositERC4626 -> ERC4626Facet.deposit
         foreignController.setDispatch(
             IForeignControllerFull.depositERC4626.selector,
             erc4626Facet,
             IERC4626Facet.deposit.selector
         );
 
-        // Controller.withdrawERC4626() -> ERC4626Facet.withdraw()
+        // Controller.withdrawERC4626 -> ERC4626Facet.withdraw
         foreignController.setDispatch(
             IForeignControllerFull.withdrawERC4626.selector,
             erc4626Facet,
             IERC4626Facet.withdraw.selector
         );
 
-        // Controller.redeemERC4626() -> ERC4626Facet.redeem()
+        // Controller.redeemERC4626 -> ERC4626Facet.redeem
         foreignController.setDispatch(
             IForeignControllerFull.redeemERC4626.selector,
             erc4626Facet,
             IERC4626Facet.redeem.selector
         );
 
-        // Controller.LIMIT_4626_DEPOSIT() -> ERC4626Facet.LIMIT_DEPOSIT()
+        // Controller.LIMIT_4626_DEPOSIT -> ERC4626Facet.LIMIT_DEPOSIT
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
-        // Controller.LIMIT_4626_WITHDRAW() -> ERC4626Facet.LIMIT_WITHDRAW()
+        // Controller.LIMIT_4626_WITHDRAW -> ERC4626Facet.LIMIT_WITHDRAW
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             erc4626Facet,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
-        // Controller.EXCHANGE_RATE_PRECISION() -> ERC4626Facet.EXCHANGE_RATE_PRECISION()
+        // Controller.EXCHANGE_RATE_PRECISION -> ERC4626Facet.EXCHANGE_RATE_PRECISION
         foreignController.setDispatch(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             erc4626Facet,
@@ -428,14 +442,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
-        // "Controller.takeFromSparkVault()" -> "SparkVaultFacet.take()"
+        // Controller.takeFromSparkVault -> SparkVaultFacet.take
         foreignController.setDispatch(
             IForeignControllerFull.takeFromSparkVault.selector,
             sparkVaultFacet,
             ISparkVaultFacet.take.selector
         );
 
-        // "Controller.LIMIT_SPARK_VAULT_TAKE()" -> "SparkVaultFacet.LIMIT_TAKE()"
+        // Controller.LIMIT_SPARK_VAULT_TAKE -> SparkVaultFacet.LIMIT_TAKE
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
             sparkVaultFacet,
@@ -448,14 +462,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
-        // "Controller.transferAsset()" -> "TransferAssetFacet.transfer()"
+        // Controller.transferAsset -> TransferAssetFacet.transfer
         foreignController.setDispatch(
             IForeignControllerFull.transferAsset.selector,
             transferAssetFacet,
             ITransferAssetFacet.transfer.selector
         );
 
-        // "Controller.LIMIT_ASSET_TRANSFER()" -> "TransferAssetFacet.LIMIT_TRANSFER()"
+        // Controller.LIMIT_ASSET_TRANSFER -> TransferAssetFacet.LIMIT_TRANSFER
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_ASSET_TRANSFER.selector,
             transferAssetFacet,
@@ -468,28 +482,28 @@ abstract contract ForkTestBase is Test {
 
         vm.label(psm3Facet, "PSM3Facet");
 
-        // "Controller.depositPSM()" -> "PSM3Facet.deposit()"
+        // Controller.depositPSM -> PSM3Facet.deposit
         foreignController.setDispatch(
             IForeignControllerFull.depositPSM.selector,
             psm3Facet,
             IPSM3Facet.deposit.selector
         );
 
-        // "Controller.withdrawPSM()" -> "PSM3Facet.withdraw()"
+        // Controller.withdrawPSM -> PSM3Facet.withdraw
         foreignController.setDispatch(
             IForeignControllerFull.withdrawPSM.selector,
             psm3Facet,
             IPSM3Facet.withdraw.selector
         );
 
-        // "Controller.LIMIT_PSM_DEPOSIT()" -> "PSM3Facet.LIMIT_DEPOSIT()"
+        // Controller.LIMIT_PSM_DEPOSIT -> PSM3Facet.LIMIT_DEPOSIT
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_PSM_DEPOSIT.selector,
             psm3Facet,
             IPSM3Facet.LIMIT_DEPOSIT.selector
         );
 
-        // "Controller.LIMIT_PSM_WITHDRAW()" -> "PSM3Facet.LIMIT_WITHDRAW()"
+        // Controller.LIMIT_PSM_WITHDRAW -> PSM3Facet.LIMIT_WITHDRAW
         foreignController.setDispatch(
             IForeignControllerFull.LIMIT_PSM_WITHDRAW.selector,
             psm3Facet,

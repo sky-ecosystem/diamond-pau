@@ -16,27 +16,27 @@ import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 contract RateLimitHelpersHarness {
 
-    function makeAddressKey(bytes32 key, address asset) public pure returns (bytes32) {
+    function makeAddressKey(bytes32 key, address asset) external pure returns (bytes32) {
         return makeAddressKeyImplementation(key, asset);
     }
 
-    function makeAddressAddressKey(bytes32 key, address asset, address destination) public pure returns (bytes32) {
+    function makeAddressAddressKey(bytes32 key, address asset, address destination) external pure returns (bytes32) {
         return makeAddressAddressKeyImplementation(key, asset, destination);
     }
 
-    function makeAddressUint16Key(bytes32 key, address asset, uint16 domain) public pure returns (bytes32) {
+    function makeAddressUint16Key(bytes32 key, address asset, uint16 domain) external pure returns (bytes32) {
         return makeAddressUint16KeyImplementation(key, asset, domain);
     }
 
-    function makeAddressUint32Key(bytes32 key, address asset, uint32 domain) public pure returns (bytes32) {
+    function makeAddressUint32Key(bytes32 key, address asset, uint32 domain) external pure returns (bytes32) {
         return makeAddressUint32KeyImplementation(key, asset, domain);
     }
 
-    function makeBytes32Key(bytes32 key, bytes32 asset) public pure returns (bytes32) {
+    function makeBytes32Key(bytes32 key, bytes32 asset) external pure returns (bytes32) {
         return makeBytes32KeyImplementation(key, asset);
     }
 
-    function makeUint32Key(bytes32 key, uint32 domain) public pure returns (bytes32) {
+    function makeUint32Key(bytes32 key, uint32 domain) external pure returns (bytes32) {
         return makeUint32KeyImplementation(key, domain);
     }
 

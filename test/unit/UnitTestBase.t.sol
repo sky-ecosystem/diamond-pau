@@ -9,15 +9,15 @@ abstract contract UnitTestBase is Test {
     bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
-    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    bytes32 constant CONTROLLER_ROLE = keccak256("CONTROLLER");
-    bytes32 constant FREEZER_ROLE    = keccak256("FREEZER");
-    bytes32 constant RELAYER_ROLE    = keccak256("RELAYER");
+    bytes32 internal constant CONTROLLER_ROLE = keccak256("CONTROLLER");
+    bytes32 internal constant FREEZER_ROLE    = keccak256("FREEZER");
+    bytes32 internal constant RELAYER_ROLE    = keccak256("RELAYER");
 
-    address admin   = makeAddr("admin");
-    address freezer = makeAddr("freezer");
-    address relayer = makeAddr("relayer");
+    address internal admin   = makeAddr("admin");
+    address internal freezer = makeAddr("freezer");
+    address internal relayer = makeAddr("relayer");
 
     function _assertReentrancyGuardWrittenToTwice(address controller) internal {
         ( , bytes32[] memory writeSlots ) = vm.accesses(controller);

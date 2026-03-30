@@ -8,6 +8,12 @@ import { CurveFacet }  from "../../../src/facets/curve/CurveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
+interface IAccessControlLike {
+
+    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
+
+}
+
 interface IControllerLike {
 
     function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
@@ -29,18 +35,18 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
         //       If more functions are needed in future tests, they should be wired here.
         address facet = address(new CurveFacet());
 
-        vm.startPrank(admin);
-
         vm.label(facet, "CurveFacet");
 
-        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
+        vm.startPrank(admin);
+
+        // Controller.setCurveMaxSlippage -> CurveFacet.setMaxSlippage
         controller.setDispatch(
             IControllerLike.setCurveMaxSlippage.selector,
             facet,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
+        // Controller.getCurveMaxSlippage -> CurveFacet.getMaxSlippage
         controller.setDispatch(
             IControllerLike.getCurveMaxSlippage.selector,
             facet,
@@ -61,11 +67,13 @@ contract Controller_CurveFacet_Admin_Tests is CurveFacet_TestBase {
     }
 
     function test_setCurveMaxSlippage_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+        vm.expectRevert(abi.encodeWithSelector(
+            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+            unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
+
+        vm.prank(unauthorized);
         controller.setCurveMaxSlippage(makeAddr("pool"), 0.98e18);
     }
 
