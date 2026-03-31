@@ -7,7 +7,7 @@ import { UnitTestBase } from "../UnitTestBase.t.sol";
 
 contract ALMProxy_Constructor_Tests is UnitTestBase {
 
-    function test_constructor() external {
+    function test_constructor() public {
         ALMProxy newAlmProxy = new ALMProxy(admin);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin), true);

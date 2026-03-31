@@ -89,13 +89,14 @@ abstract contract ERC4626_DonationAttack_TestBase is ForkTestBase {
 contract MainnetController_ERC4626_DonationAttack_Tests is ERC4626_DonationAttack_TestBase {
 
     function test_depositERC4626_donationAttackFailure() external {
-        vm.prank(Ethereum.SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
         mainnetController.setMaxExchangeRate(address(MORPHO_VAULT), 1e18, 10e18);
+        vm.stopPrank();
 
         _doAttack();
 
+        vm.prank(relayer);
         vm.expectRevert("ERC4626Facet/exchange-rate-too-high");
-        vm.prank(RELAYER);
         mainnetController.depositERC4626(address(MORPHO_VAULT), 2_000_000e18, 0);
     }
 
@@ -107,7 +108,7 @@ contract MainnetController_ERC4626_DonationAttack_Tests is ERC4626_DonationAttac
 
         _doAttack();
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         uint256 shares = mainnetController.depositERC4626(address(MORPHO_VAULT), 2_000_000e18, 0);
 
         // One can compute:
@@ -119,7 +120,7 @@ contract MainnetController_ERC4626_DonationAttack_Tests is ERC4626_DonationAttac
         assertEq(MORPHO_VAULT.totalAssets(), 3_000_000e18 + 1);
         assertEq(MORPHO_VAULT.totalSupply(), 4);
 
-        uint256 assetsOfProxy    = MORPHO_VAULT.convertToAssets(MORPHO_VAULT.balanceOf(almProxy));
+        uint256 assetsOfProxy    = MORPHO_VAULT.convertToAssets(MORPHO_VAULT.balanceOf(address(almProxy)));
         uint256 assetsOfAttacker = MORPHO_VAULT.convertToAssets(MORPHO_VAULT.balanceOf(attacker));
 
         // convertToAssets(shares) == shares * (totalAssets + 1) / (totalSupply + 1)
@@ -167,7 +168,7 @@ contract MainnetController_ERC4626_DonationAttack_Tests is ERC4626_DonationAttac
         // == (1_000_000e18 + 2) / 2 == 500_000e18 + 1.
         assertEq(MORPHO_VAULT.convertToAssets(1), 500_000e18 + 1);
 
-        deal(address(usds), almProxy, 2_000_000e18);
+        deal(address(usds), address(almProxy), 2_000_000e18);
     }
 
 }

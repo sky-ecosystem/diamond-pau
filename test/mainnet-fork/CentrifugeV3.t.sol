@@ -9,44 +9,22 @@ import {
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
-interface ISpokeLike {
-
-    event InitiateTransferShares(
-        uint16          centrifugeId,
-        uint64  indexed poolId,
-        bytes16 indexed scId,
-        address indexed sender,
-        bytes32         destinationAddress,
-        uint128         amount
-    );
-
-}
-
 abstract contract Centrifuge_TestBase is ForkTestBase {
 
-    address internal constant CENTRIFUGE_VAULT = 0x1121F4e21eD8B9BC1BB9A2952cDD8639aC897784; // DEJAAA_VAULT_USDC
+    address constant CENTRIFUGE_VAULT = 0x1121F4e21eD8B9BC1BB9A2952cDD8639aC897784; // DEJAAA_VAULT_USDC
 
-    uint16 internal constant DESTINATION_CENTRIFUGE_ID = 5; // Avalanche Centrifuge ID
+    uint16  constant DESTINATION_CENTRIFUGE_ID = 5; // Avalanche Centrifuge ID
 
-    ICentrifugeV3VaultLike internal centrifugeVault = ICentrifugeV3VaultLike(CENTRIFUGE_VAULT);
+    ICentrifugeV3VaultLike centrifugeVault = ICentrifugeV3VaultLike(CENTRIFUGE_VAULT);
 
-    IAsyncRedeemManagerLike internal manager;
+    IAsyncRedeemManagerLike manager;
 
-    address internal root;
-    address internal spoke;
-    address internal vaultToken;
+    address root;
+    address spoke;
+    address vaultToken;
 
-    uint64 internal poolId;
-
-    bytes16 internal scId;
-
-    address internal unauthorized = makeAddr("unauthorized");
+    uint64  poolId;
+    bytes16 scId;
 
     function setUp() public override {
         super.setUp();
@@ -66,21 +44,20 @@ abstract contract Centrifuge_TestBase is ForkTestBase {
 
 }
 
-contract MainnetController_CentrifugeV3_TransferShares_Tests is Centrifuge_TestBase {
+contract MainnetController_CentrifugeV3_TransferShares_FailureTests is Centrifuge_TestBase {
 
     function test_transferSharesCentrifuge_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             RELAYER_ROLE
         ));
-        vm.prank(unauthorized);
         mainnetController.transferSharesCentrifuge(CENTRIFUGE_VAULT, 1_000_000e6, DESTINATION_CENTRIFUGE_ID);
     }
 
     function test_transferSharesCentrifuge_zeroMaxAmount() external {
+        vm.prank(relayer);
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(RELAYER);
         mainnetController.transferSharesCentrifuge(CENTRIFUGE_VAULT, 1_000_000e6, DESTINATION_CENTRIFUGE_ID);
     }
 
@@ -104,18 +81,17 @@ contract MainnetController_CentrifugeV3_TransferShares_Tests is Centrifuge_TestB
         vm.stopPrank();
 
         // Setup token balances
-        deal(vaultToken, almProxy, 10_000_000e6);
-        deal(RELAYER, 1 ether);  // Gas cost for Centrifuge
+        deal(vaultToken, address(almProxy), 10_000_000e6);
+        deal(relayer, 1 ether);  // Gas cost for Centrifuge
 
+        vm.startPrank(relayer);
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        vm.prank(RELAYER);
         mainnetController.transferSharesCentrifuge{value: 0.1 ether}(
             CENTRIFUGE_VAULT,
             10_000_000e6 + 1,
             DESTINATION_CENTRIFUGE_ID
         );
 
-        vm.prank(RELAYER);
         mainnetController.transferSharesCentrifuge{value: 0.1 ether}(
             CENTRIFUGE_VAULT,
             10_000_000e6,
@@ -139,17 +115,30 @@ contract MainnetController_CentrifugeV3_TransferShares_Tests is Centrifuge_TestB
         vm.stopPrank();
 
         // Setup token balances
-        deal(vaultToken, almProxy, 10_000_000e6);
-        deal(RELAYER, 1 ether);  // Gas cost for Centrifuge
+        deal(vaultToken, address(almProxy), 10_000_000e6);
+        deal(relayer, 1 ether);  // Gas cost for Centrifuge
 
+        vm.startPrank(relayer);
         vm.expectRevert("CentrifugeFacet/id-not-configured");
-        vm.prank(RELAYER);
         mainnetController.transferSharesCentrifuge{value: 0.1 ether}(
             CENTRIFUGE_VAULT,
             10_000_000e6,
             DESTINATION_CENTRIFUGE_ID
         );
     }
+
+}
+
+contract MainnetController_CentrifugeV3_TransferShares_SuccessTests is Centrifuge_TestBase {
+
+    event InitiateTransferShares(
+        uint16 centrifugeId,
+        uint64 indexed poolId,
+        bytes16 indexed scId,
+        address indexed sender,
+        bytes32 destinationAddress,
+        uint128 amount
+    );
 
     function test_transferSharesCentrifuge() external {
         vm.startPrank(SPARK_PROXY);
@@ -171,8 +160,8 @@ contract MainnetController_CentrifugeV3_TransferShares_Tests is Centrifuge_TestB
         vm.stopPrank();
 
         // Setup token balances
-        deal(address(vaultToken), almProxy, 10_000_000e6);
-        deal(RELAYER, 1 ether);  // Gas cost for Centrifuge
+        deal(address(vaultToken), address(almProxy), 10_000_000e6);
+        deal(relayer, 1 ether);  // Gas cost for Centrifuge
 
         // Issue shares at price 1.0
         vm.prank(root);
@@ -183,27 +172,27 @@ contract MainnetController_CentrifugeV3_TransferShares_Tests is Centrifuge_TestB
             1e18
         );
 
-        uint256 proxyBalanceBefore     = IERC20Like(vaultToken).balanceOf(almProxy);
+        uint256 proxyBalanceBefore     = IERC20Like(vaultToken).balanceOf(address(almProxy));
         uint256 shareTotalSupplyBefore = IERC20Like(vaultToken).totalSupply();
 
-        vm.expectEmit(spoke);
-        emit ISpokeLike.InitiateTransferShares(
+        vm.expectEmit(address(spoke));
+        emit InitiateTransferShares(
             DESTINATION_CENTRIFUGE_ID,
             poolId,
             scId,
-            almProxy,
+            address(almProxy),
             target,
             10_000_000e6
         );
 
-        vm.prank(RELAYER);
+        vm.startPrank(relayer);
         mainnetController.transferSharesCentrifuge{value: 0.1 ether}(
             CENTRIFUGE_VAULT,
             10_000_000e6,
             DESTINATION_CENTRIFUGE_ID
         );
 
-        uint256 proxyBalanceAfter     = IERC20Like(vaultToken).balanceOf(almProxy);
+        uint256 proxyBalanceAfter     = IERC20Like(vaultToken).balanceOf(address(almProxy));
         uint256 shareTotalSupplyAfter = IERC20Like(vaultToken).totalSupply();
 
         assertEq(proxyBalanceAfter,     proxyBalanceBefore     - 10_000_000e6);

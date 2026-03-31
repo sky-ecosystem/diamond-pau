@@ -214,8 +214,8 @@ contract Controller_UniswapV3Facet_Admin_Tests is UniswapV3Facet_TestBase {
         vm.prank(admin);
         controller.setMaxTickDelta(pool, 0);
 
-        vm.expectRevert("UniswapV3Facet/max-tick-delta-oob");
         vm.prank(admin);
+        vm.expectRevert("UniswapV3Facet/max-tick-delta-oob");
         controller.setMaxTickDelta(pool, _MAX_TICK_DELTA + 1);
 
         // Can set at boundary
@@ -287,8 +287,8 @@ contract Controller_UniswapV3Facet_Admin_Tests is UniswapV3Facet_TestBase {
         controller.setLiquidityUpperTickBound(pool, 1000);
 
         // Try to set lower tick at the upper tick.
-        vm.expectRevert("UniswapV3Facet/lower-tick-oob");
         vm.prank(admin);
+        vm.expectRevert("UniswapV3Facet/lower-tick-oob");
         controller.setLiquidityLowerTickBound(pool, 1000);
 
         vm.prank(admin);

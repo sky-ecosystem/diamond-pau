@@ -9,12 +9,6 @@ import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 interface IERC20Like {
 
     function balanceOf(address account) external view returns (uint256);
@@ -29,8 +23,6 @@ abstract contract AaveV3_TestBase is ForkTestBase {
     IERC20Like internal constant AUSDC = IERC20Like(ATOKEN_USDC);
 
     uint256 internal startingAUSDCBalance;
-
-    address internal unauthorized = makeAddr("unauthorized");
 
     function setUp() public override {
         super.setUp();
@@ -72,18 +64,17 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
     }
 
     function test_depositAave_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             RELAYER_ROLE
         ));
-        vm.prank(unauthorized);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e18);
     }
 
     function test_depositAave_zeroMaxAmount() external {
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(makeAddr("fake-token"), 1e18);
     }
 
@@ -92,23 +83,23 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         foreignController.setAaveMaxSlippage(ATOKEN_USDC, 0);
 
         vm.expectRevert("AaveFacet/max-slippage-not-set");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
     }
 
     function test_depositAave_usdcRateLimitedBoundary() external {
-        deal(Base.USDC, almProxy, 1_000_000e6 + 1);
+        deal(Base.USDC, address(almProxy), 1_000_000e6 + 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6 + 1);
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
     }
 
     function test_depositAave_usdcSlippageBoundary() external {
-        deal(Base.USDC, almProxy, 1_000_000e6);
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
 
         // Positive slippage because of no rounding error
         // 1e6 * 1_000_000e6 / 1e18 = 1
@@ -117,37 +108,37 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         foreignController.setAaveMaxSlippage(ATOKEN_USDC, 1e18 + 1e6);
 
         vm.expectRevert("AaveFacet/slippage-too-high");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
         vm.prank(Base.SPARK_EXECUTOR);
         foreignController.setAaveMaxSlippage(ATOKEN_USDC, 1e18 + 1e6 - 1);
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
     }
 
     function test_depositAave_usdc() external {
-        deal(Base.USDC, almProxy, 1_000_000e6);
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
 
-        assertEq(usdcBase.allowance(almProxy, POOL), 0);
+        assertEq(usdcBase.allowance(address(almProxy), POOL), 0);
 
-        assertEq(AUSDC.balanceOf(almProxy),       0);
-        assertEq(usdcBase.balanceOf(almProxy),    1_000_000e6);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance);
+        assertEq(AUSDC.balanceOf(address(almProxy)),    0);
+        assertEq(usdcBase.balanceOf(address(almProxy)), 1_000_000e6);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance);
 
         vm.record();
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(usdcBase.allowance(almProxy, POOL), 0);
+        assertEq(usdcBase.allowance(address(almProxy), POOL), 0);
 
-        assertEq(AUSDC.balanceOf(almProxy),       1_000_000e6);
-        assertEq(usdcBase.balanceOf(almProxy),    0);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 1_000_000e6);
+        assertEq(AUSDC.balanceOf(address(almProxy)),    1_000_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)), 0);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 1_000_000e6);
     }
 
 }
@@ -161,12 +152,11 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
     }
 
     function test_withdrawAave_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             RELAYER_ROLE
         ));
-        vm.prank(unauthorized);
         foreignController.withdrawAave(ATOKEN_USDC, 1_000_000e18);
     }
 
@@ -180,21 +170,21 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         );
         vm.stopPrank();
 
-        deal(Base.USDC, almProxy, 1_000_000e6);
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         foreignController.withdrawAave(ATOKEN_USDC, 1_000_000e6);
     }
 
     function test_withdrawAave_usdcRateLimitedBoundary() external {
-        deal(Base.USDC, almProxy, 2_000_000e6);
+        deal(Base.USDC, address(almProxy), 2_000_000e6);
 
         // Warp to get past rate limit
-        vm.startPrank(RELAYER);
+        vm.startPrank(relayer);
 
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
@@ -215,19 +205,19 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         bytes32 withdrawKey = makeAddressKey(foreignController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDC);
 
         // NOTE: Using lower amount to not hit rate limit
-        deal(Base.USDC, almProxy, 500_000e6);
-        vm.prank(RELAYER);
+        deal(Base.USDC, address(almProxy), 500_000e6);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 500_000e6);
 
         skip(1 hours);
 
-        uint256 aTokenBalance = AUSDC.balanceOf(almProxy);
+        uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 500_009.705892e6);  // Earn some interest
 
-        assertEq(AUSDC.balanceOf(almProxy),       aTokenBalance);
-        assertEq(usdcBase.balanceOf(almProxy),    0);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 500_000e6);
+        assertEq(AUSDC.balanceOf(address(almProxy)),    aTokenBalance);
+        assertEq(usdcBase.balanceOf(address(almProxy)), 0);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 500_000e6);
 
         uint256 startingDepositRateLimit = rateLimits.getCurrentRateLimit(depositKey);
 
@@ -239,25 +229,25 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.record();
 
         // Partial withdraw
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, 400_000e6), 400_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(AUSDC.balanceOf(almProxy),       aTokenBalance - (400_000e6 - 1));  // Rounding
-        assertEq(usdcBase.balanceOf(almProxy),    400_000e6);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 100_000e6);  // 500k - 400k
+        assertEq(AUSDC.balanceOf(address(almProxy)),    aTokenBalance - (400_000e6 - 1));  // Rounding
+        assertEq(usdcBase.balanceOf(address(almProxy)), 400_000e6);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 100_000e6);  // 500k - 400k
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  startingDepositRateLimit + 400_000e6);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 600_000e6);
 
         // Withdraw all
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance - 400_000e6 + 1);  // Rounding
 
-        assertEq(AUSDC.balanceOf(almProxy),       0);
-        assertEq(usdcBase.balanceOf(almProxy),    aTokenBalance + 1);  // Rounding
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 500_000e6 - aTokenBalance - 1);  // Rounding
+        assertEq(AUSDC.balanceOf(address(almProxy)),    0);
+        assertEq(usdcBase.balanceOf(address(almProxy)), aTokenBalance + 1);  // Rounding
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 500_000e6 - aTokenBalance - 1);  // Rounding
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  1_000_000e6);  // Maxes out at 1m
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6 - aTokenBalance - 1);  // Rounding
@@ -273,14 +263,13 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.prank(Base.SPARK_EXECUTOR);
         rateLimits.setUnlimitedRateLimitData(withdrawKey);
 
-        deal(Base.USDC, almProxy, 1_000_000e6);
-
-        vm.prank(RELAYER);
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
+        vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
         skip(1 hours);
 
-        uint256 aTokenBalance = AUSDC.balanceOf(almProxy);
+        uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 1_000_015.893506e6);  // Earn some interest
 
@@ -291,20 +280,20 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  startingDepositRateLimit);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);
 
-        assertEq(AUSDC.balanceOf(almProxy),       aTokenBalance);
-        assertEq(usdcBase.balanceOf(almProxy),    0);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 1_000_000e6);
+        assertEq(AUSDC.balanceOf(address(almProxy)),    aTokenBalance);
+        assertEq(usdcBase.balanceOf(address(almProxy)), 0);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 1_000_000e6);
 
         // Full withdraw
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance);
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  1_000_000e6);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);  // No change
 
-        assertEq(AUSDC.balanceOf(almProxy),       0);
-        assertEq(usdcBase.balanceOf(almProxy),    aTokenBalance);
-        assertEq(usdcBase.balanceOf(ATOKEN_USDC), startingAUSDCBalance + 1_000_000e6 - aTokenBalance);
+        assertEq(AUSDC.balanceOf(address(almProxy)),    0);
+        assertEq(usdcBase.balanceOf(address(almProxy)), aTokenBalance);
+        assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 1_000_000e6 - aTokenBalance);
     }
 
 }

@@ -7,12 +7,6 @@ import { MockTarget } from "../mocks/MockTarget.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 abstract contract Freezable_RemoveRelayer_TestBase is UnitTestBase {
 
     event ExampleEvent(
@@ -25,14 +19,13 @@ abstract contract Freezable_RemoveRelayer_TestBase is UnitTestBase {
 
     event RelayerRemoved(address indexed relayer);
 
-    ALMProxyFreezable internal almProxyFreezable;
+    ALMProxyFreezable almProxyFreezable;
 
-    address internal target;
+    address target;
 
-    address internal exampleAddress = makeAddr("exampleAddress");
-    address internal unauthorized   = makeAddr("unauthorized");
+    address exampleAddress = makeAddr("exampleAddress");
 
-    bytes internal data = abi.encodeWithSignature(
+    bytes data = abi.encodeWithSignature(
         "exampleCall(address,uint256)",
         exampleAddress,
         42
@@ -51,31 +44,33 @@ abstract contract Freezable_RemoveRelayer_TestBase is UnitTestBase {
 
 }
 
-contract ALMProxy_Freezable_RemoveRelayer_Tests is Freezable_RemoveRelayer_TestBase {
+contract ALMProxy_Freezable_RemoveRelayer_FailureTests is Freezable_RemoveRelayer_TestBase {
 
-    function test_removeRelayer_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+    function test_removeRelayer_unauthorizedAccount() public {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             FREEZER_ROLE
         ));
-        vm.prank(unauthorized);
         almProxyFreezable.removeRelayer(relayer);
 
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
             FREEZER_ROLE
         ));
-        vm.prank(admin);
         almProxyFreezable.removeRelayer(relayer);
     }
 
-    function test_removeRelayer() external {
+}
+
+contract ALMProxy_Freezable_RemoveRelayer_SuccessTests is Freezable_RemoveRelayer_TestBase {
+
+    function test_removeRelayer() public {
         // ALM Proxy Freezable is msg.sender, target emits the event
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxyFreezable), 0);
-
         vm.prank(relayer);
         bytes memory returnData = almProxyFreezable.doCall(target, data);
 
@@ -85,22 +80,21 @@ contract ALMProxy_Freezable_RemoveRelayer_Tests is Freezable_RemoveRelayer_TestB
         assertTrue(almProxyFreezable.hasRole(RELAYER_ROLE, relayer));
 
         // Freezer comes in and removes relayer.
+        vm.prank(freezer);
         vm.expectEmit(address(almProxyFreezable));
         emit RelayerRemoved(relayer);
-
-        vm.prank(freezer);
         almProxyFreezable.removeRelayer(relayer);
 
         // After no longer has relayer role
         assertFalse(almProxyFreezable.hasRole(RELAYER_ROLE, relayer));
 
         // After can no longer call as relayer
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
             relayer,
             RELAYER_ROLE
         ));
-        vm.prank(relayer);
         almProxyFreezable.doCall(target, data);
     }
 

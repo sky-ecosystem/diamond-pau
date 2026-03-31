@@ -155,13 +155,13 @@ interface IBalanceSheetLike {
 
 }
 
-interface IRestrictionManagerLike {
+interface IRestrictionManager {
 
     function updateMember(address token, address user, uint64 validUntil) external;
 
 }
 
-interface IInvestmentManagerLike {
+interface IInvestmentManager {
 
     function fulfillCancelDepositRequest(
         uint64 poolId,

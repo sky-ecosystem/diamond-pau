@@ -8,12 +8,6 @@ import { CentrifugeFacet }  from "../../../src/facets/centrifuge/CentrifugeFacet
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 interface IControllerLike {
 
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
@@ -38,24 +32,23 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
         //       If more functions are needed in future tests, they should be wired here.
         address facet = address(new CentrifugeFacet());
 
-        vm.label(facet, "CentrifugeFacet");
-
         vm.startPrank(admin);
 
-        // Controller.setCentrifugeRecipient -> CentrifugeFacet.setRecipient
+        vm.label(facet, "CentrifugeFacet");
+
+        // Controller.setCentrifugeRecipient() -> CentrifugeFacet.setRecipient()
         controller.setDispatch(
             IControllerLike.setCentrifugeRecipient.selector,
             facet,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        // Controller.getCentrifugeRecipient -> CentrifugeFacet.getRecipient
+        // Controller.getCentrifugeRecipient() -> CentrifugeFacet.getRecipient()
         controller.setDispatch(
             IControllerLike.getCentrifugeRecipient.selector,
             facet,
             ICentrifugeFacet.getRecipient.selector
         );
-
         vm.stopPrank();
     }
 
@@ -70,8 +63,8 @@ contract Controller_CentrifugeFacet_SetRecipient_Tests is CentrifugeFacet_TestBa
     }
 
     function test_setCentrifugeRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
             unauthorized,
             DEFAULT_ADMIN_ROLE
         ));

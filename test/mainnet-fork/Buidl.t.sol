@@ -7,12 +7,6 @@ import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol"
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 interface IERC20Like {
 
     function balanceOf(address account) external view returns (uint256);
@@ -24,25 +18,23 @@ abstract contract BUIDL_TestBase is ForkTestBase {
     IERC20Like internal constant USDC = IERC20Like(Ethereum.USDC);
 
     address internal buidlDeposit = makeAddr("buidlDeposit");
-    address internal unauthorized = makeAddr("unauthorized");
 
 }
 
 contract MainnetController_BUIDL_Deposit_Tests is BUIDL_TestBase {
 
     function test_transferAsset_notRelayer() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             RELAYER_ROLE
         ));
-        vm.prank(unauthorized);
         mainnetController.transferAsset(Ethereum.USDC, buidlDeposit, 1_000_000e6);
     }
 
     function test_transferAsset_zeroMaxAmount() external {
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDC, buidlDeposit, 0);
     }
 
@@ -56,13 +48,13 @@ contract MainnetController_BUIDL_Deposit_Tests is BUIDL_TestBase {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
 
-        deal(Ethereum.USDC, almProxy, 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDC, buidlDeposit, 1_000_000e6 + 1);
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDC, buidlDeposit, 1_000_000e6);
     }
 
@@ -76,20 +68,20 @@ contract MainnetController_BUIDL_Deposit_Tests is BUIDL_TestBase {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
 
-        deal(Ethereum.USDC, almProxy, 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 1_000_000e6);
 
-        assertEq(USDC.balanceOf(almProxy),     1_000_000e6);
-        assertEq(USDC.balanceOf(buidlDeposit), 0);
+        assertEq(USDC.balanceOf(address(almProxy)), 1_000_000e6);
+        assertEq(USDC.balanceOf(buidlDeposit),      0);
 
-        vm.prank(RELAYER);
+        vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDC, buidlDeposit, 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
 
-        assertEq(USDC.balanceOf(almProxy),     0);
-        assertEq(USDC.balanceOf(buidlDeposit), 1_000_000e6);
+        assertEq(USDC.balanceOf(address(almProxy)), 0);
+        assertEq(USDC.balanceOf(buidlDeposit),      1_000_000e6);
     }
 
 }

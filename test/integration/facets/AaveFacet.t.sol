@@ -8,12 +8,6 @@ import { AaveFacet }  from "../../../src/facets/aave/AaveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 interface IControllerLike {
 
     function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
@@ -35,24 +29,23 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
         //       If more functions are needed in future tests, they should be wired here.
         address facet = address(new AaveFacet());
 
-        vm.label(facet, "AaveFacet");
-
         vm.startPrank(admin);
 
-        // Controller.setAaveMaxSlippage -> AaveFacet.setMaxSlippage
+        vm.label(facet, "AaveFacet");
+
+        // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
         controller.setDispatch(
             IControllerLike.setAaveMaxSlippage.selector,
             facet,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getAaveMaxSlippage -> AaveFacet.getMaxSlippage
+        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
         controller.setDispatch(
             IControllerLike.getAaveMaxSlippage.selector,
             facet,
             IAaveFacet.getMaxSlippage.selector
         );
-
         vm.stopPrank();
     }
 
@@ -67,18 +60,17 @@ contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
     }
 
     function test_setMaxSlippage_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        vm.prank(unauthorized);
         controller.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
     }
 
     function test_setMaxSlippage_aTokenZeroAddress() external {
-        vm.expectRevert("AaveFacet/aToken-zero-address");
         vm.prank(admin);
+        vm.expectRevert("AaveFacet/aToken-zero-address");
         controller.setAaveMaxSlippage(address(0), 0.98e18);
     }
 
@@ -87,20 +79,18 @@ contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
 
         assertEq(controller.getAaveMaxSlippage(aToken), 0);
 
+        vm.prank(admin);
         vm.expectEmit(address(controller));
         emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.98e18);
-
-        vm.prank(admin);
         controller.setAaveMaxSlippage(aToken, 0.98e18);
 
         assertEq(controller.getAaveMaxSlippage(aToken), 0.98e18);
 
         vm.record();
 
+        vm.prank(admin);
         vm.expectEmit(address(controller));
         emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.99e18);
-
-        vm.prank(admin);
         controller.setAaveMaxSlippage(aToken, 0.99e18);
 
         assertEq(controller.getAaveMaxSlippage(aToken), 0.99e18);

@@ -8,23 +8,17 @@ import { CCTPFacet }  from "../../../src/facets/cctp/CCTPFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IAccessControlLike {
-
-    error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
-
-}
-
 interface IControllerLike {
+
+    function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
+
+    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
 
     function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
 
-    function setMaxFeeCap(uint256 maxFeeCap) external;
+    function getCCTPMaxFeeCap() external view returns (uint256);
 
-    function setMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
-
-    function maxFeeCap() external view returns (uint256);
-
-    function getMintRecipient(uint32 destinationDomain) external view returns (bytes32);
+    function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
 
 }
 
@@ -42,64 +36,63 @@ abstract contract CCTPFacet_TestBase is Controller_TestBase {
         //       If more functions are needed in future tests, they should be wired here.
         address facet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
-        vm.label(facet, "CCTPFacet");
-
         vm.startPrank(admin);
 
-        // Controller.maxFeeCap -> CCTPFacet.maxFeeCap
+        vm.label(facet, "CCTPFacet");
+
+        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.maxFeeCap()
         controller.setDispatch(
-            IControllerLike.maxFeeCap.selector,
+            IControllerLike.getCCTPMaxFeeCap.selector,
             facet,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        // Controller.getMintRecipient -> CCTPFacet.getMintRecipient
+        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
         controller.setDispatch(
-            IControllerLike.getMintRecipient.selector,
+            IControllerLike.getCCTPMintRecipient.selector,
             facet,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        // Controller.setMaxFeeCap -> CCTPFacet.setMaxFeeCap
+        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
         controller.setDispatch(
-            IControllerLike.setMaxFeeCap.selector,
+            IControllerLike.setCCTPMaxFeeCap.selector,
             facet,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        // Controller.setMintRecipient -> CCTPFacet.setMintRecipient
+        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
         controller.setDispatch(
-            IControllerLike.setMintRecipient.selector,
+            IControllerLike.setCCTPMintRecipient.selector,
             facet,
             ICCTPFacet.setMintRecipient.selector
         );
-
         vm.stopPrank();
     }
 
 }
 
-contract Controller_CCTPFacet_SetMaxFeeCap_Tests is CCTPFacet_TestBase {
+contract Controller_CCTPFacet_SetCCTPMaxFeeCap_Tests is CCTPFacet_TestBase {
 
-    function test_setMaxFeeCap_reentrancy() external {
+    function test_setCCTPMaxFeeCap_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setMaxFeeCap(1e18);
+        controller.setCCTPMaxFeeCap(1e18);
     }
 
-    function test_setMaxFeeCap_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
+    function test_setCCTPMaxFeeCap_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
             unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
 
         vm.prank(unauthorized);
-        controller.setMaxFeeCap(1e18);
+        controller.setCCTPMaxFeeCap(1e18);
     }
 
-    function test_setMaxFeeCap() external {
-        assertEq(controller.maxFeeCap(), 0);
+    function test_setCCTPMaxFeeCap() external {
+        assertEq(controller.getCCTPMaxFeeCap(), 0);
 
         vm.record();
 
@@ -107,52 +100,51 @@ contract Controller_CCTPFacet_SetMaxFeeCap_Tests is CCTPFacet_TestBase {
         emit ICCTPFacet.CCTPMaxFeeCapSet(1e18);
 
         vm.prank(admin);
-        controller.setMaxFeeCap(1e18);
+        controller.setCCTPMaxFeeCap(1e18);
 
         _assertReentrancyGuardWrittenToTwice(address(controller));
 
-        assertEq(controller.maxFeeCap(), 1e18);
+        assertEq(controller.getCCTPMaxFeeCap(), 1e18);
     }
 
 }
 
-contract Controller_CCTPFacet_SetMintRecipient_Tests is CCTPFacet_TestBase {
+contract Controller_CCTPFacet_SetCCTPMintRecipient_Tests is CCTPFacet_TestBase {
 
-    function test_SetMintRecipient_reentrancy() external {
+    function test_setCCTPMintRecipient_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setMintRecipient(1, mintRecipient1);
+        controller.setCCTPMintRecipient(1, mintRecipient1);
     }
 
-    function test_SetMintRecipient_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControlLike.AccessControlUnauthorizedAccount.selector,
-            unauthorized,
+    function test_setCCTPMintRecipient_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        vm.prank(unauthorized);
-        controller.setMintRecipient(1, mintRecipient1);
+        controller.setCCTPMintRecipient(1, mintRecipient1);
     }
 
-    function test_SetMintRecipient() external {
-        assertEq(controller.getMintRecipient(1), bytes32(0));
-        assertEq(controller.getMintRecipient(2), bytes32(0));
+    function test_setCCTPMintRecipient() external {
+        assertEq(controller.getCCTPMintRecipient(1), bytes32(0));
+        assertEq(controller.getCCTPMintRecipient(2), bytes32(0));
 
         vm.expectEmit(address(controller));
         emit ICCTPFacet.CCTPMintRecipientSet(1, mintRecipient1);
 
         vm.prank(admin);
-        controller.setMintRecipient(1, mintRecipient1);
+        controller.setCCTPMintRecipient(1, mintRecipient1);
 
-        assertEq(controller.getMintRecipient(1), mintRecipient1);
+        assertEq(controller.getCCTPMintRecipient(1), mintRecipient1);
 
         vm.expectEmit(address(controller));
         emit ICCTPFacet.CCTPMintRecipientSet(2, mintRecipient2);
 
         vm.prank(admin);
-        controller.setMintRecipient(2, mintRecipient2);
+        controller.setCCTPMintRecipient(2, mintRecipient2);
 
-        assertEq(controller.getMintRecipient(2), mintRecipient2);
+        assertEq(controller.getCCTPMintRecipient(2), mintRecipient2);
 
         vm.record();
 
@@ -160,9 +152,9 @@ contract Controller_CCTPFacet_SetMintRecipient_Tests is CCTPFacet_TestBase {
         emit ICCTPFacet.CCTPMintRecipientSet(1, mintRecipient2);
 
         vm.prank(admin);
-        controller.setMintRecipient(1, mintRecipient2);
+        controller.setCCTPMintRecipient(1, mintRecipient2);
 
-        assertEq(controller.getMintRecipient(1), mintRecipient2);
+        assertEq(controller.getCCTPMintRecipient(1), mintRecipient2);
 
         _assertReentrancyGuardWrittenToTwice(address(controller));
     }
