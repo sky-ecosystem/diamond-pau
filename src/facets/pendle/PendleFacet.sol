@@ -164,7 +164,7 @@ contract PendleFacet is IPendleFacet, FacetBase {
     }
 
     /**********************************************************************************************/
-    /*** Internal View/Pure Functions                                                            ***/
+    /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
     function _createSimpleTokenOutput(address tokenOut, uint256 minTokenOut)

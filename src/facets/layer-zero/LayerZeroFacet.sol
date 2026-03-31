@@ -18,8 +18,8 @@ import { ILayerZeroFacet } from "./ILayerZeroFacet.sol";
 interface ILayerZeroLike {
 
     struct MessagingFee {
-        uint256 nativeFee;  // gas amount in native gas token
-        uint256 lzTokenFee; // gas amount in ZRO token
+        uint256 nativeFee;  // Gas amount in native gas token.
+        uint256 lzTokenFee; // Gas amount in ZRO token.
     }
 
     struct MessagingReceipt {

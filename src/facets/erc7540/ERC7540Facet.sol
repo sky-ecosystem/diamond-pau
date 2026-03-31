@@ -91,7 +91,7 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _decreaseRateLimit(LIMIT_REDEEM,token,IERC4626Like(token).convertToAssets(shares));
+        _decreaseRateLimit(LIMIT_REDEEM, token, IERC4626Like(token).convertToAssets(shares));
 
         address proxy = _getSharedControllerStorage().proxy;
 
