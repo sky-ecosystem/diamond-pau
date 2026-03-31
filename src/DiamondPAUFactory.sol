@@ -27,7 +27,7 @@ contract DiamondPAUFactory is IDiamondPAUFactory {
         system.almProxy       = new ALMProxy(address(this));
         system.rateLimits     = new RateLimits(address(this));
 
-        system.controller     = new Controller({
+        system.controller = new Controller({
             accessControls_ : address(system.accessControls),
             proxy_          : address(system.almProxy),
             rateLimits_     : address(system.rateLimits)
