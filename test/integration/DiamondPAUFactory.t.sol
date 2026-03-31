@@ -55,9 +55,9 @@ contract DiamondPAUFactory_Tests is Test {
             expectedRateLimits
         );
 
-        address controllerAddr = factory.deploy(admin);
+        address controllerAddress = factory.deploy(admin);
 
-        Controller     controller     = Controller(payable(controllerAddr));
+        Controller     controller     = Controller(payable(controllerAddress));
         AccessControls accessControls = AccessControls(controller.accessControls());
         ALMProxy       almProxy       = ALMProxy(payable(controller.proxy()));
         RateLimits     rateLimits     = RateLimits(controller.rateLimits());
@@ -70,8 +70,8 @@ contract DiamondPAUFactory_Tests is Test {
 
         // CONTROLLER role granted on ALMProxy and RateLimits to the Controller.
 
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     controllerAddr), true);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), controllerAddr), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     controllerAddress), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), controllerAddress), true);
 
         // DEFAULT_ADMIN_ROLE granted to admin on all three.
 

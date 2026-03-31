@@ -20,7 +20,7 @@ contract DiamondPAUFactory is IDiamondPAUFactory {
     /*** Deploy function                                                                        ***/
     /**********************************************************************************************/
 
-    function deploy(address admin) external returns (address controller) {
+    function deploy(address admin) external override returns (address controller) {
         // Step 1: Deploy ALMProxy and RateLimits contracts with the factory as initial admin.
 
         ALMProxy   almProxy   = new ALMProxy(address(this));
