@@ -17,7 +17,7 @@ contract DiamondPAUFactory is IDiamondPAUFactory {
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
     /**********************************************************************************************/
-    /*** Deploy function                                                                      ***/
+    /*** Deploy function                                                                        ***/
     /**********************************************************************************************/
 
     function deploy(address admin) external returns (address controller) {
