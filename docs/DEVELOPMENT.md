@@ -28,13 +28,13 @@ All deployment commands follow the nomenclature: `make deploy-<domain>-<env>-<ty
 
 | Command | Description |
 |---------|-------------|
-| `make deploy-base-production-full` | Deploy full Diamond PAU system to Base production |
+| `make deploy-base-production-full` | Deploy full PAU system to Base production |
 | `make deploy-mainnet-production-controller` | Deploy controller to Mainnet production |
 | `make deploy-staging-full` | Deploy full staging environment with new allocation system and dependencies |
 
 ### Deployment Types
 
-- **full** - Complete Diamond PAU system deployment
+- **full** - Complete PAU system deployment
 - **controller** - Controller contract only
 
 ### Environments

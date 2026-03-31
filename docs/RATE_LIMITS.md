@@ -1,6 +1,6 @@
 # Rate Limits
 
-This document describes the rate limiting system used in Diamond PAU.
+This document describes the rate limiting system used in PAU.
 
 ## Overview
 

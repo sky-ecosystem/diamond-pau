@@ -1,10 +1,10 @@
 # Liquidity Operations
 
-This document describes the stablecoin market making, swapping, and liquidity provision functionality in Diamond PAU.
+This document describes the stablecoin market making, swapping, and liquidity provision functionality in PAU.
 
 ## Overview
 
-Diamond PAU performs liquidity operations across multiple venues:
+PAU performs liquidity operations across multiple venues:
 
 | Venue | Operations | Use Case |
 |-------|------------|----------|

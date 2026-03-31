@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture of the Diamond PAU system.
+This document describes the architecture of the PAU system.
 
 ## Core Contracts
 
@@ -49,7 +49,7 @@ See [RATE_LIMITS.md](./RATE_LIMITS.md) for detailed rate limit documentation.
 
 ### ALMProxyFreezable
 
-A variant of the `ALMProxy` that is not intended to hold funds or have critical authority. It defines low-risk parameters within the Diamond PAU ecosystem.
+A variant of the `ALMProxy` that is not intended to hold funds or have critical authority. It defines low-risk parameters within the PAU ecosystem.
 
 **Architectural differences from standard ALMProxy:**
 - **Controller role usage:** In the standard `ALMProxy`, the controller is a controller contract (e.g., `MainnetController`) that acts when approved relayers interact with it. In `ALMProxyFreezable`, the "controllers" are the relayers themselves (granted the `CONTROLLER` role directly).
