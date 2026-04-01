@@ -2,7 +2,7 @@
 pragma solidity ^0.8.34;
 
 import { ApproveLib }     from "../../libraries/ApproveLib.sol";
-import { makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
@@ -23,7 +23,7 @@ interface IBasinLike {
 
 }
 
-contract Basin3Facet is IBasinFacet, FacetBase {
+contract BasinFacet is IBasinFacet, FacetBase {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/
