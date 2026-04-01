@@ -9,9 +9,9 @@ import { IRateLimits } from "../../interfaces/IRateLimits.sol";
 
 import { FacetBase } from "../FacetBase.sol";
 
-import { IPSM3Facet } from "./IPSM3Facet.sol";
+import { IBasinFacet } from "./IBasinFacet.sol";
 
-interface IPSM3Like {
+interface IBasinLike {
 
     function deposit(address asset, address receiver, uint256 assetsToDeposit)
         external
@@ -23,27 +23,27 @@ interface IPSM3Like {
 
 }
 
-contract PSM3Facet is IPSM3Facet, FacetBase {
+contract Basin3Facet is IBasinFacet, FacetBase {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_PSM_DEPOSIT");
-    bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_PSM_WITHDRAW");
+    bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_BASIN_DEPOSIT");
+    bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_BASIN_WITHDRAW");
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    address public immutable override psm;
+    address public immutable override basin;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address psm_) {
-        psm = psm_;
+    constructor(address basin_) {
+        basin = basin_;
     }
 
     /**********************************************************************************************/
@@ -61,14 +61,14 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        // Approve `asset` to PSM from the proxy (assumes the proxy has enough `asset`).
-        ApproveLib.approve(asset, proxy, psm, amount);
+        // Approve `asset` to Basin from the proxy (assumes the proxy has enough `asset`).
+        ApproveLib.approve(asset, proxy, basin, amount);
 
-        // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
+        // Deposit `amount` of `asset` in the Basin, decode the result to get `shares`.
         return abi.decode(
             IALMProxy(proxy).doCall(
-                psm,
-                abi.encodeCall(IPSM3Like.deposit, (asset, proxy, amount))
+                basin,
+                abi.encodeCall(IBasinLike.deposit, (asset, proxy, amount))
             ),
             (uint256)
         );
@@ -83,13 +83,13 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
     {
         address proxy = _getSharedControllerStorage().proxy;
 
-        // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result to get
-        // `assetsWithdrawn` (assumes the proxy has enough PSM shares).
+        // Withdraw up to `maxAmount` of `asset` in the Basin, decode the result to get
+        // `assetsWithdrawn` (assumes the proxy has enough Basin shares).
         // NOTE: Rate limited at end of function, so cannot return here.
         assetsWithdrawn = abi.decode(
             IALMProxy(proxy).doCall(
-                psm,
-                abi.encodeCall(IPSM3Like.withdraw, (asset, proxy, maxAmount))
+                basin,
+                abi.encodeCall(IBasinLike.withdraw, (asset, proxy, maxAmount))
             ),
             (uint256)
         );
@@ -101,9 +101,9 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, address asset, uint256 amount) internal {
+    function _decreaseRateLimit(bytes32 key, address token, uint256 amount) internal {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(key, asset),
+            makeAddressAddressKey(key, token, basin),
             amount
         );
     }
