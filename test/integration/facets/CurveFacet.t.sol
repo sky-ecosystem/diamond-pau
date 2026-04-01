@@ -10,9 +10,14 @@ import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
+    struct Wire {
+        bytes4 callSelector;
+        bytes4 delegateSelector;
+    }
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+    function addWires(address facet, Wire[] calldata wires) external;
+
+    function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
 
     function getCurveMaxSlippage(address pool) external view returns (uint256);
 
@@ -33,19 +38,19 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
 
         vm.label(facet, "CurveFacet");
 
-        // Controller.setCurveMaxSlippage() -> CurveFacet.setMaxSlippage()
-        controller.setDispatch(
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
+
+        wires[0] = IControllerLike.Wire(
             IControllerLike.setCurveMaxSlippage.selector,
-            facet,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getCurveMaxSlippage() -> CurveFacet.getMaxSlippage()
-        controller.setDispatch(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.getCurveMaxSlippage.selector,
-            facet,
             ICurveFacet.getMaxSlippage.selector
         );
+
+        controller.addWires(facet, wires);
 
         vm.stopPrank();
     }

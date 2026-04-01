@@ -20,6 +20,8 @@ import { Controller } from "../../src/Controller.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { IController } from "../../src/interfaces/IController.sol";
+
 import { RateLimits }     from "../../src/RateLimits.sol";
 import { AccessControls } from "../../src/AccessControls.sol";
 
@@ -528,61 +530,49 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
-        foreignController.setDispatch(
+        IController.Wire[] memory wires = new IController.Wire[](8);
+
+        wires[0] = IController.Wire(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
-            cctpFacet,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
-        foreignController.setDispatch(
+        wires[1] = IController.Wire(
             IForeignControllerFull.setCCTPMintRecipient.selector,
-            cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.maxFeeCap()
-        foreignController.setDispatch(
+        wires[2] = IController.Wire(
             IForeignControllerFull.getCCTPMaxFeeCap.selector,
-            cctpFacet,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
-        foreignController.setDispatch(
+        wires[3] = IController.Wire(
             IForeignControllerFull.getCCTPMintRecipient.selector,
-            cctpFacet,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        // Controller.transferUSDCToCCTP() -> CCTPFacet.transfer()
-        foreignController.setDispatch(
+        wires[4] = IController.Wire(
             IForeignControllerFull.transferUSDCToCCTP.selector,
-            cctpFacet,
             ICCTPFacet.transfer.selector
         );
 
-        // Controller.transferUSDCToCCTPWithFee() -> CCTPFacet.transferWithFee()
-        foreignController.setDispatch(
+        wires[5] = IController.Wire(
             IForeignControllerFull.transferUSDCToCCTPWithFee.selector,
-            cctpFacet,
             ICCTPFacet.transferWithFee.selector
         );
 
-        // Controller.LIMIT_USDC_TO_CCTP() -> CCTPFacet.LIMIT_TO_CCTP()
-        foreignController.setDispatch(
+        wires[6] = IController.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_CCTP.selector,
-            cctpFacet,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
 
-        // Controller.LIMIT_USDC_TO_DOMAIN() -> CCTPFacet.LIMIT_TO_DOMAIN()
-        foreignController.setDispatch(
+        wires[7] = IController.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
-            cctpFacet,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
+
+        foreignController.addWires(cctpFacet, wires);
     }
 
 }

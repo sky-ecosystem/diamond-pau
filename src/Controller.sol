@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { EnumerableSet }   from "../lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { ControllerSharedStorage } from "./ControllerSharedStorage.sol";
@@ -10,13 +11,18 @@ import { IController }     from "./interfaces/IController.sol";
 
 contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     /**********************************************************************************************/
     /*** Controller Storage Domain                                                              ***/
     /**********************************************************************************************/
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        mapping (bytes4 => Dispatch) dispatches;
+        EnumerableSet.AddressSet                      facets;
+        mapping (bytes4  => Dispatch)                 dispatches;
+        mapping (address => EnumerableSet.Bytes32Set) wiring;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.Controller")) - 1)) & ~bytes32(uint256(0xff))
@@ -51,22 +57,63 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector)
+    function addDispatch(bytes4 callSelector, Dispatch calldata dispatch)
         external
         override
         nonReentrant
     {
-        require(
-            IAccessControls(_getSharedControllerStorage().accessControls).hasRole(
-                _DEFAULT_ADMIN_ROLE,
-                msg.sender
-            ),
-            NotAdmin(msg.sender)
-        );
+        _revertIfNotAdmin();
+        _addDispatch(callSelector, dispatch);
+    }
 
-        _getControllerStorage().dispatches[callSelector] = Dispatch(facet, delegateSelector);
+    function addDispatches(bytes4[] calldata callSelectors, Dispatch[] calldata dispatches)
+        external
+        override
+        nonReentrant
+    {
+        _revertIfNotAdmin();
 
-        emit DispatchSet(callSelector, facet, delegateSelector);
+        for (uint256 i = 0; i < callSelectors.length; ++i) {
+            _addDispatch(callSelectors[i], dispatches[i]);
+        }
+    }
+
+    function addWire(address facet, Wire calldata wire) external override nonReentrant {
+        _revertIfNotAdmin();
+        _addDispatch(wire.callSelector, Dispatch(facet, wire.delegateSelector));
+    }
+
+    function addWires(address facet, Wire[] calldata wires) external override nonReentrant {
+        _revertIfNotAdmin();
+
+        for (uint256 i = 0; i < wires.length; ++i) {
+            _addDispatch(wires[i].callSelector, Dispatch(facet, wires[i].delegateSelector));
+        }
+    }
+
+    function removeDispatch(bytes4 callSelector) external override nonReentrant {
+        _revertIfNotAdmin();
+        _removeDispatch(callSelector);
+    }
+
+    function removeDispatches(bytes4[] calldata callSelectors) external override nonReentrant {
+        _revertIfNotAdmin();
+
+        for (uint256 i = 0; i < callSelectors.length; ++i) {
+            _removeDispatch(callSelectors[i]);
+        }
+    }
+
+    function removeWires(address facet) external override nonReentrant {
+        _revertIfNotAdmin();
+
+        EnumerableSet.Bytes32Set storage wiring = _getControllerStorage().wiring[facet];
+
+        while (wiring.length() > 0) {
+            ( bytes4 callSelector, ) = _fromWiring(wiring.at(0));
+
+            _removeDispatch(callSelector);
+        }
     }
 
     /**********************************************************************************************/
@@ -89,15 +136,61 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
+    function circuits() external view override returns (Circuit[] memory circuits_) {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        uint256 facetCount = $.facets.length();
+
+        circuits_ = new Circuit[](facetCount);
+
+        for (uint256 i = 0; i < facetCount; ++i) {
+            address facet = $.facets.at(i);
+
+            circuits_[i] = Circuit(facet, _toWires($.wiring[facet]));
+        }
+    }
+
     function getDispatch(bytes4 callSelector)
         external
         view
         override
-        returns (address facet, bytes4 delegateSelector)
+        returns (Dispatch memory dispatch)
     {
-        Dispatch storage dispatch = _getControllerStorage().dispatches[callSelector];
+        return _getControllerStorage().dispatches[callSelector];
+    }
 
-        return (dispatch.facet, dispatch.delegateSelector);
+    function getDispatches(bytes4[] calldata callSelectors)
+        external
+        view
+        override
+        returns (Dispatch[] memory dispatches)
+    {
+        dispatches = new Dispatch[](callSelectors.length);
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        for (uint256 i = 0; i < callSelectors.length; ++i) {
+            dispatches[i] = $.dispatches[callSelectors[i]];
+        }
+    }
+
+    function getWiring(address facet) external view override returns (Wire[] memory wiring) {
+        return _toWires(_getControllerStorage().wiring[facet]);
+    }
+
+    function getWirings(address[] calldata facets)
+        external
+        view
+        override
+        returns (Wire[][] memory wirings)
+    {
+        wirings = new Wire[][](facets.length);
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        for (uint256 i = 0; i < facets.length; ++i) {
+            wirings[i] = _toWires($.wiring[facets[i]]);
+        }
     }
 
     /**********************************************************************************************/
@@ -126,5 +219,99 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     receive() external payable {}
+
+    /**********************************************************************************************/
+    /*** External Interactive Functions                                                         ***/
+    /**********************************************************************************************/
+
+    function _addDispatch(bytes4 callSelector, Dispatch memory dispatch) internal {
+        address facet = dispatch.facet;
+
+        require(facet != address(0), InvalidDispatch());
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        require(
+            $.dispatches[callSelector].facet == address(0),
+            DispatchAlreadyEnabled(callSelector)
+        );
+
+        $.facets.add(facet);
+
+        $.dispatches[callSelector] = dispatch;
+
+        bytes4 delegateSelector = dispatch.delegateSelector;
+
+        $.wiring[facet].add(_toWiring(callSelector, delegateSelector));
+
+        emit DispatchAdded(callSelector, facet, delegateSelector);
+    }
+
+    function _removeDispatch(bytes4 callSelector) internal {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        Dispatch storage dispatch = $.dispatches[callSelector];
+
+        address facet = dispatch.facet;
+
+        EnumerableSet.Bytes32Set storage wiring = $.wiring[facet];
+
+        wiring.remove(_toWiring(callSelector, dispatch.delegateSelector));
+
+        delete $.dispatches[callSelector];
+
+        if (wiring.length() == 0) {
+            $.facets.remove(facet);
+        }
+
+        emit DispatchRemoved(callSelector);
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _fromWiring(bytes32 wiring)
+        internal
+        pure
+        returns (bytes4 callSelector, bytes4 delegateSelector)
+    {
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return (bytes4(wiring), bytes4(wiring << 32));
+    }
+
+    function _toWiring(bytes4 callSelector, bytes4 delegateSelector)
+        internal
+        pure
+        returns (bytes32 wiring)
+    {
+        return bytes32(abi.encodePacked(callSelector, delegateSelector));
+    }
+
+    function _toWires(EnumerableSet.Bytes32Set storage wiring)
+        internal
+        view
+        returns (Wire[] memory wires)
+    {
+        uint256 wiringCount = wiring.length();
+
+        wires = new Wire[](wiringCount);
+
+        for (uint256 i = 0; i < wiringCount; ++i) {
+            ( bytes4 callSelector, bytes4 delegateSelector ) = _fromWiring(wiring.at(i));
+
+            wires[i] = Wire(callSelector, delegateSelector);
+        }
+    }
+
+    function _revertIfNotAdmin() internal view {
+        require(
+            IAccessControls(_getSharedControllerStorage().accessControls).hasRole(
+                _DEFAULT_ADMIN_ROLE,
+                msg.sender
+            ),
+            NotAdmin(msg.sender)
+        );
+    }
 
 }
