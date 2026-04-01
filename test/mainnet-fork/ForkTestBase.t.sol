@@ -23,6 +23,7 @@ import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
+import { IBasinFacet }         from "../../src/facets/basin/IBasinFacet.sol";
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
 import { ICCTPFacet }          from "../../src/facets/cctp/ICCTPFacet.sol";
 import { ICentrifugeFacet }    from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
@@ -48,6 +49,7 @@ import { IWEETHFacet }         from "../../src/facets/weeth/IWEETHFacet.sol";
 import { IWrapProxyETHFacet }  from "../../src/facets/wrap-proxy-eth/IWrapProxyETHFacet.sol";
 import { IWSTETHFacet }        from "../../src/facets/wsteth/IWSTETHFacet.sol";
 
+import { BasinFacet }         from "../../src/facets/basin/BasinFacet.sol";
 import { AaveFacet }          from "../../src/facets/aave/AaveFacet.sol";
 import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
@@ -78,6 +80,8 @@ import { ALMProxy }         from "../../src/ALMProxy.sol";
 import { Controller }       from "../../src/Controller.sol";
 import { makeUint32Key }    from "../../src/libraries/RateLimitHelpers.sol";
 import { RateLimits }       from "../../src/RateLimits.sol";
+
+import { MockBasin } from "../mocks/MockBasin.sol";
 
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
@@ -194,6 +198,7 @@ abstract contract ForkTestBase is DssTest {
     AccessControls         accessControls;
     ALMProxy               almProxy;
     IMainnetControllerFull mainnetController;
+    MockBasin              mockBasin;
     RateLimits             rateLimits;
 
     address buffer;
@@ -288,8 +293,13 @@ abstract contract ForkTestBase is DssTest {
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(mainnetController));
 
+        // Deploy mock for Basin (not yet deployed to mainnet)
+        mockBasin = new MockBasin();
+        vm.label(address(mockBasin), "MockBasin");
+
         // Facet wiring
         _wireAaveFacet();
+        _wireBasinFacet();
         _wireCCTPFacet();
         _wireCentrifugeFacet();
         _wireCurveFacet();
@@ -405,6 +415,47 @@ abstract contract ForkTestBase is DssTest {
     /**********************************************************************************************/
     /*** Facet wiring helpers                                                                   ***/
     /**********************************************************************************************/
+
+    function _wireBasinFacet() internal {
+        address basinFacet = address(new BasinFacet(address(mockBasin)));
+
+        vm.label(basinFacet, "BasinFacet");
+
+        // Controller.depositBasin() -> BasinFacet.deposit()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.depositBasin.selector,
+            basinFacet,
+            IBasinFacet.deposit.selector
+        );
+
+        // Controller.withdrawBasin() -> BasinFacet.withdraw()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.withdrawBasin.selector,
+            basinFacet,
+            IBasinFacet.withdraw.selector
+        );
+
+        // Controller.LIMIT_BASIN_DEPOSIT() -> BasinFacet.LIMIT_DEPOSIT()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_BASIN_DEPOSIT.selector,
+            basinFacet,
+            IBasinFacet.LIMIT_DEPOSIT.selector
+        );
+
+        // Controller.LIMIT_BASIN_WITHDRAW() -> BasinFacet.LIMIT_WITHDRAW()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.LIMIT_BASIN_WITHDRAW.selector,
+            basinFacet,
+            IBasinFacet.LIMIT_WITHDRAW.selector
+        );
+
+        // Controller.basin() -> BasinFacet.basin()
+        mainnetController.setDispatch(
+            IMainnetControllerFull.basin.selector,
+            basinFacet,
+            IBasinFacet.basin.selector
+        );
+    }
 
     function _wireCentrifugeFacet() internal {
         // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
