@@ -419,11 +419,11 @@ abstract contract IMainnetControllerFull is IController, Controller {
     /*** USDE (Ethena) actions                                                                  ***/
     /**********************************************************************************************/
 
-    function LIMIT_USDE_BURN() external virtual view returns (bytes32);
+    function LIMIT_USDE_BURN() external view virtual returns (bytes32);
 
-    function LIMIT_USDE_MINT() external virtual view returns (bytes32);
+    function LIMIT_USDE_MINT() external view virtual returns (bytes32);
 
-    function LIMIT_SUSDE_COOLDOWN() external virtual view returns (bytes32);
+    function LIMIT_SUSDE_COOLDOWN() external view virtual returns (bytes32);
 
     function cooldownAssetsSUSDe(
         uint256 usdeAmount
