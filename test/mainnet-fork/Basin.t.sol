@@ -7,6 +7,8 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { MockBasin } from "../mocks/MockBasin.sol";
+
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -285,6 +287,81 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         mainnetController.withdrawBasin(Ethereum.USDS, 1);
 
         vm.stopPrank();
+    }
+
+}
+
+contract MainnetController_Basin_RateLimitIsolation_Tests is Basin_TestBase {
+
+    MockBasin internal mockBasin2;
+
+    bytes32 internal depositKey1;
+    bytes32 internal depositKey2;
+    bytes32 internal withdrawKey1;
+    bytes32 internal withdrawKey2;
+
+    function setUp() public override {
+        super.setUp();
+
+        mockBasin2 = new MockBasin();
+        vm.label(address(mockBasin2), "MockBasin2");
+
+        depositKey1 = makeAddressAddressKey(
+            mainnetController.LIMIT_BASIN_DEPOSIT(),
+            Ethereum.USDS,
+            address(mockBasin)
+        );
+        depositKey2 = makeAddressAddressKey(
+            mainnetController.LIMIT_BASIN_DEPOSIT(),
+            Ethereum.USDS,
+            address(mockBasin2)
+        );
+        withdrawKey1 = makeAddressAddressKey(
+            mainnetController.LIMIT_BASIN_WITHDRAW(),
+            Ethereum.USDS,
+            address(mockBasin)
+        );
+        withdrawKey2 = makeAddressAddressKey(
+            mainnetController.LIMIT_BASIN_WITHDRAW(),
+            Ethereum.USDS,
+            address(mockBasin2)
+        );
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(depositKey2,  BASIN_MAX_AMOUNT, BASIN_SLOPE);
+        rateLimits.setRateLimitData(withdrawKey2, BASIN_MAX_AMOUNT, BASIN_SLOPE);
+        vm.stopPrank();
+    }
+
+    function test_rateLimitKeys_areDifferent() external view {
+        assertTrue(depositKey1 != depositKey2);
+        assertTrue(withdrawKey1 != withdrawKey2);
+    }
+
+    function test_depositBasin_rateLimitIsolation() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey1), BASIN_MAX_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey2), BASIN_MAX_AMOUNT);
+
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.depositBasin(Ethereum.USDS, 1_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey1), 4_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey2), BASIN_MAX_AMOUNT);
+    }
+
+    function test_withdrawBasin_rateLimitIsolation() external {
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey1), BASIN_MAX_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey2), BASIN_MAX_AMOUNT);
+
+        deal(Ethereum.USDS, address(mockBasin), 1_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.withdrawBasin(Ethereum.USDS, 1_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey1), 4_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey2), BASIN_MAX_AMOUNT);
     }
 
 }

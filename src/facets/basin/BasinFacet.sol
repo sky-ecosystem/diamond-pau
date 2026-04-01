@@ -103,7 +103,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
     function _decreaseRateLimit(bytes32 key, address asset, uint256 amount) internal {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressKey(key, token, basin),
+            makeAddressAddressKey(key, asset, basin),
             amount
         );
     }
