@@ -19,7 +19,7 @@ contract PAUFactory_Tests is Test {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 internal constant DEFAULT_ADMIN_ROLE   = 0x00;
     bytes32 internal constant FACET_VALIDATOR_ROLE = keccak256("FACET_VALIDATOR_ROLE");
 
     address internal admin          = makeAddr("admin");
@@ -49,6 +49,9 @@ contract PAUFactory_Tests is Test {
 
         assertEq(factory.hasRole(DEFAULT_ADMIN_ROLE,   factoryAdmin),   true);
         assertEq(factory.hasRole(FACET_VALIDATOR_ROLE, facetValidator), true);
+
+        assertEq(factory.getRoleMemberCount(DEFAULT_ADMIN_ROLE),   1);
+        assertEq(factory.getRoleMemberCount(FACET_VALIDATOR_ROLE), 1);
     }
 
     /**********************************************************************************************/
