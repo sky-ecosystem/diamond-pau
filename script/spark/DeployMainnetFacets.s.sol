@@ -10,12 +10,10 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { AaveFacet }          from "../../src/facets/aave/AaveFacet.sol";
 import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
-import { DAIUSDSFacet }       from "../../src/facets/dai-usds/DAIUSDSFacet.sol";
 import { ERC4626Facet }       from "../../src/facets/erc4626/ERC4626Facet.sol";
 import { FarmFacet }          from "../../src/facets/farm/FarmFacet.sol";
 import { LayerZeroFacet }     from "../../src/facets/layer-zero/LayerZeroFacet.sol";
 import { MapleFacet }         from "../../src/facets/maple/MapleFacet.sol";
-import { OTCFacet }           from "../../src/facets/otc/OTCFacet.sol";
 import { PSMFacet }           from "../../src/facets/psm/PSMFacet.sol";
 import { SparkVaultFacet }    from "../../src/facets/spark-vault/SparkVaultFacet.sol";
 import { SuperstateFacet }    from "../../src/facets/superstate/SuperstateFacet.sol";
@@ -30,16 +28,15 @@ contract DeployMainnetFacets is Script {
     /*** Structs                                                                                ***/
     /**********************************************************************************************/
 
-    struct MainnetFacetAddresses { // @TODO : Re-check all the integrations in mainnet. Remove unused ones and add any missing ones.
+    // NOTE: Struct to hold Mainnet facet deployment addresses.
+    struct MainnetFacetAddresses {
         address aaveFacet;
         address cctpFacet;
         address curveFacet;
-        address daiUsdsFacet;
         address erc4626Facet;
         address farmFacet;
         address layerZeroFacet;
         address mapleFacet;
-        address otcFacet;
         address psmFacet;
         address sparkVaultFacet;
         address superstateFacet;
@@ -71,7 +68,7 @@ contract DeployMainnetFacets is Script {
         string memory env      = vm.envString("ENV");
         string memory fileSlug = string(abi.encodePacked("spark-facets-mainnet-", env));
 
-        console.log("Deploying PAU facets for Ethereum Mainnet...");
+        console.log("Deploying PAU facets for Spark\n  Chain: Mainnet\n  Env: %s", env);
 
         vm.startBroadcast();
 
@@ -84,6 +81,10 @@ contract DeployMainnetFacets is Script {
         _exportFacets(facets, fileSlug);
     }
 
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
     function _deployFacets() internal returns (MainnetFacetAddresses memory facets) {
         facets.aaveFacet = address(new AaveFacet());
 
@@ -94,12 +95,6 @@ contract DeployMainnetFacets is Script {
 
         facets.curveFacet = address(new CurveFacet());
 
-        facets.daiUsdsFacet = address(new DAIUSDSFacet({
-            dai_     : Ethereum.DAI,
-            daiUSDS_ : Ethereum.DAI_USDS,
-            usds_    : Ethereum.USDS
-        }));
-
         facets.erc4626Facet = address(new ERC4626Facet());
 
         facets.farmFacet = address(new FarmFacet());
@@ -107,8 +102,6 @@ contract DeployMainnetFacets is Script {
         facets.layerZeroFacet = address(new LayerZeroFacet());
 
         facets.mapleFacet = address(new MapleFacet());
-    
-        facets.otcFacet = address(new OTCFacet());
 
         facets.psmFacet = address(new PSMFacet(
             Ethereum.DAI,
@@ -147,12 +140,10 @@ contract DeployMainnetFacets is Script {
         ScriptTools.exportContract(fileSlug, "aaveFacet",          facets.aaveFacet);
         ScriptTools.exportContract(fileSlug, "cctpFacet",          facets.cctpFacet);
         ScriptTools.exportContract(fileSlug, "curveFacet",         facets.curveFacet);
-        ScriptTools.exportContract(fileSlug, "daiUsdsFacet",       facets.daiUsdsFacet);
         ScriptTools.exportContract(fileSlug, "erc4626Facet",       facets.erc4626Facet);
         ScriptTools.exportContract(fileSlug, "farmFacet",          facets.farmFacet);
         ScriptTools.exportContract(fileSlug, "layerZeroFacet",     facets.layerZeroFacet);
         ScriptTools.exportContract(fileSlug, "mapleFacet",         facets.mapleFacet);
-        ScriptTools.exportContract(fileSlug, "otcFacet",           facets.otcFacet);
         ScriptTools.exportContract(fileSlug, "psmFacet",           facets.psmFacet);
         ScriptTools.exportContract(fileSlug, "sparkVaultFacet",    facets.sparkVaultFacet);
         ScriptTools.exportContract(fileSlug, "superstateFacet",    facets.superstateFacet);

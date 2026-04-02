@@ -20,7 +20,7 @@ contract DeployPAUFactory is Script {
 
         string memory fileSlug = string(abi.encodePacked("pau-factory-", chain, "-", env));
 
-        console.log("Deploying PAU factory for %s...", chain);
+        console.log("Deploying PAU factory...\n  Chain: %s\n  Env: %s", chain, env);
 
         vm.startBroadcast();
 

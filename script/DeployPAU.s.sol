@@ -33,7 +33,7 @@ contract DeployPAU is Script {
         address pauFactory = config.readAddress(".pauFactory");
         address relayer    = config.readAddress(".relayer");
 
-        console.log("Deploying PAU system for %s...", chain);
+        console.log("Deploying PAU system...\n  Star: %s\n  Chain: %s\n  Env: %s", star, chain, env);
 
         vm.startBroadcast();
 
