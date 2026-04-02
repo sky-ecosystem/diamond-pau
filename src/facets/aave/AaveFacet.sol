@@ -62,6 +62,8 @@ contract AaveFacet is IAaveFacet, FacetBase {
     bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_AAVE_DEPOSIT");
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_AAVE_WITHDRAW");
 
+    string public constant VERSION = "1.0.0";
+
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/

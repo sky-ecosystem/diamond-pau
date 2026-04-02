@@ -89,6 +89,8 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_UNISWAP_V4_WITHDRAW");
     bytes32 public constant override LIMIT_SWAP     = keccak256("LIMIT_UNISWAP_V4_SWAP");
 
+    string public constant VERSION = "1.0.0";
+
     uint256 internal constant _V4_SWAP = 0x10;
 
     /**********************************************************************************************/

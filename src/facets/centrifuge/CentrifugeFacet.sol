@@ -83,6 +83,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     // Requests for Centrifuge pools are non-fungible and all have ID = 0.
     uint256 public constant override REQUEST_ID = 0;
 
+    string public constant VERSION = "1.0.0";
+
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/

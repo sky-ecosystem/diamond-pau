@@ -80,6 +80,8 @@ contract CurveFacet is ICurveFacet, FacetBase {
     bytes32 public constant override LIMIT_SWAP     = keccak256("LIMIT_CURVE_SWAP");
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_CURVE_WITHDRAW");
 
+    string public constant VERSION = "1.0.0";
+
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/

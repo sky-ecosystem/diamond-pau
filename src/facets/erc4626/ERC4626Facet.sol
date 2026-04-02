@@ -57,6 +57,8 @@ contract ERC4626Facet is IERC4626Facet, FacetBase {
 
     uint256 public constant override EXCHANGE_RATE_PRECISION = 1e36;
 
+    string public constant VERSION = "1.0.0";
+
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/

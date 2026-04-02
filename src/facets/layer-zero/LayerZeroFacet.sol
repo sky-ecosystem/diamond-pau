@@ -128,6 +128,8 @@ contract LayerZeroFacet is ILayerZeroFacet, FacetBase {
 
     bytes32 public constant override LIMIT_TRANSFER = keccak256("LIMIT_LAYERZERO_TRANSFER");
 
+    string public constant VERSION = "1.0.0";
+
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
