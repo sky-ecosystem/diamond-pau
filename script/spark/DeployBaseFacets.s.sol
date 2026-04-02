@@ -61,14 +61,14 @@ contract DeployBaseFacets is Script {
     function _deployFacets() internal returns (BaseFacetAddresses memory facets) {
         facets.aaveFacet = address(new AaveFacet());
 
-        facets.cctpFacet = address(new CCTPFacet(
-            Base.CCTP_TOKEN_MESSENGER,
-            Base.USDC
-        ));
+        facets.cctpFacet = address(new CCTPFacet({
+            cctp_ : Base.CCTP_TOKEN_MESSENGER,
+            usdc_ : Base.USDC
+        }));
 
         facets.erc4626Facet = address(new ERC4626Facet());
 
-        facets.psm3Facet = address(new PSM3Facet(Base.PSM3));
+        facets.psm3Facet = address(new PSM3Facet({psm_ : Base.PSM3}));
 
         facets.transferAssetFacet = address(new TransferAssetFacet());
     }

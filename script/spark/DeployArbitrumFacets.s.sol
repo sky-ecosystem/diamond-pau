@@ -59,14 +59,14 @@ contract DeployArbitrumFacets is Script {
     function _deployFacets() internal returns (ArbitrumFacetAddresses memory facets) {
         facets.aaveFacet = address(new AaveFacet());
 
-        facets.cctpFacet = address(new CCTPFacet(
-            Arbitrum.CCTP_TOKEN_MESSENGER,
-            Arbitrum.USDC
-        ));
+        facets.cctpFacet = address(new CCTPFacet({
+            cctp_ : Arbitrum.CCTP_TOKEN_MESSENGER,
+            usdc_ : Arbitrum.USDC
+        }));
 
         facets.erc4626Facet = address(new ERC4626Facet());
 
-        facets.psm3Facet = address(new PSM3Facet(Arbitrum.PSM3));
+        facets.psm3Facet = address(new PSM3Facet({psm_ : Arbitrum.PSM3}));
     }
 
     function _exportFacets(ArbitrumFacetAddresses memory facets, string memory fileSlug) internal {

@@ -57,10 +57,10 @@ contract DeployAvalancheFacets is Script {
     function _deployFacets() internal returns (AvalancheFacetAddresses memory facets) {
         facets.aaveFacet = address(new AaveFacet());
 
-        facets.cctpFacet = address(new CCTPFacet(
-            Avalanche.CCTP_TOKEN_MESSENGER,
-            Avalanche.USDC
-        ));
+        facets.cctpFacet = address(new CCTPFacet({
+            cctp_ : Avalanche.CCTP_TOKEN_MESSENGER,
+            usdc_ : Avalanche.USDC
+        }));
 
         facets.sparkVaultFacet = address(new SparkVaultFacet());
     }

@@ -32,7 +32,10 @@ contract DeployPAUFactory is Script {
 
         // Step 1: Deploy PAU factory
 
-        address pauFactory = address(new PAUFactory(admin, facetValidator));
+        address pauFactory = address(new PAUFactory({
+            admin          : admin,
+            facetValidator : facetValidator
+        }));
 
         console.log("PAU factory deployed at: ", pauFactory);
 

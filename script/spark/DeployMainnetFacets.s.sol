@@ -88,10 +88,10 @@ contract DeployMainnetFacets is Script {
     function _deployFacets() internal returns (MainnetFacetAddresses memory facets) {
         facets.aaveFacet = address(new AaveFacet());
 
-        facets.cctpFacet = address(new CCTPFacet(
-            Ethereum.CCTP_TOKEN_MESSENGER,
-            Ethereum.USDC
-        ));
+        facets.cctpFacet = address(new CCTPFacet({
+            cctp_ : Ethereum.CCTP_TOKEN_MESSENGER,
+            usdc_ : Ethereum.USDC
+        }));
 
         facets.curveFacet = address(new CurveFacet());
 
@@ -103,20 +103,20 @@ contract DeployMainnetFacets is Script {
 
         facets.mapleFacet = address(new MapleFacet());
 
-        facets.psmFacet = address(new PSMFacet(
-            Ethereum.DAI,
-            Ethereum.DAI_USDS,
-            Ethereum.PSM,
-            Ethereum.USDC,
-            Ethereum.USDS
-        ));
+        facets.psmFacet = address(new PSMFacet({
+            dai_     : Ethereum.DAI,
+            daiUSDS_ : Ethereum.DAI_USDS,
+            psm_     : Ethereum.PSM,
+            usdc_    : Ethereum.USDC,
+            usds_    : Ethereum.USDS
+        }));
 
         facets.sparkVaultFacet = address(new SparkVaultFacet());
 
-        facets.superstateFacet = address(new SuperstateFacet(
-            Ethereum.USDC,
-            Ethereum.USTB
-        ));
+        facets.superstateFacet = address(new SuperstateFacet({
+            usdc_ : Ethereum.USDC,
+            ustb_ : Ethereum.USTB
+        }));
 
         facets.transferAssetFacet = address(new TransferAssetFacet());
 
@@ -126,14 +126,17 @@ contract DeployMainnetFacets is Script {
             router_          : _UNISWAP_V4_ROUTER
         }));
 
-        facets.usdeFacet = address(new USDEFacet(
-            Ethereum.ETHENA_MINTER,
-            Ethereum.SUSDE,
-            Ethereum.USDC,
-            Ethereum.USDE
-        ));
+        facets.usdeFacet = address(new USDEFacet({
+            ethenaMinter_ : Ethereum.ETHENA_MINTER,
+            susde_        : Ethereum.SUSDE,
+            usdc_         : Ethereum.USDC,
+            usde_         : Ethereum.USDE
+        }));
 
-        facets.usdsFacet = address(new USDSFacet(Ethereum.ALLOCATOR_VAULT, Ethereum.USDS));
+        facets.usdsFacet = address(new USDSFacet({
+            vault_ : Ethereum.ALLOCATOR_VAULT,
+            usds_  : Ethereum.USDS
+        }));
     }
 
     function _exportFacets(MainnetFacetAddresses memory facets, string memory fileSlug) internal {
