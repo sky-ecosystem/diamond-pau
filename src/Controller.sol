@@ -44,6 +44,15 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
     /**********************************************************************************************/
+    /*** Modifiers                                                                              ***/
+    /**********************************************************************************************/
+
+    modifier onlyAdmin() {
+        _revertIfNotAdmin();
+        _;
+    }
+
+    /**********************************************************************************************/
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
@@ -61,14 +70,19 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function addWire(address facet, Wire calldata wire) external override nonReentrant {
-        _revertIfNotAdmin();
+    function addWire(address facet, Wire calldata wire) external override nonReentrant onlyAdmin {
         _validateFacet(facet);
         _addWire(facet, wire);
     }
 
-    function addWires(address facet, Wire[] calldata wires) external override nonReentrant {
-        _revertIfNotAdmin();
+    function addWires(address facet, Wire[] calldata wires)
+        external
+        override
+        nonReentrant
+        onlyAdmin
+    {
+        require(wires.length > 0, EmptyArray());
+
         _validateFacet(facet);
 
         for (uint256 i = 0; i < wires.length; ++i) {
@@ -76,25 +90,26 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         }
     }
 
-    function removeWire(bytes4 callSelector) external override nonReentrant {
-        _revertIfNotAdmin();
+    function removeWire(bytes4 callSelector) external override nonReentrant onlyAdmin {
         _removeWire(callSelector);
     }
 
-    function removeWires(bytes4[] calldata callSelectors) external override nonReentrant {
-        _revertIfNotAdmin();
+    function removeWires(bytes4[] calldata callSelectors) external override nonReentrant onlyAdmin {
+        require(callSelectors.length > 0, EmptyArray());
 
         for (uint256 i = 0; i < callSelectors.length; ++i) {
             _removeWire(callSelectors[i]);
         }
     }
 
-    function removeAllWiresFor(address facet) external override nonReentrant {
-        _revertIfNotAdmin();
-
+    function removeAllWiresFor(address facet) external override nonReentrant onlyAdmin {
         EnumerableSet.Bytes32Set storage wiring = _getControllerStorage().wiring[facet];
 
-        while (wiring.length() > 0) {
+        uint256 wiringCount = wiring.length();
+
+        require(wiringCount > 0, EmptyArray());
+
+        while (wiringCount-- > 0) {
             ( bytes4 callSelector, ) = _fromWiring(wiring.at(0));
 
             _removeWire(callSelector);
@@ -207,10 +222,8 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         }
     }
 
-    receive() external payable {}
-
     /**********************************************************************************************/
-    /*** External Interactive Functions                                                         ***/
+    /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
     function _addWire(address facet, Wire memory wire) internal {
@@ -306,7 +319,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         );
     }
 
-    function _revertIfCallSelectorIsHardcoded(bytes4 callSelector) internal view {
+    function _revertIfCallSelectorIsHardcoded(bytes4 callSelector) internal pure {
         require(
             callSelector != IController.addWire.selector &&
             callSelector != IController.addWires.selector &&

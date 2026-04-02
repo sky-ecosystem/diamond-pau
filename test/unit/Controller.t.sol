@@ -310,6 +310,14 @@ contract Controller_Tests is Test {
         controller.addWires(address(0), new IController.Wire[](0));
     }
 
+    function test_addWires_emptyArray() external {
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(IController.EmptyArray.selector);
+        vm.prank(admin);
+        controller.addWires(address(0), new IController.Wire[](0));
+    }
+
     function test_addWires_zeroFacet() external {
         IController.Wire[] memory wires = new IController.Wire[](2);
 
@@ -604,6 +612,14 @@ contract Controller_Tests is Test {
         controller.removeWires(new bytes4[](0));
     }
 
+    function test_removeWires_emptyArray() external {
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(IController.EmptyArray.selector);
+        vm.prank(admin);
+        controller.removeWires(new bytes4[](0));
+    }
+
     function test_removeWires_callSelectorHardcoded() external {
         controller.__setDispatch(0x12456789, makeAddr("facet"), bytes4(0));
 
@@ -850,6 +866,14 @@ contract Controller_Tests is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
+        controller.removeAllWiresFor(address(0));
+    }
+
+    function test_removeAllWiresFor_emptyArray() external {
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(IController.EmptyArray.selector);
+        vm.prank(admin);
         controller.removeAllWiresFor(address(0));
     }
 
@@ -1107,25 +1131,6 @@ contract Controller_Tests is Test {
         assertEq(wirings[1][0].delegateSelector, delegateSelectors[1]);
         assertEq(wirings[1][1].callSelector,     callSelectors[2]);
         assertEq(wirings[1][1].delegateSelector, delegateSelectors[2]);
-    }
-
-    /**********************************************************************************************/
-    /*** receive Tests                                                                          ***/
-    /**********************************************************************************************/
-
-    function test_receive() external {
-        address account = makeAddr("account");
-
-        deal(account, 1 ether);
-
-        assertEq(account.balance,             1 ether);
-        assertEq(address(controller).balance, 0);
-
-        vm.prank(account);
-        payable(controller).call{value: 1 ether}("");
-
-        assertEq(account.balance,             0);
-        assertEq(address(controller).balance, 1 ether);
     }
 
     /**********************************************************************************************/

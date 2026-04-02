@@ -47,6 +47,9 @@ interface IController {
     /// @notice Thrown when a call selector is not wired to a facet.
     error CallSelectorNotWired(bytes4 callSelector);
 
+    /// @notice Thrown when an argument array is empty.
+    error EmptyArray();
+
     /// @notice Thrown when the facet is not registered as valid on the factory.
     error InvalidFacet(address facet);
 

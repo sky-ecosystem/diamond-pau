@@ -62,9 +62,10 @@ contract ControllerIntegration_Tests is Controller_TestBase {
     }
 
     function test_addWire() external {
-        bytes4  callSelector     = 0x12345678;
-        address facet            = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
-        bytes4  delegateSelector = 0x87654321;
+        address facet = address(new MockFacet1());
+
+        bytes4 callSelector     = 0x12345678;
+        bytes4 delegateSelector = 0x87654321;
 
         vm.prank(facetValidator);
         factory.setValidFacet(facet, true);
@@ -90,6 +91,54 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         assertEq(dispatch.facet,            address(0));
         assertEq(dispatch.delegateSelector, bytes4(0));
+    }
+
+    /**********************************************************************************************/
+    /*** addWires Tests                                                                         ***/
+    /**********************************************************************************************/
+
+    function test_addWires_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.addWires(address(0), new IController.Wire[](0));
+    }
+
+    function test_addWires_notValidFacet() external {
+        address facet = makeAddr("facet");
+
+        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
+        vm.prank(admin);
+        controller.addWires(facet, new IController.Wire[](0));
+    }
+
+    /**********************************************************************************************/
+    /*** removeWire Tests                                                                       ***/
+    /**********************************************************************************************/
+
+    function test_removeWire_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.removeWire(bytes4(0));
+    }
+
+    /**********************************************************************************************/
+    /*** removeWires Tests                                                                      ***/
+    /**********************************************************************************************/
+
+    function test_removeWires_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.removeWires(new bytes4[](0));
+    }
+
+    /**********************************************************************************************/
+    /*** removeAllWiresFor Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_removeAllWiresFor_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.removeAllWiresFor(address(0));
     }
 
     /**********************************************************************************************/
@@ -141,7 +190,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(IMockController(address(controller)).foo(12), 3);
 
         vm.prank(admin);
-        controller.removeWire(IMockController.foo.selector);
+        controller.removeAllWiresFor(facet2);
 
         vm.expectRevert(
             abi.encodeWithSelector(
