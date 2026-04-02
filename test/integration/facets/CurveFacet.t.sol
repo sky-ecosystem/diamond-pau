@@ -23,7 +23,7 @@ interface IControllerLike {
 
 }
 
-abstract contract CurveFacet_TestBase is Controller_TestBase {
+contract Controller_CurveFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -56,9 +56,22 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_CurveFacet_Admin_Tests is CurveFacet_TestBase {
+    function test_constructor() external {
+        CurveFacet facet = new CurveFacet();
+
+        assertEq(facet.LIMIT_DEPOSIT(),  keccak256("LIMIT_CURVE_DEPOSIT"));
+        assertEq(facet.LIMIT_SWAP(),     keccak256("LIMIT_CURVE_SWAP"));
+        assertEq(facet.LIMIT_WITHDRAW(), keccak256("LIMIT_CURVE_WITHDRAW"));
+        assertEq(facet.VERSION(),        "1.0.0");
+    }
+
+    /**********************************************************************************************/
+    /*** setCurveMaxSlippage Tests                                                              ***/
+    /**********************************************************************************************/
 
     function test_setCurveMaxSlippage_reentrancy() external {
         _setEntered(address(controller));

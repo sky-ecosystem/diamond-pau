@@ -50,7 +50,7 @@ contract OTCFacet is IOTCFacet, FacetBase {
 
     bytes32 public constant override LIMIT_SWAP = keccak256("LIMIT_OTC_SWAP");
 
-    string public constant VERSION = "1.0.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/

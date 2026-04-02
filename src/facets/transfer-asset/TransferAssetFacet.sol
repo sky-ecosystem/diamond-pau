@@ -24,7 +24,7 @@ contract TransferAssetFacet is ITransferAssetFacet, FacetBase {
 
     bytes32 public constant override LIMIT_TRANSFER = keccak256("LIMIT_ASSET_TRANSFER");
 
-    string public constant VERSION = "1.0.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/

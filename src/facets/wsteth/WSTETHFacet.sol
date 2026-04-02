@@ -45,7 +45,7 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
     bytes32 public constant override LIMIT_DEPOSIT          = keccak256("LIMIT_WSTETH_DEPOSIT");
     bytes32 public constant override LIMIT_REQUEST_WITHDRAW = keccak256("LIMIT_WSTETH_REQUEST_WITHDRAW");
 
-    string public constant VERSION = "1.0.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/

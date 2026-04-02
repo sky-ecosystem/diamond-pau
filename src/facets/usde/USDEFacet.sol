@@ -38,7 +38,7 @@ contract USDEFacet is IUSDEFacet, FacetBase {
     bytes32 public constant override LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant override LIMIT_SUSDE_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
 
-    string public constant VERSION = "1.0.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/

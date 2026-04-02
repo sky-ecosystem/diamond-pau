@@ -36,7 +36,7 @@ interface IControllerLike {
 
 }
 
-abstract contract OTCFacet_TestBase is Controller_TestBase {
+contract Controller_OTCFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -99,9 +99,16 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_OTCFacet_Admin_Tests is OTCFacet_TestBase {
+    function test_constructor() external {
+        OTCFacet facet = new OTCFacet();
+
+        assertEq(facet.LIMIT_SWAP(), keccak256("LIMIT_OTC_SWAP"));
+        assertEq(facet.VERSION(),    "1.0.0");
+    }
 
     /**********************************************************************************************/
     /*** setBuffer Tests                                                                        ***/

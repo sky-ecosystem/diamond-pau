@@ -24,7 +24,7 @@ interface IControllerLike {
 
 }
 
-abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
+contract Controller_LayerZeroFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -57,9 +57,16 @@ abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_LayerZeroFacet_Admin_Tests is LayerZeroFacet_TestBase {
+    function test_constructor() external {
+        LayerZeroFacet facet = new LayerZeroFacet();
+
+        assertEq(facet.LIMIT_TRANSFER(), keccak256("LIMIT_LAYERZERO_TRANSFER"));
+        assertEq(facet.VERSION(),        "1.0.0");
+    }
 
     /**********************************************************************************************/
     /*** setRecipient Tests                                                                     ***/

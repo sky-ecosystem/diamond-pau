@@ -28,7 +28,7 @@ contract MapleFacet is IMapleFacet, FacetBase {
 
     bytes32 public constant override LIMIT_REDEEM = keccak256("LIMIT_MAPLE_REDEEM");
 
-    string public constant VERSION = "1.0.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/

@@ -24,7 +24,7 @@ interface IControllerLike {
 
 }
 
-contract ERC4626Facet_TestBase is Controller_TestBase {
+contract Controller_ERC4626Facet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -57,9 +57,18 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_ERC4626Facet_Admin_Tests is ERC4626Facet_TestBase {
+    function test_constructor() external {
+        ERC4626Facet facet = new ERC4626Facet();
+
+        assertEq(facet.LIMIT_DEPOSIT(),           keccak256("LIMIT_4626_DEPOSIT"));
+        assertEq(facet.LIMIT_WITHDRAW(),          keccak256("LIMIT_4626_WITHDRAW"));
+        assertEq(facet.EXCHANGE_RATE_PRECISION(), 1e36);
+        assertEq(facet.VERSION(),                 "1.0.0");
+    }
 
     /**********************************************************************************************/
     /*** setMaxExchangeRate Tests                                                               ***/
