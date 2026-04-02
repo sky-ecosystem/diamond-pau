@@ -104,11 +104,11 @@ contract ControllerIntegration_Tests is Controller_TestBase {
     }
 
     function test_addWires_notValidFacet() external {
-        address facet = makeAddr("facet");
+        address facet = address(new MockFacet1());
 
         vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
         vm.prank(admin);
-        controller.addWires(facet, new IController.Wire[](0));
+        controller.addWires(facet, new IController.Wire[](2));
     }
 
     /**********************************************************************************************/

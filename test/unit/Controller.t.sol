@@ -141,6 +141,7 @@ contract Controller_Tests is Test {
 
     function test_constructor() external {
         assertEq(controller.accessControls(), accessControls);
+        assertEq(controller.factory(),        factory);
         assertEq(controller.proxy(),          proxy);
         assertEq(controller.rateLimits(),     rateLimits);
     }

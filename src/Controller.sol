@@ -109,10 +109,12 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
         require(wiringCount > 0, EmptyArray());
 
-        while (wiringCount-- > 0) {
+        while (wiringCount > 0) {
             ( bytes4 callSelector, ) = _fromWiring(wiring.at(0));
 
             _removeWire(callSelector);
+
+            --wiringCount;
         }
     }
 
