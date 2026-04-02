@@ -38,7 +38,12 @@ interface IControllerLike {
 
 }
 
-abstract contract UniswapV3Facet_TestBase is Controller_TestBase {
+contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
+
+    uint24 internal constant _MAX_TICK_DELTA = 887_272;
+
+    int24 internal constant _MIN_UNISWAP_TICK = -887_272;
+    int24 internal constant _MAX_UNISWAP_TICK = 887_272;
 
     IControllerLike internal controller;
 
@@ -106,14 +111,19 @@ abstract contract UniswapV3Facet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_UniswapV3Facet_Admin_Tests is UniswapV3Facet_TestBase {
+    function test_constructor_zeroPositionManager() external {
+        vm.expectRevert("UniswapV3Facet/zero-position-manager");
+        new UniswapV3Facet(address(0), address(0));
+    }
 
-    uint24 internal constant _MAX_TICK_DELTA = 887_272;
-
-    int24 internal constant _MIN_UNISWAP_TICK = -887_272;
-    int24 internal constant _MAX_UNISWAP_TICK = 887_272;
+    function test_constructor_zeroRouter() external {
+        vm.expectRevert("UniswapV3Facet/zero-router");
+        new UniswapV3Facet(makeAddr("positionManager"), address(0));
+    }
 
     /**********************************************************************************************/
     /*** setMaxSlippage Tests                                                                   ***/

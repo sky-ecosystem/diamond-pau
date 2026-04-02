@@ -26,6 +26,8 @@ contract MerklFacet is IMerklFacet, FacetBase {
     /**********************************************************************************************/
 
     constructor(address distributor_) {
+        require(distributor_ != address(0), "MerklFacet/zero-distributor");
+
         distributor = distributor_;
     }
 
@@ -39,6 +41,8 @@ contract MerklFacet is IMerklFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        require(operator != address(0), "MerklFacet/zero-operator");
+
         address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(

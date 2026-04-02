@@ -72,8 +72,8 @@ contract ControllerHarness is Controller {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    constructor(address accessControls_, address proxy_, address rateLimits_, address factory_)
-        Controller(accessControls_, proxy_, rateLimits_, factory_) {}
+    constructor(address accessControls_, address factory_, address proxy_, address rateLimits_)
+        Controller(accessControls_, factory_, proxy_, rateLimits_) {}
 
     function __addFacet(address facet) external {
         _getControllerStorage().facets.add(facet);
@@ -132,12 +132,32 @@ contract Controller_Tests is Test {
     ControllerHarness internal controller;
 
     function setUp() external {
-        controller = new ControllerHarness(accessControls, proxy, rateLimits, address(factory));
+        controller = new ControllerHarness(accessControls, factory, proxy, rateLimits);
     }
 
     /**********************************************************************************************/
     /*** Constructor Tests                                                                      ***/
     /**********************************************************************************************/
+
+    function test_constructor_zeroAccessControls() external {
+        vm.expectRevert(IController.ZeroAccessControls.selector);
+        new ControllerHarness(address(0), address(0), address(0), address(0));
+    }
+
+    function test_constructor_zeroFactory() external {
+        vm.expectRevert(IController.ZeroFactory.selector);
+        new ControllerHarness(accessControls, address(0), address(0), address(0));
+    }
+
+    function test_constructor_zeroProxy() external {
+        vm.expectRevert(IController.ZeroProxy.selector);
+        new ControllerHarness(accessControls, factory, address(0), address(0));
+    }
+
+    function test_constructor_zeroRateLimits() external {
+        vm.expectRevert(IController.ZeroRateLimits.selector);
+        new ControllerHarness(accessControls, factory, proxy, address(0));
+    }
 
     function test_constructor() external {
         assertEq(controller.accessControls(), accessControls);
@@ -1137,6 +1157,11 @@ contract Controller_Tests is Test {
     /**********************************************************************************************/
     /*** Fallback Tests                                                                         ***/
     /**********************************************************************************************/
+
+    function test_fallback_invalidCallDataLength() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.InvalidCallDataLength.selector, 3));
+        address(controller).call(hex"123456");
+    }
 
     function test_fallback_dispatchNotFound() external {
         vm.expectRevert(

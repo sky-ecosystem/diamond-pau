@@ -27,7 +27,7 @@ interface IControllerLike {
 
 }
 
-abstract contract CCTPFacet_TestBase is Controller_TestBase {
+contract Controller_CCTPFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -73,9 +73,23 @@ abstract contract CCTPFacet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_CCTPFacet_SetCCTPMaxFeeCap_Tests is CCTPFacet_TestBase {
+    function test_constructor_zeroCCTP() external {
+        vm.expectRevert("CCTPFacet/zero-cctp");
+        new CCTPFacet(address(0), address(0));
+    }
+
+    function test_constructor_zeroUSDC() external {
+        vm.expectRevert("CCTPFacet/zero-usdc");
+        new CCTPFacet(makeAddr("cctp"), address(0));
+    }
+
+    /**********************************************************************************************/
+    /*** setCCTPMaxFeeCap Tests                                                                  ***/
+    /**********************************************************************************************/
 
     function test_setCCTPMaxFeeCap_reentrancy() external {
         _setEntered(address(controller));
@@ -110,9 +124,9 @@ contract Controller_CCTPFacet_SetCCTPMaxFeeCap_Tests is CCTPFacet_TestBase {
         assertEq(controller.getCCTPMaxFeeCap(), 1e18);
     }
 
-}
-
-contract Controller_CCTPFacet_SetCCTPMintRecipient_Tests is CCTPFacet_TestBase {
+    /**********************************************************************************************/
+    /*** setCCTPMintRecipient Tests                                                              ***/
+    /**********************************************************************************************/
 
     function test_setCCTPMintRecipient_reentrancy() external {
         _setEntered(address(controller));

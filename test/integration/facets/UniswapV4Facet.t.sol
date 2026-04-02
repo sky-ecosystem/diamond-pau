@@ -36,7 +36,7 @@ interface IControllerLike {
 
 }
 
-abstract contract UniswapV4_TestBase is Controller_TestBase {
+contract Controller_UniswapV4Facet_Tests is Controller_TestBase {
 
     bytes32 internal constant _POOL_ID = 0x8aa4e11cbdf30eedc92100f4c8a31ff748e201d44712cc8c90d189edaa8e4e47;
 
@@ -85,9 +85,24 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-}
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
 
-contract Controller_UniswapV4_Admin_Tests is UniswapV4_TestBase {
+    function test_constructor_zeroPermit2() external {
+        vm.expectRevert("UniswapV4Facet/zero-permit2");
+        new UniswapV4Facet(address(0), address(0), address(0));
+    }
+
+    function test_constructor_zeroPositionManager() external {
+        vm.expectRevert("UniswapV4Facet/zero-position-manager");
+        new UniswapV4Facet(makeAddr("permit2"), address(0), address(0));
+    }
+
+    function test_constructor_zeroRouter() external {
+        vm.expectRevert("UniswapV4Facet/zero-router");
+        new UniswapV4Facet(makeAddr("permit2"), makeAddr("positionManager"), address(0));
+    }
 
     /**********************************************************************************************/
     /*** setMaxSlippage Tests                                                                   ***/
