@@ -647,10 +647,10 @@ abstract contract ForkTestBase is DssTest {
 
         factory.setValidFacet(merklFacet, true);
 
-        mainnetController.addDispatch(
-            IMainnetControllerFull.toggleOperatorMerkl.selector,
-            IController.Dispatch(
-                merklFacet,
+        mainnetController.addWire(
+            merklFacet,
+            IController.Wire(
+                IMainnetControllerFull.toggleOperatorMerkl.selector,
                 IMerklFacet.toggleOperator.selector
             )
         );
@@ -1186,10 +1186,10 @@ abstract contract ForkTestBase is DssTest {
 
         factory.setValidFacet(wrapProxyETHFacet, true);
 
-        mainnetController.addDispatch(
-            IMainnetControllerFull.wrapAllProxyETH.selector,
-            IController.Dispatch(
-                wrapProxyETHFacet,
+        mainnetController.addWire(
+            wrapProxyETHFacet,
+            IController.Wire(
+                IMainnetControllerFull.wrapAllProxyETH.selector,
                 IWrapProxyETHFacet.wrapAll.selector
             )
         );

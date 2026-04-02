@@ -26,23 +26,26 @@ interface IController {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event DispatchAdded(
+    event WireAdded(
         bytes4  indexed callSelector,
-        address indexed facet,
-        bytes4  indexed delegateSelector
+        bytes4  indexed delegateSelector,
+        address indexed facet
     );
 
-    event DispatchRemoved(bytes4 indexed callSelector);
+    event WireRemoved(bytes4 indexed callSelector);
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
     /**********************************************************************************************/
 
-    /// @notice Thrown when a dispatch is already enabled for a given call selector.
-    error DispatchAlreadyEnabled(bytes4 callSelector);
+    /// @notice Thrown when a when a call selector is already wired to a facet.
+    error CallSelectorAlreadyWired(bytes4 callSelector);
 
-    /// @notice Thrown when a dispatch is not found for a given call selector.
-    error DispatchNotFound(bytes4 callSelector);
+    /// @notice Thrown when the call selector is hardcoded.
+    error CallSelectorHardcoded(bytes4 callSelector);
+
+    /// @notice Thrown when a call selector is not wired to a facet.
+    error CallSelectorNotWired(bytes4 callSelector);
 
     /// @notice Thrown when the facet is not registered as valid on the factory.
     error InvalidFacet(address facet);
@@ -57,26 +60,23 @@ interface IController {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function addDispatch(bytes4 callSelector, Dispatch calldata dispatch) external;
-
-    function addDispatches(bytes4[] calldata callSelectors, Dispatch[] calldata dispatches)
-        external;
-
     function addWire(address facet, Wire calldata wire) external;
 
     function addWires(address facet, Wire[] calldata wires) external;
 
-    function removeDispatch(bytes4 callSelector) external;
+    function removeAllWiresFor(address facet) external;
 
-    function removeDispatches(bytes4[] calldata callSelectors) external;
+    function removeWire(bytes4 callSelector) external;
 
-    function removeWires(address facet) external;
+    function removeWires(bytes4[] calldata callSelectors) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
     function accessControls() external view returns (address);
+
+    function circuits() external view returns (Circuit[] memory);
 
     function factory() external view returns (address);
 
@@ -87,8 +87,6 @@ interface IController {
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
-
-    function circuits() external view returns (Circuit[] memory);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 

@@ -44,24 +44,24 @@ contract ControllerIntegration_Tests is Controller_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** addDispatch Tests                                                                      ***/
+    /*** addWire Tests                                                                          ***/
     /**********************************************************************************************/
 
-    function test_addDispatch_notAdmin() external {
+    function test_addWire_notAdmin() external {
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.addDispatch(0x12345678, IController.Dispatch(address(0), 0x87654321));
+        controller.addWire(address(0), IController.Wire(bytes4(0), bytes4(0)));
     }
 
-    function test_addDispatch_notValidFacet() external {
+    function test_addWire_notValidFacet() external {
         address facet = makeAddr("facet");
 
         vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
         vm.prank(admin);
-        controller.addDispatch(bytes4(0), IController.Dispatch(facet, bytes4(0)));
+        controller.addWire(facet, IController.Wire(bytes4(0), bytes4(0)));
     }
 
-    function test_addDispatch() external {
+    function test_addWire() external {
         bytes4  callSelector     = 0x12345678;
         address facet            = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
         bytes4  delegateSelector = 0x87654321;
@@ -70,10 +70,10 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         factory.setValidFacet(facet, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(callSelector, facet, delegateSelector);
+        emit IController.WireAdded(callSelector, delegateSelector, facet);
 
         vm.prank(admin);
-        controller.addDispatch(callSelector, IController.Dispatch(facet, delegateSelector));
+        controller.addWire(facet, IController.Wire(callSelector, delegateSelector));
 
         IController.Dispatch memory dispatch = controller.getDispatch(callSelector);
 
@@ -81,10 +81,10 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(dispatch.delegateSelector, delegateSelector);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelector);
+        emit IController.WireRemoved(callSelector);
 
         vm.prank(admin);
-        controller.removeDispatch(callSelector);
+        controller.removeWire(callSelector);
 
         dispatch = controller.getDispatch(callSelector);
 
@@ -99,7 +99,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
     function test_fallback_facetNotFound() external {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IController.DispatchNotFound.selector,
+                IController.CallSelectorNotWired.selector,
                 IMockController.foo.selector
             )
         );
@@ -115,37 +115,37 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         vm.stopPrank();
 
         vm.prank(admin);
-        controller.addDispatch(IMockController.foo.selector, IController.Dispatch(facet1, MockFacet1.divide.selector));
+        controller.addWire(facet1, IController.Wire(IMockController.foo.selector, MockFacet1.divide.selector));
 
         assertEq(IMockController(address(controller)).foo(12), 6);
 
         vm.startPrank(admin);
-        controller.removeDispatch(IMockController.foo.selector);
-        controller.addDispatch(IMockController.foo.selector, IController.Dispatch(facet1, MockFacet1.multiply.selector));
+        controller.removeWire(IMockController.foo.selector);
+        controller.addWire(facet1, IController.Wire(IMockController.foo.selector, MockFacet1.multiply.selector));
         vm.stopPrank();
 
         assertEq(IMockController(address(controller)).foo(12), 24);
 
         vm.startPrank(admin);
-        controller.removeDispatch(IMockController.foo.selector);
-        controller.addDispatch(IMockController.foo.selector, IController.Dispatch(facet2, MockFacet2.multiply.selector));
+        controller.removeWire(IMockController.foo.selector);
+        controller.addWire(facet2, IController.Wire(IMockController.foo.selector, MockFacet2.multiply.selector));
         vm.stopPrank();
 
         assertEq(IMockController(address(controller)).foo(12), 48);
 
         vm.startPrank(admin);
-        controller.removeDispatch(IMockController.foo.selector);
-        controller.addDispatch(IMockController.foo.selector, IController.Dispatch(facet2, MockFacet2.divide.selector));
+        controller.removeWire(IMockController.foo.selector);
+        controller.addWire(facet2, IController.Wire(IMockController.foo.selector, MockFacet2.divide.selector));
         vm.stopPrank();
 
         assertEq(IMockController(address(controller)).foo(12), 3);
 
         vm.prank(admin);
-        controller.removeDispatch(IMockController.foo.selector);
+        controller.removeWire(IMockController.foo.selector);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IController.DispatchNotFound.selector,
+                IController.CallSelectorNotWired.selector,
                 IMockController.foo.selector
             )
         );

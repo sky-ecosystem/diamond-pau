@@ -284,10 +284,10 @@ abstract contract ForkTestBase is Test {
 
         vm.label(merklFacet, "MerklFacet");
 
-        foreignController.addDispatch(
-            IForeignControllerFull.toggleOperatorMerkl.selector,
-            IController.Dispatch(
-                merklFacet,
+        foreignController.addWire(
+            merklFacet,
+            IController.Wire(
+                IForeignControllerFull.toggleOperatorMerkl.selector,
                 IMerklFacet.toggleOperator.selector
             )
         );

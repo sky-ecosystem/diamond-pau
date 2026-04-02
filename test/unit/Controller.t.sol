@@ -146,237 +146,6 @@ contract Controller_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** addDispatch Tests                                                                      ***/
-    /**********************************************************************************************/
-
-    function test_addDispatch_reentrancy() external {
-        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.addDispatch(bytes4(0), IController.Dispatch(address(0), bytes4(0)));
-    }
-
-    function test_addDispatch_notAdmin() external {
-        _expectAndMockAccessControlCall(unauthorized, false);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
-        vm.prank(unauthorized);
-        controller.addDispatch(bytes4(0), IController.Dispatch(address(0), bytes4(0)));
-    }
-
-    function test_addDispatch_zeroFacet() external {
-        _expectAndMockAccessControlCall(admin, true);
-
-        vm.expectRevert(IController.ZeroFacet.selector);
-        vm.prank(admin);
-        controller.addDispatch(bytes4(0), IController.Dispatch(address(0), bytes4(0)));
-    }
-
-    function test_addDispatch_invalidFacet() external {
-        address facet = makeAddr("facet");
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet,       false);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
-        vm.prank(admin);
-        controller.addDispatch(bytes4(0), IController.Dispatch(facet, bytes4(0)));
-    }
-
-    function test_addDispatch_dispatchAlreadyEnabled() external {
-        address facet = makeAddr("facet");
-
-        controller.__setDispatch(0x12345678, facet, bytes4(0));
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet,       true);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
-        vm.prank(admin);
-        controller.addDispatch(0x12345678, IController.Dispatch(facet, bytes4(0)));
-    }
-
-    function test_addDispatch() external {
-        bytes4  callSelector     = 0x12345678;
-        address facet            = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
-        bytes4  delegateSelector = 0x87654321;
-
-        assertEq(controller.__getHasFacet(facet), false);
-
-        assertEq(controller.__getDispatchFacet(callSelector),    address(0));
-        assertEq(controller.__getDispatchSelector(callSelector), bytes4(0));
-
-        assertEq(controller.__getHasWiring(facet, callSelector, delegateSelector), false);
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet,       true);
-
-        vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(callSelector, facet, delegateSelector);
-
-        vm.prank(admin);
-        controller.addDispatch(callSelector, IController.Dispatch(facet, delegateSelector));
-
-        assertEq(controller.__getHasFacet(facet), true);
-
-        assertEq(controller.__getDispatchFacet(callSelector),    facet);
-        assertEq(controller.__getDispatchSelector(callSelector), delegateSelector);
-
-        assertEq(controller.__getHasWiring(facet, callSelector, delegateSelector), true);
-    }
-
-    /**********************************************************************************************/
-    /*** addDispatches Tests                                                                    ***/
-    /**********************************************************************************************/
-
-    function test_addDispatches_reentrancy() external {
-        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.addDispatches(new bytes4[](0), new IController.Dispatch[](0));
-    }
-
-    function test_addDispatches_notAdmin() external {
-        _expectAndMockAccessControlCall(unauthorized, false);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
-        vm.prank(unauthorized);
-        controller.addDispatches(new bytes4[](0), new IController.Dispatch[](0));
-    }
-
-    function test_addDispatches_zeroFacet() external {
-        address facet = makeAddr("facet");
-
-        IController.Dispatch[] memory dispatches = new IController.Dispatch[](2);
-        dispatches[0] = IController.Dispatch(address(0), bytes4(0));
-        dispatches[1] = IController.Dispatch(facet, bytes4(0));
-
-        _expectAndMockAccessControlCall(admin, true);
-
-        vm.expectRevert(IController.ZeroFacet.selector);
-        vm.prank(admin);
-        controller.addDispatches(new bytes4[](2), dispatches);
-
-        dispatches[0] = IController.Dispatch(facet, bytes4(0));
-        dispatches[1] = IController.Dispatch(address(0), bytes4(0));
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet,       true);
-
-        vm.expectRevert(IController.ZeroFacet.selector);
-        vm.prank(admin);
-        controller.addDispatches(new bytes4[](2), dispatches);
-    }
-
-    function test_addDispatches_invalidFacet() external {
-        address facet1 = makeAddr("facet1");
-        address facet2 = makeAddr("facet2");
-
-        IController.Dispatch[] memory dispatches = new IController.Dispatch[](2);
-        dispatches[0] = IController.Dispatch(facet1, bytes4(0));
-        dispatches[1] = IController.Dispatch(facet2, bytes4(0));
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet1,      false);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet1));
-        vm.prank(admin);
-        controller.addDispatches(new bytes4[](2), dispatches);
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet1,      true);
-        _expectAndMockFactoryCall(facet2,      false);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet2));
-        vm.prank(admin);
-        controller.addDispatches(new bytes4[](2), dispatches);
-    }
-
-    function test_addDispatches_dispatchAlreadyEnabled() external {
-        address facet  = makeAddr("facet");
-        address facet1 = makeAddr("facet1");
-        address facet2 = makeAddr("facet2");
-
-        controller.__setDispatch(0x12345678, facet, bytes4(0));
-
-        bytes4[] memory callSelectors = new bytes4[](2);
-        callSelectors[0] = 0x12345678;
-        callSelectors[1] = 0x87654321;
-
-        IController.Dispatch[] memory dispatches = new IController.Dispatch[](2);
-        dispatches[0] = IController.Dispatch(facet1, bytes4(0));
-        dispatches[1] = IController.Dispatch(facet2, bytes4(0));
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet1,      true);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
-        vm.prank(admin);
-        controller.addDispatches(callSelectors, dispatches);
-
-        callSelectors[0] = 0x87654321;
-        callSelectors[1] = 0x12345678;
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet1,      true);
-        _expectAndMockFactoryCall(facet2,      true);
-
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
-        vm.prank(admin);
-        controller.addDispatches(callSelectors, dispatches);
-    }
-
-    function test_addDispatches() external {
-        address facet1 = makeAddr("facet1");
-        address facet2 = makeAddr("facet2");
-
-        bytes4[] memory callSelectors = new bytes4[](2);
-        callSelectors[0] = 0x12345678;
-        callSelectors[1] = 0xFEDCBA98;
-
-        IController.Dispatch[] memory dispatches = new IController.Dispatch[](2);
-        dispatches[0] = IController.Dispatch(facet1, 0x87654321);
-        dispatches[1] = IController.Dispatch(facet2, 0x89ABCDEF);
-
-        assertEq(controller.__getHasFacet(facet1), false);
-        assertEq(controller.__getHasFacet(facet2), false);
-
-        assertEq(controller.__getDispatchFacet(callSelectors[0]),    address(0));
-        assertEq(controller.__getDispatchSelector(callSelectors[0]), bytes4(0));
-
-        assertEq(controller.__getDispatchFacet(callSelectors[1]),    address(0));
-        assertEq(controller.__getDispatchSelector(callSelectors[1]), bytes4(0));
-
-        assertEq(controller.__getHasWiring(facet1, callSelectors[0], dispatches[0].delegateSelector), false);
-        assertEq(controller.__getHasWiring(facet2, callSelectors[1], dispatches[1].delegateSelector), false);
-
-        _expectAndMockAccessControlCall(admin, true);
-        _expectAndMockFactoryCall(facet1,      true);
-        _expectAndMockFactoryCall(facet2,      true);
-
-        vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(0x12345678, facet1, 0x87654321);
-
-        vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(0xFEDCBA98, facet2, 0x89ABCDEF);
-
-        vm.prank(admin);
-        controller.addDispatches(callSelectors, dispatches);
-
-        assertEq(controller.__getHasFacet(facet1), true);
-        assertEq(controller.__getHasFacet(facet2), true);
-
-        assertEq(controller.__getDispatchFacet(callSelectors[0]),    facet1);
-        assertEq(controller.__getDispatchSelector(callSelectors[0]), dispatches[0].delegateSelector);
-
-        assertEq(controller.__getDispatchFacet(callSelectors[1]),    facet2);
-        assertEq(controller.__getDispatchSelector(callSelectors[1]), dispatches[1].delegateSelector);
-
-        assertEq(controller.__getHasWiring(facet1, callSelectors[0], dispatches[0].delegateSelector), true);
-        assertEq(controller.__getHasWiring(facet2, callSelectors[1], dispatches[1].delegateSelector), true);
-    }
-
-    /**********************************************************************************************/
     /*** addWire Tests                                                                          ***/
     /**********************************************************************************************/
 
@@ -414,17 +183,83 @@ contract Controller_Tests is Test {
         controller.addWire(facet, IController.Wire(bytes4(0), bytes4(0)));
     }
 
-    function test_addWire_dispatchAlreadyEnabled() external {
+    function test_addWire_callSelectorHardcoded() external {
         address facet = makeAddr("facet");
-
-        controller.__setDispatch(0x12345678, facet, bytes4(0));
 
         _expectAndMockAccessControlCall(admin, true);
         _expectAndMockFactoryCall(facet,       true);
 
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.addWire.selector
+            )
+        );
+
         vm.prank(admin);
-        controller.addWire(facet, IController.Wire(0x12345678, bytes4(0)));
+        controller.addWire(facet, IController.Wire(IController.addWire.selector, bytes4(0)));
+
+        _expectAndMockAccessControlCall(admin, true);
+        _expectAndMockFactoryCall(facet,       true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.factory.selector
+            )
+        );
+
+        vm.prank(admin);
+        controller.addWire(facet, IController.Wire(IController.factory.selector, bytes4(0)));
+    }
+
+    function test_addWire_callSelectorHardcoded_exhaustive() external {
+        address facet = makeAddr("facet");
+
+        bytes4[] memory callSelectors = new bytes4[](14);
+        callSelectors[0]  = IController.addWire.selector;
+        callSelectors[1]  = IController.addWires.selector;
+        callSelectors[2]  = IController.removeWire.selector;
+        callSelectors[3]  = IController.removeAllWiresFor.selector;
+        callSelectors[4]  = IController.removeWires.selector;
+        callSelectors[5]  = IController.accessControls.selector;
+        callSelectors[6]  = IController.circuits.selector;
+        callSelectors[7]  = IController.factory.selector;
+        callSelectors[8]  = IController.proxy.selector;
+        callSelectors[9]  = IController.rateLimits.selector;
+        callSelectors[10] = IController.getDispatch.selector;
+        callSelectors[11] = IController.getDispatches.selector;
+        callSelectors[12] = IController.getWiring.selector;
+        callSelectors[13] = IController.getWirings.selector;
+
+        for (uint256 i = 0; i < callSelectors.length; ++i) {
+            _expectAndMockAccessControlCall(admin, true);
+            _expectAndMockFactoryCall(facet,       true);
+
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IController.CallSelectorHardcoded.selector,
+                    callSelectors[i]
+                )
+            );
+
+            vm.prank(admin);
+            controller.addWire(facet, IController.Wire(callSelectors[i], bytes4(0)));
+        }
+    }
+
+    function test_addWire_callSelectorAlreadyWired() external {
+        address facet        = makeAddr("facet");
+        bytes4  callSelector = 0x12345678;
+
+        controller.__setDispatch(callSelector, facet, bytes4(0));
+
+        _expectAndMockAccessControlCall(admin, true);
+        _expectAndMockFactoryCall(facet,       true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorAlreadyWired.selector, callSelector));
+        vm.prank(admin);
+        controller.addWire(facet, IController.Wire(callSelector, bytes4(0)));
     }
 
     function test_addWire() external {
@@ -443,7 +278,7 @@ contract Controller_Tests is Test {
         _expectAndMockFactoryCall(facet,       true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(callSelector, facet, delegateSelector);
+        emit IController.WireAdded(callSelector, delegateSelector, facet);
 
         vm.prank(admin);
         controller.addWire(facet, IController.Wire(callSelector, delegateSelector));
@@ -500,29 +335,67 @@ contract Controller_Tests is Test {
         controller.addWires(facet, wires);
     }
 
-    function test_addWires_dispatchAlreadyEnabled() external {
-        controller.__setDispatch(0x12345678, makeAddr("facet"), bytes4(0));
-
+    function test_addWires_callSelectorHardcoded() external {
         address facet = makeAddr("facet");
 
         IController.Wire[] memory wires = new IController.Wire[](2);
-        wires[0] = IController.Wire(0x12345678, bytes4(0));
-        wires[1] = IController.Wire(0x87654321, bytes4(0));
+        wires[0] = IController.Wire(IController.addWires.selector, bytes4(0));
+        wires[1] = IController.Wire(0x12456789,                    bytes4(0));
 
         _expectAndMockAccessControlCall(admin, true);
         _expectAndMockFactoryCall(facet,       true);
 
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.addWires.selector
+            )
+        );
+
         vm.prank(admin);
         controller.addWires(facet, wires);
 
-        wires[0] = IController.Wire(0x87654321, bytes4(0));
-        wires[1] = IController.Wire(0x12345678, bytes4(0));
+        wires[0] = IController.Wire(0x12345678,                   bytes4(0));
+        wires[1] = IController.Wire(IController.factory.selector, bytes4(0));
 
         _expectAndMockAccessControlCall(admin, true);
         _expectAndMockFactoryCall(facet,       true);
 
-        vm.expectRevert(abi.encodeWithSelector(IController.DispatchAlreadyEnabled.selector, bytes4(0x12345678)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.factory.selector
+            )
+        );
+
+        vm.prank(admin);
+        controller.addWires(facet, wires);
+    }
+
+    function test_addWires_callSelectorAlreadyWired() external {
+        address facet        = makeAddr("facet");
+        bytes4  callSelector = 0x12345678;
+
+        controller.__setDispatch(callSelector, facet, bytes4(0));
+
+        IController.Wire[] memory wires = new IController.Wire[](2);
+        wires[0] = IController.Wire(callSelector, bytes4(0));
+        wires[1] = IController.Wire(0x87654321,   bytes4(0));
+
+        _expectAndMockAccessControlCall(admin, true);
+        _expectAndMockFactoryCall(facet,       true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorAlreadyWired.selector, callSelector));
+        vm.prank(admin);
+        controller.addWires(facet, wires);
+
+        wires[0] = IController.Wire(0x87654321,   bytes4(0));
+        wires[1] = IController.Wire(callSelector, bytes4(0));
+
+        _expectAndMockAccessControlCall(admin, true);
+        _expectAndMockFactoryCall(facet,       true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorAlreadyWired.selector, callSelector));
         vm.prank(admin);
         controller.addWires(facet, wires);
     }
@@ -549,10 +422,10 @@ contract Controller_Tests is Test {
         _expectAndMockFactoryCall(facet,       true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(0x12345678, makeAddr("facet"), 0x87654321);
+        emit IController.WireAdded(0x12345678, 0x87654321, makeAddr("facet"));
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchAdded(0xFEDCBA98, makeAddr("facet"), 0x89ABCDEF);
+        emit IController.WireAdded(0xFEDCBA98, 0x89ABCDEF, makeAddr("facet"));
 
         vm.prank(admin);
         controller.addWires(facet, wires);
@@ -570,25 +443,49 @@ contract Controller_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** removeDispatch Tests                                                                   ***/
+    /*** removeWire Tests                                                                       ***/
     /**********************************************************************************************/
 
-    function test_removeDispatch_reentrancy() external {
+    function test_removeWire_reentrancy() external {
         vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.removeDispatch(bytes4(0));
+        controller.removeWire(bytes4(0));
     }
 
-    function test_removeDispatch_notAdmin() external {
+    function test_removeWire_notAdmin() external {
         _expectAndMockAccessControlCall(unauthorized, false);
 
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.removeDispatch(bytes4(0));
+        controller.removeWire(bytes4(0));
     }
 
-    function test_removeDispatch() external {
+    function test_removeWire_callSelectorIsHardcoded() external {
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.addWire.selector
+            )
+        );
+
+        vm.prank(admin);
+        controller.removeWire(IController.addWire.selector);
+    }
+
+    function test_removeWire_callSelectorNotWired() external {
+        bytes4 callSelector = 0x12456789;
+
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorNotWired.selector, callSelector));
+        vm.prank(admin);
+        controller.removeWire(callSelector);
+    }
+
+    function test_removeWire() external {
         bytes4  callSelector     = 0x12345678;
         address facet            = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
         bytes4  delegateSelector = 0x87654321;
@@ -609,10 +506,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelector);
+        emit IController.WireRemoved(callSelector);
 
         vm.prank(admin);
-        controller.removeDispatch(callSelector);
+        controller.removeWire(callSelector);
 
         assertEq(controller.__getHasFacet(facet), false);
 
@@ -622,7 +519,7 @@ contract Controller_Tests is Test {
         assertEq(controller.__getHasWiring(facet, callSelector, delegateSelector), false);
     }
 
-    function test_removeDispatch_oneThenLast() external {
+    function test_removeWire_oneThenLast() external {
         address facet = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
 
         bytes4[] memory callSelectors = new bytes4[](2);
@@ -654,10 +551,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[0]);
+        emit IController.WireRemoved(callSelectors[0]);
 
         vm.prank(admin);
-        controller.removeDispatch(callSelectors[0]);
+        controller.removeWire(callSelectors[0]);
 
         assertEq(controller.__getHasFacet(facet), true);
 
@@ -672,10 +569,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[1]);
+        emit IController.WireRemoved(callSelectors[1]);
 
         vm.prank(admin);
-        controller.removeDispatch(callSelectors[1]);
+        controller.removeWire(callSelectors[1]);
 
         assertEq(controller.__getHasFacet(facet), false);
 
@@ -689,25 +586,85 @@ contract Controller_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** removeDispatches Tests                                                                 ***/
+    /*** removeWires Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_removeDispatches_reentrancy() external {
+    function test_removeWires_reentrancy() external {
         vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.removeDispatches(new bytes4[](0));
+        controller.removeWires(new bytes4[](0));
     }
 
-    function test_removeDispatches_notAdmin() external {
+    function test_removeWires_notAdmin() external {
         _expectAndMockAccessControlCall(unauthorized, false);
 
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.removeDispatches(new bytes4[](0));
+        controller.removeWires(new bytes4[](0));
     }
 
-    function test_removeDispatches() external {
+    function test_removeWires_callSelectorHardcoded() external {
+        controller.__setDispatch(0x12456789, makeAddr("facet"), bytes4(0));
+
+        bytes4[] memory callSelectors = new bytes4[](2);
+        callSelectors[0] = IController.addWires.selector;
+        callSelectors[1] = 0x12456789;
+
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.addWires.selector
+            )
+        );
+
+        vm.prank(admin);
+        controller.removeWires(callSelectors);
+
+        callSelectors[0] = 0x12456789;
+        callSelectors[1] = IController.factory.selector;
+
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.CallSelectorHardcoded.selector,
+                IController.factory.selector
+            )
+        );
+
+        vm.prank(admin);
+        controller.removeWires(callSelectors);
+    }
+
+    function test_removeWires_callSelectorNotWired() external {
+        bytes4 callSelector = 0x12345678;
+
+        controller.__setDispatch(0x87654321, makeAddr("facet"), bytes4(0));
+
+        bytes4[] memory callSelectors = new bytes4[](2);
+        callSelectors[0] = callSelector;
+        callSelectors[1] = 0x87654321;
+
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorNotWired.selector, callSelector));
+        vm.prank(admin);
+        controller.removeWires(callSelectors);
+
+        callSelectors[0] = 0x87654321;
+        callSelectors[1] = callSelector;
+
+        _expectAndMockAccessControlCall(admin, true);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorNotWired.selector, callSelector));
+        vm.prank(admin);
+        controller.removeWires(callSelectors);
+    }
+
+    function test_removeWires() external {
         bytes4[] memory callSelectors = new bytes4[](2);
         callSelectors[0] = 0x12345678;
         callSelectors[1] = 0x89ABCDEF;
@@ -744,14 +701,14 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[0]);
+        emit IController.WireRemoved(callSelectors[0]);
 
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[1]);
+        emit IController.WireRemoved(callSelectors[1]);
 
         vm.prank(admin);
-        controller.removeDispatches(callSelectors);
+        controller.removeWires(callSelectors);
 
         assertEq(controller.__getHasFacet(facets[0]), false);
         assertEq(controller.__getHasFacet(facets[1]), false);
@@ -766,7 +723,7 @@ contract Controller_Tests is Test {
         assertEq(controller.__getHasWiring(facets[1], callSelectors[1], delegateSelectors[1]), false);
     }
 
-    function test_removeDispatches_halfThenHalf() external {
+    function test_removeWires_halfThenHalf() external {
         address facet = makeAddr("facet");
 
         bytes4[] memory firstHalfCallSelectors = new bytes4[](2);
@@ -819,13 +776,13 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(firstHalfCallSelectors[0]);
+        emit IController.WireRemoved(firstHalfCallSelectors[0]);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(firstHalfCallSelectors[1]);
+        emit IController.WireRemoved(firstHalfCallSelectors[1]);
 
         vm.prank(admin);
-        controller.removeDispatches(firstHalfCallSelectors);
+        controller.removeWires(firstHalfCallSelectors);
 
         assertEq(controller.__getHasFacet(facet), true);
 
@@ -849,13 +806,13 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(secondHalfCallSelectors[0]);
+        emit IController.WireRemoved(secondHalfCallSelectors[0]);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(secondHalfCallSelectors[1]);
+        emit IController.WireRemoved(secondHalfCallSelectors[1]);
 
         vm.prank(admin);
-        controller.removeDispatches(secondHalfCallSelectors);
+        controller.removeWires(secondHalfCallSelectors);
 
         assertEq(controller.__getHasFacet(facet), false);
 
@@ -878,25 +835,25 @@ contract Controller_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** removeWires Tests                                                                      ***/
+    /*** removeAllWiresFor Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_removeWires_reentrancy() external {
+    function test_removeAllWiresFor_reentrancy() external {
         vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.removeWires(address(0));
+        controller.removeAllWiresFor(address(0));
     }
 
-    function test_removeWires_notAdmin() external {
+    function test_removeAllWiresFor_notAdmin() external {
         _expectAndMockAccessControlCall(unauthorized, false);
 
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.removeWires(address(0));
+        controller.removeAllWiresFor(address(0));
     }
 
-    function test_removeWires() external {
+    function test_removeAllWiresFor() external {
         address facet = makeAddr("facet");
 
         bytes4[] memory callSelectors = new bytes4[](4);
@@ -947,19 +904,19 @@ contract Controller_Tests is Test {
         // NOTE: Ordering is 0 then reverse order of 1, 2, 3 due to how EnumerableSet inserts work.
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[0]);
+        emit IController.WireRemoved(callSelectors[0]);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[3]);
+        emit IController.WireRemoved(callSelectors[3]);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[2]);
+        emit IController.WireRemoved(callSelectors[2]);
 
         vm.expectEmit(address(controller));
-        emit IController.DispatchRemoved(callSelectors[1]);
+        emit IController.WireRemoved(callSelectors[1]);
 
         vm.prank(admin);
-        controller.removeWires(facet);
+        controller.removeAllWiresFor(facet);
 
         assertEq(controller.__getHasFacet(facet), false);
 
@@ -1177,7 +1134,7 @@ contract Controller_Tests is Test {
 
     function test_fallback_dispatchNotFound() external {
         vm.expectRevert(
-            abi.encodeWithSelector(IController.DispatchNotFound.selector, IMockController.facetFoo.selector)
+            abi.encodeWithSelector(IController.CallSelectorNotWired.selector, IMockController.facetFoo.selector)
         );
 
         IMockController(address(controller)).facetFoo();
