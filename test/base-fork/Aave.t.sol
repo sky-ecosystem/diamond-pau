@@ -7,6 +7,8 @@ import { Base } from "../../lib/spark-address-registry/src/Base.sol";
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { IAaveFacet } from "../../src/facets/aave/IAaveFacet.sol";
+
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -129,6 +131,9 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 1_000_000e6);
+
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
@@ -206,6 +211,10 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         // NOTE: Using lower amount to not hit rate limit
         deal(Base.USDC, address(almProxy), 500_000e6);
+
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 500_000e6);
+
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 500_000e6);
 
@@ -229,6 +238,9 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.record();
 
         // Partial withdraw
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, 400_000e6);
+
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, 400_000e6), 400_000e6);
 
@@ -242,6 +254,9 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 600_000e6);
 
         // Withdraw all
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, aTokenBalance - 400_000e6 + 1);  // Rounding
+
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance - 400_000e6 + 1);  // Rounding
 
@@ -264,6 +279,10 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         rateLimits.setUnlimitedRateLimitData(withdrawKey);
 
         deal(Base.USDC, address(almProxy), 1_000_000e6);
+
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 1_000_000e6);
+
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
@@ -285,6 +304,9 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 1_000_000e6);
 
         // Full withdraw
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, aTokenBalance);
+
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance);
 

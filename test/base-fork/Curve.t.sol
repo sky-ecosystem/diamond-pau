@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { MockERC20Decimals } from "../mocks/Mocks.sol";
 
+import { ICurveFacet } from "../../src/facets/curve/ICurveFacet.sol";
+
 import { ICurvePoolLike as ICurvePoolLikeLib } from "../../src/facets/curve/CurveFacet.sol";
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
@@ -324,6 +326,13 @@ contract ForeignController_Curve_AddLiquidity_SuccessTests is Curve_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(curveDepositKey), 2_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(curveSwapKey),    1_000_000e18);
 
+        vm.expectEmit(address(foreignController));
+        emit ICurveFacet.CurveAddLiquidity(
+            CURVE_POOL,
+            minLpAmount,
+            (amounts[0] + amounts[1]) * 1e12
+        );
+
         vm.prank(relayer);
         uint256 lpTokensReceived = foreignController.addLiquidityCurve(
             CURVE_POOL,
@@ -607,6 +616,13 @@ contract ForeignController_Curve_RemoveLiquidity_SuccessTests is Curve_TestBase 
 
         uint256[] memory rates = ICurvePoolLike(CURVE_POOL).stored_rates();
 
+        vm.expectEmit(address(foreignController));
+        emit ICurveFacet.CurveRemoveLiquidity(
+            CURVE_POOL,
+            lpTokensReceived,
+            (999_956.744169e6 + 1_000_043.234104e6) * 1e12
+        );
+
         vm.prank(relayer);
         uint256[] memory assetsReceived = foreignController.removeLiquidityCurve(
             CURVE_POOL,
@@ -778,6 +794,9 @@ contract ForeignController_Curve_Swap_SuccessTests is Curve_TestBase {
         // CurveFacet requires: minAmountOut >= amountIn * rateIn * maxSlippage / rateOut / 1e18
         uint256[] memory rates = curvePool.stored_rates();
         uint256 minAmountOut = 1_000_000e6 * rates[1] * 0.999e18 / rates[0] / 1e18;
+
+        vm.expectEmit(address(foreignController));
+        emit ICurveFacet.CurveSwap(CURVE_POOL, 1, 0, 1_000_000e6, expectedAmountOut);
 
         vm.prank(relayer);
         uint256 amountOut = foreignController.swapCurve(CURVE_POOL, 1, 0, 1_000_000e6, minAmountOut);

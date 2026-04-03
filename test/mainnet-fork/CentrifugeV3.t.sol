@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { ICentrifugeFacet } from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
+
 import {
     IAsyncRedeemManagerLike,
     ICentrifugeV3VaultLike,
@@ -174,6 +176,13 @@ contract MainnetController_CentrifugeV3_TransferShares_SuccessTests is Centrifug
 
         uint256 proxyBalanceBefore     = IERC20Like(vaultToken).balanceOf(address(almProxy));
         uint256 shareTotalSupplyBefore = IERC20Like(vaultToken).totalSupply();
+
+        vm.expectEmit(address(mainnetController));
+        emit ICentrifugeFacet.CentrifugeTransferShares(
+            CENTRIFUGE_VAULT,
+            10_000_000e6,
+            DESTINATION_CENTRIFUGE_ID
+        );
 
         vm.expectEmit(address(spoke));
         emit InitiateTransferShares(

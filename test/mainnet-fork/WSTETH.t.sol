@@ -26,6 +26,8 @@ interface IWithdrawalQueue {
         bool    isClaimed;
     }
 
+    function getLastRequestId() external view returns (uint256);
+
     function getWithdrawalStatus(uint256[] calldata requestIds)
         external
         view
@@ -185,6 +187,9 @@ contract MainnetController_WSTETH_RequestWithdraw_Tests is WSTETH_TestBase {
         assertEq(WETH.balanceOf(address(almProxy)),   1_000e18);
         assertEq(WSTETH.balanceOf(address(almProxy)), 0);
 
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
 
@@ -201,6 +206,13 @@ contract MainnetController_WSTETH_RequestWithdraw_Tests is WSTETH_TestBase {
         assertEq(expectedETHWithdrawal, 607.511715620589663161e18);
 
         vm.record();
+
+        uint256[] memory expectedRequestIds = new uint256[](1);
+
+        expectedRequestIds[0] = WITHDRAW_QUEUE.getLastRequestId() + 1;
+
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHRequestWithdraw(500e18, expectedRequestIds);
 
         vm.prank(relayer);
         uint256[] memory requestIds = mainnetController.requestWithdrawFromWstETH(500e18);
@@ -264,6 +276,9 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         assertEq(WETH.balanceOf(address(almProxy)),   1_000e18);
         assertEq(WSTETH.balanceOf(address(almProxy)), 0);
 
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
 
@@ -278,6 +293,13 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         uint256 expectedETHWithdrawal = WSTETH.getStETHByWstETH(5e18);
 
         assertEq(expectedETHWithdrawal, 6.075117156205896631e18);
+
+        uint256[] memory expectedRequestIds = new uint256[](1);
+
+        expectedRequestIds[0] = WITHDRAW_QUEUE.getLastRequestId() + 1;
+
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHRequestWithdraw(5e18, expectedRequestIds);
 
         // NOTE: Requesting for a small withdrawal so that it can be finalized.
         vm.prank(relayer);
@@ -311,6 +333,9 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         assertEq(statuses[0].isClaimed,   false);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHClaimWithdrawal(requestIds[0]);
 
         vm.prank(relayer);
         mainnetController.claimWithdrawalFromWstETH(requestIds[0]);

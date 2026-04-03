@@ -10,6 +10,8 @@ import { SparkVault } from "../../lib/spark-vaults-v2/src/SparkVault.sol";
 
 import { makeAddressAddressKey, makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { ISparkVaultFacet } from "../../src/facets/spark-vault/ISparkVaultFacet.sol";
+
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -142,6 +144,9 @@ contract ForeignController_SparkVault_TakeFrom_Tests is SparkVault_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(foreignController));
+        emit ISparkVaultFacet.SparkVaultTake(address(sparkVault), 1_000_000e6);
+
         vm.prank(relayer);
         foreignController.takeFromSparkVault(address(sparkVault), 1_000_000e6);
 
@@ -162,6 +167,9 @@ contract ForeignController_SparkVault_TakeFrom_Tests is SparkVault_TestBase {
         testState.rateLimit += rateLimitIncreaseInOneHour;
 
         _assertTestState(testState);
+
+        vm.expectEmit(address(foreignController));
+        emit ISparkVaultFacet.SparkVaultTake(address(sparkVault), rateLimitIncreaseInOneHour);
 
         vm.prank(relayer);
         foreignController.takeFromSparkVault(address(sparkVault), rateLimitIncreaseInOneHour);
@@ -199,6 +207,9 @@ contract ForeignController_SparkVault_TakeFrom_Tests is SparkVault_TestBase {
         });
 
         _assertTestState(testState);
+
+        vm.expectEmit(address(foreignController));
+        emit ISparkVaultFacet.SparkVaultTake(address(sparkVault), takeAmount);
 
         vm.prank(relayer);
         foreignController.takeFromSparkVault(address(sparkVault), takeAmount);

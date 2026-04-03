@@ -7,6 +7,8 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { IUSDEFacet } from "../../src/facets/usde/IUSDEFacet.sol";
+
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IEthenaMinterLike {
@@ -63,6 +65,9 @@ contract MainnetController_Ethena_SetDelegatedSigner_Tests is Ethena_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDESetDelegatedSigner(signer);
+
         vm.expectEmit(ETHENA_MINTER);
         emit IEthenaMinterLike.DelegatedSignerInitiated(signer, address(almProxy));
 
@@ -96,12 +101,18 @@ contract MainnetController_Ethena_RemoveDelegatedSigner_Tests is Ethena_TestBase
     function test_removeDelegatedSigner() external {
         address signer = makeAddr("signer");
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDESetDelegatedSigner(signer);
+
         vm.prank(relayer);
         mainnetController.setDelegatedSigner(signer);
 
         assertEq(IEthenaMinterLike(ETHENA_MINTER).delegatedSigner(signer, address(almProxy)), 1);  // PENDING
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDERemoveDelegatedSigner(signer);
 
         vm.expectEmit(ETHENA_MINTER);
         emit IEthenaMinterLike.DelegatedSignerRemoved(signer, address(almProxy));
@@ -176,6 +187,9 @@ contract MainnetController_Ethena_PrepareUSDEMint_Tests is Ethena_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareMint(100e6);
+
         vm.prank(relayer);
         mainnetController.prepareUSDeMint(100e6);
 
@@ -187,6 +201,9 @@ contract MainnetController_Ethena_PrepareUSDEMint_Tests is Ethena_TestBase {
     function test_prepareUSDEMint_rateLimits() external {
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareMint(4_000_000e6);
+
         vm.prank(relayer);
         mainnetController.prepareUSDeMint(4_000_000e6);
 
@@ -195,6 +212,9 @@ contract MainnetController_Ethena_PrepareUSDEMint_Tests is Ethena_TestBase {
         skip(4 hours);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 2_000_000e6 - 6400);  // Rounding
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareMint(600_000e6);
 
         vm.prank(relayer);
         mainnetController.prepareUSDeMint(600_000e6);
@@ -264,6 +284,9 @@ contract MainnetController_Ethena_PrepareUSDEBurn_Tests is Ethena_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareBurn(100e18);
+
         vm.prank(relayer);
         mainnetController.prepareUSDeBurn(100e18);
 
@@ -275,6 +298,9 @@ contract MainnetController_Ethena_PrepareUSDEBurn_Tests is Ethena_TestBase {
     function test_prepareUSDEBurn_rateLimits() external {
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18);
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareBurn(4_000_000e18);
+
         vm.prank(relayer);
         mainnetController.prepareUSDeBurn(4_000_000e18);
 
@@ -283,6 +309,9 @@ contract MainnetController_Ethena_PrepareUSDEBurn_Tests is Ethena_TestBase {
         skip(4 hours);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 2_000_000e18 - 6400);  // Rounding
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEPrepareBurn(600_000e18);
 
         vm.prank(relayer);
         mainnetController.prepareUSDeBurn(600_000e18);
@@ -367,6 +396,9 @@ contract MainnetController_Ethena_CooldownAssetsSUSDE_Tests is Ethena_TestBase {
 
         vm.expectEmit(address(susde));
         emit ISUSDELike.Withdraw(address(almProxy), silo, address(almProxy), assets, 100e18);
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDECooldownAssets(assets, 100e18);
 
         vm.prank(relayer);
         uint256 returnedShares = mainnetController.cooldownAssetsSUSDe(assets);
@@ -484,6 +516,9 @@ contract MainnetController_Ethena_CooldownSharesSUSDE_Tests is Ethena_TestBase {
         vm.expectEmit(address(susde));
         emit ISUSDELike.Withdraw(address(almProxy), silo, address(almProxy), assets, 100e18);
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDECooldownShares(100e18, assets);
+
         vm.prank(relayer);
         uint256 returnedAssets = mainnetController.cooldownSharesSUSDe(100e18);
 
@@ -592,6 +627,9 @@ contract MainnetController_Ethena_UnstakeSUSDE_Tests is Ethena_TestBase {
 
         deal(address(susde), address(almProxy), 100e18);
 
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDECooldownShares(100e18, assets);
+
         vm.prank(relayer);
         mainnetController.cooldownSharesSUSDe(100e18);
 
@@ -601,6 +639,9 @@ contract MainnetController_Ethena_UnstakeSUSDE_Tests is Ethena_TestBase {
         skip(7 days);  // Cooldown period
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDEUnstakeSUSDE();
 
         vm.prank(relayer);
         mainnetController.unstakeSUSDe();

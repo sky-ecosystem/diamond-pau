@@ -276,6 +276,14 @@ contract MainnetController_LayerZero_TransferToken_Tests is LayerZero_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit ILayerZeroFacet.LayerZeroTransfer(
+            USDT_OFT,
+            DESTINATION_ENDPOINT_ID,
+            10_000_000e6,
+            fee.nativeFee
+        );
+
         vm.expectEmit(USDT_OFT);
         emit ILayerZeroLike.OFTSent(
             bytes32(0xb6ebf135f758657b482818d84091e50f1af1cb378bd6f4e013f45dfa6f860cd6),
@@ -343,6 +351,14 @@ contract MainnetController_LayerZero_TransferToken_Tests is LayerZero_TestBase {
         ILayerZeroLike.MessagingFee memory fee = ILayerZeroLike(USDT_OFT).quoteSend(sendParams, false);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit ILayerZeroFacet.LayerZeroTransfer(
+            USDT_OFT,
+            DESTINATION_ENDPOINT_ID,
+            10_000_000e6,
+            fee.nativeFee
+        );
 
         vm.expectEmit(USDT_OFT);
         emit ILayerZeroLike.OFTSent(
@@ -700,6 +716,14 @@ contract ForeignController_LayerZero_TransferToken_Tests is ArbitrumChain_LayerZ
 
         vm.record();
 
+        vm.expectEmit(address(foreignController));
+        emit ILayerZeroFacet.LayerZeroTransfer(
+            USDT_OFT,
+            DESTINATION_ENDPOINT_ID,
+            10_000_000e6,
+            fee.nativeFee
+        );
+
         vm.expectEmit(USDT_OFT);
         emit ILayerZeroLike.OFTSent(
             bytes32(0xce4454206df6ee6a9cab360f7d76fd11ae258f65a9e8cc88faf1110c0bb36864),
@@ -764,6 +788,14 @@ contract ForeignController_LayerZero_TransferToken_Tests is ArbitrumChain_LayerZ
         ILayerZeroLike.MessagingFee memory fee = ILayerZeroLike(USDT_OFT).quoteSend(sendParams, false);
 
         vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit ILayerZeroFacet.LayerZeroTransfer(
+            USDT_OFT,
+            DESTINATION_ENDPOINT_ID,
+            10_000_000e6,
+            fee.nativeFee
+        );
 
         vm.expectEmit(USDT_OFT);
         emit ILayerZeroLike.OFTSent(
