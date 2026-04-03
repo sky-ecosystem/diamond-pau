@@ -251,9 +251,9 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     function _removeWire(bytes4 callSelector) internal {
-        ControllerStorage storage $ = _getControllerStorage();
-
         _revertIfCallSelectorIsHardcoded(callSelector);
+
+        ControllerStorage storage $ = _getControllerStorage();
 
         Dispatch storage dispatch = $.dispatches[callSelector];
 
