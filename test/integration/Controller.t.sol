@@ -202,13 +202,13 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         // Wire div to facet1.divideBy2 and mul to facet1.multiplyBy2
 
         IController.Wire[] memory wires = new IController.Wire[](2);
-        wires[0] = IController.Wire(IMockController.div.selector,  MockFacet1.divideBy2.selector);
+        wires[0] = IController.Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
         wires[1] = IController.Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
 
         vm.prank(admin);
         controller.addWires(facet1, wires);
 
-        assertEq(controller.div(12),  6);
+        assertEq(controller.div(12), 6);
         assertEq(controller.mul(12), 24);
 
         IController.Circuit[] memory circuits = controller.circuits();
@@ -251,7 +251,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         controller.addWire(facet2, IController.Wire(IMockController.div.selector, MockFacet2.divideBy4.selector));
         vm.stopPrank();
 
-        assertEq(controller.div(12),  3);
+        assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 24);
 
         circuits = controller.circuits();
@@ -298,7 +298,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         controller.addWire(facet2, IController.Wire(IMockController.mul.selector, MockFacet2.multiplyBy4.selector));
         vm.stopPrank();
 
-        assertEq(controller.div(12),  3);
+        assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 48);
 
         circuits = controller.circuits();
