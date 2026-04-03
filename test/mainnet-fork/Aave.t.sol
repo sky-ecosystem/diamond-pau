@@ -50,6 +50,12 @@ interface IPoolConfiguratorLike {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract AaveV3_TestBase is ForkTestBase {
 
     address internal constant ATOKEN_USDS = 0x32a6268f9Ba3642Dda7892aDd74f1D34469A4259;
@@ -102,6 +108,14 @@ abstract contract AaveV3_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21417200;  // Dec 16, 2024
+    }
+
+}
+
+contract AaveFacet_Tests is AaveV3_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(aaveFacet).VERSION(), "1.0.0");
     }
 
 }

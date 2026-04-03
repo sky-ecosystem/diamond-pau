@@ -24,6 +24,12 @@ interface IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract Maple_TestBase is ForkTestBase {
 
     IERC20Like internal constant USDC = IERC20Like(Ethereum.USDC);
@@ -88,6 +94,14 @@ abstract contract Maple_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21570000;  // Jan 7, 2024
+    }
+
+}
+
+contract MapleFacet_Tests is Maple_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(mapleFacet).VERSION(), "1.0.0");
     }
 
 }

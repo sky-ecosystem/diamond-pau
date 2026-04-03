@@ -55,6 +55,12 @@ interface ISSTokenLike is IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract Superstate_TestBase is ForkTestBase {
 
     IAllowlistV2Like internal constant ALLOWLIST = IAllowlistV2Like(0x02f1fA8B196d21c7b733EB2700B825611d8A38E5);
@@ -84,6 +90,14 @@ abstract contract Superstate_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21570000;  // Jan 7, 2024
+    }
+
+}
+
+contract SuperstateFacet_Tests is Superstate_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(superstateFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -36,6 +36,12 @@ interface IUniswapV3Factory {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract UniswapV3_TestBase is ForkTestBase {
 
     address constant UNISWAP_V3_FACTORY = 0x33128a8fC17869897dcE68Ed026d694621f6FDfD;
@@ -282,6 +288,14 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
             amount0 : amount0 * 98 / 100,
             amount1 : amount1 * 98 / 100
         });
+    }
+
+}
+
+contract UniswapV3_Facet_Tests is UniswapV3_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(uniswapV3Facet).VERSION(), "1.0.0");
     }
 
 }

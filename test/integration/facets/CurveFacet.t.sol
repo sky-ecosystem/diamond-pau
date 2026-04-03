@@ -27,6 +27,8 @@ contract Controller_CurveFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
+    address internal facet;
+
     function setUp() external {
         controller = IControllerLike(_deploy());
 

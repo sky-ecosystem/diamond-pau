@@ -104,6 +104,16 @@ abstract contract ForkTestBase is Test {
 
     IPSM3 psmBase;
 
+    address curveFacet;
+    address merklFacet;
+    address pendleFacet;
+    address aaveFacet;
+    address erc4626Facet;
+    address psm3Facet;
+    address sparkVaultFacet;
+    address transferAssetFacet;
+    address uniswapV3Facet;
+
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
     /**********************************************************************************************/
@@ -226,7 +236,7 @@ abstract contract ForkTestBase is Test {
     /**********************************************************************************************/
 
     function _wireCurveFacet() internal {
-        address curveFacet = address(new CurveFacet());
+        curveFacet = address(new CurveFacet());
 
         vm.label(curveFacet, "CurveFacet");
 
@@ -278,7 +288,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireMerklFacet() internal {
-        address merklFacet = address(new MerklFacet(GroveBase.MERKL_DISTRIBUTOR));
+        merklFacet = address(new MerklFacet(GroveBase.MERKL_DISTRIBUTOR));
 
         factory.setValidFacet(merklFacet, true);
 
@@ -294,7 +304,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wirePendleFacet() internal {
-        address pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
+        pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
 
         vm.label(pendleFacet, "PendleFacet");
 
@@ -316,7 +326,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
+        aaveFacet = address(new AaveFacet());
 
         vm.label(aaveFacet, "AaveFacet");
 
@@ -358,7 +368,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
+        erc4626Facet = address(new ERC4626Facet());
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
@@ -410,7 +420,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireSparkVaultFacet() internal {
-        address sparkVaultFacet = address(new SparkVaultFacet());
+        sparkVaultFacet = address(new SparkVaultFacet());
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
@@ -432,7 +442,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireTransferAssetFacet() internal {
-        address transferAssetFacet = address(new TransferAssetFacet());
+        transferAssetFacet = address(new TransferAssetFacet());
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
@@ -454,7 +464,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wirePSM3Facet() internal {
-        address psm3Facet = address(new PSM3Facet(address(psmBase)));
+        psm3Facet = address(new PSM3Facet(address(psmBase)));
 
         vm.label(psm3Facet, "PSM3Facet");
 
@@ -486,7 +496,7 @@ abstract contract ForkTestBase is Test {
     }
 
     function _wireUniswapV3Facet() internal {
-        address uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+        uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 

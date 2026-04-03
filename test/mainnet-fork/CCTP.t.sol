@@ -56,6 +56,12 @@ interface IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract MainnetController_CCTP_TestBase is ForkTestBase {
 
     uint256 internal constant CCTP_MAX_FEE_CAP = 100e6;
@@ -69,6 +75,14 @@ abstract contract MainnetController_CCTP_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 23700802; // November 1, 2025
+    }
+
+}
+
+contract CCTPFacet_Tests is MainnetController_CCTP_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(cctpFacet).VERSION(), "1.0.0");
     }
 
 }

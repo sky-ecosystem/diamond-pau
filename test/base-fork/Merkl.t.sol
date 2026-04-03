@@ -6,6 +6,10 @@ import { Base as SparkBase } from "lib/spark-address-registry/src/Base.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
+interface IFacetLike {
+    function VERSION() external view returns (string memory);
+}
+
 interface IMerklDistributorLike {
 
     function toggleOperator(address user, address operator) external;
@@ -29,6 +33,14 @@ abstract contract Merkl_TestBase is ForkTestBase {
     address operator2 = makeAddr("operator2");
 
     IMerklDistributorLike merklDistributor = IMerklDistributorLike(GroveBase.MERKL_DISTRIBUTOR);
+
+}
+
+contract Merkl_Facet_Tests is Merkl_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(merklFacet).VERSION(), "1.0.0");
+    }
 
 }
 

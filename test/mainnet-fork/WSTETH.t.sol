@@ -39,6 +39,12 @@ interface IWSTETH is IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract WSTETH_TestBase is ForkTestBase {
 
     IERC20Like       internal constant WETH           = IERC20Like(Ethereum.WETH);
@@ -47,6 +53,14 @@ abstract contract WSTETH_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 23469772; // September 29, 2025
+    }
+
+}
+
+contract WSTETHFacet_Tests is WSTETH_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(wstethFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -14,6 +14,10 @@ import {
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
+interface IFacetLike {
+    function VERSION() external view returns (string memory);
+}
+
 abstract contract Centrifuge_TestBase is ForkTestBase {
 
     address constant CENTRIFUGE_VAULT = 0xCF4C60066aAB54b3f750F94c2a06046d5466Ccf9; // deJAAA USDC Vault
@@ -58,6 +62,22 @@ abstract contract Centrifuge_TestBase is ForkTestBase {
 
         globalEscrow = manager.globalEscrow();
         poolEscrow   = manager.poolEscrow(poolId);
+    }
+
+}
+
+contract Centrifuge_Facet_Tests is Centrifuge_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(centrifugeFacet).VERSION(), "1.0.0");
+    }
+
+}
+
+contract ERC7540_Facet_Tests is Centrifuge_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(erc7540Facet).VERSION(), "1.0.0");
     }
 
 }

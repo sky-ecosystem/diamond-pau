@@ -42,6 +42,8 @@ abstract contract UniswapV3Facet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
+    address internal facet;
+
     function setUp() external {
         controller = IControllerLike(_deploy());
 

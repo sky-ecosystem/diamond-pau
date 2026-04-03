@@ -25,6 +25,12 @@ interface ICurvePoolLike {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract Curve_TestBase is ForkTestBase {
 
     address internal constant CURVE_POOL = 0x4f493B7dE8aAC7d55F71853688b1F7C8F0243C85;
@@ -76,6 +82,14 @@ abstract contract Curve_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 22225000;  // April 8, 2025
+    }
+
+}
+
+contract CurveFacet_Tests is Curve_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(curveFacet).VERSION(), "1.0.0");
     }
 
 }

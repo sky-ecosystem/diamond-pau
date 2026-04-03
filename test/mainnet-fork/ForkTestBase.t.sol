@@ -217,6 +217,35 @@ abstract contract ForkTestBase is DssTest {
     uint256 VAT_DAI_USDS_JOIN;
 
     /**********************************************************************************************/
+    /*** Facet addresses                                                                       ***/
+    /**********************************************************************************************/
+
+    address aaveFacet;
+    address cctpFacet;
+    address centrifugeFacet;
+    address curveFacet;
+    address daiUSDSFacet;
+    address erc4626Facet;
+    address erc7540Facet;
+    address farmFacet;
+    address layerZeroFacet;
+    address mapleFacet;
+    address merklFacet;
+    address otcFacet;
+    address pendleFacet;
+    address psmFacet;
+    address sparkVaultFacet;
+    address superstateFacet;
+    address transferAssetFacet;
+    address uniswapV3Facet;
+    address uniswapV4Facet;
+    address usdeFacet;
+    address usdsFacet;
+    address weethFacet;
+    address wrapProxyETHFacet;
+    address wstethFacet;
+
+    /**********************************************************************************************/
     /*** Test setup                                                                             ***/
     /**********************************************************************************************/
 
@@ -417,7 +446,7 @@ abstract contract ForkTestBase is DssTest {
     function _wireCentrifugeFacet() internal {
         // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
 
-        address centrifugeFacet = address(new CentrifugeFacet());
+        centrifugeFacet = address(new CentrifugeFacet());
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
@@ -469,7 +498,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireCurveFacet() internal {
-        address curveFacet = address(new CurveFacet());
+        curveFacet = address(new CurveFacet());
 
         vm.label(curveFacet, "CurveFacet");
 
@@ -521,7 +550,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireCCTPFacet() internal {
-        address cctpFacet = address(new CCTPFacet(CCTP_MESSENGER, Ethereum.USDC));
+        cctpFacet = address(new CCTPFacet(CCTP_MESSENGER, Ethereum.USDC));
 
         vm.label(cctpFacet, "CCTPFacet");
 
@@ -573,7 +602,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
+        aaveFacet = address(new AaveFacet());
 
         vm.label(aaveFacet, "AaveFacet");
 
@@ -615,7 +644,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireDAIUSDSFacet() internal {
-        address daiUSDSFacet = address(new DAIUSDSFacet({
+        daiUSDSFacet = address(new DAIUSDSFacet({
             dai_     : Ethereum.DAI,
             daiUSDS_ : Ethereum.DAI_USDS,
             usds_    : Ethereum.USDS
@@ -641,7 +670,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireMerklFacet() internal {
-        address merklFacet = address(new MerklFacet(GroveEthereum.MERKL_DISTRIBUTOR));
+        merklFacet = address(new MerklFacet(GroveEthereum.MERKL_DISTRIBUTOR));
 
         vm.label(merklFacet, "MerklFacet");
 
@@ -657,7 +686,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireERC4626Facet() internal {
-        address erc4626Facet = address(new ERC4626Facet());
+        erc4626Facet = address(new ERC4626Facet());
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
@@ -709,7 +738,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireERC7540Facet() internal {
-        address erc7540Facet = address(new ERC7540Facet());
+        erc7540Facet = address(new ERC7540Facet());
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
@@ -751,7 +780,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireFarmFacet() internal {
-        address farmFacet = address(new FarmFacet());
+        farmFacet = address(new FarmFacet());
 
         vm.label(farmFacet, "FarmFacet");
 
@@ -783,7 +812,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireLayerZeroFacet() internal {
-        address layerZeroFacet = address(new LayerZeroFacet());
+        layerZeroFacet = address(new LayerZeroFacet());
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
@@ -815,7 +844,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireOTCFacet() internal {
-        address otcFacet = address(new OTCFacet());
+        otcFacet = address(new OTCFacet());
 
         vm.label(otcFacet, "OTCFacet");
 
@@ -882,7 +911,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireSparkVaultFacet() internal {
-        address sparkVaultFacet = address(new SparkVaultFacet());
+        sparkVaultFacet = address(new SparkVaultFacet());
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
@@ -904,7 +933,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wirePSMFacet() internal {
-        address psmFacet = address(new PSMFacet(
+        psmFacet = address(new PSMFacet(
             Ethereum.DAI,
             Ethereum.DAI_USDS,
             Ethereum.PSM,
@@ -942,7 +971,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireTransferAssetFacet() internal {
-        address transferAssetFacet = address(new TransferAssetFacet());
+        transferAssetFacet = address(new TransferAssetFacet());
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
@@ -964,7 +993,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireMapleFacet() internal {
-        address mapleFacet = address(new MapleFacet());
+        mapleFacet = address(new MapleFacet());
 
         vm.label(mapleFacet, "MapleFacet");
 
@@ -991,7 +1020,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wirePendleFacet() internal {
-        address pendleFacet = address(new PendleFacet(GroveEthereum.PENDLE_ROUTER));
+        pendleFacet = address(new PendleFacet(GroveEthereum.PENDLE_ROUTER));
 
         vm.label(pendleFacet, "PendleFacet");
 
@@ -1013,7 +1042,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireSuperstateFacet() internal {
-        address superstateFacet = address(new SuperstateFacet(Ethereum.USDC, Ethereum.USTB));
+        superstateFacet = address(new SuperstateFacet(Ethereum.USDC, Ethereum.USTB));
 
         vm.label(superstateFacet, "SuperstateFacet");
 
@@ -1035,7 +1064,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireWEETHFacet() internal {
-        address weethFacet = address(new WEETHFacet(Ethereum.WETH, Ethereum.WEETH));
+        weethFacet = address(new WEETHFacet(Ethereum.WETH, Ethereum.WEETH));
 
         vm.label(weethFacet, "WEETHFacet");
 
@@ -1072,7 +1101,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireWSTETHFacet() internal {
-        address wstethFacet = address(new WSTETHFacet(
+        wstethFacet = address(new WSTETHFacet(
             Ethereum.WETH,
             Ethereum.WSTETH_WITHDRAW_QUEUE,
             Ethereum.WSTETH
@@ -1113,7 +1142,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDEFacet() internal {
-        address usdeFacet = address(new USDEFacet(
+        usdeFacet = address(new USDEFacet(
             ETHENA_MINTER,
             address(susde),
             address(usdc),
@@ -1180,7 +1209,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireWrapProxyETHFacet() internal {
-        address wrapProxyETHFacet = address(new WrapProxyETHFacet(Ethereum.WETH));
+        wrapProxyETHFacet = address(new WrapProxyETHFacet(Ethereum.WETH));
 
         vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
 
@@ -1196,7 +1225,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDSFacet() internal {
-        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+        usdsFacet = address(new USDSFacet(vault, address(usds)));
 
         vm.label(usdsFacet, "USDSFacet");
 
@@ -1223,7 +1252,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUniswapV4Facet() internal {
-        address uniswapV4Facet = address(new UniswapV4Facet({
+        uniswapV4Facet = address(new UniswapV4Facet({
             permit2_         : _PERMIT2,
             positionManager_ : _UNISWAP_V4_POSITION_MANAGER,
             router_          : _UNISWAP_V4_ROUTER
@@ -1294,7 +1323,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUniswapV3Facet() internal {
-        address uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+        uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 

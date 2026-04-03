@@ -27,6 +27,12 @@ interface IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 // Mock ERC20 with variable decimals
 contract ERC20 is ERC20Mock {
 
@@ -104,6 +110,14 @@ abstract contract OTC_TestBase is ForkTestBase {
         assertEq(sent18_,        sent18);
         assertEq(sentTimestamp_, sentTimestamp);
         assertEq(claimed18_,     claimed18);
+    }
+
+}
+
+contract OTCFacet_Tests is OTC_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(otcFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -31,10 +31,24 @@ interface ISUSDELike {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract Ethena_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21417200;  // Dec 16, 2024
+    }
+
+}
+
+contract EthenaFacet_Tests is Ethena_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(usdeFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -23,14 +23,16 @@ interface IControllerLike {
 
 }
 
-contract Controller_AaveFacet_Tests is Controller_TestBase {
+abstract contract AaveFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        // NOTE: Only wires the functions needed for the tests.
+        //       If more functions are needed in future tests, they should be wired here.
+        address facet = address(new AaveFacet());
 
         address facet = address(new AaveFacet());
 
@@ -118,3 +120,4 @@ contract Controller_AaveFacet_Tests is Controller_TestBase {
     }
 
 }
+

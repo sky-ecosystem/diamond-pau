@@ -31,6 +31,10 @@ interface ICurvePoolLike is ICurvePoolLikeLib {
 
 }
 
+interface IFacetLike {
+    function VERSION() external view returns (string memory);
+}
+
 abstract contract Curve_TestBase is ForkTestBase {
 
     // TODO: replace with real target pool once available
@@ -151,6 +155,14 @@ abstract contract Curve_TestBase is ForkTestBase {
         }
 
         return minWithdrawAmounts;
+    }
+
+}
+
+contract Curve_Facet_Tests is Curve_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(curveFacet).VERSION(), "1.0.0");
     }
 
 }

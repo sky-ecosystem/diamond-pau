@@ -79,6 +79,12 @@ interface IPSM3Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract LayerZero_TestBase is ForkTestBase {
 
     address internal constant USDT_OFT = 0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee;
@@ -89,6 +95,14 @@ abstract contract LayerZero_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 22468758;  // May 12, 2025
+    }
+
+}
+
+contract LayerZeroFacet_Tests is LayerZero_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(layerZeroFacet).VERSION(), "1.0.0");
     }
 
 }

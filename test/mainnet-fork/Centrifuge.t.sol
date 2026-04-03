@@ -14,6 +14,12 @@ import {
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract Centrifuge_TestBase is ForkTestBase {
 
     address constant ESCROW                         = 0x0000000005F458Fd6ba9EEb5f365D83b7dA913dD;
@@ -38,6 +44,22 @@ abstract contract Centrifuge_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21988625;  // Mar 6, 2025
+    }
+
+}
+
+contract CentrifugeFacet_Tests is Centrifuge_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(centrifugeFacet).VERSION(), "1.0.0");
+    }
+
+}
+
+contract ERC7540Facet_Tests is Centrifuge_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(erc7540Facet).VERSION(), "1.0.0");
     }
 
 }

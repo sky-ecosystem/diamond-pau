@@ -60,6 +60,12 @@ interface IEETHLike is IERC20Like {
 
 }
 
+interface IFacetLike {
+
+    function VERSION() external view returns (string memory);
+
+}
+
 abstract contract WEETH_TestBase is ForkTestBase {
 
     address internal constant WITHDRAW_REQUEST_NFT_ADMIN = 0xcD425f44758a08BaAB3C4908f3e3dE5776e45d7a;
@@ -99,6 +105,14 @@ abstract contract WEETH_TestBase is ForkTestBase {
 
     function _getMinEETHShares(uint256 amount) internal view returns (uint256) {
         return liquidityPool.sharesForAmount(amount);
+    }
+
+}
+
+contract WEETHFacet_Tests is WEETH_TestBase {
+
+    function test_version() external {
+        assertEq(IFacetLike(weethFacet).VERSION(), "1.0.0");
     }
 
 }
