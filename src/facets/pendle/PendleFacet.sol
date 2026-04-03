@@ -120,6 +120,8 @@ contract PendleFacet is IPendleFacet, FacetBase {
 
         require(totalTokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
 
+        emit PendleRedeem(market, pyAmountIn, totalTokenOutAmount);
+
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
             makeAddressKey(LIMIT_REDEEM, market),
             totalTokenOutAmount

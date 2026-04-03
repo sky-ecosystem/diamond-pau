@@ -5,6 +5,8 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
+import { IWSTETHFacet } from "../../src/facets/wsteth/IWSTETHFacet.sol";
+
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -86,6 +88,9 @@ contract MainnetController_WSTETH_Deposit_Tests is WSTETH_TestBase {
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18 + 1);
 
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
     }
@@ -104,6 +109,9 @@ contract MainnetController_WSTETH_Deposit_Tests is WSTETH_TestBase {
         assertEq(WSTETH.balanceOf(address(almProxy)), 0);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
 
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);

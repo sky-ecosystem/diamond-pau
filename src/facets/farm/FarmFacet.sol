@@ -42,6 +42,8 @@ contract FarmFacet is IFarmFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit FarmDeposit(farm, amount);
+
         _decreaseRateLimit(LIMIT_DEPOSIT, farm, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -57,6 +59,8 @@ contract FarmFacet is IFarmFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit FarmWithdraw(farm, amount);
+
         _decreaseRateLimit(LIMIT_WITHDRAW, farm, amount);
 
         address proxy = _getSharedControllerStorage().proxy;

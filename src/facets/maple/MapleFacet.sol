@@ -38,6 +38,8 @@ contract MapleFacet is IMapleFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit MapleRequestRedemption(mapleToken, shares);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
@@ -59,6 +61,8 @@ contract MapleFacet is IMapleFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit MapleCancelRedemption(mapleToken, shares);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         require(

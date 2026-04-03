@@ -301,6 +301,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         uint256 amountSpent = startingBalance - IERC20Like(tokenIn).balanceOf(proxy);
 
+        emit UniswapV3Swap(pool, tokenIn, amountSpent, amountOut);
+
         // Clear approvals of dust.
         _approve(tokenIn, router, 0);
 
@@ -353,6 +355,16 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         require(liquidity != 0, "UniswapV3Facet/no-liquidity-increased");
 
+        emit UniswapV3AddLiquidity(
+            pool,
+            resultingTokenId,
+            ticks.lower,
+            ticks.upper,
+            liquidity,
+            amounts.amount0,
+            amounts.amount1
+        );
+
         // Clear approvals of dust.
         _approve(token0, positionManager, 0);
         _approve(token1, positionManager, 0);
@@ -386,6 +398,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
         });
 
         amounts = _callDecreaseLiquidity(tokenId, liquidity, min, deadline);
+
+        emit UniswapV3RemoveLiquidity(pool, tokenId, amounts.amount0, amounts.amount1);
 
         _callCollect(tokenId);
 

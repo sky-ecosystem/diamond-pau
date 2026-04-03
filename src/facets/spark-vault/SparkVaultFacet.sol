@@ -34,6 +34,8 @@ contract SparkVaultFacet is ISparkVaultFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit SparkVaultTake(sparkVault, assetAmount);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(

@@ -34,6 +34,8 @@ contract TransferAssetFacet is ITransferAssetFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit TransferAssetFacetTransfer(asset, destination, amount);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(

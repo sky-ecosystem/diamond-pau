@@ -80,6 +80,8 @@ contract PSMFacet is IPSMFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit PSMSwapUSDSToUSDC(usdcAmount);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_USDS_TO_USDC, usdcAmount);
@@ -110,6 +112,8 @@ contract PSMFacet is IPSMFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit PSMSwapUSDCToUSDS(usdcAmount);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);

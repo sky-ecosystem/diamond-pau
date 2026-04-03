@@ -142,6 +142,8 @@ contract OTCFacet is IOTCFacet, FacetBase {
         // NOTE: This will lose precision for tokens with >18 decimals.
         uint256 normalizedSent = _toNormalizedAmount(assetToSend, amount);
 
+        emit OTCSwapSent(exchange, parameters.buffer, assetToSend, amount, normalizedSent);
+
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
             makeAddressKey(LIMIT_SWAP, exchange),
             normalizedSent
@@ -154,8 +156,6 @@ contract OTCFacet is IOTCFacet, FacetBase {
         state.normalizedSent    = normalizedSent;
         state.sentTimestamp     = block.timestamp;
         state.normalizedClaimed = 0;
-
-        emit OTCSwapSent(exchange, parameters.buffer, assetToSend, amount, normalizedSent);
 
         _transfer(assetToSend, exchange, amount);
     }

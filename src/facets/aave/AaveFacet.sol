@@ -87,6 +87,8 @@ contract AaveFacet is IAaveFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit AaveDeposit(aToken, amount);
+
         address proxy = _getSharedControllerStorage().proxy;
 
         _decreaseRateLimit(LIMIT_DEPOSIT, aToken, amount);
@@ -135,6 +137,8 @@ contract AaveFacet is IAaveFacet, FacetBase {
             ),
             (uint256)
         );
+
+        emit AaveWithdraw(aToken, amountWithdrawn);
 
         _decreaseRateLimit(LIMIT_WITHDRAW, aToken, amountWithdrawn);
         _increaseRateLimit(LIMIT_DEPOSIT,  aToken, amountWithdrawn);

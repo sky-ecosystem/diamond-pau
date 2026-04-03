@@ -65,13 +65,15 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
         ApproveLib.approve(asset, proxy, psm, amount);
 
         // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
-        return abi.decode(
+        shares = abi.decode(
             IALMProxy(proxy).doCall(
                 psm,
                 abi.encodeCall(IPSM3Like.deposit, (asset, proxy, amount))
             ),
             (uint256)
         );
+
+        emit PSM3Deposit(asset, amount, shares);
     }
 
     function withdraw(address asset, uint256 maxAmount)
@@ -93,6 +95,8 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
             ),
             (uint256)
         );
+
+        emit PSM3Withdraw(asset, maxAmount, assetsWithdrawn);
 
         _decreaseRateLimit(LIMIT_WITHDRAW, asset, assetsWithdrawn);
     }

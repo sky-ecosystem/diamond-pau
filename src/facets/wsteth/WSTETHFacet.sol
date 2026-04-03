@@ -68,6 +68,8 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
     /**********************************************************************************************/
 
     function deposit(uint256 amount) external override nonReentrant onlyRole(RELAYER_ROLE) {
+        emit WSTETHDeposit(amount);
+
         _decreaseRateLimit(LIMIT_DEPOSIT, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -98,7 +100,7 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
         uint256[] memory amountsToRedeem = new uint256[](1);
         amountsToRedeem[0] = amountToRedeem;
 
-        return abi.decode(
+        requestIds = abi.decode(
             IALMProxy(proxy).doCall(
                 withdrawQueue,
                 abi.encodeCall(
@@ -108,6 +110,8 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
             ),
             (uint256[])
         );
+
+        emit WSTETHRequestWithdraw(amountToRedeem, requestIds);
     }
 
     function claimWithdrawal(uint256 requestId)
@@ -116,6 +120,8 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        emit WSTETHClaimWithdrawal(requestId);
+
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         address proxy             = $.proxy;

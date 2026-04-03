@@ -120,6 +120,8 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         );
 
         require(shares >= minSharesOut, "WEETHFacet/slippage-too-high");
+
+        emit WEETHDeposit(amount, shares);
     }
 
     function requestWithdraw(address weethModule, uint256 weethShares, uint256 minEETHShares)
@@ -159,13 +161,15 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         // Request withdrawal of ETH from eETH.
         ApproveLib.approve(eeth, proxy, liquidityPool, eethAmount);
 
-        return abi.decode(
+        requestId = abi.decode(
             IALMProxy(proxy).doCall(
                 liquidityPool,
                 abi.encodeCall(ILiquidityPoolLike.requestWithdraw, (weethModule, eethAmount))
             ),
             (uint256)
         );
+
+        emit WEETHRequestWithdraw(weethModule, requestId, weethShares);
     }
 
     function claimWithdrawal(address weethModule, uint256 requestId)
@@ -185,13 +189,15 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
             "WEETHFacet/invalid-action"
         );
 
-        return abi.decode(
+        ethReceived = abi.decode(
             IALMProxy($.proxy).doCall(
                 weethModule,
                 abi.encodeCall(IWEETHModuleLike.claimWithdrawal, (requestId))
             ),
             (uint256)
         );
+
+        emit WEETHClaimWithdrawal(weethModule, requestId, ethReceived);
     }
 
 }
