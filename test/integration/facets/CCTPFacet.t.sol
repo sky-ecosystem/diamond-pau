@@ -31,8 +31,6 @@ abstract contract Controller_CCTPFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
-    address internal facet;
-
     bytes32 internal mintRecipient1 = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 internal mintRecipient2 = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
 

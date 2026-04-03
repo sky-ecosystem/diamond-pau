@@ -27,8 +27,6 @@ contract Controller_CentrifugeFacet_Tests is Controller_TestBase {
 
     IControllerLike internal controller;
 
-    address internal facet;
-
     bytes32 internal centrifugeRecipient1 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient1"))));
     bytes32 internal centrifugeRecipient2 = bytes32(uint256(uint160(makeAddr("centrifugeRecipient2"))));
 

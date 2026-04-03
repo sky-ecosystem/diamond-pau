@@ -34,8 +34,6 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
         //       If more functions are needed in future tests, they should be wired here.
         address facet = address(new AaveFacet());
 
-        address facet = address(new AaveFacet());
-
         vm.label(facet, "AaveFacet");
 
         factory.setValidFacet(facet, true);
