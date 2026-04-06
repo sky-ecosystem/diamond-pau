@@ -1031,6 +1031,17 @@ contract ForeignController_UniswapV3_AddLiquidity_TWAPProtectionTests is Uniswap
             upper: initTick + 100
         });
 
+        vm.expectEmit(address(foreignController));
+        emit IUniswapV3Facet.UniswapV3AddLiquidity(
+            _getPool(),
+            4168816,
+            tick.lower,
+            tick.upper,
+            1985819769370545184,
+            9_807.642265083487153562e18,
+            desired.amount1
+        );
+
         vm.startPrank(relayer);
         ( uint256 tokenId, uint128 liquidity, ) = foreignController.addLiquidityUniswapV3(
             _getPool(),

@@ -1130,6 +1130,17 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4MintPosition(
+            _POOL_ID,
+            73018,
+            -10,
+            0,
+            1_000_000e6,
+            0,
+            0
+        );
+
         IncreasePositionResult memory result = _mintPosition({
             poolId     : _POOL_ID,
             tickLower  : -10,
@@ -1403,6 +1414,15 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4IncreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            1_000_000e6,
+            0,
+            0
+        );
+
         IncreasePositionResult memory result = _increasePosition(
             minted.tokenId,
             1_000_000e6,
@@ -1566,6 +1586,15 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4DecreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            minted.liquidityIncrease / 2,
+            170.378078e6,
+            79.604976e6
+        );
+
         DecreasePositionResult memory result = _decreasePosition(
             minted.tokenId,
             minted.liquidityIncrease / 2,
@@ -1592,6 +1621,15 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
         );
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4DecreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            minted.liquidityIncrease,
+            340.756157e6,
+            159.209952e6
+        );
 
         DecreasePositionResult memory result = _decreasePosition(
             minted.tokenId,
@@ -1704,6 +1742,14 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4Swap(
+            _POOL_ID,
+            Ethereum.USDC,
+            1_000_000e6,
+            999_280.652247e6
+        );
+
         uint256 amountOut = _swap(_POOL_ID, Ethereum.USDC, 1_000_000e6, amountOutMin);
 
         _assertReentrancyGuardWrittenToTwice();
@@ -1720,6 +1766,14 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDT, 1_000_000e6, 0.99e18);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4Swap(
+            _POOL_ID,
+            Ethereum.USDT,
+            1_000_000e6,
+            1_000_646.141415e6
+        );
 
         uint256 amountOut = _swap(_POOL_ID, Ethereum.USDT, 1_000_000e6, amountOutMin);
 
@@ -2890,6 +2944,17 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4MintPosition(
+            _POOL_ID,
+            73018,
+            276_000,
+            276_600,
+            1_000_000e12,
+            0,
+            0
+        );
+
         IncreasePositionResult memory result = _mintPosition({
             poolId     : _POOL_ID,
             tickLower  : 276_000,
@@ -3193,6 +3258,15 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4IncreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            1_000_000e12,
+            0,
+            0
+        );
+
         IncreasePositionResult memory result = _increasePosition(
             minted.tokenId,
             1_000_000e12,
@@ -3356,6 +3430,15 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4DecreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            minted.liquidityIncrease / 2,
+            6_435.921890e6,
+            8_451.034838684389128266e18
+        );
+
         DecreasePositionResult memory result = _decreasePosition(
             minted.tokenId,
             minted.liquidityIncrease / 2,
@@ -3382,6 +3465,15 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
         );
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4DecreasePosition(
+            _POOL_ID,
+            minted.tokenId,
+            minted.liquidityIncrease,
+            12_871.843780e6,
+            16_902.069677368778256532e18
+        );
 
         DecreasePositionResult memory result = _decreasePosition(
             minted.tokenId,
@@ -3494,6 +3586,14 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4Swap(
+            _POOL_ID,
+            Ethereum.USDT,
+            10_000e6,
+            9_963.585379886102636344e18
+        );
+
         uint256 amountOut = _swap(_POOL_ID, Ethereum.USDT, 10_000e6, amountOutMin);
 
         _assertReentrancyGuardWrittenToTwice();
@@ -3510,6 +3610,14 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDS, 3_000e18, 0.99e18);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4Swap(
+            _POOL_ID,
+            Ethereum.USDS,
+            3_000e18,
+            2_990.034994e6
+        );
 
         uint256 amountOut = _swap(_POOL_ID, Ethereum.USDS, 3_000e18, amountOutMin);
 
