@@ -429,40 +429,36 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(basinFacet, "BasinFacet");
 
-        // Controller.depositBasin() -> BasinFacet.deposit()
-        mainnetController.setDispatch(
+        factory.setValidFacet(basinFacet, true);
+
+        IController.Wire[] memory wires = new IController.Wire[](5);
+
+        wires[0] = IController.Wire(
             IMainnetControllerFull.depositBasin.selector,
-            basinFacet,
             IBasinFacet.deposit.selector
         );
 
-        // Controller.withdrawBasin() -> BasinFacet.withdraw()
-        mainnetController.setDispatch(
+        wires[1] = IController.Wire(
             IMainnetControllerFull.withdrawBasin.selector,
-            basinFacet,
             IBasinFacet.withdraw.selector
         );
 
-        // Controller.LIMIT_BASIN_DEPOSIT() -> BasinFacet.LIMIT_DEPOSIT()
-        mainnetController.setDispatch(
+        wires[2] = IController.Wire(
             IMainnetControllerFull.LIMIT_BASIN_DEPOSIT.selector,
-            basinFacet,
             IBasinFacet.LIMIT_DEPOSIT.selector
         );
 
-        // Controller.LIMIT_BASIN_WITHDRAW() -> BasinFacet.LIMIT_WITHDRAW()
-        mainnetController.setDispatch(
+        wires[3] = IController.Wire(
             IMainnetControllerFull.LIMIT_BASIN_WITHDRAW.selector,
-            basinFacet,
             IBasinFacet.LIMIT_WITHDRAW.selector
         );
 
-        // Controller.basin() -> BasinFacet.basin()
-        mainnetController.setDispatch(
+        wires[4] = IController.Wire(
             IMainnetControllerFull.basin.selector,
-            basinFacet,
             IBasinFacet.basin.selector
         );
+
+        mainnetController.addWires(basinFacet, wires);
     }
 
     function _wireCentrifugeFacet() internal {

@@ -8,7 +8,12 @@ import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+    struct Wire {
+        bytes4 callSelector;
+        bytes4 delegateSelector;
+    }
+
+    function addWires(address facet, Wire[] calldata wires) external;
 
     function basin() external view returns (address);
 
@@ -31,27 +36,29 @@ abstract contract BasinFacet_TestBase is Controller_TestBase {
 
         vm.label(facet, "BasinFacet");
 
-        vm.startPrank(admin);
+        vm.prank(facetValidator);
+        factory.setValidFacet(facet, true);
 
-        controller.setDispatch(
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](3);
+
+        wires[0] = IControllerLike.Wire(
             IControllerLike.basin.selector,
-            facet,
             IBasinFacet.basin.selector
         );
 
-        controller.setDispatch(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.LIMIT_BASIN_DEPOSIT.selector,
-            facet,
             IBasinFacet.LIMIT_DEPOSIT.selector
         );
 
-        controller.setDispatch(
+        wires[2] = IControllerLike.Wire(
             IControllerLike.LIMIT_BASIN_WITHDRAW.selector,
-            facet,
             IBasinFacet.LIMIT_WITHDRAW.selector
         );
 
-        vm.stopPrank();
+        vm.prank(admin);
+        controller.addWires(facet, wires);
+
     }
 
 }
