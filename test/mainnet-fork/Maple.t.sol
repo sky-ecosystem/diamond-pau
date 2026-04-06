@@ -273,7 +273,7 @@ contract MainnetController_Maple_RequestRedemption_Tests is Maple_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), SYRUP.asset(), proxyShares);
+        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), proxyShares);
 
         vm.prank(relayer);
         mainnetController.requestMapleRedemption(address(SYRUP), proxyShares);
@@ -320,7 +320,7 @@ contract MainnetController_Maple_CancelRedemption_Tests is Maple_TestBase {
         uint256 proxyShares = mainnetController.depositERC4626(address(SYRUP), 1_000_000e6, 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), SYRUP.asset(), proxyShares);
+        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), proxyShares);
 
         mainnetController.requestMapleRedemption(address(SYRUP), proxyShares);
 
@@ -330,7 +330,7 @@ contract MainnetController_Maple_CancelRedemption_Tests is Maple_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleCancelRedemption(address(SYRUP), SYRUP.asset(), proxyShares);
+        emit IMapleFacet.MapleCancelRedemption(address(SYRUP), proxyShares);
 
         mainnetController.cancelMapleRedemption(address(SYRUP), proxyShares);
 

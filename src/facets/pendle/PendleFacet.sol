@@ -116,7 +116,7 @@ contract PendleFacet is IPendleFacet, FacetBase {
         require(IPendleMarketLike(market).isExpired(), "PendleFacet/market-not-expired");
         require(minAmountOut != 0,                     "PendleFacet/min-amount-out-not-set");
 
-        ( address tokenOut, uint256 totalTokenOutAmount ) = _executePyRedeem(market, pyAmountIn);
+        uint256 totalTokenOutAmount = _executePyRedeem(market, pyAmountIn);
 
         require(totalTokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
 
@@ -125,7 +125,7 @@ contract PendleFacet is IPendleFacet, FacetBase {
             totalTokenOutAmount
         );
 
-        emit PendleRedeem(market, tokenOut, pyAmountIn, totalTokenOutAmount);
+        emit PendleRedeem(market, pyAmountIn, totalTokenOutAmount);
     }
 
     /**********************************************************************************************/
@@ -134,11 +134,11 @@ contract PendleFacet is IPendleFacet, FacetBase {
 
     function _executePyRedeem(address market, uint256 pyAmountIn)
         internal
-        returns (address tokenOut, uint256 totalTokenOutAmount)
+        returns (uint256 totalTokenOutAmount)
     {
         ( address sy, address pt, address yt ) = IPendleMarketLike(market).readTokens();
 
-        tokenOut = ISYLike(sy).yieldToken();
+        address tokenOut = ISYLike(sy).yieldToken();
 
         // Expecting to receive full amount, but the buffer is subtracted to avoid reverts due to
         // potential rounding errors.

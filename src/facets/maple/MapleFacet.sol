@@ -54,7 +54,7 @@ contract MapleFacet is IMapleFacet, FacetBase {
             abi.encodeCall(IMapleTokenLike.requestRedeem, (shares, proxy))
         );
 
-        emit MapleRequestRedemption(mapleToken, IMapleTokenLike(mapleToken).asset(), shares);
+        emit MapleRequestRedemption(mapleToken, shares);
     }
 
     function cancelRedemption(address mapleToken, uint256 shares)
@@ -79,7 +79,7 @@ contract MapleFacet is IMapleFacet, FacetBase {
             abi.encodeCall(IMapleTokenLike.removeShares, (shares, proxy))
         );
 
-        emit MapleCancelRedemption(mapleToken, IMapleTokenLike(mapleToken).asset(), shares);
+        emit MapleCancelRedemption(mapleToken, shares);
     }
 
 }

@@ -21,7 +21,7 @@ interface IUSDEFacet is IFacetBase {
 
     event USDESetDelegatedSigner(address indexed delegatedSigner);
 
-    event USDEUnstakeSUSDE();
+    event USDEUnstakeSUSDE(uint256 assets);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

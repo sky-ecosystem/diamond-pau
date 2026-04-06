@@ -112,8 +112,6 @@ contract PSMFacet is IPSMFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit PSMSwapUSDCToUSDS(usdcAmount);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);
@@ -124,6 +122,8 @@ contract PSMFacet is IPSMFacet, FacetBase {
         uint256 conversionFactor = to18ConversionFactor();
         uint256 daiAmount        = usdcAmount * conversionFactor;
         address proxy            = $.proxy;
+
+        emit PSMSwapUSDCToUSDS(usdcAmount);
 
         // Swap all if amount is less than or equal to the max USDC that can be swapped to DAI in
         // one call, else refill and swap in chunks within the limits.

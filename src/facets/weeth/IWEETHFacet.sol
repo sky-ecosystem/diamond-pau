@@ -15,7 +15,7 @@ interface IWEETHFacet is IFacetBase {
         uint256         ethReceived
     );
 
-    event WEETHDeposit(uint256 amount, uint256 shares);
+    event WEETHDeposit(uint256 amount, uint256 eethAmount, uint256 shares);
 
     event WEETHRequestWithdraw(
         address indexed weethModule,

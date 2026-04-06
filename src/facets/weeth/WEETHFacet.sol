@@ -121,7 +121,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
 
         require(shares >= minSharesOut, "WEETHFacet/slippage-too-high");
 
-        emit WEETHDeposit(amount, shares);
+        emit WEETHDeposit(amount, eethAmount, shares);
     }
 
     function requestWithdraw(address weethModule, uint256 weethShares, uint256 minEETHShares)

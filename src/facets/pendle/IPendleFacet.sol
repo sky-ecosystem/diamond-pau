@@ -9,12 +9,7 @@ interface IPendleFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event PendleRedeem(
-        address indexed market,
-        address indexed tokenOut,
-        uint256         pyAmountIn,
-        uint256         totalTokenOutAmount
-    );
+    event PendleRedeem(address indexed market, uint256 pyAmountIn, uint256 totalTokenOutAmount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

@@ -641,7 +641,7 @@ contract MainnetController_Ethena_UnstakeSUSDE_Tests is Ethena_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IUSDEFacet.USDEUnstakeSUSDE();
+        emit IUSDEFacet.USDEUnstakeSUSDE(assets);
 
         vm.prank(relayer);
         mainnetController.unstakeSUSDe();

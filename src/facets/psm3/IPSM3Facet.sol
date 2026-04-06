@@ -11,7 +11,7 @@ interface IPSM3Facet is IFacetBase {
 
     event PSM3Deposit(address indexed asset, uint256 amount, uint256 shares);
 
-    event PSM3Withdraw(address indexed asset, uint256 assetsWithdrawn);
+    event PSM3Withdraw(address indexed asset, uint256 assetsWithdrawn, uint256 sharesBurnt);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

@@ -21,6 +21,8 @@ interface IPSM3Like {
         external
         returns (uint256 assetsWithdrawn);
 
+    function shares(address user) external view returns (uint256);
+
 }
 
 contract PSM3Facet is IPSM3Facet, FacetBase {
@@ -85,6 +87,8 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
     {
         address proxy = _getSharedControllerStorage().proxy;
 
+        uint256 sharesBefore = IPSM3Like(psm).shares(proxy);
+
         // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result to get
         // `assetsWithdrawn` (assumes the proxy has enough PSM shares).
         // NOTE: Rate limited at end of function, so cannot return here.
@@ -98,7 +102,7 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
 
         _decreaseRateLimit(LIMIT_WITHDRAW, asset, assetsWithdrawn);
 
-        emit PSM3Withdraw(asset, assetsWithdrawn);
+        emit PSM3Withdraw(asset, assetsWithdrawn, sharesBefore - IPSM3Like(psm).shares(proxy));
     }
 
     /**********************************************************************************************/

@@ -10,6 +10,12 @@ import { FacetBase } from "../FacetBase.sol";
 
 import { IUSDEFacet } from "./IUSDEFacet.sol";
 
+interface IERC20Like {
+
+    function balanceOf(address account) external view returns (uint256);
+
+}
+
 interface IEthenaMinterLike {
 
     function setDelegatedSigner(address delegateSigner) external;
@@ -150,9 +156,11 @@ contract USDEFacet is IUSDEFacet, FacetBase {
     function unstakeSUSDE() external override nonReentrant onlyRole(RELAYER_ROLE) {
         address proxy = _getSharedControllerStorage().proxy;
 
+        uint256 usdeBefore = IERC20Like(usde).balanceOf(proxy);
+
         IALMProxy(proxy).doCall(susde, abi.encodeCall(ISUSDELike.unstake, (proxy)));
 
-        emit USDEUnstakeSUSDE();
+        emit USDEUnstakeSUSDE(IERC20Like(usde).balanceOf(proxy) - usdeBefore);
     }
 
     /**********************************************************************************************/
