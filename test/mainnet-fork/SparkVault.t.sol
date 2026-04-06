@@ -250,10 +250,11 @@ contract MainnetController_SparkVault_TakeFrom_E2ETests is SparkVault_TestBase {
         bytes32 morphoDepositKey  = makeAddressKey(LIMIT_4626_DEPOSIT,  Ethereum.MORPHO_VAULT_DAI_1);
         bytes32 morphoWithdrawKey = makeAddressKey(LIMIT_4626_WITHDRAW, Ethereum.MORPHO_VAULT_DAI_1);
 
-        rateLimits.setRateLimitData(takeKey,            10_000_000e6,  uint256(10_000_000e6) / 1 days);
-        rateLimits.setRateLimitData(transferKey,        10_000_000e6,  uint256(10_000_000e6) / 1 days);
-        rateLimits.setRateLimitData(morphoDepositKey,   10_000_000e18, uint256(10_000_000e18) / 1 days);
-        rateLimits.setRateLimitData(LIMIT_USDS_TO_USDC, 10_000_000e6,  uint256(10_000_000e6) / 1 days);
+        rateLimits.setRateLimitData(takeKey,                                10_000_000e6,  uint256(10_000_000e6) / 1 days);
+        rateLimits.setRateLimitData(transferKey,                            10_000_000e6,  uint256(10_000_000e6) / 1 days);
+        rateLimits.setRateLimitData(morphoDepositKey,                       10_000_000e18, uint256(10_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(LIMIT_USDS_TO_USDC,                     10_000_000e6,  uint256(10_000_000e6) / 1 days);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_DAIUSDS_SWAP(), 10_000_000e18, uint256(10_000_000e18) / 1 days);
 
         rateLimits.setUnlimitedRateLimitData(morphoWithdrawKey);
 
