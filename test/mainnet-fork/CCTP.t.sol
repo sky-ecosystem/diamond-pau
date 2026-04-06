@@ -8,20 +8,22 @@ import { Base }     from "../../lib/spark-address-registry/src/Base.sol";
 
 import { Bridge }                from "../../lib/grove-xchain-helpers/src/testing/Bridge.sol";
 import { CCTPv2BridgeTesting }   from "../../lib/grove-xchain-helpers/src/testing/bridges/CCTPv2BridgeTesting.sol";
-import { CCTPv2Forwarder  }      from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
+import { CCTPv2Forwarder }       from "../../lib/grove-xchain-helpers/src/forwarders/CCTPv2Forwarder.sol";
 import { Domain, DomainHelpers } from "../../lib/grove-xchain-helpers/src/testing/Domain.sol";
 
 import { CCTPFacet } from "../../src/facets/cctp/CCTPFacet.sol";
 
 import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
-import { ALMProxy }   from "../../src/ALMProxy.sol";
-import { Controller } from "../../src/Controller.sol";
-
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { RateLimits }     from "../../src/RateLimits.sol";
+import { IController } from "../../src/interfaces/IController.sol";
+
 import { AccessControls } from "../../src/AccessControls.sol";
+import { ALMProxy }       from "../../src/ALMProxy.sol";
+import { Controller }     from "../../src/Controller.sol";
+import { PAUFactory }     from "../../src/PAUFactory.sol";
+import { RateLimits }     from "../../src/RateLimits.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -65,7 +67,7 @@ abstract contract MainnetController_CCTP_TestBase is ForkTestBase {
         mainnetController.setCCTPMaxFeeCap(CCTP_MAX_FEE_CAP);
     }
 
-    function _getBlock() internal override pure returns (uint256) {
+    function _getBlock() internal pure override returns (uint256) {
         return 23700802; // November 1, 2025
     }
 
@@ -422,6 +424,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
     ALMProxy               internal foreignAlmProxy;
     IForeignControllerFull internal foreignController;
+    PAUFactory             internal foreignFactory;
     RateLimits             internal foreignRateLimits;
 
     /**********************************************************************************************/
@@ -450,18 +453,21 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         foreignAlmProxy   = new ALMProxy(Base.SPARK_EXECUTOR);
         foreignRateLimits = new RateLimits(Base.SPARK_EXECUTOR);
 
-        AccessControls accessControls = new AccessControls(Base.SPARK_EXECUTOR);
+        AccessControls foreignAccessControls = new AccessControls(Base.SPARK_EXECUTOR);
+
+        foreignFactory = new PAUFactory(Base.SPARK_EXECUTOR, Base.SPARK_EXECUTOR);
 
         foreignController = IForeignControllerFull(payable(new Controller({
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
-            accessControls_ : address(accessControls)
+            accessControls_ : address(foreignAccessControls),
+            factory_        : address(foreignFactory)
         })));
 
         vm.startPrank(Base.SPARK_EXECUTOR);
 
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        foreignAccessControls.grantRole(foreignAccessControls.FREEZER_ROLE(), freezer);
+        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
 
         foreignAlmProxy.grantRole(foreignAlmProxy.CONTROLLER(), address(foreignController));
 
@@ -515,7 +521,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         );
     }
 
-    function _getBlock() internal override pure returns (uint256) {
+    function _getBlock() internal pure override returns (uint256) {
         return 23700802; // November 1, 2025
     }
 
@@ -528,61 +534,51 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
-        foreignController.setDispatch(
+        foreignFactory.setValidFacet(cctpFacet, true);
+
+        IController.Wire[] memory wires = new IController.Wire[](8);
+
+        wires[0] = IController.Wire(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
-            cctpFacet,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
-        foreignController.setDispatch(
+        wires[1] = IController.Wire(
             IForeignControllerFull.setCCTPMintRecipient.selector,
-            cctpFacet,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.maxFeeCap()
-        foreignController.setDispatch(
+        wires[2] = IController.Wire(
             IForeignControllerFull.getCCTPMaxFeeCap.selector,
-            cctpFacet,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
-        foreignController.setDispatch(
+        wires[3] = IController.Wire(
             IForeignControllerFull.getCCTPMintRecipient.selector,
-            cctpFacet,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        // Controller.transferUSDCToCCTP() -> CCTPFacet.transfer()
-        foreignController.setDispatch(
+        wires[4] = IController.Wire(
             IForeignControllerFull.transferUSDCToCCTP.selector,
-            cctpFacet,
             ICCTPFacet.transfer.selector
         );
 
-        // Controller.transferUSDCToCCTPWithFee() -> CCTPFacet.transferWithFee()
-        foreignController.setDispatch(
+        wires[5] = IController.Wire(
             IForeignControllerFull.transferUSDCToCCTPWithFee.selector,
-            cctpFacet,
             ICCTPFacet.transferWithFee.selector
         );
 
-        // Controller.LIMIT_USDC_TO_CCTP() -> CCTPFacet.LIMIT_TO_CCTP()
-        foreignController.setDispatch(
+        wires[6] = IController.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_CCTP.selector,
-            cctpFacet,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
 
-        // Controller.LIMIT_USDC_TO_DOMAIN() -> CCTPFacet.LIMIT_TO_DOMAIN()
-        foreignController.setDispatch(
+        wires[7] = IController.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
-            cctpFacet,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
+
+        foreignController.addWires(cctpFacet, wires);
     }
 
 }
@@ -591,7 +587,7 @@ contract ForeignController_CCTP_Transfer_Tests is BaseChain_CCTP_TestBase {
 
     using DomainHelpers for *;
 
-    function setUp( ) public override {
+    function setUp() public override {
         super.setUp();
         destination.selectFork();
     }
@@ -732,7 +728,7 @@ contract ForeignController_CCTP_TransferWithFee_Tests is BaseChain_CCTP_TestBase
 
     uint256 internal constant MAX_FEE = 10;
 
-    function setUp( ) public override {
+    function setUp() public override {
         super.setUp();
         destination.selectFork();
     }

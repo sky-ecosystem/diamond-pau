@@ -1,4 +1,4 @@
-# Diamond PAU
+# PAU
 
 ![Foundry CI](https://github.com/marsfoundation/spark-alm-controller/actions/workflows/ci.yml/badge.svg)
 [![Foundry][foundry-badge]][foundry]
@@ -9,31 +9,32 @@
 
 ## Overview
 
-This repository contains the onchain components of the Diamond PAU system. The system enables controlled interaction with various DeFi protocols while enforcing rate limits and maintaining custody of funds through the ALMProxy.
+This repository contains the onchain components of the PAU system. The system enables controlled interaction with various DeFi protocols while enforcing rate limits and maintaining custody of funds through the ALMProxy.
 
 ### Core Contracts
 
-| Contract | Description |
-|----------|-------------|
-| `ALMProxy` | Proxy contract that holds custody of all funds and routes calls to external contracts |
-| `MainnetController` | Controller for Ethereum mainnet operations (Sky allocation, PSM, CCTP bridging) |
-| `ForeignController` | Controller for L2 operations (PSM, external protocols, CCTP bridging) |
-| `RateLimits` | Enforces and manages rate limits on controller operations |
-| `OTCBuffer` | Buffer contract for offchain OTC swap operations |
+| Contract         | Description                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `ALMProxy`       | Proxy contract that holds custody of all funds and routes calls to external contracts |
+| `Controller`     | Unified controller with dispatch-based routing to specialized facets                  |
+| `RateLimits`     | Enforces and manages rate limits on controller operations                             |
+| `AccessControls` | Role-based access control for the system                                              |
+| `OTCBuffer`      | Buffer contract for offchain OTC swap operations                                      |
+| `PAUFactory`     | Factory contract that deploys and configures the full PAU system                      |
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](./docs/ARCHITECTURE.md) | System architecture, contract interactions, and permissions |
-| [Rate Limits](./docs/RATE_LIMITS.md) | Rate limit design, calculations, and configuration |
-| [Liquidity Operations](./docs/LIQUIDITY_OPERATIONS.md) | Curve, Uniswap V4, OTC, and PSM integrations |
-| [weETH Integration](./docs/WEETH_INTEGRATION.md) | EtherFi weETH module architecture and withdrawal flow |
-| [Threat Model](./docs/THREAT_MODEL.md) | Attack vectors, trust assumptions, and security invariants |
-| [Security](./docs/SECURITY.md) | Protocol-specific considerations and audit information |
-| [Operational Requirements](./docs/OPERATIONAL_REQUIREMENTS.md) | Seeding, configuration, and onboarding checklists |
-| [Development](./docs/DEVELOPMENT.md) | Testing, deployment, and upgrade procedures |
-| [Code Notes](./docs/CODE_NOTES.md) | Implementation details and design decisions |
+| Document                                                       | Description                                                 |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Architecture](./docs/ARCHITECTURE.md)                         | System architecture, contract interactions, and permissions |
+| [Rate Limits](./docs/RATE_LIMITS.md)                           | Rate limit design, calculations, and configuration          |
+| [Liquidity Operations](./docs/LIQUIDITY_OPERATIONS.md)         | Curve, Uniswap V4, OTC, and PSM integrations                |
+| [weETH Integration](./docs/WEETH_INTEGRATION.md)               | EtherFi weETH module architecture and withdrawal flow       |
+| [Threat Model](./docs/THREAT_MODEL.md)                         | Attack vectors, trust assumptions, and security invariants  |
+| [Security](./docs/SECURITY.md)                                 | Protocol-specific considerations and audit information      |
+| [Operational Requirements](./docs/OPERATIONAL_REQUIREMENTS.md) | Seeding, configuration, and onboarding checklists           |
+| [Development](./docs/DEVELOPMENT.md)                           | Testing, deployment, and upgrade procedures                 |
+| [Code Notes](./docs/CODE_NOTES.md)                             | Implementation details and design decisions                 |
 
 ## Quick Start
 
@@ -43,46 +44,32 @@ This repository contains the onchain components of the Diamond PAU system. The s
 forge test
 ```
 
-### Deployments
-
-Deploy commands follow the pattern: `make deploy-<domain>-<env>-<type>`
-
-```bash
-# Deploy full Diamond PAU system to Base production
-make deploy-base-production-full
-
-# Deploy controller to Mainnet production
-make deploy-mainnet-production-controller
-
-# Deploy full staging environment
-make deploy-staging-full
-```
-
 See [Development Guide](./docs/DEVELOPMENT.md) for detailed instructions.
 
 ## Architecture Overview
 
-The controller contract is the entry point for all calls. It checks rate limits and executes logic, performing multiple calls to the ALMProxy atomically.
+The Controller is the entry point for all calls. It dispatches to the appropriate facet, which checks rate limits and executes logic, performing calls to the ALMProxy atomically.
 
 ```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│     Relayer     │────▶│  MainnetController   │────▶│    ALMProxy     │
-│   (External)    │     │  or ForeignController│     │ (Funds Custody) │
-└─────────────────┘     └──────────────────────┘     └─────────────────┘
-                                   │                          │
-                                   │                          │
-                                   ▼                          ▼
-                        ┌──────────────────┐       ┌────────────────────┐
-                        │   RateLimits     │       │ External Protocols │
-                        │   (State Store)  │       │  (Sky, PSM, etc.)  │
-                        └──────────────────┘       └────────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│     Relayer     │────▶│   Controller     │────▶│    ALMProxy     │
+│   (External)    │     │  (Dispatches to  │     │ (Funds Custody) │
+└─────────────────┘     │    Facets)       │     └─────────────────┘
+                        └──────────────────┘              │
+                                   │                      │
+                                   │                      ▼
+                                   ▼            ┌────────────────────┐
+                         ┌──────────────────┐   │ External Protocols │
+                         │   RateLimits     │   │  (Sky, PSM, etc.)  │
+                         │   (State Store)  │   └────────────────────┘
+                         └──────────────────┘
 ```
 
 See [Architecture Documentation](./docs/ARCHITECTURE.md) for detailed diagrams and explanations.
 
 ## Max Slippages
 
-Max slippage values throughout Diamond PAU integrations are defined as how close the resulting value should be to the expected or minimum value, **not** as how much deviation is allowed. This is an inverse way of denoting max slippages compared to common DeFi nomenclature.
+Max slippage values throughout PAU integrations are defined as how close the resulting value should be to the expected or minimum value, **not** as how much deviation is allowed. This is an inverse way of denoting max slippages compared to common DeFi nomenclature.
 
 ### How It Works
 
@@ -123,12 +110,14 @@ See [Security Documentation](./docs/SECURITY.md) for complete trust assumptions 
 ### Audits
 
 Audit reports are available in the [`audits/`](./audits/) directory. The system has been audited by:
+
 - Cantina
-- ChainSecurity
 - Certora
+- ChainSecurity
+- Unvariant
 
 ---
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/c83ef7e4-fae1-4c5c-8cff-99494ef75962" height="100"/>
+  <img src="https://github.com/user-attachments/assets/84ca8724-b6ad-42ef-9c5b-32abd1bb5e03" height="100"/>
 </p>

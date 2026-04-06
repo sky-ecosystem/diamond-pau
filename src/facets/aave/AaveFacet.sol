@@ -13,9 +13,9 @@ import { IAaveFacet } from "./IAaveFacet.sol";
 
 interface IATokenWithPoolLike {
 
-    function POOL() external view returns(address);
+    function POOL() external view returns (address);
 
-    function UNDERLYING_ASSET_ADDRESS() external view returns(address);
+    function UNDERLYING_ASSET_ADDRESS() external view returns (address);
 
 }
 
@@ -37,7 +37,7 @@ interface IPoolLike {
 contract AaveFacet is IAaveFacet, FacetBase {
 
     /**********************************************************************************************/
-    /*** AaveFacet Storage Domain                                                               ***/
+    /*** Facet Storage Domain                                                                   ***/
     /**********************************************************************************************/
 
     /// @custom:storage-location erc7201:sky.pau.storage.AaveFacet

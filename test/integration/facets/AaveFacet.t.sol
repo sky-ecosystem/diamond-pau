@@ -10,7 +10,12 @@ import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+    struct Wire {
+        bytes4 callSelector;
+        bytes4 delegateSelector;
+    }
+
+    function addWires(address facet, Wire[] calldata wires) external;
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
@@ -25,28 +30,30 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        // NOTE: Only wires the functions needed for the tests.
-        //       If more functions are needed in future tests, they should be wired here.
-        address facet = address(new AaveFacet());
+        vm.startPrank(facetValidator);
 
-        vm.startPrank(admin);
+        address facet = address(new AaveFacet());
 
         vm.label(facet, "AaveFacet");
 
-        // Controller.setAaveMaxSlippage() -> AaveFacet.setMaxSlippage()
-        controller.setDispatch(
+        factory.setValidFacet(facet, true);
+
+        vm.stopPrank();
+
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
+
+        wires[0] = IControllerLike.Wire(
             IControllerLike.setAaveMaxSlippage.selector,
-            facet,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        // Controller.getAaveMaxSlippage() -> AaveFacet.getMaxSlippage()
-        controller.setDispatch(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.getAaveMaxSlippage.selector,
-            facet,
             IAaveFacet.getMaxSlippage.selector
         );
-        vm.stopPrank();
+
+        vm.prank(admin);
+        controller.addWires(facet, wires);
     }
 
 }

@@ -10,11 +10,16 @@ import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
+    struct Wire {
+        bytes4 callSelector;
+        bytes4 delegateSelector;
+    }
+
+    function addWires(address facet, Wire[] calldata wires) external;
+
     function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
 
     function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
-
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
 
     function getCCTPMaxFeeCap() external view returns (uint256);
 
@@ -32,42 +37,40 @@ abstract contract CCTPFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        // NOTE: Only wires the functions needed for the tests.
-        //       If more functions are needed in future tests, they should be wired here.
-        address facet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
+        vm.startPrank(facetValidator);
 
-        vm.startPrank(admin);
+        address facet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
         vm.label(facet, "CCTPFacet");
 
-        // Controller.getCCTPMaxFeeCap() -> CCTPFacet.maxFeeCap()
-        controller.setDispatch(
+        factory.setValidFacet(facet, true);
+
+        vm.stopPrank();
+
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](4);
+
+        wires[0] = IControllerLike.Wire(
             IControllerLike.getCCTPMaxFeeCap.selector,
-            facet,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        // Controller.getCCTPMintRecipient() -> CCTPFacet.getMintRecipient()
-        controller.setDispatch(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.getCCTPMintRecipient.selector,
-            facet,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        // Controller.setCCTPMaxFeeCap() -> CCTPFacet.setMaxFeeCap()
-        controller.setDispatch(
+        wires[2] = IControllerLike.Wire(
             IControllerLike.setCCTPMaxFeeCap.selector,
-            facet,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        // Controller.setCCTPMintRecipient() -> CCTPFacet.setMintRecipient()
-        controller.setDispatch(
+        wires[3] = IControllerLike.Wire(
             IControllerLike.setCCTPMintRecipient.selector,
-            facet,
             ICCTPFacet.setMintRecipient.selector
         );
-        vm.stopPrank();
+
+        vm.prank(admin);
+        controller.addWires(facet, wires);
     }
 
 }

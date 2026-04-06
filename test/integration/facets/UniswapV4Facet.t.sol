@@ -11,7 +11,12 @@ import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setDispatch(bytes4 callSelector, address facet, bytes4 delegateSelector) external;
+    struct Wire {
+        bytes4 callSelector;
+        bytes4 delegateSelector;
+    }
+
+    function addWires(address facet, Wire[] calldata wires) external;
 
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
@@ -40,8 +45,8 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        // NOTE: Only wires the functions needed for the tests.
-        //       If more functions are needed in future tests, they should be wired here.
+        vm.startPrank(facetValidator);
+
         address facet = address(new UniswapV4Facet({
             permit2_         : makeAddr("permit2"),
             positionManager_ : makeAddr("positionManager"),
@@ -50,37 +55,34 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        vm.startPrank(admin);
+        factory.setValidFacet(facet, true);
 
-        // Controller.setMaxSlippage -> UniswapV4Facet.setMaxSlippage
-        controller.setDispatch(
+        vm.stopPrank();
+
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](4);
+
+        wires[0] = IControllerLike.Wire(
             IControllerLike.setMaxSlippage.selector,
-            facet,
             IUniswapV4Facet.setMaxSlippage.selector
         );
 
-        // Controller.setTickLimits -> UniswapV4Facet.setTickLimits
-        controller.setDispatch(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.setTickLimits.selector,
-            facet,
             IUniswapV4Facet.setTickLimits.selector
         );
 
-        // Controller.getMaxSlippage -> UniswapV4Facet.getMaxSlippage
-        controller.setDispatch(
+        wires[2] = IControllerLike.Wire(
             IControllerLike.getMaxSlippage.selector,
-            facet,
             IUniswapV4Facet.getMaxSlippage.selector
         );
 
-        // Controller.getTickLimits -> UniswapV4Facet.getTickLimits
-        controller.setDispatch(
+        wires[3] = IControllerLike.Wire(
             IControllerLike.getTickLimits.selector,
-            facet,
             IUniswapV4Facet.getTickLimits.selector
         );
 
-        vm.stopPrank();
+        vm.prank(admin);
+        controller.addWires(facet, wires);
     }
 
 }
