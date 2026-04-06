@@ -23,4 +23,6 @@ interface IDAIUSDSFacet is IFacetBase {
 
     function usds() external view returns (address);
 
+    function LIMIT_SWAP() external pure returns (bytes32);
+
 }

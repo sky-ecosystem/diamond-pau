@@ -625,7 +625,7 @@ abstract contract ForkTestBase is DssTest {
 
         factory.setValidFacet(daiUSDSFacet, true);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
+        IController.Wire[] memory wires = new IController.Wire[](3);
 
         wires[0] = IController.Wire(
             IMainnetControllerFull.swapUSDSToDAI.selector,
@@ -635,6 +635,11 @@ abstract contract ForkTestBase is DssTest {
         wires[1] = IController.Wire(
             IMainnetControllerFull.swapDAIToUSDS.selector,
             IDAIUSDSFacet.swapDAIToUSDS.selector
+        );
+
+        wires[2] = IController.Wire(
+            IMainnetControllerFull.LIMIT_DAIUSDS_SWAP.selector,
+            IDAIUSDSFacet.LIMIT_SWAP.selector
         );
 
         mainnetController.addWires(daiUSDSFacet, wires);

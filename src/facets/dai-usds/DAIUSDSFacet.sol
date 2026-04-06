@@ -3,7 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ApproveLib } from "../../libraries/ApproveLib.sol";
 
-import { IALMProxy } from "../../interfaces/IALMProxy.sol";
+import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
 
 import { FacetBase } from "../FacetBase.sol";
 
@@ -18,6 +19,12 @@ interface IDAIUSDSLike {
 }
 
 contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
+
+    /**********************************************************************************************/
+    /*** Constants                                                                              ***/
+    /**********************************************************************************************/
+
+    bytes32 public constant LIMIT_SWAP = keccak256("LIMIT_DAIUSDS_SWAP");
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
@@ -47,6 +54,11 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
+            LIMIT_SWAP,
+            usdsAmount
+        );
+
         address proxy = _getSharedControllerStorage().proxy;
 
         ApproveLib.approve(usds, proxy, daiUSDS, usdsAmount);
@@ -63,6 +75,11 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitIncrease(
+            LIMIT_SWAP,
+            daiAmount
+        );
+
         address proxy = _getSharedControllerStorage().proxy;
 
         ApproveLib.approve(dai, proxy, daiUSDS, daiAmount);
