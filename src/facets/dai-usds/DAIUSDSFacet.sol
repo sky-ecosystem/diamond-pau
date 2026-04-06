@@ -54,12 +54,14 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(
             LIMIT_SWAP,
             usdsAmount
         );
 
-        address proxy = _getSharedControllerStorage().proxy;
+        address proxy = $.proxy;
 
         ApproveLib.approve(usds, proxy, daiUSDS, usdsAmount);
 
@@ -75,12 +77,14 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitIncrease(
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        IRateLimits($.rateLimits).triggerRateLimitIncrease(
             LIMIT_SWAP,
             daiAmount
         );
 
-        address proxy = _getSharedControllerStorage().proxy;
+        address proxy = $.proxy;
 
         ApproveLib.approve(dai, proxy, daiUSDS, daiAmount);
 
