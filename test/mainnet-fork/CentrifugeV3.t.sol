@@ -177,13 +177,6 @@ contract MainnetController_CentrifugeV3_TransferShares_SuccessTests is Centrifug
         uint256 proxyBalanceBefore     = IERC20Like(vaultToken).balanceOf(address(almProxy));
         uint256 shareTotalSupplyBefore = IERC20Like(vaultToken).totalSupply();
 
-        vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeTransferShares(
-            CENTRIFUGE_VAULT,
-            10_000_000e6,
-            DESTINATION_CENTRIFUGE_ID
-        );
-
         vm.expectEmit(address(spoke));
         emit InitiateTransferShares(
             DESTINATION_CENTRIFUGE_ID,
@@ -192,6 +185,13 @@ contract MainnetController_CentrifugeV3_TransferShares_SuccessTests is Centrifug
             address(almProxy),
             target,
             10_000_000e6
+        );
+
+        vm.expectEmit(address(mainnetController));
+        emit ICentrifugeFacet.CentrifugeTransferShares(
+            CENTRIFUGE_VAULT,
+            10_000_000e6,
+            DESTINATION_CENTRIFUGE_ID
         );
 
         vm.startPrank(relayer);

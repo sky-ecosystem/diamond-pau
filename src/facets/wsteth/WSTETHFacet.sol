@@ -68,8 +68,6 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
     /**********************************************************************************************/
 
     function deposit(uint256 amount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        emit WSTETHDeposit(amount);
-
         _decreaseRateLimit(LIMIT_DEPOSIT, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -77,6 +75,8 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
         IALMProxy(proxy).doCall(weth, abi.encodeCall(IWETHLike.withdraw, (amount)));
 
         IALMProxy(proxy).doCallWithValue(wsteth, "", amount);
+
+        emit WSTETHDeposit(amount);
     }
 
     function requestWithdraw(uint256 amountToRedeem)
@@ -111,7 +111,7 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
             (uint256[])
         );
 
-        emit WSTETHRequestWithdraw(amountToRedeem, requestIds);
+        emit WSTETHRequestWithdraw(amountToRedeem, stethAmount, requestIds);
     }
 
     function claimWithdrawal(uint256 requestId)
@@ -120,8 +120,6 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit WSTETHClaimWithdrawal(requestId);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         address proxy             = $.proxy;
@@ -132,7 +130,11 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
             abi.encodeCall(IWithdrawalQueueLike.claimWithdrawal, (requestId))
         );
 
-        IALMProxy(proxy).doCallWithValue(weth, "", proxy.balance - initialETHBalance);
+        uint256 ethClaimed = proxy.balance - initialETHBalance;
+
+        IALMProxy(proxy).doCallWithValue(weth, "", ethClaimed);
+
+        emit WSTETHClaimWithdrawal(requestId, ethClaimed);
     }
 
     /**********************************************************************************************/

@@ -320,7 +320,12 @@ contract MainnetController_WEETH_RequestWithdraw_Tests is WEETH_TestBase {
         uint32 nextRequestId = withdrawRequestNFT.nextRequestId();
 
         vm.expectEmit(address(mainnetController));
-        emit IWEETHFacet.WEETHRequestWithdraw(weethModule, nextRequestId, 500e18);
+        emit IWEETHFacet.WEETHRequestWithdraw(
+            weethModule,
+            nextRequestId,
+            expectedEETHBalance,
+            500e18
+        );
 
         vm.prank(relayer);
         uint256 requestId = mainnetController.requestWithdrawFromWeETH(
@@ -509,7 +514,7 @@ contract MainnetController_WEETH_ClaimWithdrawal_Tests is WEETH_TestBase {
         emit IWEETHFacet.WEETHClaimWithdrawal(weethModule, requestId, eethAmount);
 
         vm.prank(relayer);
-        uint256 ethReceived = mainnetController.claimWithdrawalFromWeETH(weethModule, requestId);
+        uint256 wethReceived = mainnetController.claimWithdrawalFromWeETH(weethModule, requestId);
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -517,7 +522,7 @@ contract MainnetController_WEETH_ClaimWithdrawal_Tests is WEETH_TestBase {
         assertEq(WETH.balanceOf(address(almProxy)), eethAmount);
         assertEq(weethModule.balance,               0);
         assertEq(WETH.balanceOf(weethModule),       0);
-        assertEq(ethReceived,                       eethAmount);
+        assertEq(wethReceived,                      eethAmount);
     }
 
 }

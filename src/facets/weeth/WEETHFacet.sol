@@ -169,7 +169,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
             (uint256)
         );
 
-        emit WEETHRequestWithdraw(weethModule, requestId, weethShares);
+        emit WEETHRequestWithdraw(weethModule, requestId, eethAmount, weethShares);
     }
 
     function claimWithdrawal(address weethModule, uint256 requestId)
@@ -177,7 +177,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
-        returns (uint256 ethReceived)
+        returns (uint256 wethReceived)
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
@@ -189,7 +189,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
             "WEETHFacet/invalid-action"
         );
 
-        ethReceived = abi.decode(
+        wethReceived = abi.decode(
             IALMProxy($.proxy).doCall(
                 weethModule,
                 abi.encodeCall(IWEETHModuleLike.claimWithdrawal, (requestId))
@@ -197,7 +197,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
             (uint256)
         );
 
-        emit WEETHClaimWithdrawal(weethModule, requestId, ethReceived);
+        emit WEETHClaimWithdrawal(weethModule, requestId, wethReceived);
     }
 
 }

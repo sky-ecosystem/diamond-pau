@@ -60,8 +60,6 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit ERC7540RequestDeposit(token, amount);
-
         // Note that whitelist is done by rate limits.
         _decreaseRateLimit(LIMIT_DEPOSIT, token, amount);
 
@@ -75,6 +73,8 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
             token,
             abi.encodeCall(IERC7540Like.requestDeposit, (amount, proxy, proxy))
         );
+
+        emit ERC7540RequestDeposit(token, amount);
     }
 
     function claimDeposit(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
@@ -83,10 +83,10 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 shares = IERC4626Like(token).maxMint(proxy);
 
-        emit ERC7540ClaimDeposit(token, shares);
-
         // Claim shares from the vault to the proxy
         IALMProxy(proxy).doCall(token, abi.encodeCall(IERC4626Like.mint, (shares, proxy)));
+
+        emit ERC7540ClaimDeposit(token, shares);
     }
 
     function requestRedeem(address token, uint256 shares)
@@ -95,8 +95,6 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit ERC7540RequestRedeem(token, shares);
-
         _decreaseRateLimit(LIMIT_REDEEM, token, IERC4626Like(token).convertToAssets(shares));
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -105,6 +103,8 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
             token,
             abi.encodeCall(IERC7540Like.requestRedeem, (shares, proxy, proxy))
         );
+
+        emit ERC7540RequestRedeem(token, shares);
     }
 
     function claimRedeem(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
@@ -113,13 +113,13 @@ contract ERC7540Facet is IERC7540Facet, FacetBase {
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 assets = IERC4626Like(token).maxWithdraw(proxy);
 
-        emit ERC7540ClaimRedeem(token, assets);
-
         // Claim assets from the vault to the proxy
         IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(IERC4626Like.withdraw, (assets, proxy, proxy))
         );
+
+        emit ERC7540ClaimRedeem(token, assets);
     }
 
     /**********************************************************************************************/

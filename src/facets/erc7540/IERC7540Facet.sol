@@ -13,7 +13,7 @@ interface IERC7540Facet is IFacetBase {
 
     event ERC7540ClaimRedeem(address indexed token, uint256 assets);
 
-    event ERC7540RequestDeposit(address indexed token, uint256 amount);
+    event ERC7540RequestDeposit(address indexed token, uint256 assets);
 
     event ERC7540RequestRedeem(address indexed token, uint256 shares);
 

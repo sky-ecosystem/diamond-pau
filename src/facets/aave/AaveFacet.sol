@@ -87,8 +87,6 @@ contract AaveFacet is IAaveFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit AaveDeposit(aToken, amount);
-
         address proxy = _getSharedControllerStorage().proxy;
 
         _decreaseRateLimit(LIMIT_DEPOSIT, aToken, amount);
@@ -114,6 +112,8 @@ contract AaveFacet is IAaveFacet, FacetBase {
         uint256 newATokens = IERC20Like(aToken).balanceOf(proxy) - aTokenBalance;
 
         require(newATokens >= amount * maxSlippage / 1e18, "AaveFacet/slippage-too-high");
+
+        emit AaveDeposit(aToken, amount);
     }
 
     function withdraw(address aToken, uint256 amount)
@@ -138,10 +138,10 @@ contract AaveFacet is IAaveFacet, FacetBase {
             (uint256)
         );
 
-        emit AaveWithdraw(aToken, amountWithdrawn);
-
         _decreaseRateLimit(LIMIT_WITHDRAW, aToken, amountWithdrawn);
         _increaseRateLimit(LIMIT_DEPOSIT,  aToken, amountWithdrawn);
+
+        emit AaveWithdraw(aToken, amountWithdrawn);
     }
 
     /**********************************************************************************************/

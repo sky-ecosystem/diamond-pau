@@ -330,7 +330,8 @@ contract ForeignController_Curve_AddLiquidity_SuccessTests is Curve_TestBase {
         emit ICurveFacet.CurveAddLiquidity(
             CURVE_POOL,
             minLpAmount,
-            (amounts[0] + amounts[1]) * 1e12
+            (amounts[0] + amounts[1]) * 1e12,
+            amounts
         );
 
         vm.prank(relayer);
@@ -616,11 +617,17 @@ contract ForeignController_Curve_RemoveLiquidity_SuccessTests is Curve_TestBase 
 
         uint256[] memory rates = ICurvePoolLike(CURVE_POOL).stored_rates();
 
+        uint256[] memory expectedWithdrawnAmounts = new uint256[](2);
+
+        expectedWithdrawnAmounts[0] = 999_956.744169e6;
+        expectedWithdrawnAmounts[1] = 1_000_043.234104e6;
+
         vm.expectEmit(address(foreignController));
         emit ICurveFacet.CurveRemoveLiquidity(
             CURVE_POOL,
             lpTokensReceived,
-            (999_956.744169e6 + 1_000_043.234104e6) * 1e12
+            (expectedWithdrawnAmounts[0] + expectedWithdrawnAmounts[1]) * 1e12,
+            expectedWithdrawnAmounts
         );
 
         vm.prank(relayer);

@@ -142,8 +142,6 @@ contract OTCFacet is IOTCFacet, FacetBase {
         // NOTE: This will lose precision for tokens with >18 decimals.
         uint256 normalizedSent = _toNormalizedAmount(assetToSend, amount);
 
-        emit OTCSwapSent(exchange, parameters.buffer, assetToSend, amount, normalizedSent);
-
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
             makeAddressKey(LIMIT_SWAP, exchange),
             normalizedSent
@@ -158,6 +156,8 @@ contract OTCFacet is IOTCFacet, FacetBase {
         state.normalizedClaimed = 0;
 
         _transfer(assetToSend, exchange, amount);
+
+        emit OTCSwapSent(exchange, parameters.buffer, assetToSend, amount, normalizedSent);
     }
 
     function claim(address exchange, address assetToClaim)
@@ -181,9 +181,9 @@ contract OTCFacet is IOTCFacet, FacetBase {
 
         $.states[exchange].normalizedClaimed += normalizedAmount;
 
-        emit OTCClaimed(exchange, buffer, assetToClaim, amount, normalizedAmount);
-
         _transferFrom(assetToClaim, buffer, amount);
+
+        emit OTCClaimed(exchange, buffer, assetToClaim, amount, normalizedAmount);
     }
 
     /**********************************************************************************************/

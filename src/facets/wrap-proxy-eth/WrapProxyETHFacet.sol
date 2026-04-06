@@ -32,11 +32,11 @@ contract WrapProxyETHFacet is IWrapProxyETHFacet, FacetBase {
 
         uint256 ethAmount = proxy.balance;
 
-        emit WrapProxyETHWrap(ethAmount);
-
         if (ethAmount == 0) return;
 
         IALMProxy(proxy).doCallWithValue(weth, "", ethAmount);
+
+        emit WrapProxyETHWrap(ethAmount);
     }
 
 }

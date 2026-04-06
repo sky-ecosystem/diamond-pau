@@ -341,7 +341,7 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
             callData : callData
         });
 
-        emit UniswapV4Swap(poolId, tokenIn, amountIn, amountOut);
+        emit UniswapV4Swap(poolId, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /**********************************************************************************************/

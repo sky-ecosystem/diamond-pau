@@ -58,34 +58,35 @@ contract MainnetController_Merkl_ToggleOperator_SuccessTests is Merkl_TestBase {
     function test_toggleOperatorMerkl_singleOperator() external {
         assertEq(merklDistributor.operators(address(almProxy), operator1), 0);
 
-        vm.expectEmit(address(mainnetController));
-        emit IMerklFacet.MerklToggleOperator(operator1);
-
         vm.expectEmit(address(merklDistributor));
         emit OperatorToggled(address(almProxy), operator1, true);
+
+        vm.expectEmit(address(mainnetController));
+        emit IMerklFacet.MerklToggleOperator(operator1);
 
         vm.prank(relayer);
         mainnetController.toggleOperatorMerkl(operator1);
 
         assertEq(merklDistributor.operators(address(almProxy), operator1), 1);
 
-        vm.expectEmit(address(mainnetController));
-        emit IMerklFacet.MerklToggleOperator(operator1);
-
         vm.expectEmit(address(merklDistributor));
         emit OperatorToggled(address(almProxy), operator1, false);
+
+        vm.expectEmit(address(mainnetController));
+        emit IMerklFacet.MerklToggleOperator(operator1);
 
         vm.prank(relayer);
         mainnetController.toggleOperatorMerkl(operator1);
 
         assertEq(merklDistributor.operators(address(almProxy), operator1), 0);
 
+        vm.expectEmit(address(merklDistributor));
+        emit OperatorToggled(address(almProxy), operator1, true);
+
         vm.expectEmit(address(mainnetController));
         emit IMerklFacet.MerklToggleOperator(operator1);
 
         vm.prank(relayer);
-        vm.expectEmit(address(merklDistributor));
-        emit OperatorToggled(address(almProxy), operator1, true);
         mainnetController.toggleOperatorMerkl(operator1);
 
         assertEq(merklDistributor.operators(address(almProxy), operator1), 1);

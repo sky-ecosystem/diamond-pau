@@ -200,9 +200,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
             (uint256)
         );
 
-        emit CurveAddLiquidity(pool, shares, valueDeposited);
-
         _applySwapRateLimit(pool, depositAmounts, rates, shares);
+
+        emit CurveAddLiquidity(pool, shares, valueDeposited, depositAmounts);
     }
 
     function removeLiquidity(
@@ -262,9 +262,9 @@ contract CurveFacet is ICurveFacet, FacetBase {
         }
         valueWithdrawn /= 1e18;
 
-        emit CurveRemoveLiquidity(pool, lpBurnAmount, valueWithdrawn);
-
         _decreaseRateLimit(LIMIT_WITHDRAW, pool, valueWithdrawn);
+
+        emit CurveRemoveLiquidity(pool, lpBurnAmount, valueWithdrawn, withdrawnTokens);
     }
 
     /**********************************************************************************************/

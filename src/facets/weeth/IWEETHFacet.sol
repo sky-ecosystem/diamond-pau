@@ -20,6 +20,7 @@ interface IWEETHFacet is IFacetBase {
     event WEETHRequestWithdraw(
         address indexed weethModule,
         uint256 indexed requestId,
+        uint256         eethAmount,
         uint256         weethShares
     );
 

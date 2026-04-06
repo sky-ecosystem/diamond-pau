@@ -68,12 +68,12 @@ contract USDEFacet is IUSDEFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit USDESetDelegatedSigner(delegatedSigner);
-
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
             ethenaMinter,
             abi.encodeCall(IEthenaMinterLike.setDelegatedSigner, (delegatedSigner))
         );
+
+        emit USDESetDelegatedSigner(delegatedSigner);
     }
 
     function removeDelegatedSigner(address delegatedSigner)
@@ -82,28 +82,28 @@ contract USDEFacet is IUSDEFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit USDERemoveDelegatedSigner(delegatedSigner);
-
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
             ethenaMinter,
             abi.encodeCall(IEthenaMinterLike.removeDelegatedSigner, (delegatedSigner))
         );
+
+        emit USDERemoveDelegatedSigner(delegatedSigner);
     }
 
     function prepareMint(uint256 usdcAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        emit USDEPrepareMint(usdcAmount);
-
         _decreaseRateLimit(LIMIT_USDE_MINT, usdcAmount);
 
         ApproveLib.approve(usdc, _getSharedControllerStorage().proxy, ethenaMinter, usdcAmount);
+
+        emit USDEPrepareMint(usdcAmount);
     }
 
     function prepareBurn(uint256 usdeAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        emit USDEPrepareBurn(usdeAmount);
-
         _decreaseRateLimit(LIMIT_USDE_BURN, usdeAmount);
 
         ApproveLib.approve(usde, _getSharedControllerStorage().proxy, ethenaMinter, usdeAmount);
+
+        emit USDEPrepareBurn(usdeAmount);
     }
 
     function cooldownAssets(uint256 usdeAmount)
@@ -142,17 +142,17 @@ contract USDEFacet is IUSDEFacet, FacetBase {
             (uint256)
         );
 
-        emit USDECooldownShares(susdeAmount, assets);
-
         _decreaseRateLimit(LIMIT_SUSDE_COOLDOWN, assets);
+
+        emit USDECooldownShares(susdeAmount, assets);
     }
 
     function unstakeSUSDE() external override nonReentrant onlyRole(RELAYER_ROLE) {
-        emit USDEUnstakeSUSDE();
-
         address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(susde, abi.encodeCall(ISUSDELike.unstake, (proxy)));
+
+        emit USDEUnstakeSUSDE();
     }
 
     /**********************************************************************************************/

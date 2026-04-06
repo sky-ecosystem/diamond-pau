@@ -42,8 +42,6 @@ contract FarmFacet is IFarmFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit FarmDeposit(farm, amount);
-
         _decreaseRateLimit(LIMIT_DEPOSIT, farm, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -51,6 +49,8 @@ contract FarmFacet is IFarmFacet, FacetBase {
         ApproveLib.approve(IFarmLike(farm).stakingToken(), proxy, farm, amount);
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.stake, (amount)));
+
+        emit FarmDeposit(farm, amount);
     }
 
     function withdraw(address farm, uint256 amount)
@@ -59,8 +59,6 @@ contract FarmFacet is IFarmFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit FarmWithdraw(farm, amount);
-
         _decreaseRateLimit(LIMIT_WITHDRAW, farm, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -68,6 +66,8 @@ contract FarmFacet is IFarmFacet, FacetBase {
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.withdraw, (amount)));
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
+
+        emit FarmWithdraw(farm, amount);
     }
 
     /**********************************************************************************************/

@@ -301,13 +301,13 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         uint256 amountSpent = startingBalance - IERC20Like(tokenIn).balanceOf(proxy);
 
-        emit UniswapV3Swap(pool, tokenIn, amountSpent, amountOut);
-
         // Clear approvals of dust.
         _approve(tokenIn, router, 0);
 
         // Rate limit decreased by value of tokenIn (the amount actually spent).
         _decreaseRateLimit(LIMIT_SWAP, tokenIn, pool, amountSpent);
+
+        emit UniswapV3Swap(pool, tokenIn, amountSpent, amountOut);
     }
 
     function addLiquidity(
@@ -355,6 +355,13 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         require(liquidity != 0, "UniswapV3Facet/no-liquidity-increased");
 
+        // Clear approvals of dust.
+        _approve(token0, positionManager, 0);
+        _approve(token1, positionManager, 0);
+
+        _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts.amount0);
+        _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts.amount1);
+
         emit UniswapV3AddLiquidity(
             pool,
             resultingTokenId,
@@ -364,13 +371,6 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
             amounts.amount0,
             amounts.amount1
         );
-
-        // Clear approvals of dust.
-        _approve(token0, positionManager, 0);
-        _approve(token1, positionManager, 0);
-
-        _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts.amount0);
-        _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts.amount1);
     }
 
     function removeLiquidity(
@@ -399,8 +399,6 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         amounts = _callDecreaseLiquidity(tokenId, liquidity, min, deadline);
 
-        emit UniswapV3RemoveLiquidity(pool, tokenId, amounts.amount0, amounts.amount1);
-
         _callCollect(tokenId);
 
         uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
@@ -410,6 +408,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         _decreaseRateLimit(LIMIT_WITHDRAW, token0, pool, amounts.amount0);
         _decreaseRateLimit(LIMIT_WITHDRAW, token1, pool, amounts.amount1);
+
+        emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
 
     /**********************************************************************************************/

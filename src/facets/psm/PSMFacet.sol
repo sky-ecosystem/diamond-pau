@@ -80,8 +80,6 @@ contract PSMFacet is IPSMFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit PSMSwapUSDSToUSDC(usdcAmount);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_USDS_TO_USDC, usdcAmount);
@@ -104,6 +102,8 @@ contract PSMFacet is IPSMFacet, FacetBase {
 
         // Swap DAI to USDC through the PSM.
         IALMProxy(proxy).doCall(psm, abi.encodeCall(IPSMLike.buyGemNoFee, (proxy, usdcAmount)));
+
+        emit PSMSwapUSDSToUSDC(usdcAmount);
     }
 
     function swapUSDCToUSDS(uint256 usdcAmount)

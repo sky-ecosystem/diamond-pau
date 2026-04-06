@@ -12,6 +12,8 @@ import { IMapleFacet } from "./IMapleFacet.sol";
 
 interface IMapleTokenLike {
 
+    function asset() external view returns (address);
+
     function requestRedeem(uint256 shares, address receiver) external;
 
     function removeShares(uint256 shares, address receiver) external;
@@ -38,8 +40,6 @@ contract MapleFacet is IMapleFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit MapleRequestRedemption(mapleToken, shares);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
@@ -53,6 +53,8 @@ contract MapleFacet is IMapleFacet, FacetBase {
             mapleToken,
             abi.encodeCall(IMapleTokenLike.requestRedeem, (shares, proxy))
         );
+
+        emit MapleRequestRedemption(mapleToken, IMapleTokenLike(mapleToken).asset(), shares);
     }
 
     function cancelRedemption(address mapleToken, uint256 shares)
@@ -61,8 +63,6 @@ contract MapleFacet is IMapleFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit MapleCancelRedemption(mapleToken, shares);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         require(
@@ -78,6 +78,8 @@ contract MapleFacet is IMapleFacet, FacetBase {
             mapleToken,
             abi.encodeCall(IMapleTokenLike.removeShares, (shares, proxy))
         );
+
+        emit MapleCancelRedemption(mapleToken, IMapleTokenLike(mapleToken).asset(), shares);
     }
 
 }

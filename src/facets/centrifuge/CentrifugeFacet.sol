@@ -111,8 +111,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         _rateLimitExists(makeAddressKey(LIMIT_DEPOSIT, token));
 
-        emit CentrifugeCancelDepositRequest(token);
-
         address proxy = _getSharedControllerStorage().proxy;
 
         // NOTE: While the cancellation is pending, no new deposit request can be submitted.
@@ -120,6 +118,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
             token,
             abi.encodeCall(ICentrifugeV3VaultLike(token).cancelDepositRequest, (REQUEST_ID, proxy))
         );
+
+        emit CentrifugeCancelDepositRequest(token);
     }
 
     function claimCancelDepositRequest(address token)
@@ -129,7 +129,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
         onlyRole(RELAYER_ROLE)
     {
         _rateLimitExists(makeAddressKey(LIMIT_DEPOSIT, token));
-        emit CentrifugeClaimCancelDepositRequest(token);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -140,6 +139,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
                 (REQUEST_ID, proxy, proxy)
             )
         );
+
+        emit CentrifugeClaimCancelDepositRequest(token);
     }
 
     function cancelRedeemRequest(address token)
@@ -150,8 +151,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         _rateLimitExists(makeAddressKey(LIMIT_REDEEM, token));
 
-        emit CentrifugeCancelRedeemRequest(token);
-
         address proxy = _getSharedControllerStorage().proxy;
 
         // NOTE: While the cancellation is pending, no new redeem request can be submitted.
@@ -159,6 +158,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
             token,
             abi.encodeCall(ICentrifugeV3VaultLike(token).cancelRedeemRequest, (REQUEST_ID, proxy))
         );
+
+        emit CentrifugeCancelRedeemRequest(token);
     }
 
     function claimCancelRedeemRequest(address token)
@@ -169,8 +170,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
     {
         _rateLimitExists(makeAddressKey(LIMIT_REDEEM, token));
 
-        emit CentrifugeClaimCancelRedeemRequest(token);
-
         address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(
@@ -180,6 +179,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
                 (REQUEST_ID, proxy, proxy)
             )
         );
+
+        emit CentrifugeClaimCancelRedeemRequest(token);
     }
 
     function transferShares(address token, uint128 amount, uint16 centrifugeId)
@@ -200,8 +201,6 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
 
         require(recipient != 0, "CentrifugeFacet/id-not-configured");
 
-        emit CentrifugeTransferShares(token, amount, centrifugeId);
-
         address spoke
             = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
 
@@ -221,6 +220,8 @@ contract CentrifugeFacet is ICentrifugeFacet, FacetBase {
             ),
             msg.value
         );
+
+        emit CentrifugeTransferShares(token, amount, centrifugeId);
     }
 
     /**********************************************************************************************/

@@ -374,7 +374,7 @@ contract ForeignController_PSM3_Withdraw_Tests is PSM3_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IPSM3Facet.PSM3Withdraw(address(usdsBase), 100e18, 100e18);
+        emit IPSM3Facet.PSM3Withdraw(address(usdsBase), 100e18);
 
         vm.prank(relayer);
         uint256 amountWithdrawn = foreignController.withdrawPSM(address(usdsBase), 100e18);
@@ -420,7 +420,7 @@ contract ForeignController_PSM3_Withdraw_Tests is PSM3_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IPSM3Facet.PSM3Withdraw(Base.USDC, 100e6, 100e6);
+        emit IPSM3Facet.PSM3Withdraw(Base.USDC, 100e6);
 
         vm.prank(relayer);
         uint256 amountWithdrawn = foreignController.withdrawPSM(Base.USDC, 100e6);
@@ -468,7 +468,7 @@ contract ForeignController_PSM3_Withdraw_Tests is PSM3_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IPSM3Facet.PSM3Withdraw(address(susdsBase), 100e18, 100e18 - 1);
+        emit IPSM3Facet.PSM3Withdraw(address(susdsBase), 100e18 - 1);
 
         vm.prank(relayer);
         uint256 amountWithdrawn = foreignController.withdrawPSM(address(susdsBase), 100e18);

@@ -9,9 +9,9 @@ interface IFarmFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event FarmDeposit(address indexed farm, uint256 amount);
+    event FarmDeposit(address indexed farmToken, uint256 amount);
 
-    event FarmWithdraw(address indexed farm, uint256 amount);
+    event FarmWithdraw(address indexed farmToken, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

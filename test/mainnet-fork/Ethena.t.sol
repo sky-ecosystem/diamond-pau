@@ -65,11 +65,11 @@ contract MainnetController_Ethena_SetDelegatedSigner_Tests is Ethena_TestBase {
 
         vm.record();
 
-        vm.expectEmit(address(mainnetController));
-        emit IUSDEFacet.USDESetDelegatedSigner(signer);
-
         vm.expectEmit(ETHENA_MINTER);
         emit IEthenaMinterLike.DelegatedSignerInitiated(signer, address(almProxy));
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDESetDelegatedSigner(signer);
 
         vm.prank(relayer);
         mainnetController.setDelegatedSigner(signer);
@@ -111,11 +111,11 @@ contract MainnetController_Ethena_RemoveDelegatedSigner_Tests is Ethena_TestBase
 
         vm.record();
 
-        vm.expectEmit(address(mainnetController));
-        emit IUSDEFacet.USDERemoveDelegatedSigner(signer);
-
         vm.expectEmit(ETHENA_MINTER);
         emit IEthenaMinterLike.DelegatedSignerRemoved(signer, address(almProxy));
+
+        vm.expectEmit(address(mainnetController));
+        emit IUSDEFacet.USDERemoveDelegatedSigner(signer);
 
         vm.prank(relayer);
         mainnetController.removeDelegatedSigner(signer);

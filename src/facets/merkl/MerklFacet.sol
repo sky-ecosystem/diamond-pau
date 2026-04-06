@@ -39,14 +39,14 @@ contract MerklFacet is IMerklFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit MerklToggleOperator(operator);
-
         address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(
             distributor,
             abi.encodeCall(IMerklDistributorLike.toggleOperator, (proxy, operator))
         );
+
+        emit MerklToggleOperator(operator);
     }
 
 }

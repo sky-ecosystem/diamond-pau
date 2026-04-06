@@ -48,6 +48,7 @@ interface IUniswapV3Facet is IFacetBase {
     event UniswapV3RemoveLiquidity(
         address indexed pool,
         uint256 indexed tokenId,
+        uint128         liquidity,
         uint256         amount0,
         uint256         amount1
     );

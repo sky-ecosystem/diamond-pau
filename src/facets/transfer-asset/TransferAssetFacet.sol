@@ -34,8 +34,6 @@ contract TransferAssetFacet is ITransferAssetFacet, FacetBase {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        emit TransferAssetFacetTransfer(asset, destination, amount);
-
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
@@ -52,6 +50,8 @@ contract TransferAssetFacet is ITransferAssetFacet, FacetBase {
             returnData.length == 0 || (returnData.length == 32 && abi.decode(returnData, (bool))),
             "TransferAssetFacet/transfer-failed"
         );
+
+        emit TransferAssetFacetTransfer(asset, destination, amount);
     }
 
 }

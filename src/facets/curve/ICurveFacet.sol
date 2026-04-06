@@ -9,11 +9,21 @@ interface ICurveFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event CurveAddLiquidity(address indexed pool, uint256 shares, uint256 valueDeposited);
+    event CurveAddLiquidity(
+        address indexed pool,
+        uint256         shares,
+        uint256         valueDeposited,
+        uint256[]       depositAmounts
+    );
 
     event CurveMaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
-    event CurveRemoveLiquidity(address indexed pool, uint256 lpBurnAmount, uint256 valueWithdrawn);
+    event CurveRemoveLiquidity(
+        address indexed pool,
+        uint256         lpBurnAmount,
+        uint256         valueWithdrawn,
+        uint256[]       withdrawnTokens
+    );
 
     event CurveSwap(
         address indexed pool,

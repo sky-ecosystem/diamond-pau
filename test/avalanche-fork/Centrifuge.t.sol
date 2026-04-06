@@ -1021,13 +1021,6 @@ contract ForeignController_Centrifuge_TransferShares_Tests is Centrifuge_TestBas
         uint256 proxyBalanceBefore     = vaultToken.balanceOf(address(almProxy));
         uint256 shareTotalSupplyBefore = vaultToken.totalSupply();
 
-        vm.expectEmit(address(foreignController));
-        emit ICentrifugeFacet.CentrifugeTransferShares(
-            CENTRIFUGE_VAULT,
-            10_000_000e6,
-            DESTINATION_CENTRIFUGE_ID
-        );
-
         vm.expectEmit(address(spoke));
         emit ISpokeLike.InitiateTransferShares(
             DESTINATION_CENTRIFUGE_ID,
@@ -1036,6 +1029,13 @@ contract ForeignController_Centrifuge_TransferShares_Tests is Centrifuge_TestBas
             address(almProxy),
             target,
             10_000_000e6
+        );
+
+        vm.expectEmit(address(foreignController));
+        emit ICentrifugeFacet.CentrifugeTransferShares(
+            CENTRIFUGE_VAULT,
+            10_000_000e6,
+            DESTINATION_CENTRIFUGE_ID
         );
 
         vm.startPrank(ALM_RELAYER);

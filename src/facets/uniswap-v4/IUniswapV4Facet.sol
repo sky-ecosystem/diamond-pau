@@ -50,6 +50,7 @@ interface IUniswapV4Facet is IFacetBase {
     event UniswapV4Swap(
         bytes32 indexed poolId,
         address indexed tokenIn,
+        address indexed tokenOut,
         uint128         amountIn,
         uint128         amountOut
     );

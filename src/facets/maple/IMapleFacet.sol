@@ -9,9 +9,9 @@ interface IMapleFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event MapleCancelRedemption(address indexed mapleToken, uint256 shares);
+    event MapleCancelRedemption(address indexed mapleToken, address indexed asset, uint256 shares);
 
-    event MapleRequestRedemption(address indexed mapleToken, uint256 shares);
+    event MapleRequestRedemption(address indexed mapleToken, address indexed asset, uint256 shares);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

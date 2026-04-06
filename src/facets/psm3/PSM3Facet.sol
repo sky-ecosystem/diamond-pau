@@ -96,9 +96,9 @@ contract PSM3Facet is IPSM3Facet, FacetBase {
             (uint256)
         );
 
-        emit PSM3Withdraw(asset, maxAmount, assetsWithdrawn);
-
         _decreaseRateLimit(LIMIT_WITHDRAW, asset, assetsWithdrawn);
+
+        emit PSM3Withdraw(asset, assetsWithdrawn);
     }
 
     /**********************************************************************************************/

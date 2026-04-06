@@ -211,8 +211,6 @@ contract LayerZeroFacet is ILayerZeroFacet, FacetBase {
             (ILayerZeroLike.MessagingFee)
         );
 
-        emit LayerZeroTransfer(oftAddress, destinationEndpointId, amount, fee.nativeFee);
-
         IALMProxy(proxy).doCallWithValue{value: fee.nativeFee}(
             oftAddress,
             abi.encodeCall(ILayerZeroLike.send, (sendParams, fee, proxy)),
@@ -227,6 +225,8 @@ contract LayerZeroFacet is ILayerZeroFacet, FacetBase {
 
             require(success, "LayerZeroFacet/refund-failed");
         }
+
+        emit LayerZeroTransfer(oftAddress, destinationEndpointId, amount, fee.nativeFee);
     }
 
     /**********************************************************************************************/

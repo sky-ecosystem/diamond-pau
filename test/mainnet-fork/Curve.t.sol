@@ -264,7 +264,8 @@ contract MainnetController_Curve_AddLiquidity_Tests is Curve_TestBase {
         emit ICurveFacet.CurveAddLiquidity(
             CURVE_POOL,
             minLpAmount,
-            (amounts[0] + amounts[1]) * 1e12
+            (amounts[0] + amounts[1]) * 1e12,
+            amounts
         );
 
         vm.prank(relayer);
@@ -570,13 +571,19 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
         minWithdrawAmounts[0] = 465_000e6;
         minWithdrawAmounts[1] = 1_535_000e6;
 
+        uint256[] memory expectedWithdrawnAmounts = new uint256[](2);
+
+        expectedWithdrawnAmounts[0] = 465_059.586753e6;
+        expectedWithdrawnAmounts[1] = 1_535_013.847298e6;
+
         vm.record();
 
         vm.expectEmit(address(mainnetController));
         emit ICurveFacet.CurveRemoveLiquidity(
             CURVE_POOL,
             lpTokensReceived,
-            (465_059.586753e6 + 1_535_013.847298e6) * 1e12
+            (expectedWithdrawnAmounts[0] + expectedWithdrawnAmounts[1]) * 1e12,
+            expectedWithdrawnAmounts
         );
 
         vm.prank(relayer);
@@ -588,8 +595,8 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(assetsReceived[0], 465_059.586753e6);
-        assertEq(assetsReceived[1], 1_535_013.847298e6);
+        assertEq(assetsReceived[0], expectedWithdrawnAmounts[0]);
+        assertEq(assetsReceived[1], expectedWithdrawnAmounts[1]);
 
         uint256 sumAssetsReceived = (assetsReceived[0] + assetsReceived[1]) * 1e12;
 

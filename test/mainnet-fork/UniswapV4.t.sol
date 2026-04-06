@@ -1746,6 +1746,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
         emit IUniswapV4Facet.UniswapV4Swap(
             _POOL_ID,
             Ethereum.USDC,
+            Ethereum.USDT,
             1_000_000e6,
             999_280.652247e6
         );
@@ -1771,6 +1772,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
         emit IUniswapV4Facet.UniswapV4Swap(
             _POOL_ID,
             Ethereum.USDT,
+            Ethereum.USDC,
             1_000_000e6,
             1_000_646.141415e6
         );
@@ -3590,6 +3592,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
         emit IUniswapV4Facet.UniswapV4Swap(
             _POOL_ID,
             Ethereum.USDT,
+            Ethereum.USDS,
             10_000e6,
             9_963.585379886102636344e18
         );
@@ -3615,6 +3618,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
         emit IUniswapV4Facet.UniswapV4Swap(
             _POOL_ID,
             Ethereum.USDS,
+            Ethereum.USDT,
             3_000e18,
             2_990.034994e6
         );
