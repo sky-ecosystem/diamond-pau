@@ -4,6 +4,7 @@ pragma solidity ^0.8.34;
 import { IAccessControl }           from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { IAccessControlEnumerable } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 import { IERC165 }                  from "../../lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import { IERC1967 }                 from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC1967.sol";
 
 import { ERC1967Proxy } from "../../lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -163,7 +164,7 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** onERC721Received Tests                                                                  ***/
+    /*** onERC721Received Tests                                                                 ***/
     /**********************************************************************************************/
 
     function test_onERC721Received() external {
@@ -179,7 +180,7 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** supportsInterface Tests                                                                 ***/
+    /*** supportsInterface Tests                                                                ***/
     /**********************************************************************************************/
 
     function test_supportsInterface() external {
@@ -190,7 +191,7 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
     }
 
     /**********************************************************************************************/
-    /***  Receive function Tests                                                                 ***/
+    /***  Receive function Tests                                                                ***/
     /**********************************************************************************************/
 
     function test_receive() external {
@@ -203,6 +204,34 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
 
         assertEq(address(this).balance,        0);
         assertEq(address(weethModule).balance, 1 ether);
+    }
+
+    /**********************************************************************************************/
+    /*** Upgrade function Tests                                                                 ***/
+    /**********************************************************************************************/
+
+    function test_authorizeUpgrade_notAuthorized() external {
+        address newImplementation = address(new WEETHModule());
+
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        weethModule.upgradeToAndCall(newImplementation, "");
+    }
+
+    function test_authorizeUpgrade() external {
+        address newImplementation = address(new WEETHModule());
+
+        vm.expectEmit(address(weethModule));
+        emit IERC1967.Upgraded({ implementation: newImplementation });
+
+        vm.prank(admin);
+        weethModule.upgradeToAndCall(newImplementation, "");
+
+        // Verify the proxy still works after upgrade
+        assertEq(weethModule.almProxy(), almProxy);
     }
 
 }
