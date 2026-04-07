@@ -125,7 +125,7 @@ contract WSTETHFacet is IWSTETHFacet, FacetBase {
 
         require(
             IRateLimits($.rateLimits).getRateLimitData(LIMIT_REQUEST_WITHDRAW).maxAmount > 0,
-            "WSTETHLib/invalid-action"
+            "WSTETHFacet/invalid-action"
         );
 
         IALMProxy(proxy).doCall(
