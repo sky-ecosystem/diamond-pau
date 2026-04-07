@@ -448,21 +448,18 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
         IALMProxy(_getSharedControllerStorage().proxy).doCall(positionManager, callData);
 
         // Get token balances after liquidity decrease.
-        uint256 endingBalance0 = _getProxyBalance(token0);
-        uint256 endingBalance1 = _getProxyBalance(token1);
+        amount0 = uint128(_getProxyBalance(token0) - startingBalance0);
+        amount1 = uint128(_getProxyBalance(token1) - startingBalance1);
 
         // NOTE: The limitation of this integration is the assumption that the tokens are valued
         //       equally (i.e. 1.000000 USDC = 1.000000000000000000 USDS).
         uint256 rateLimitDecrease =
-            _getNormalizedBalance(token0, endingBalance0 - startingBalance0) +
-            _getNormalizedBalance(token1, endingBalance1 - startingBalance1);
+            _getNormalizedBalance(token0, amount0) +
+            _getNormalizedBalance(token1, amount1);
 
         // Perform rate limit decrease.
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
         _decreaseRateLimit(LIMIT_WITHDRAW, poolId, rateLimitDecrease);
-
-        amount0 = uint128(endingBalance0 - startingBalance0);
-        amount1 = uint128(endingBalance1 - startingBalance1);
     }
 
     function _swap(

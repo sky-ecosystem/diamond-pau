@@ -31,8 +31,6 @@ interface IMapleTokenLike is IERC4626Like {
 
 interface IMapleTokenExtendedLike is IMapleTokenLike {
 
-    function asset() external view returns (address);
-
     function manager() external view returns (address);
 
 }

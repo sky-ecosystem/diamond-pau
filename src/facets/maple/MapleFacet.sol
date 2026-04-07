@@ -12,8 +12,6 @@ import { IMapleFacet } from "./IMapleFacet.sol";
 
 interface IMapleTokenLike {
 
-    function asset() external view returns (address);
-
     function requestRedeem(uint256 shares, address receiver) external;
 
     function removeShares(uint256 shares, address receiver) external;
