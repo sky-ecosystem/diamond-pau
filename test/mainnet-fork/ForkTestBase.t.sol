@@ -425,13 +425,13 @@ abstract contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function _wireBasinFacet() internal {
-        address basinFacet = address(new BasinFacet(address(mockBasin)));
+        address basinFacet = address(new BasinFacet());
 
         vm.label(basinFacet, "BasinFacet");
 
         factory.setValidFacet(basinFacet, true);
 
-        IController.Wire[] memory wires = new IController.Wire[](5);
+        IController.Wire[] memory wires = new IController.Wire[](4);
 
         wires[0] = IController.Wire(
             IMainnetControllerFull.depositBasin.selector,
@@ -451,11 +451,6 @@ abstract contract ForkTestBase is DssTest {
         wires[3] = IController.Wire(
             IMainnetControllerFull.LIMIT_BASIN_WITHDRAW.selector,
             IBasinFacet.LIMIT_WITHDRAW.selector
-        );
-
-        wires[4] = IController.Wire(
-            IMainnetControllerFull.basin.selector,
-            IBasinFacet.basin.selector
         );
 
         mainnetController.addWires(basinFacet, wires);

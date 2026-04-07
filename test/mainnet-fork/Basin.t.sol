@@ -59,7 +59,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
     function test_depositBasin_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.depositBasin(Ethereum.USDS, 1e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_depositBasin_notRelayer() external {
@@ -68,7 +68,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
             address(this),
             RELAYER_ROLE
         ));
-        mainnetController.depositBasin(Ethereum.USDS, 1e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_depositBasin_zeroMaxAmount() external {
@@ -83,7 +83,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
-        mainnetController.depositBasin(Ethereum.USDS, 1e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_depositBasin_rateLimitBoundary() external {
@@ -91,10 +91,10 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
-        mainnetController.depositBasin(Ethereum.USDS, BASIN_MAX_AMOUNT + 1e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, BASIN_MAX_AMOUNT + 1e18);
 
         vm.prank(relayer);
-        mainnetController.depositBasin(Ethereum.USDS, BASIN_MAX_AMOUNT);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, BASIN_MAX_AMOUNT);
     }
 
     function test_depositBasin() external {
@@ -110,7 +110,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
         vm.record();
 
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositBasin(Ethereum.USDS, depositAmount);
+        uint256 shares = mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, depositAmount);
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -130,7 +130,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
         deal(Ethereum.USDS, address(almProxy), depositAmount);
 
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositBasin(Ethereum.USDS, depositAmount);
+        uint256 shares = mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, depositAmount);
 
         assertEq(shares, customShares);
         assertEq(IERC20Like(Ethereum.USDS).balanceOf(address(almProxy)),  0);
@@ -150,7 +150,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(key), BASIN_MAX_AMOUNT);
 
-        mainnetController.depositBasin(Ethereum.USDS, 1_000_000e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e18);
 
@@ -160,12 +160,12 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         deal(Ethereum.USDS, address(almProxy), currentLimit);
 
-        mainnetController.depositBasin(Ethereum.USDS, currentLimit);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, currentLimit);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.depositBasin(Ethereum.USDS, 1);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1);
 
         vm.stopPrank();
     }
@@ -177,7 +177,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
     function test_withdrawBasin_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.withdrawBasin(Ethereum.USDS, 1e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_withdrawBasin_notRelayer() external {
@@ -186,7 +186,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
             address(this),
             RELAYER_ROLE
         ));
-        mainnetController.withdrawBasin(Ethereum.USDS, 1e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_withdrawBasin_zeroMaxAmount() external {
@@ -204,7 +204,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
-        mainnetController.withdrawBasin(Ethereum.USDS, 1e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1e18);
     }
 
     function test_withdrawBasin_rateLimitBoundary() external {
@@ -212,10 +212,10 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
-        mainnetController.withdrawBasin(Ethereum.USDS, BASIN_MAX_AMOUNT + 1e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, BASIN_MAX_AMOUNT + 1e18);
 
         vm.prank(relayer);
-        mainnetController.withdrawBasin(Ethereum.USDS, BASIN_MAX_AMOUNT);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, BASIN_MAX_AMOUNT);
     }
 
     function test_withdrawBasin() external {
@@ -229,7 +229,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         vm.record();
 
         vm.prank(relayer);
-        uint256 assetsWithdrawn = mainnetController.withdrawBasin(Ethereum.USDS, withdrawAmount);
+        uint256 assetsWithdrawn = mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, withdrawAmount);
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -247,7 +247,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         deal(Ethereum.USDS, address(mockBasin), customAmount);
 
         vm.prank(relayer);
-        uint256 assetsWithdrawn = mainnetController.withdrawBasin(Ethereum.USDS, maxAmount);
+        uint256 assetsWithdrawn = mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, maxAmount);
 
         assertEq(assetsWithdrawn, customAmount);
         assertEq(IERC20Like(Ethereum.USDS).balanceOf(address(almProxy)),  customAmount);
@@ -267,7 +267,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(key), BASIN_MAX_AMOUNT);
 
-        mainnetController.withdrawBasin(Ethereum.USDS, 1_000_000e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e18);
 
@@ -277,14 +277,14 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         deal(Ethereum.USDS, address(mockBasin), currentLimit);
 
-        mainnetController.withdrawBasin(Ethereum.USDS, currentLimit);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, currentLimit);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
 
         deal(Ethereum.USDS, address(mockBasin), 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.withdrawBasin(Ethereum.USDS, 1);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1);
 
         vm.stopPrank();
     }
@@ -345,7 +345,7 @@ contract MainnetController_Basin_RateLimitIsolation_Tests is Basin_TestBase {
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
         vm.prank(relayer);
-        mainnetController.depositBasin(Ethereum.USDS, 1_000_000e18);
+        mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey1), 4_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(depositKey2), BASIN_MAX_AMOUNT);
@@ -358,7 +358,7 @@ contract MainnetController_Basin_RateLimitIsolation_Tests is Basin_TestBase {
         deal(Ethereum.USDS, address(mockBasin), 1_000_000e18);
 
         vm.prank(relayer);
-        mainnetController.withdrawBasin(Ethereum.USDS, 1_000_000e18);
+        mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey1), 4_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey2), BASIN_MAX_AMOUNT);

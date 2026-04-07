@@ -15,8 +15,6 @@ interface IControllerLike {
 
     function addWires(address facet, Wire[] calldata wires) external;
 
-    function basin() external view returns (address);
-
     function LIMIT_BASIN_DEPOSIT() external pure returns (bytes32);
 
     function LIMIT_BASIN_WITHDRAW() external pure returns (bytes32);
@@ -25,33 +23,26 @@ interface IControllerLike {
 
 abstract contract BasinFacet_TestBase is Controller_TestBase {
 
-    address internal basinAddress = makeAddr("basin");
-
     IControllerLike internal controller;
 
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        address facet = address(new BasinFacet(basinAddress));
+        address facet = address(new BasinFacet());
 
         vm.label(facet, "BasinFacet");
 
         vm.prank(facetValidator);
         factory.setValidFacet(facet, true);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](3);
+        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
 
         wires[0] = IControllerLike.Wire(
-            IControllerLike.basin.selector,
-            IBasinFacet.basin.selector
-        );
-
-        wires[1] = IControllerLike.Wire(
             IControllerLike.LIMIT_BASIN_DEPOSIT.selector,
             IBasinFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[1] = IControllerLike.Wire(
             IControllerLike.LIMIT_BASIN_WITHDRAW.selector,
             IBasinFacet.LIMIT_WITHDRAW.selector
         );
@@ -64,10 +55,6 @@ abstract contract BasinFacet_TestBase is Controller_TestBase {
 }
 
 contract Controller_BasinFacet_View_Tests is BasinFacet_TestBase {
-
-    function test_basin() external view {
-        assertEq(controller.basin(), basinAddress);
-    }
 
     function test_LIMIT_BASIN_DEPOSIT() external view {
         assertEq(controller.LIMIT_BASIN_DEPOSIT(), keccak256("LIMIT_BASIN_DEPOSIT"));
