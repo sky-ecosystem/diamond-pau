@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IController }  from "../../src/interfaces/IController.sol";
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
 
 import { Controller_TestBase } from "./TestBase.t.sol";
 
@@ -46,118 +47,79 @@ contract ControllerIntegration_Tests is Controller_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** addWire Tests                                                                          ***/
+    /*** optInToFacet Tests                                                                     ***/
     /**********************************************************************************************/
 
-    function test_addWire_notAdmin() external {
+    function test_optInToFacet_notAdmin() external {
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.addWire(address(0), IController.Wire(bytes4(0), bytes4(0)));
+        controller.optInToFacet("MockFacet1");
     }
 
-    function test_addWire_notValidFacet() external {
-        address facet = makeAddr("facet");
-
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
-        vm.prank(admin);
-        controller.addWire(facet, IController.Wire(bytes4(0), bytes4(0)));
-    }
-
-    function test_addWire() external {
-        address facet = address(new MockFacet1());
-
-        bytes4 callSelector     = 0x12345678;
-        bytes4 delegateSelector = 0x87654321;
-
-        vm.prank(facetValidator);
-        factory.setValidFacet(facet, true);
-
-        vm.expectEmit(address(controller));
-        emit IController.WireAdded(callSelector, delegateSelector, facet);
+    function test_optInToFacet() external {
+        assertEq(controller.isFacetWhitelisted("MockFacet1"), false);
 
         vm.prank(admin);
-        controller.addWire(facet, IController.Wire(callSelector, delegateSelector));
+        controller.optInToFacet("MockFacet1");
 
-        IController.Dispatch memory dispatch = controller.getDispatch(callSelector);
+        assertEq(controller.isFacetWhitelisted("MockFacet1"), true);
+    }
 
-        assertEq(dispatch.facet,            facet);
-        assertEq(dispatch.delegateSelector, delegateSelector);
+    /**********************************************************************************************/
+    /*** optOutOfFacet Tests                                                                    ***/
+    /**********************************************************************************************/
 
-        vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelector);
+    function test_optOutOfFacet_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.optOutOfFacet("MockFacet1");
+    }
+
+    function test_optOutOfFacet() external {
+        vm.prank(admin);
+        controller.optInToFacet("MockFacet1");
+
+        assertEq(controller.isFacetWhitelisted("MockFacet1"), true);
 
         vm.prank(admin);
-        controller.removeWire(callSelector);
+        controller.optOutOfFacet("MockFacet1");
 
-        dispatch = controller.getDispatch(callSelector);
-
-        assertEq(dispatch.facet,            address(0));
-        assertEq(dispatch.delegateSelector, bytes4(0));
+        assertEq(controller.isFacetWhitelisted("MockFacet1"), false);
     }
 
     /**********************************************************************************************/
-    /*** addWires Tests                                                                         ***/
+    /*** setAllowAllFacets Tests                                                                ***/
     /**********************************************************************************************/
 
-    function test_addWires_notAdmin() external {
+    function test_setAllowAllFacets_notAdmin() external {
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
-        controller.addWires(address(0), new IController.Wire[](0));
+        controller.setAllowAllFacets(false);
     }
 
-    function test_addWires_notValidFacet() external {
-        address facet = address(new MockFacet1());
+    function test_setAllowAllFacets() external {
+        assertEq(controller.allowAllFacets(), true);
 
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidFacet.selector, facet));
         vm.prank(admin);
-        controller.addWires(facet, new IController.Wire[](2));
+        controller.setAllowAllFacets(false);
+
+        assertEq(controller.allowAllFacets(), false);
+
+        vm.prank(admin);
+        controller.setAllowAllFacets(true);
+
+        assertEq(controller.allowAllFacets(), true);
     }
 
     /**********************************************************************************************/
-    /*** removeWire Tests                                                                       ***/
-    /**********************************************************************************************/
-
-    function test_removeWire_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
-        vm.prank(unauthorized);
-        controller.removeWire(bytes4(0));
-    }
-
-    /**********************************************************************************************/
-    /*** removeWires Tests                                                                      ***/
-    /**********************************************************************************************/
-
-    function test_removeWires_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
-        vm.prank(unauthorized);
-        controller.removeWires(new bytes4[](0));
-    }
-
-    /**********************************************************************************************/
-    /*** removeAllWiresFor Tests                                                                ***/
-    /**********************************************************************************************/
-
-    function test_removeAllWiresFor_notAdmin() external {
-        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
-        vm.prank(unauthorized);
-        controller.removeAllWiresFor(address(0));
-    }
-
-    /**********************************************************************************************/
-    /*** Fallback Tests                                                                         ***/
+    /*** Fallback Tests (registry-based dispatch)                                               ***/
     /**********************************************************************************************/
 
     function test_fallback_story() external {
         address facet1 = address(new MockFacet1());
         address facet2 = address(new MockFacet2());
 
-        address[] memory facets = new address[](2);
-        facets[0] = facet1;
-        facets[1] = facet2;
-
-        bytes4[] memory callSelectors = new bytes4[](2);
-        callSelectors[0] = IMockController.div.selector;
-        callSelectors[1] = IMockController.mul.selector;
+        // Calls revert before any wiring
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -165,7 +127,6 @@ contract ControllerIntegration_Tests is Controller_TestBase {
                 IMockController.div.selector
             )
         );
-
         controller.div(0);
 
         vm.expectRevert(
@@ -174,178 +135,70 @@ contract ControllerIntegration_Tests is Controller_TestBase {
                 IMockController.mul.selector
             )
         );
-
         controller.mul(0);
 
-        assertEq(controller.circuits().length, 0);
+        // Register facets on registry and wire them
 
-        IController.Dispatch[] memory dispatches = controller.getDispatches(callSelectors);
+        vm.startPrank(registryAdmin);
 
-        assertEq(dispatches.length, 2);
+        registry.registerFacet("MockFacet1", facet1);
+        registry.registerFacet("MockFacet2", facet2);
 
-        assertEq(dispatches[0].facet,            address(0));
-        assertEq(dispatches[0].delegateSelector, bytes4(0));
-        assertEq(dispatches[1].facet,            address(0));
-        assertEq(dispatches[1].delegateSelector, bytes4(0));
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
+        wires[0] = IPAURegistry.Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
+        wires[1] = IPAURegistry.Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
 
-        IController.Wire[][] memory wirings = controller.getWirings(facets);
+        string[] memory identifiers = new string[](2);
+        identifiers[0] = "MockFacet1";
+        identifiers[1] = "MockFacet1";
 
-        assertEq(wirings.length,    2);
-        assertEq(wirings[0].length, 0);
-        assertEq(wirings[1].length, 0);
+        registry.addWirings(wires, identifiers);
 
-        vm.startPrank(facetValidator);
-        factory.setValidFacet(facet1, true);
-        factory.setValidFacet(facet2, true);
         vm.stopPrank();
 
-        // Wire div to facet1.divideBy2 and mul to facet1.multiplyBy2
-
-        IController.Wire[] memory wires = new IController.Wire[](2);
-        wires[0] = IController.Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
-        wires[1] = IController.Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
-
-        vm.prank(admin);
-        controller.addWires(facet1, wires);
+        // Controller (allowAllFacets=true by default) can call through
 
         assertEq(controller.div(12), 6);
         assertEq(controller.mul(12), 24);
 
-        IController.Circuit[] memory circuits = controller.circuits();
+        IController.Dispatch memory dispatch = controller.getDispatch(IMockController.div.selector);
+        assertEq(dispatch.facet,            facet1);
+        assertEq(dispatch.delegateSelector, MockFacet1.divideBy2.selector);
 
-        assertEq(circuits.length, 1);
+        // Re-wire div to facet2.divideBy4 via registry
 
-        assertEq(circuits[0].facet,        facet1);
-        assertEq(circuits[0].wires.length, 2);
-
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[1].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        dispatches = controller.getDispatches(callSelectors);
-
-        assertEq(dispatches.length, 2);
-
-        assertEq(dispatches[0].facet,            facet1);
-        assertEq(dispatches[0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(dispatches[1].facet,            facet1);
-        assertEq(dispatches[1].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        wirings = controller.getWirings(facets);
-
-        assertEq(wirings.length, 2);
-
-        assertEq(wirings[0].length, 2);
-        assertEq(wirings[0][0].callSelector,     IMockController.div.selector);
-        assertEq(wirings[0][0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(wirings[0][1].callSelector,     IMockController.mul.selector);
-        assertEq(wirings[0][1].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        assertEq(wirings[1].length, 0);
-
-        // Re-wire div to facet2.divideBy4 (keeping mul to facet1.multiplyBy2)
-
-        vm.startPrank(admin);
-        controller.removeWire(IMockController.div.selector);
-        controller.addWire(facet2, IController.Wire(IMockController.div.selector, MockFacet2.divideBy4.selector));
+        vm.startPrank(registryAdmin);
+        registry.removeWiring(IMockController.div.selector);
+        registry.addWiring(
+            IMockController.div.selector,
+            MockFacet2.divideBy4.selector,
+            "MockFacet2"
+        );
         vm.stopPrank();
 
         assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 24);
 
-        circuits = controller.circuits();
+        // Re-wire mul to facet2.multiplyBy4 via registry
 
-        assertEq(circuits.length, 2);
-
-        assertEq(circuits[0].facet,        facet1);
-        assertEq(circuits[0].wires.length, 1);
-
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        assertEq(circuits[1].facet,        facet2);
-        assertEq(circuits[1].wires.length, 1);
-
-        assertEq(circuits[1].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[1].wires[0].delegateSelector, MockFacet2.divideBy4.selector);
-
-        dispatches = controller.getDispatches(callSelectors);
-
-        assertEq(dispatches.length, 2);
-
-        assertEq(dispatches[0].facet,            facet2);
-        assertEq(dispatches[0].delegateSelector, MockFacet2.divideBy4.selector);
-        assertEq(dispatches[1].facet,            facet1);
-        assertEq(dispatches[1].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        wirings = controller.getWirings(facets);
-
-        assertEq(wirings.length, 2);
-
-        assertEq(wirings[0].length, 1);
-        assertEq(wirings[0][0].callSelector,     IMockController.mul.selector);
-        assertEq(wirings[0][0].delegateSelector, MockFacet1.multiplyBy2.selector);
-
-        assertEq(wirings[1].length, 1);
-        assertEq(wirings[1][0].callSelector,     IMockController.div.selector);
-        assertEq(wirings[1][0].delegateSelector, MockFacet2.divideBy4.selector);
-
-        // Remove all wires for facet1 and add a new wire for mul to facet2.multiplyBy4
-
-        vm.startPrank(admin);
-        controller.removeAllWiresFor(facet1);
-        controller.addWire(facet2, IController.Wire(IMockController.mul.selector, MockFacet2.multiplyBy4.selector));
+        vm.startPrank(registryAdmin);
+        registry.removeWiring(IMockController.mul.selector);
+        registry.addWiring(
+            IMockController.mul.selector,
+            MockFacet2.multiplyBy4.selector,
+            "MockFacet2"
+        );
         vm.stopPrank();
 
         assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 48);
 
-        circuits = controller.circuits();
+        // Remove wiring — calls revert again
 
-        assertEq(circuits.length, 1);
-
-        assertEq(circuits[0].facet,        facet2);
-        assertEq(circuits[0].wires.length, 2);
-
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet2.divideBy4.selector);
-
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[1].delegateSelector, MockFacet2.multiplyBy4.selector);
-
-        dispatches = controller.getDispatches(callSelectors);
-
-        assertEq(dispatches.length, 2);
-
-        assertEq(dispatches[0].facet,            facet2);
-        assertEq(dispatches[0].delegateSelector, MockFacet2.divideBy4.selector);
-        assertEq(dispatches[1].facet,            facet2);
-        assertEq(dispatches[1].delegateSelector, MockFacet2.multiplyBy4.selector);
-
-        wirings = controller.getWirings(facets);
-
-        assertEq(wirings.length, 2);
-
-        assertEq(wirings[0].length, 0);
-
-        assertEq(wirings[1].length, 2);
-        assertEq(wirings[1][0].callSelector,     IMockController.div.selector);
-        assertEq(wirings[1][0].delegateSelector, MockFacet2.divideBy4.selector);
-        assertEq(wirings[1][1].callSelector,     IMockController.mul.selector);
-        assertEq(wirings[1][1].delegateSelector, MockFacet2.multiplyBy4.selector);
-
-        // Remove wires for div and mul
-
-        callSelectors[0] = IMockController.div.selector;
-        callSelectors[1] = IMockController.mul.selector;
-
-        vm.prank(admin);
-        controller.removeWires(callSelectors);
-
-        circuits = controller.circuits();
-
-        assertEq(circuits.length, 0);
+        vm.startPrank(registryAdmin);
+        registry.removeWiring(IMockController.div.selector);
+        registry.removeWiring(IMockController.mul.selector);
+        vm.stopPrank();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -353,7 +206,6 @@ contract ControllerIntegration_Tests is Controller_TestBase {
                 IMockController.div.selector
             )
         );
-
         controller.div(0);
 
         vm.expectRevert(
@@ -362,25 +214,71 @@ contract ControllerIntegration_Tests is Controller_TestBase {
                 IMockController.mul.selector
             )
         );
-
         controller.mul(0);
+    }
 
-        assertEq(controller.circuits().length, 0);
+    /**********************************************************************************************/
+    /*** Whitelist Tests (allowAllFacets = false)                                               ***/
+    /**********************************************************************************************/
 
-        dispatches = controller.getDispatches(callSelectors);
+    function test_fallback_whitelistEnforcement() external {
+        address facet1 = address(new MockFacet1());
 
-        assertEq(dispatches.length, 2);
+        // Register and wire facet on registry
 
-        assertEq(dispatches[0].facet,            address(0));
-        assertEq(dispatches[0].delegateSelector, bytes4(0));
-        assertEq(dispatches[1].facet,            address(0));
-        assertEq(dispatches[1].delegateSelector, bytes4(0));
+        vm.startPrank(registryAdmin);
+        registry.registerFacet("MockFacet1", facet1);
+        registry.addWiring(
+            IMockController.div.selector,
+            MockFacet1.divideBy2.selector,
+            "MockFacet1"
+        );
+        vm.stopPrank();
 
-        wirings = controller.getWirings(facets);
+        // Works with allowAllFacets=true (default)
+        assertEq(controller.div(12), 6);
 
-        assertEq(wirings.length,    2);
-        assertEq(wirings[0].length, 0);
-        assertEq(wirings[1].length, 0);
+        // Disable allowAllFacets
+        vm.prank(admin);
+        controller.setAllowAllFacets(false);
+
+        // Now fails because MockFacet1 is not whitelisted
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.FacetNotWhitelisted.selector,
+                IMockController.div.selector,
+                "MockFacet1"
+            )
+        );
+        controller.div(12);
+
+        // Opt in to MockFacet1
+        vm.prank(admin);
+        controller.optInToFacet("MockFacet1");
+
+        // Now works
+        assertEq(controller.div(12), 6);
+
+        // Opt out
+        vm.prank(admin);
+        controller.optOutOfFacet("MockFacet1");
+
+        // Fails again
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IController.FacetNotWhitelisted.selector,
+                IMockController.div.selector,
+                "MockFacet1"
+            )
+        );
+        controller.div(12);
+
+        // Re-enable allowAllFacets
+        vm.prank(admin);
+        controller.setAllowAllFacets(true);
+
+        // Works again
+        assertEq(controller.div(12), 6);
     }
 
 }

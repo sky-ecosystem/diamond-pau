@@ -15,15 +15,29 @@ contract PAUFactory_Tests is Test {
 
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    address internal admin          = makeAddr("admin");
-    address internal deployer       = makeAddr("deployer");
-    address internal facetValidator = makeAddr("facetValidator");
+    address internal admin    = makeAddr("admin");
+    address internal deployer = makeAddr("deployer");
+    address internal registry = makeAddr("registry");
 
     PAUFactory internal factory;
 
     function setUp() external {
         vm.prank(deployer);
-        factory = new PAUFactory(admin, facetValidator);
+        factory = new PAUFactory(admin, registry);
+    }
+
+    /**********************************************************************************************/
+    /*** Constructor Tests                                                                      ***/
+    /**********************************************************************************************/
+
+    function test_constructor_zeroRegistry() external {
+        vm.expectRevert(IPAUFactory.ZeroRegistry.selector);
+        new PAUFactory(admin, address(0));
+    }
+
+    function test_constructor() external view {
+        assertEq(factory.registry(), registry);
+        assertEq(factory.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/

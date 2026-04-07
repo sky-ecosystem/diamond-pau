@@ -7,17 +7,11 @@ import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
 import { IERC4626Facet } from "../../../src/facets/erc4626/IERC4626Facet.sol";
 import { ERC4626Facet }  from "../../../src/facets/erc4626/ERC4626Facet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
 
     function getMaxExchangeRate(address token) external view returns (uint256);
@@ -31,30 +25,29 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new ERC4626Facet());
 
         vm.label(facet, "ERC4626Facet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("ERC4626Facet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getMaxExchangeRate.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "ERC4626Facet");
+
+        vm.stopPrank();
     }
 
 }

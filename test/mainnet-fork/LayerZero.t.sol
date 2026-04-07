@@ -21,13 +21,16 @@ import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol"
 
 import { makeAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IController }  from "../../src/interfaces/IController.sol";
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 import { ALMProxy }       from "../../src/ALMProxy.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { PAUFactory }     from "../../src/PAUFactory.sol";
 import { RateLimits }     from "../../src/RateLimits.sol";
+
+import { PAURegistry } from "../../src/registry/PAURegistry.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -399,6 +402,7 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     ALMProxy               internal foreignAlmProxy;
     IForeignControllerFull internal foreignController;
     PAUFactory             internal foreignFactory;
+    PAURegistry            internal foreignRegistry;
     RateLimits             internal foreignRateLimits;
 
     /**********************************************************************************************/
@@ -447,13 +451,14 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         AccessControls foreignAccessControls = new AccessControls(SPARK_EXECUTOR);
 
-        foreignFactory = new PAUFactory(SPARK_EXECUTOR, SPARK_EXECUTOR);
+        foreignRegistry = new PAURegistry(SPARK_EXECUTOR, SPARK_EXECUTOR);
+        foreignFactory  = new PAUFactory(SPARK_EXECUTOR, address(foreignRegistry));
 
         foreignController = IForeignControllerFull(payable(address(new Controller({
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
             accessControls_ : address(foreignAccessControls),
-            factory_        : address(foreignFactory)
+            registry_       : address(foreignRegistry)
         }))));
 
         vm.startPrank(SPARK_EXECUTOR);
@@ -471,36 +476,44 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
         vm.stopPrank();
     }
 
+    function _addForeignWirings(IPAURegistry.Wire[] memory wires, string memory facetIdentifier) internal {
+        string[] memory identifiers = new string[](wires.length);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            identifiers[i] = facetIdentifier;
+        }
+        foreignRegistry.addWirings(wires, identifiers);
+    }
+
     function _wireLayerZeroFacetForeignController() internal {
         address layerZeroFacet = address(new LayerZeroFacet());
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        foreignFactory.setValidFacet(layerZeroFacet, true);
+        foreignRegistry.registerFacet("LayerZeroFacet", layerZeroFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](4);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setLayerZeroRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.transferTokenLayerZero.selector,
             ILayerZeroFacet.transfer.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.layerZeroRecipients.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
-        foreignController.addWires(layerZeroFacet, wires);
+        _addForeignWirings(wires, "LayerZeroFacet");
     }
 
     function _getBlock() internal pure override returns (uint256) {

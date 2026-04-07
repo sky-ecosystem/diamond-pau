@@ -7,17 +7,11 @@ import { IFacetBase } from "../../../src/facets/IFacetBase.sol";
 import { IOTCFacet }  from "../../../src/facets/otc/IOTCFacet.sol";
 import { OTCFacet }   from "../../../src/facets/otc/OTCFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setBuffer(address exchange, address buffer) external;
 
     function setIsWhitelisted(address exchange, address asset, bool isWhitelisted) external;
@@ -43,60 +37,59 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new OTCFacet());
 
         vm.label(facet, "OTCFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("OTCFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](8);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](8);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setBuffer.selector,
             IOTCFacet.setBuffer.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.setMaxSlippage.selector,
             IOTCFacet.setMaxSlippage.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IPAURegistry.Wire(
             IControllerLike.setRechargeRate.selector,
             IOTCFacet.setRechargeRate.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IPAURegistry.Wire(
             IControllerLike.setIsWhitelisted.selector,
             IOTCFacet.setIsWhitelisted.selector
         );
 
-        wires[4] = IControllerLike.Wire(
+        wires[4] = IPAURegistry.Wire(
             IControllerLike.getBuffer.selector,
             IOTCFacet.getBuffer.selector
         );
 
-        wires[5] = IControllerLike.Wire(
+        wires[5] = IPAURegistry.Wire(
             IControllerLike.getMaxSlippage.selector,
             IOTCFacet.getMaxSlippage.selector
         );
 
-        wires[6] = IControllerLike.Wire(
+        wires[6] = IPAURegistry.Wire(
             IControllerLike.getRechargeRate.selector,
             IOTCFacet.getRechargeRate.selector
         );
 
-        wires[7] = IControllerLike.Wire(
+        wires[7] = IPAURegistry.Wire(
             IControllerLike.getIsWhitelisted.selector,
             IOTCFacet.getIsWhitelisted.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "OTCFacet");
+
+        vm.stopPrank();
     }
 
 }

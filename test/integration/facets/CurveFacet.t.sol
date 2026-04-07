@@ -6,17 +6,11 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 import { ICurveFacet } from "../../../src/facets/curve/ICurveFacet.sol";
 import { CurveFacet }  from "../../../src/facets/curve/CurveFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
 
     function getCurveMaxSlippage(address pool) external view returns (uint256);
@@ -30,30 +24,29 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new CurveFacet());
 
         vm.label(facet, "CurveFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("CurveFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setCurveMaxSlippage.selector,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getCurveMaxSlippage.selector,
             ICurveFacet.getMaxSlippage.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "CurveFacet");
+
+        vm.stopPrank();
     }
 
 }

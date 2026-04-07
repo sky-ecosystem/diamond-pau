@@ -18,13 +18,16 @@ import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { CentrifugeFacet } from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { ERC7540Facet }    from "../../src/facets/erc7540/ERC7540Facet.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IController }  from "../../src/interfaces/IController.sol";
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 import { ALMProxy }       from "../../src/ALMProxy.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { PAUFactory }     from "../../src/PAUFactory.sol";
 import { RateLimits }     from "../../src/RateLimits.sol";
+
+import { PAURegistry } from "../../src/registry/PAURegistry.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -73,6 +76,7 @@ contract ForkTestBase is Test {
     IForeignControllerFull foreignController;
     RateLimits             rateLimits;
     PAUFactory             factory;
+    PAURegistry            registry;
 
     /**********************************************************************************************/
     /*** Addresses for testing                                                                  ***/
@@ -122,13 +126,14 @@ contract ForkTestBase is Test {
 
         accessControls = new AccessControls(GROVE_EXECUTOR);
 
-        factory = new PAUFactory(GROVE_EXECUTOR, GROVE_EXECUTOR);
+        registry = new PAURegistry(GROVE_EXECUTOR, GROVE_EXECUTOR);
+        factory  = new PAUFactory(GROVE_EXECUTOR, address(registry));
 
         foreignController = IForeignControllerFull(payable(new Controller({
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls),
-            factory_        : address(factory)
+            registry_       : address(registry)
         })));
 
         vm.startPrank(GROVE_EXECUTOR);
@@ -156,6 +161,14 @@ contract ForkTestBase is Test {
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
 
+    function _addWirings(IPAURegistry.Wire[] memory wires, string memory facetIdentifier) internal {
+        string[] memory identifiers = new string[](wires.length);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            identifiers[i] = facetIdentifier;
+        }
+        registry.addWirings(wires, identifiers);
+    }
+
     function _wireCentrifugeFacet() internal {
         // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
 
@@ -163,51 +176,51 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        factory.setValidFacet(centrifugeFacet, true);
+        registry.registerFacet("CentrifugeFacet", centrifugeFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](8);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.transferSharesCentrifuge.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IPAURegistry.Wire(
             IForeignControllerFull.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
-        foreignController.addWires(centrifugeFacet, wires);
+        _addWirings(wires, "CentrifugeFacet");
     }
 
     function _wireERC7540Facet() internal {
@@ -215,41 +228,41 @@ contract ForkTestBase is Test {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        factory.setValidFacet(erc7540Facet, true);
+        registry.registerFacet("ERC7540Facet", erc7540Facet);
 
-        IController.Wire[] memory wires = new IController.Wire[](6);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](6);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.requestDepositERC7540.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.claimDepositERC7540.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.requestRedeemERC7540.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.claimRedeemERC7540.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
             IERC7540Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_7540_REDEEM.selector,
             IERC7540Facet.LIMIT_REDEEM.selector
         );
 
-        foreignController.addWires(erc7540Facet, wires);
+        _addWirings(wires, "ERC7540Facet");
     }
 
 }

@@ -6,17 +6,11 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 import { ICentrifugeFacet } from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
 import { CentrifugeFacet }  from "../../../src/facets/centrifuge/CentrifugeFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
@@ -33,30 +27,29 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new CentrifugeFacet());
 
         vm.label(facet, "CentrifugeFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("CentrifugeFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "CentrifugeFacet");
+
+        vm.stopPrank();
     }
 
 }

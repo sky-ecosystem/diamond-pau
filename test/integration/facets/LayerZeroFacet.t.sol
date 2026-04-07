@@ -7,17 +7,11 @@ import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { ILayerZeroFacet } from "../../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { LayerZeroFacet }  from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
     function getRecipient(uint32 destinationEndpointId) external view returns (bytes32);
@@ -31,30 +25,29 @@ abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new LayerZeroFacet());
 
         vm.label(facet, "LayerZeroFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("LayerZeroFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getRecipient.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "LayerZeroFacet");
+
+        vm.stopPrank();
     }
 
 }

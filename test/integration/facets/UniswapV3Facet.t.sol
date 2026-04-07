@@ -7,17 +7,11 @@ import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { IUniswapV3Facet } from "../../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 import { UniswapV3Facet }  from "../../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setLiquidityLowerTickBound(address pool, int24 lowerTickBound) external;
 
     function setLiquidityUpperTickBound(address pool, int24 upperTickBound) external;
@@ -45,65 +39,64 @@ abstract contract UniswapV3Facet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new UniswapV3Facet(makeAddr("positionManager"), makeAddr("router")));
 
         vm.label(facet, "UniswapV3Facet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("UniswapV3Facet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](9);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](9);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setMaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.setMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IPAURegistry.Wire(
             IControllerLike.setLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IPAURegistry.Wire(
             IControllerLike.setLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
-        wires[4] = IControllerLike.Wire(
+        wires[4] = IPAURegistry.Wire(
             IControllerLike.setTWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
-        wires[5] = IControllerLike.Wire(
+        wires[5] = IPAURegistry.Wire(
             IControllerLike.getMaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        wires[6] = IControllerLike.Wire(
+        wires[6] = IPAURegistry.Wire(
             IControllerLike.getMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        wires[7] = IControllerLike.Wire(
+        wires[7] = IPAURegistry.Wire(
             IControllerLike.getLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        wires[8] = IControllerLike.Wire(
+        wires[8] = IPAURegistry.Wire(
             IControllerLike.getTWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "UniswapV3Facet");
+
+        vm.stopPrank();
     }
 
 }

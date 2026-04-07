@@ -38,13 +38,16 @@ import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.s
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IController }  from "../../src/interfaces/IController.sol";
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 import { ALMProxy }       from "../../src/ALMProxy.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { PAUFactory }     from "../../src/PAUFactory.sol";
 import { RateLimits }     from "../../src/RateLimits.sol";
+
+import { PAURegistry } from "../../src/registry/PAURegistry.sol";
 
 import { IForeignControllerFull }  from "../interfaces/IForeignControllerFull.sol";
 
@@ -93,6 +96,7 @@ abstract contract ForkTestBase is Test {
     IForeignControllerFull foreignController;
     RateLimits             rateLimits;
     PAUFactory             factory;
+    PAURegistry            registry;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -138,13 +142,14 @@ abstract contract ForkTestBase is Test {
 
         accessControls = new AccessControls(SPARK_EXECUTOR);
 
-        factory = new PAUFactory(SPARK_EXECUTOR, SPARK_EXECUTOR);
+        registry = new PAURegistry(SPARK_EXECUTOR, SPARK_EXECUTOR);
+        factory  = new PAUFactory(SPARK_EXECUTOR, address(registry));
 
         foreignController = IForeignControllerFull(payable(new Controller({
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
             accessControls_ : address(accessControls),
-            factory_        : address(factory)
+            registry_       : address(registry)
         })));
 
         vm.startPrank(SPARK_EXECUTOR);
@@ -225,71 +230,77 @@ abstract contract ForkTestBase is Test {
     /*** Facet wiring helpers.                                                                  ***/
     /**********************************************************************************************/
 
+    function _addWirings(IPAURegistry.Wire[] memory wires, string memory facetIdentifier) internal {
+        string[] memory identifiers = new string[](wires.length);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            identifiers[i] = facetIdentifier;
+        }
+        registry.addWirings(wires, identifiers);
+    }
+
     function _wireCurveFacet() internal {
         address curveFacet = address(new CurveFacet());
 
         vm.label(curveFacet, "CurveFacet");
 
-        factory.setValidFacet(curveFacet, true);
+        registry.registerFacet("CurveFacet", curveFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](8);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setCurveMaxSlippage.selector,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.getCurveMaxSlippage.selector,
             ICurveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.swapCurve.selector,
             ICurveFacet.swap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.addLiquidityCurve.selector,
             ICurveFacet.addLiquidity.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.removeLiquidityCurve.selector,
             ICurveFacet.removeLiquidity.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_CURVE_SWAP.selector,
             ICurveFacet.LIMIT_SWAP.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             ICurveFacet.LIMIT_WITHDRAW.selector
         );
 
-        foreignController.addWires(curveFacet, wires);
+        _addWirings(wires, "CurveFacet");
     }
 
     function _wireMerklFacet() internal {
         address merklFacet = address(new MerklFacet(GroveBase.MERKL_DISTRIBUTOR));
 
-        factory.setValidFacet(merklFacet, true);
+        registry.registerFacet("MerklFacet", merklFacet);
 
         vm.label(merklFacet, "MerklFacet");
 
-        foreignController.addWire(
-            merklFacet,
-            IController.Wire(
-                IForeignControllerFull.toggleOperatorMerkl.selector,
-                IMerklFacet.toggleOperator.selector
-            )
+        registry.addWiring(
+            IForeignControllerFull.toggleOperatorMerkl.selector,
+            IMerklFacet.toggleOperator.selector,
+            "MerklFacet"
         );
     }
 
@@ -298,21 +309,21 @@ abstract contract ForkTestBase is Test {
 
         vm.label(pendleFacet, "PendleFacet");
 
-        factory.setValidFacet(pendleFacet, true);
+        registry.registerFacet("PendleFacet", pendleFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.redeemPendlePT.selector,
             IPendleFacet.redeem.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             IPendleFacet.LIMIT_REDEEM.selector
         );
 
-        foreignController.addWires(pendleFacet, wires);
+        _addWirings(wires, "PendleFacet");
     }
 
     function _wireAaveFacet() internal {
@@ -320,41 +331,41 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        factory.setValidFacet(aaveFacet, true);
+        registry.registerFacet("AaveFacet", aaveFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](6);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](6);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setAaveMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.depositAave.selector,
             IAaveFacet.deposit.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.withdrawAave.selector,
             IAaveFacet.withdraw.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             IAaveFacet.LIMIT_WITHDRAW.selector
         );
 
-        foreignController.addWires(aaveFacet, wires);
+        _addWirings(wires, "AaveFacet");
     }
 
     function _wireERC4626Facet() internal {
@@ -362,51 +373,51 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
-        factory.setValidFacet(erc4626Facet, true);
+        registry.registerFacet("ERC4626Facet", erc4626Facet);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](8);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.maxExchangeRates.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.depositERC4626.selector,
             IERC4626Facet.deposit.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.withdrawERC4626.selector,
             IERC4626Facet.withdraw.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.redeemERC4626.selector,
             IERC4626Facet.redeem.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IPAURegistry.Wire(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
 
-        foreignController.addWires(erc4626Facet, wires);
+        _addWirings(wires, "ERC4626Facet");
     }
 
     function _wireSparkVaultFacet() internal {
@@ -414,21 +425,21 @@ abstract contract ForkTestBase is Test {
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
-        factory.setValidFacet(sparkVaultFacet, true);
+        registry.registerFacet("SparkVaultFacet", sparkVaultFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.takeFromSparkVault.selector,
             ISparkVaultFacet.take.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
             ISparkVaultFacet.LIMIT_TAKE.selector
         );
 
-        foreignController.addWires(sparkVaultFacet, wires);
+        _addWirings(wires, "SparkVaultFacet");
     }
 
     function _wireTransferAssetFacet() internal {
@@ -436,21 +447,21 @@ abstract contract ForkTestBase is Test {
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
-        factory.setValidFacet(transferAssetFacet, true);
+        registry.registerFacet("TransferAssetFacet", transferAssetFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.transferAsset.selector,
             ITransferAssetFacet.transfer.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_ASSET_TRANSFER.selector,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
         );
 
-        foreignController.addWires(transferAssetFacet, wires);
+        _addWirings(wires, "TransferAssetFacet");
     }
 
     function _wirePSM3Facet() internal {
@@ -458,31 +469,31 @@ abstract contract ForkTestBase is Test {
 
         vm.label(psm3Facet, "PSM3Facet");
 
-        factory.setValidFacet(psm3Facet, true);
+        registry.registerFacet("PSM3Facet", psm3Facet);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](4);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.depositPSM.selector,
             IPSM3Facet.deposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.withdrawPSM.selector,
             IPSM3Facet.withdraw.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_PSM_DEPOSIT.selector,
             IPSM3Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_PSM_WITHDRAW.selector,
             IPSM3Facet.LIMIT_WITHDRAW.selector
         );
 
-        foreignController.addWires(psm3Facet, wires);
+        _addWirings(wires, "PSM3Facet");
     }
 
     function _wireUniswapV3Facet() internal {
@@ -490,86 +501,86 @@ abstract contract ForkTestBase is Test {
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 
-        factory.setValidFacet(uniswapV3Facet, true);
+        registry.registerFacet("UniswapV3Facet", uniswapV3Facet);
 
-        IController.Wire[] memory wires = new IController.Wire[](15);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](15);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.addLiquidityUniswapV3.selector,
             IUniswapV3Facet.addLiquidity.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.removeLiquidityUniswapV3.selector,
             IUniswapV3Facet.removeLiquidity.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.swapUniswapV3.selector,
             IUniswapV3Facet.swap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.setUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.setUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.setUniswapV3AddLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IPAURegistry.Wire(
             IForeignControllerFull.setUniswapV3AddLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IPAURegistry.Wire(
             IForeignControllerFull.setUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
-        wires[8] = IController.Wire(
+        wires[8] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_DEPOSIT.selector,
             IUniswapV3Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[9] = IController.Wire(
+        wires[9] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_SWAP.selector,
             IUniswapV3Facet.LIMIT_SWAP.selector
         );
 
-        wires[10] = IController.Wire(
+        wires[10] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_WITHDRAW.selector,
             IUniswapV3Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[11] = IController.Wire(
+        wires[11] = IPAURegistry.Wire(
             IForeignControllerFull.getUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        wires[12] = IController.Wire(
+        wires[12] = IPAURegistry.Wire(
             IForeignControllerFull.getUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        wires[13] = IController.Wire(
+        wires[13] = IPAURegistry.Wire(
             IForeignControllerFull.getUniswapV3AddLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        wires[14] = IController.Wire(
+        wires[14] = IPAURegistry.Wire(
             IForeignControllerFull.getUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
-        foreignController.addWires(uniswapV3Facet, wires);
+        _addWirings(wires, "UniswapV3Facet");
     }
 
 }

@@ -6,17 +6,11 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 import { IAaveFacet } from "../../../src/facets/aave/IAaveFacet.sol";
 import { AaveFacet }  from "../../../src/facets/aave/AaveFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
     function getAaveMaxSlippage(address aToken) external view returns (uint256);
@@ -30,30 +24,29 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new AaveFacet());
 
         vm.label(facet, "AaveFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("AaveFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](2);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setAaveMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "AaveFacet");
+
+        vm.stopPrank();
     }
 
 }

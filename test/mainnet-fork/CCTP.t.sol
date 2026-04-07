@@ -17,13 +17,16 @@ import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IController }  from "../../src/interfaces/IController.sol";
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
 
 import { AccessControls } from "../../src/AccessControls.sol";
 import { ALMProxy }       from "../../src/ALMProxy.sol";
 import { Controller }     from "../../src/Controller.sol";
 import { PAUFactory }     from "../../src/PAUFactory.sol";
 import { RateLimits }     from "../../src/RateLimits.sol";
+
+import { PAURegistry } from "../../src/registry/PAURegistry.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -425,6 +428,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     ALMProxy               internal foreignAlmProxy;
     IForeignControllerFull internal foreignController;
     PAUFactory             internal foreignFactory;
+    PAURegistry            internal foreignRegistry;
     RateLimits             internal foreignRateLimits;
 
     /**********************************************************************************************/
@@ -455,13 +459,14 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         AccessControls foreignAccessControls = new AccessControls(Base.SPARK_EXECUTOR);
 
-        foreignFactory = new PAUFactory(Base.SPARK_EXECUTOR, Base.SPARK_EXECUTOR);
+        foreignRegistry = new PAURegistry(Base.SPARK_EXECUTOR, Base.SPARK_EXECUTOR);
+        foreignFactory  = new PAUFactory(Base.SPARK_EXECUTOR, address(foreignRegistry));
 
         foreignController = IForeignControllerFull(payable(new Controller({
             proxy_          : address(foreignAlmProxy),
             rateLimits_     : address(foreignRateLimits),
             accessControls_ : address(foreignAccessControls),
-            factory_        : address(foreignFactory)
+            registry_       : address(foreignRegistry)
         })));
 
         vm.startPrank(Base.SPARK_EXECUTOR);
@@ -529,56 +534,64 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         vm.store(address(foreignController), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
     }
 
+    function _addForeignWirings(IPAURegistry.Wire[] memory wires, string memory facetIdentifier) internal {
+        string[] memory identifiers = new string[](wires.length);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            identifiers[i] = facetIdentifier;
+        }
+        foreignRegistry.addWirings(wires, identifiers);
+    }
+
     function _wireForeignCCTPFacet() internal {
         address cctpFacet = address(new CCTPFacet(BASE_CCTP_TOKEN_MESSENGER, Base.USDC));
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        foreignFactory.setValidFacet(cctpFacet, true);
+        foreignRegistry.registerFacet("CCTPFacet", cctpFacet);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](8);
 
-        wires[0] = IController.Wire(
+        wires[0] = IPAURegistry.Wire(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IPAURegistry.Wire(
             IForeignControllerFull.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IPAURegistry.Wire(
             IForeignControllerFull.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IPAURegistry.Wire(
             IForeignControllerFull.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IPAURegistry.Wire(
             IForeignControllerFull.transferUSDCToCCTP.selector,
             ICCTPFacet.transfer.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IPAURegistry.Wire(
             IForeignControllerFull.transferUSDCToCCTPWithFee.selector,
             ICCTPFacet.transferWithFee.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_CCTP.selector,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IPAURegistry.Wire(
             IForeignControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
 
-        foreignController.addWires(cctpFacet, wires);
+        _addForeignWirings(wires, "CCTPFacet");
     }
 
 }

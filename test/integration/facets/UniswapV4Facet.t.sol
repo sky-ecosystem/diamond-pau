@@ -7,17 +7,11 @@ import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { IUniswapV4Facet } from "../../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
 import { UniswapV4Facet }  from "../../../src/facets/uniswap-v4/UniswapV4Facet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     function setTickLimits(
@@ -45,7 +39,7 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new UniswapV4Facet({
             permit2_         : makeAddr("permit2"),
@@ -55,34 +49,33 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("UniswapV4Facet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](4);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](4);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.setMaxSlippage.selector,
             IUniswapV4Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.setTickLimits.selector,
             IUniswapV4Facet.setTickLimits.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IPAURegistry.Wire(
             IControllerLike.getMaxSlippage.selector,
             IUniswapV4Facet.getMaxSlippage.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IPAURegistry.Wire(
             IControllerLike.getTickLimits.selector,
             IUniswapV4Facet.getTickLimits.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "UniswapV4Facet");
+
+        vm.stopPrank();
     }
 
 }

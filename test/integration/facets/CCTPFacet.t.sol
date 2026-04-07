@@ -6,17 +6,11 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 import { ICCTPFacet } from "../../../src/facets/cctp/ICCTPFacet.sol";
 import { CCTPFacet }  from "../../../src/facets/cctp/CCTPFacet.sol";
 
+import { IPAURegistry } from "../../../src/interfaces/IPAURegistry.sol";
+
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
 
     function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
@@ -37,40 +31,39 @@ abstract contract CCTPFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(registryAdmin);
 
         address facet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
         vm.label(facet, "CCTPFacet");
 
-        factory.setValidFacet(facet, true);
+        registry.registerFacet("CCTPFacet", facet);
 
-        vm.stopPrank();
+        IPAURegistry.Wire[] memory wires = new IPAURegistry.Wire[](4);
 
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](4);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IPAURegistry.Wire(
             IControllerLike.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IPAURegistry.Wire(
             IControllerLike.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IPAURegistry.Wire(
             IControllerLike.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IPAURegistry.Wire(
             IControllerLike.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        _addWirings(wires, "CCTPFacet");
+
+        vm.stopPrank();
     }
 
 }

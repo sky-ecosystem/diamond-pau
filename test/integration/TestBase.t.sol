@@ -3,11 +3,15 @@ pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
 
-import { AccessControls } from "../../src/AccessControls.sol";
-import { ALMProxy }       from "../../src/ALMProxy.sol";
-import { Controller }     from "../../src/Controller.sol";
-import { RateLimits }     from "../../src/RateLimits.sol";
-import { PAUFactory }     from "../../src/PAUFactory.sol";
+import { AccessControls }  from "../../src/AccessControls.sol";
+import { ALMProxy }        from "../../src/ALMProxy.sol";
+import { Controller }      from "../../src/Controller.sol";
+import { RateLimits }      from "../../src/RateLimits.sol";
+import { PAUFactory }      from "../../src/PAUFactory.sol";
+
+import { IPAURegistry } from "../../src/interfaces/IPAURegistry.sol";
+
+import { PAURegistry } from "../../src/registry/PAURegistry.sol";
 
 abstract contract Controller_TestBase is Test {
 
@@ -22,13 +26,14 @@ abstract contract Controller_TestBase is Test {
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
     address internal admin          = makeAddr("admin");
-    address internal facetValidator = makeAddr("facetValidator");
     address internal factoryAdmin   = makeAddr("factoryAdmin");
     address internal freezer        = makeAddr("freezer");
+    address internal registryAdmin  = makeAddr("registryAdmin");
     address internal relayer        = makeAddr("relayer");
     address internal unauthorized   = makeAddr("unauthorized");
 
-    PAUFactory internal factory;
+    PAUFactory  internal factory;
+    PAURegistry internal registry;
 
     /**********************************************************************************************/
     /*** Setup                                                                                  ***/
@@ -39,13 +44,14 @@ abstract contract Controller_TestBase is Test {
         ALMProxy       proxy          = new ALMProxy(admin);
         RateLimits     rateLimits     = new RateLimits(admin);
 
-        factory = new PAUFactory(factoryAdmin, facetValidator);
+        registry = new PAURegistry(factoryAdmin, registryAdmin);
+        factory  = new PAUFactory(factoryAdmin, address(registry));
 
         controller = address(new Controller(
             address(accessControls),
             address(proxy),
             address(rateLimits),
-            address(factory)
+            address(registry)
         ));
 
         vm.startPrank(admin);
@@ -59,6 +65,7 @@ abstract contract Controller_TestBase is Test {
         vm.label(controller,              "Controller");
         vm.label(address(proxy),          "Proxy");
         vm.label(address(rateLimits),     "RateLimits");
+        vm.label(address(registry),       "Registry");
         vm.label(unauthorized,            "Unauthorized");
     }
 
@@ -68,6 +75,14 @@ abstract contract Controller_TestBase is Test {
 
     function _setEntered(address controller_) internal virtual {
         vm.store(controller_, _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
+    }
+
+    function _addWirings(IPAURegistry.Wire[] memory wires, string memory facetIdentifier) internal {
+        string[] memory identifiers = new string[](wires.length);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            identifiers[i] = facetIdentifier;
+        }
+        registry.addWirings(wires, identifiers);
     }
 
     function _assertReentrancyGuardWrittenToTwice(address controller_) internal {
