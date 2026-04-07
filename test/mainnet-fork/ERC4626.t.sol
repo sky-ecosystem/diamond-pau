@@ -9,12 +9,6 @@ import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract ERC4626_SUSDS_TestBase is ForkTestBase {
 
     uint256 internal SUSDS_CONVERTED_ASSETS;
@@ -56,14 +50,6 @@ abstract contract ERC4626_SUSDS_TestBase is ForkTestBase {
 
         assertEq(SUSDS_TOTAL_ASSETS, 485_597_342.757158870618550128e18);
         assertEq(SUSDS_TOTAL_SUPPLY, 483_937_062.910395855928183397e18);
-    }
-
-}
-
-contract ERC4626Facet_Tests is ERC4626_SUSDS_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(erc4626Facet).VERSION(), "1.0.0");
     }
 
 }

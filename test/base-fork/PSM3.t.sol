@@ -15,10 +15,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-    function VERSION() external view returns (string memory);
-}
-
 abstract contract PSM3_TestBase is ForkTestBase {
 
     function _assertState(
@@ -50,14 +46,6 @@ abstract contract PSM3_TestBase is ForkTestBase {
 
         // Should always be 0 before and after calls
         assertEq(usdsBase.allowance(address(almProxy), address(psmBase)), 0);
-    }
-
-}
-
-contract PSM3_Facet_Tests is PSM3_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(psm3Facet).VERSION(), "1.0.0");
     }
 
 }

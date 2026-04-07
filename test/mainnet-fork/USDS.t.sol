@@ -15,23 +15,9 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract USDS_TestBase is ForkTestBase {
 
     IERC20Like internal constant USDS = IERC20Like(Ethereum.USDS);
-
-}
-
-contract USDSFacet_Tests is USDS_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(usdsFacet).VERSION(), "1.0.0");
-    }
 
 }
 

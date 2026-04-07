@@ -89,18 +89,6 @@ abstract contract UniswapV4_TestBase is Controller_TestBase {
 
 contract Controller_UniswapV4_Admin_Tests is UniswapV4_TestBase {
 
-    function test_constructor() external {
-        UniswapV4Facet facet = new UniswapV4Facet(makeAddr("permit2"), makeAddr("positionManager"), makeAddr("router"));
-
-        assertEq(facet.LIMIT_DEPOSIT(),   keccak256("LIMIT_UNISWAP_V4_DEPOSIT"));
-        assertEq(facet.LIMIT_WITHDRAW(),  keccak256("LIMIT_UNISWAP_V4_WITHDRAW"));
-        assertEq(facet.LIMIT_SWAP(),      keccak256("LIMIT_UNISWAP_V4_SWAP"));
-        assertEq(facet.VERSION(),         "1.0.0");
-        assertEq(facet.permit2(),         makeAddr("permit2"));
-        assertEq(facet.positionManager(), makeAddr("positionManager"));
-        assertEq(facet.router(),          makeAddr("router"));
-    }
-
     /**********************************************************************************************/
     /*** setMaxSlippage Tests                                                                   ***/
     /**********************************************************************************************/

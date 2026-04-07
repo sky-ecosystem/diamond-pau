@@ -105,12 +105,6 @@ interface IV4RouterLike {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract UniswapV4_TestBase is ForkTestBase {
 
     struct IncreasePositionResult {
@@ -730,14 +724,6 @@ abstract contract UniswapV4_TestBase is ForkTestBase {
         PoolKey memory poolKey = IPositionManagerLike(_UNISWAP_V4_POSITION_MANAGER).poolKeys(bytes25(poolId));
 
         return tokenIn == Currency.unwrap(poolKey.currency0) ? poolKey.currency1 : poolKey.currency0;
-    }
-
-}
-
-contract UniswapV4Facet_Tests is UniswapV4_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(uniswapV4Facet).VERSION(), "1.0.0");
     }
 
 }

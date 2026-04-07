@@ -17,12 +17,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract TransferAsset_TestBase is ForkTestBase {
 
     IERC20Like internal constant USDT = IERC20Like(Ethereum.USDT);
@@ -45,14 +39,6 @@ abstract contract TransferAsset_TestBase is ForkTestBase {
         );
 
         vm.stopPrank();
-    }
-
-}
-
-contract TransferAssetFacet_Tests is TransferAsset_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(transferAssetFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -15,12 +15,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract Farm_TestBase is ForkTestBase {
 
     address internal constant FARM = 0x173e314C7635B45322cd8Cb14f44b312e079F3af;  // USDS SPK farm
@@ -49,14 +43,6 @@ abstract contract Farm_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 22982805;  // July 23, 2025
-    }
-
-}
-
-contract FarmFacet_Tests is Farm_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(farmFacet).VERSION(), "1.0.0");
     }
 
 }

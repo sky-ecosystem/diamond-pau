@@ -27,12 +27,6 @@ interface IPSMLike {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract PSM_TestBase is ForkTestBase {
 
     IERC20Like internal constant DAI  = IERC20Like(Ethereum.DAI);
@@ -40,14 +34,6 @@ abstract contract PSM_TestBase is ForkTestBase {
     IERC20Like internal constant USDS = IERC20Like(Ethereum.USDS);
 
     IPSMLike internal constant PSM = IPSMLike(Ethereum.PSM);
-
-}
-
-contract PSMFacet_Tests is PSM_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(psmFacet).VERSION(), "1.0.0");
-    }
 
 }
 

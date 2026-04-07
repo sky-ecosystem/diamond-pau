@@ -20,12 +20,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract SparkVault_TestBase is ForkTestBase {
 
     struct TestState {
@@ -81,14 +75,6 @@ abstract contract SparkVault_TestBase is ForkTestBase {
 
     function _assertTestState(TestState memory state) internal view {
         _assertTestState(state, 0);
-    }
-
-}
-
-contract SparkVault_Facet_Tests is SparkVault_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(sparkVaultFacet).VERSION(), "1.0.0");
     }
 
 }

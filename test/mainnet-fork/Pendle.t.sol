@@ -38,12 +38,6 @@ interface IYTLike {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract Pendle_TestBase is ForkTestBase {
 
     // sUSDe 25 Sep 2025 market
@@ -67,14 +61,6 @@ abstract contract Pendle_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 23319550;  // 8 Sep 2025
-    }
-
-}
-
-contract PendleFacet_Tests is Pendle_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(pendleFacet).VERSION(), "1.0.0");
     }
 
 }

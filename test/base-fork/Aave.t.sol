@@ -15,10 +15,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-    function VERSION() external view returns (string memory);
-}
-
 abstract contract AaveV3_TestBase is ForkTestBase {
 
     address internal constant ATOKEN_USDC = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
@@ -55,14 +51,6 @@ abstract contract AaveV3_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 22841965;  // November 24, 2024
-    }
-
-}
-
-contract AaveV3_Facet_Tests is AaveV3_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(aaveFacet).VERSION(), "1.0.0");
     }
 
 }

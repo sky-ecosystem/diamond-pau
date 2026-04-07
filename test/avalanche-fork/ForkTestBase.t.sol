@@ -86,9 +86,6 @@ contract ForkTestBase is Test {
 
     MockSSROracle ssrOracle;
 
-    address centrifugeFacet;
-    address erc7540Facet;
-
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
     /**********************************************************************************************/
@@ -162,7 +159,7 @@ contract ForkTestBase is Test {
     function _wireCentrifugeFacet() internal {
         // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
 
-        centrifugeFacet = address(new CentrifugeFacet());
+        address centrifugeFacet = address(new CentrifugeFacet());
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
@@ -214,7 +211,7 @@ contract ForkTestBase is Test {
     }
 
     function _wireERC7540Facet() internal {
-        erc7540Facet = address(new ERC7540Facet());
+        address erc7540Facet = address(new ERC7540Facet());
 
         vm.label(erc7540Facet, "ERC7540Facet");
 

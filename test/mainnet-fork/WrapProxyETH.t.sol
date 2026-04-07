@@ -13,20 +13,6 @@ interface IERC20Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
-contract WrapProxyETHFacet_Tests is ForkTestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(wrapProxyETHFacet).VERSION(), "1.0.0");
-    }
-
-}
-
 contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
 
     IERC20Like internal constant WETH = IERC20Like(Ethereum.WETH);

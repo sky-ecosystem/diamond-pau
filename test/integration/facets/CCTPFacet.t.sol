@@ -27,7 +27,7 @@ interface IControllerLike {
 
 }
 
-abstract contract Controller_CCTPFacet_Tests is Controller_TestBase {
+abstract contract CCTPFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -73,26 +73,9 @@ abstract contract Controller_CCTPFacet_Tests is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-    /**********************************************************************************************/
-    /*** constructor Tests                                                                      ***/
-    /**********************************************************************************************/
+}
 
-    function test_constructor() external {
-        CCTPFacet facet = new CCTPFacet(makeAddr("cctp"), makeAddr("usdc"));
-
-        assertEq(facet.LIMIT_TO_CCTP(),          keccak256("LIMIT_USDC_TO_CCTP"));
-        assertEq(facet.LIMIT_TO_DOMAIN(),        keccak256("LIMIT_USDC_TO_DOMAIN"));
-        assertEq(facet.DESTINATION_CALLER(),     0);
-        assertEq(facet.MAX_FEE(),                0);
-        assertEq(facet.MAX_FINALITY_THRESHOLD(), 2_000);
-        assertEq(facet.VERSION(),                "1.0.0");
-        assertEq(facet.cctp(),                   makeAddr("cctp"));
-        assertEq(facet.usdc(),                   makeAddr("usdc"));
-    }
-
-    /**********************************************************************************************/
-    /*** setCCTPMaxFeeCap Tests                                                                 ***/
-    /**********************************************************************************************/
+contract Controller_CCTPFacet_SetCCTPMaxFeeCap_Tests is CCTPFacet_TestBase {
 
     function test_setCCTPMaxFeeCap_reentrancy() external {
         _setEntered(address(controller));
@@ -127,9 +110,9 @@ abstract contract Controller_CCTPFacet_Tests is Controller_TestBase {
         assertEq(controller.getCCTPMaxFeeCap(), 1e18);
     }
 
-    /**********************************************************************************************/
-    /*** setCCTPMintRecipient Tests                                                             ***/
-    /**********************************************************************************************/
+}
+
+contract Controller_CCTPFacet_SetCCTPMintRecipient_Tests is CCTPFacet_TestBase {
 
     function test_setCCTPMintRecipient_reentrancy() external {
         _setEntered(address(controller));

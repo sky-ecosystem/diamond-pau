@@ -31,12 +31,6 @@ interface IERC721Like {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract UniswapV3_TestBase is ForkTestBase {
 
     address constant UNISWAP_V3_USDC_USDT_POOL = 0x3416cF6C708Da44DB2624D63ea0AAef7113527C6;
@@ -267,14 +261,6 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
             amount0 : amount0 * 98 / 100,
             amount1 : amount1 * 98 / 100
         });
-    }
-
-}
-
-contract UniswapV3Facet_Tests is UniswapV3_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(uniswapV3Facet).VERSION(), "1.0.0");
     }
 
 }

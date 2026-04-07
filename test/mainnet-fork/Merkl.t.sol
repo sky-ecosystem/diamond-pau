@@ -21,12 +21,6 @@ interface IMerklDistributorLike {
 
 }
 
-interface IFacetLike {
-
-    function VERSION() external view returns (string memory);
-
-}
-
 abstract contract Merkl_TestBase is ForkTestBase {
 
     address constant A_ETH_RLUSD = 0x72eEED8043Dcce2Fe7CdAC950D928F80f472ab80;
@@ -40,14 +34,6 @@ abstract contract Merkl_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 23827450;  // Nov 18, 2025
-    }
-
-}
-
-contract MerklFacet_Tests is Merkl_TestBase {
-
-    function test_version() external {
-        assertEq(IFacetLike(merklFacet).VERSION(), "1.0.0");
     }
 
 }

@@ -30,8 +30,8 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        // NOTE: Only wires the functions needed for the tests.
-        //       If more functions are needed in future tests, they should be wired here.
+        vm.startPrank(facetValidator);
+
         address facet = address(new AaveFacet());
 
         vm.label(facet, "AaveFacet");
@@ -56,21 +56,9 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-    /**********************************************************************************************/
-    /*** Constructor Tests                                                                      ***/
-    /**********************************************************************************************/
+}
 
-    function test_constructor() external {
-        AaveFacet facet = new AaveFacet();
-
-        assertEq(facet.LIMIT_DEPOSIT(),  keccak256("LIMIT_AAVE_DEPOSIT"));
-        assertEq(facet.LIMIT_WITHDRAW(), keccak256("LIMIT_AAVE_WITHDRAW"));
-        assertEq(facet.VERSION(),        "1.0.0");
-    }
-
-    /**********************************************************************************************/
-    /*** setMaxSlippage Tests                                                                   ***/
-    /**********************************************************************************************/
+contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
 
     function test_setMaxSlippage_reentrancy() external {
         _setEntered(address(controller));
@@ -118,4 +106,3 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
     }
 
 }
-

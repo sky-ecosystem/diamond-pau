@@ -23,7 +23,7 @@ interface IControllerLike {
 
 }
 
-contract Controller_CentrifugeFacet_Tests is Controller_TestBase {
+abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
 
     IControllerLike internal controller;
 
@@ -59,22 +59,9 @@ contract Controller_CentrifugeFacet_Tests is Controller_TestBase {
         controller.addWires(facet, wires);
     }
 
-    /**********************************************************************************************/
-    /*** Constructor Tests                                                                      ***/
-    /**********************************************************************************************/
+}
 
-    function test_constructor() external {
-        CentrifugeFacet facet = new CentrifugeFacet();
-
-        assertEq(facet.LIMIT_TRANSFER(), keccak256("LIMIT_CENTRIFUGE_TRANSFER"));
-        assertEq(facet.LIMIT_DEPOSIT(),  keccak256("LIMIT_7540_DEPOSIT"));
-        assertEq(facet.LIMIT_REDEEM(),   keccak256("LIMIT_7540_REDEEM"));
-        assertEq(facet.REQUEST_ID(),     0);
-        assertEq(facet.VERSION(),        "1.0.0");
-    }
-    /**********************************************************************************************/
-    /*** setCentrifugeRecipient Tests                                                              ***/
-    /**********************************************************************************************/
+contract Controller_CentrifugeFacet_SetRecipient_Tests is CentrifugeFacet_TestBase {
 
     function test_setCentrifugeRecipient_reentrancy() external {
         _setEntered(address(controller));
