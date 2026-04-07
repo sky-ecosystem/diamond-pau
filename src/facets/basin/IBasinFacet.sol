@@ -9,9 +9,9 @@ interface IBasinFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function deposit(address asset, uint256 amount) external returns (uint256 shares);
+    function deposit(address basin, address asset, uint256 amount) external returns (uint256 shares);
 
-    function withdraw(address asset, uint256 maxAmount) external returns (uint256 assetsWithdrawn);
+    function withdraw(address basin, address asset, uint256 maxAmount) external returns (uint256 assetsWithdrawn);
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
@@ -20,7 +20,5 @@ interface IBasinFacet is IFacetBase {
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     function LIMIT_WITHDRAW() external pure returns (bytes32);
-
-    function basin() external view returns (address);
 
 }

@@ -42,22 +42,20 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address basin_) {
-        basin = basin_;
-    }
+    constructor() {}
 
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
-    function deposit(address asset, uint256 amount)
+    function deposit(address basin, address asset, uint256 amount)
         external
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        _decreaseRateLimit(LIMIT_DEPOSIT, asset, amount);
+        _decreaseRateLimit(LIMIT_DEPOSIT, basin, asset, amount);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -74,7 +72,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
         );
     }
 
-    function withdraw(address asset, uint256 maxAmount)
+    function withdraw(address basin, address asset, uint256 maxAmount)
         external
         override
         nonReentrant
@@ -94,14 +92,14 @@ contract BasinFacet is IBasinFacet, FacetBase {
             (uint256)
         );
 
-        _decreaseRateLimit(LIMIT_WITHDRAW, asset, assetsWithdrawn);
+        _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
     }
 
     /**********************************************************************************************/
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, address asset, uint256 amount) internal {
+    function _decreaseRateLimit(bytes32 key, address basin, address asset, uint256 amount) internal {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
             makeAddressAddressKey(key, asset, basin),
             amount
