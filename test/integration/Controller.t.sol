@@ -33,7 +33,7 @@ interface IMockController is IController {
 
     function div(uint256 arg) external pure returns (uint256);
 
-    function mult(uint256 arg) external pure returns (uint256);
+    function mul(uint256 arg) external pure returns (uint256);
 
 }
 
@@ -157,7 +157,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         bytes4[] memory callSelectors = new bytes4[](2);
         callSelectors[0] = IMockController.div.selector;
-        callSelectors[1] = IMockController.mult.selector;
+        callSelectors[1] = IMockController.mul.selector;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -171,13 +171,13 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IController.CallSelectorNotWired.selector,
-                IMockController.mult.selector
+                IMockController.mul.selector
             )
         );
 
-        controller.mult(0);
+        controller.mul(0);
 
-        assertEq(controller.circuits().length,                   0);
+        assertEq(controller.circuits().length, 0);
 
         IController.Dispatch[] memory dispatches = controller.getDispatches(callSelectors);
 
@@ -199,17 +199,17 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         factory.setValidFacet(facet2, true);
         vm.stopPrank();
 
-        // Wire div to facet1.divideBy2 and mult to facet1.multiplyBy2
+        // Wire div to facet1.divideBy2 and mul to facet1.multiplyBy2
 
         IController.Wire[] memory wires = new IController.Wire[](2);
-        wires[0] = IController.Wire(IMockController.div.selector,  MockFacet1.divideBy2.selector);
-        wires[1] = IController.Wire(IMockController.mult.selector, MockFacet1.multiplyBy2.selector);
+        wires[0] = IController.Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
+        wires[1] = IController.Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
 
         vm.prank(admin);
         controller.addWires(facet1, wires);
 
-        assertEq(controller.div(12),  6);
-        assertEq(controller.mult(12), 24);
+        assertEq(controller.div(12), 6);
+        assertEq(controller.mul(12), 24);
 
         IController.Circuit[] memory circuits = controller.circuits();
 
@@ -220,7 +220,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
         assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mult.selector);
+        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
         assertEq(circuits[0].wires[1].delegateSelector, MockFacet1.multiplyBy2.selector);
 
         dispatches = controller.getDispatches(callSelectors);
@@ -239,20 +239,20 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(wirings[0].length, 2);
         assertEq(wirings[0][0].callSelector,     IMockController.div.selector);
         assertEq(wirings[0][0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(wirings[0][1].callSelector,     IMockController.mult.selector);
+        assertEq(wirings[0][1].callSelector,     IMockController.mul.selector);
         assertEq(wirings[0][1].delegateSelector, MockFacet1.multiplyBy2.selector);
 
         assertEq(wirings[1].length, 0);
 
-        // Re-wire div to facet2.divideBy4 (keeping mult to facet1.multiplyBy2)
+        // Re-wire div to facet2.divideBy4 (keeping mul to facet1.multiplyBy2)
 
         vm.startPrank(admin);
         controller.removeWire(IMockController.div.selector);
         controller.addWire(facet2, IController.Wire(IMockController.div.selector, MockFacet2.divideBy4.selector));
         vm.stopPrank();
 
-        assertEq(controller.div(12),  3);
-        assertEq(controller.mult(12), 24);
+        assertEq(controller.div(12), 3);
+        assertEq(controller.mul(12), 24);
 
         circuits = controller.circuits();
 
@@ -261,7 +261,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(circuits[0].facet,        facet1);
         assertEq(circuits[0].wires.length, 1);
 
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.mult.selector);
+        assertEq(circuits[0].wires[0].callSelector,     IMockController.mul.selector);
         assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.multiplyBy2.selector);
 
         assertEq(circuits[1].facet,        facet2);
@@ -284,22 +284,22 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(wirings.length, 2);
 
         assertEq(wirings[0].length, 1);
-        assertEq(wirings[0][0].callSelector,     IMockController.mult.selector);
+        assertEq(wirings[0][0].callSelector,     IMockController.mul.selector);
         assertEq(wirings[0][0].delegateSelector, MockFacet1.multiplyBy2.selector);
 
         assertEq(wirings[1].length, 1);
         assertEq(wirings[1][0].callSelector,     IMockController.div.selector);
         assertEq(wirings[1][0].delegateSelector, MockFacet2.divideBy4.selector);
 
-        // Remove all wires for facet1 and add a new wire for mult to facet2.multiplyBy4
+        // Remove all wires for facet1 and add a new wire for mul to facet2.multiplyBy4
 
         vm.startPrank(admin);
         controller.removeAllWiresFor(facet1);
-        controller.addWire(facet2, IController.Wire(IMockController.mult.selector, MockFacet2.multiplyBy4.selector));
+        controller.addWire(facet2, IController.Wire(IMockController.mul.selector, MockFacet2.multiplyBy4.selector));
         vm.stopPrank();
 
-        assertEq(controller.div(12),  3);
-        assertEq(controller.mult(12), 48);
+        assertEq(controller.div(12), 3);
+        assertEq(controller.mul(12), 48);
 
         circuits = controller.circuits();
 
@@ -311,7 +311,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
         assertEq(circuits[0].wires[0].delegateSelector, MockFacet2.divideBy4.selector);
 
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mult.selector);
+        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
         assertEq(circuits[0].wires[1].delegateSelector, MockFacet2.multiplyBy4.selector);
 
         dispatches = controller.getDispatches(callSelectors);
@@ -332,13 +332,13 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(wirings[1].length, 2);
         assertEq(wirings[1][0].callSelector,     IMockController.div.selector);
         assertEq(wirings[1][0].delegateSelector, MockFacet2.divideBy4.selector);
-        assertEq(wirings[1][1].callSelector,     IMockController.mult.selector);
+        assertEq(wirings[1][1].callSelector,     IMockController.mul.selector);
         assertEq(wirings[1][1].delegateSelector, MockFacet2.multiplyBy4.selector);
 
-        // Remove wires for div and mult
+        // Remove wires for div and mul
 
         callSelectors[0] = IMockController.div.selector;
-        callSelectors[1] = IMockController.mult.selector;
+        callSelectors[1] = IMockController.mul.selector;
 
         vm.prank(admin);
         controller.removeWires(callSelectors);
@@ -359,11 +359,11 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IController.CallSelectorNotWired.selector,
-                IMockController.mult.selector
+                IMockController.mul.selector
             )
         );
 
-        controller.mult(0);
+        controller.mul(0);
 
         assertEq(controller.circuits().length, 0);
 

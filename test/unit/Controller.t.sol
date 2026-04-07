@@ -740,7 +740,6 @@ contract Controller_Tests is Test {
         vm.expectEmit(address(controller));
         emit IController.WireRemoved(callSelectors[0]);
 
-
         vm.expectEmit(address(controller));
         emit IController.WireRemoved(callSelectors[1]);
 
@@ -781,13 +780,13 @@ contract Controller_Tests is Test {
 
         controller.__addFacet(facet);
 
-        controller.__setDispatch(firstHalfCallSelectors[0], facet, firstHalfDelegateSelectors[0]);
-        controller.__setDispatch(firstHalfCallSelectors[1], facet, firstHalfDelegateSelectors[1]);
+        controller.__setDispatch(firstHalfCallSelectors[0],  facet, firstHalfDelegateSelectors[0]);
+        controller.__setDispatch(firstHalfCallSelectors[1],  facet, firstHalfDelegateSelectors[1]);
         controller.__setDispatch(secondHalfCallSelectors[0], facet, secondHalfDelegateSelectors[0]);
         controller.__setDispatch(secondHalfCallSelectors[1], facet, secondHalfDelegateSelectors[1]);
 
-        controller.__addWire(facet, firstHalfCallSelectors[0], firstHalfDelegateSelectors[0]);
-        controller.__addWire(facet, firstHalfCallSelectors[1], firstHalfDelegateSelectors[1]);
+        controller.__addWire(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]);
+        controller.__addWire(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]);
         controller.__addWire(facet, secondHalfCallSelectors[0], secondHalfDelegateSelectors[0]);
         controller.__addWire(facet, secondHalfCallSelectors[1], secondHalfDelegateSelectors[1]);
 
@@ -805,8 +804,8 @@ contract Controller_Tests is Test {
         assertEq(controller.__getDispatchFacet(secondHalfCallSelectors[1]),    facet);
         assertEq(controller.__getDispatchSelector(secondHalfCallSelectors[1]), secondHalfDelegateSelectors[1]);
 
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0], firstHalfDelegateSelectors[0]), true);
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1], firstHalfDelegateSelectors[1]), true);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]),  true);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]),  true);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[0], secondHalfDelegateSelectors[0]), true);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[1], secondHalfDelegateSelectors[1]), true);
 
@@ -835,8 +834,8 @@ contract Controller_Tests is Test {
         assertEq(controller.__getDispatchFacet(secondHalfCallSelectors[1]),    facet);
         assertEq(controller.__getDispatchSelector(secondHalfCallSelectors[1]), secondHalfDelegateSelectors[1]);
 
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]), false);
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]), false);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]),  false);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]),  false);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[0], secondHalfDelegateSelectors[0]), true);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[1], secondHalfDelegateSelectors[1]), true);
 
@@ -865,14 +864,14 @@ contract Controller_Tests is Test {
         assertEq(controller.__getDispatchFacet(secondHalfCallSelectors[1]),    address(0));
         assertEq(controller.__getDispatchSelector(secondHalfCallSelectors[1]), bytes4(0));
 
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]), false);
-        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]), false);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[0],  firstHalfDelegateSelectors[0]),  false);
+        assertEq(controller.__getHasWiring(facet, firstHalfCallSelectors[1],  firstHalfDelegateSelectors[1]),  false);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[0], secondHalfDelegateSelectors[0]), false);
         assertEq(controller.__getHasWiring(facet, secondHalfCallSelectors[1], secondHalfDelegateSelectors[1]), false);
     }
 
     /**********************************************************************************************/
-    /*** removeAllWiresFor Tests                                                                      ***/
+    /*** removeAllWiresFor Tests                                                                ***/
     /**********************************************************************************************/
 
     function test_removeAllWiresFor_reentrancy() external {
@@ -1108,9 +1107,9 @@ contract Controller_Tests is Test {
         IController.Wire[] memory wiring = controller.getWiring(facet);
 
         assertEq(wiring.length, 2);
-        assertEq(wiring[0].callSelector, callSelectors[0]);
+        assertEq(wiring[0].callSelector,     callSelectors[0]);
         assertEq(wiring[0].delegateSelector, delegateSelectors[0]);
-        assertEq(wiring[1].callSelector, callSelectors[1]);
+        assertEq(wiring[1].callSelector,     callSelectors[1]);
         assertEq(wiring[1].delegateSelector, delegateSelectors[1]);
     }
 
@@ -1163,7 +1162,7 @@ contract Controller_Tests is Test {
         address(controller).call(hex"123456");
     }
 
-    function test_fallback_dispatchNotFound() external {
+    function test_fallback_callSelectorNotFound() external {
         vm.expectRevert(
             abi.encodeWithSelector(IController.CallSelectorNotWired.selector, IMockController.facetFoo.selector)
         );
