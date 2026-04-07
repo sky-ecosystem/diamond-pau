@@ -15,16 +15,32 @@ interface ISuperstateFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Subscribes to Superstate.
+     * @param usdcAmount Amount of USDC to subscribe.
+     */
     function subscribe(uint256 usdcAmount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for subscribe operations.
+     * @return bytes32 Key for subscribe limit.
+     */
     function LIMIT_SUBSCRIBE() external pure returns (bytes32);
 
+    /**
+     * @dev    USDC contract address.
+     * @return address USDC contract address.
+     */
     function usdc() external view returns (address);
 
+    /**
+     * @dev    USTB contract address.
+     * @return address USTB contract address.
+     */
     function ustb() external view returns (address);
 
 }

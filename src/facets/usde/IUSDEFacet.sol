@@ -27,36 +27,93 @@ interface IUSDEFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Cooldowns assets.
+     * @param  usdeAmount Amount of USDE to cooldown.
+     * @return shares     Amount of shares received.
+     */
     function cooldownAssets(uint256 usdeAmount) external returns (uint256 shares);
 
+    /**
+     * @dev    Cooldowns shares.
+     * @param  susdeAmount Amount of SUSDE to cooldown.
+     * @return assets      Amount of assets received.
+     */
     function cooldownShares(uint256 susdeAmount) external returns (uint256 assets);
 
+    /**
+     * @dev   Prepares to burn USDE.
+     * @param usdeAmount Amount of USDE to burn.
+     */
     function prepareBurn(uint256 usdeAmount) external;
 
+    /**
+     * @dev   Prepares to mint USDE.
+     * @param usdcAmount Amount of USDC to mint.
+     */
     function prepareMint(uint256 usdcAmount) external;
 
+    /**
+     * @dev   Removes a delegated signer.
+     * @param delegatedSigner Delegated signer address.
+     */
     function removeDelegatedSigner(address delegatedSigner) external;
 
+    /**
+     * @dev   Sets a delegated signer.
+     * @param delegatedSigner Delegated signer address.
+     */
     function setDelegatedSigner(address delegatedSigner) external;
 
+    /**
+     * @dev Unstakes SUSDE.
+     */
     function unstakeSUSDE() external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for USDE burn operations.
+     * @return bytes32 Key for USDE burn limit.
+     */
     function LIMIT_USDE_BURN() external view returns (bytes32);
 
+    /**
+     * @dev    Limit for USDE mint operations.
+     * @return bytes32 Key for USDE mint limit.
+     */
     function LIMIT_USDE_MINT() external view returns (bytes32);
 
+    /**
+     * @dev    Limit for SUSDE cooldown operations.
+     * @return bytes32 Key for SUSDE cooldown limit.
+     */
     function LIMIT_SUSDE_COOLDOWN() external view returns (bytes32);
 
+    /**
+     * @dev    Ethena minter address.
+     * @return address Ethena minter address.
+     */
     function ethenaMinter() external view returns (address);
 
+    /**
+     * @dev    SUSDE contract address.
+     * @return address SUSDE contract address.
+     */
     function susde() external view returns (address);
 
+    /**
+     * @dev    USDC contract address.
+     * @return address USDC contract address.
+     */
     function usdc() external view returns (address);
 
+    /**
+     * @dev    USDE contract address.
+     * @return address USDE contract address.
+     */
     function usde() external view returns (address);
 
 }

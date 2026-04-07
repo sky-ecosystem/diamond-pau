@@ -17,18 +17,38 @@ interface IDAIUSDSFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Swaps DAI to USDS.
+     * @param daiAmount Amount of DAI to swap.
+     */
     function swapDAIToUSDS(uint256 daiAmount) external;
 
+    /**
+     * @dev   Swaps USDS to DAI.
+     * @param usdsAmount Amount of USDS to swap.
+     */
     function swapUSDSToDAI(uint256 usdsAmount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    DAI contract address.
+     * @return address DAI contract address.
+     */
     function dai() external view returns (address);
 
+    /**
+     * @dev    DAI/USDS contract address.
+     * @return address DAIUSDS contract address.
+     */
     function daiUSDS() external view returns (address);
 
+    /**
+     * @dev    USDS contract address.
+     * @return address USDS contract address.
+     */
     function usds() external view returns (address);
 
 }

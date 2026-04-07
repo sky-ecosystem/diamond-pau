@@ -35,6 +35,11 @@ interface IUniswapV4Facet is IFacetBase {
         uint128         amount1
     );
 
+    /**
+     * @dev   Event emitted when a max slippage is set.
+     * @param poolId      Pool ID.
+     * @param maxSlippage Max slippage allowed.
+     */
     event UniswapV4MaxSlippageSet(bytes32 indexed poolId, uint256 maxSlippage);
 
     event UniswapV4MintPosition(
@@ -55,17 +60,32 @@ interface IUniswapV4Facet is IFacetBase {
         uint128         amountOut
     );
 
-
+    /**
+     * @dev   Event emitted when tick limits are set.
+     * @param poolId         Pool ID.
+     * @param tickLowerMin   Minimum lower tick.
+     * @param tickUpperMax   Maximum upper tick.
+     * @param maxTickSpacing Maximum tick spacing.
+     */
     event UniswapV4TickLimitsSet(
         bytes32 indexed poolId,
         int24           tickLowerMin,
         int24           tickUpperMax,
         uint24          maxTickSpacing
     );
+
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Decreases the liquidity of a position.
+     * @param poolId            Pool ID.
+     * @param tokenId           Token ID.
+     * @param liquidityDecrease Amount of liquidity to decrease.
+     * @param amount0Min        Minimum amount of token0 to receive.
+     * @param amount1Min        Minimum amount of token1 to receive.
+     */
     function decreasePosition(
         bytes32 poolId,
         uint256 tokenId,
@@ -75,6 +95,14 @@ interface IUniswapV4Facet is IFacetBase {
     )
         external;
 
+    /**
+     * @dev   Increases the liquidity of a position.
+     * @param poolId            Pool ID.
+     * @param tokenId           Token ID.
+     * @param liquidityIncrease Amount of liquidity to increase.
+     * @param amount0Max        Maximum amount of token0 to spend.
+     * @param amount1Max        Maximum amount of token1 to spend.
+     */
     function increasePosition(
         bytes32 poolId,
         uint256 tokenId,
@@ -84,6 +112,15 @@ interface IUniswapV4Facet is IFacetBase {
     )
         external;
 
+    /**
+     * @dev   Mints a position.
+     * @param poolId     Pool ID.
+     * @param tickLower  Lower tick.
+     * @param tickUpper  Upper tick.
+     * @param liquidity  Liquidity.
+     * @param amount0Max Maximum amount of token0 to spend.
+     * @param amount1Max Maximum amount of token1 to spend.
+     */
     function mintPosition(
         bytes32 poolId,
         int24   tickLower,
@@ -94,8 +131,20 @@ interface IUniswapV4Facet is IFacetBase {
     )
         external;
 
+    /**
+     * @dev   Sets a max slippage.
+     * @param poolId      Pool ID.
+     * @param maxSlippage Max slippage allowed.
+     */
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
+    /**
+     * @dev   Sets tick limits.
+     * @param poolId         Pool ID.
+     * @param tickLowerMin   Minimum lower tick.
+     * @param tickUpperMax   Maximum upper tick.
+     * @param maxTickSpacing Maximum tick spacing.
+     */
     function setTickLimits(
         bytes32 poolId,
         int24   tickLowerMin,
@@ -104,30 +153,73 @@ interface IUniswapV4Facet is IFacetBase {
     )
         external;
 
+    /**
+     * @dev   Swaps tokens in a pool.
+     * @param poolId       Pool ID.
+     * @param tokenIn      Token in.
+     * @param amountIn     Amount in.
+     * @param amountOutMin Minimum amount out.
+     */
     function swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for deposit operations.
+     * @return bytes32 Key for deposit limit.
+     */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
+    /**
+     * @dev    Limit for swap operations.
+     * @return bytes32 Key for swap limit.
+     */
     function LIMIT_SWAP() external pure returns (bytes32);
 
+    /**
+     * @dev    Limit for withdraw operations.
+     * @return bytes32 Key for withdraw limit.
+     */
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
+    /**
+     * @dev    Permit2 contract address.
+     * @return address Permit2 contract address.
+     */
     function permit2() external view returns (address);
 
+    /**
+     * @dev    Position manager address.
+     * @return address Position manager address.
+     */
     function positionManager() external view returns (address);
 
+    /**
+     * @dev    Router address.
+     * @return address Router address.
+     */
     function router() external view returns (address);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Gets a max slippage.
+     * @param  poolId  Pool ID.
+     * @return uint256 Max slippage allowed.
+     */
     function getMaxSlippage(bytes32 poolId) external view returns (uint256);
 
+    /**
+     * @dev    Gets tick limits.
+     * @param  poolId         Pool ID.
+     * @return tickLowerMin   Minimum lower tick.
+     * @return tickUpperMax   Maximum upper tick.
+     * @return maxTickSpacing Maximum tick spacing.
+     */
     function getTickLimits(bytes32 poolId)
         external
         view

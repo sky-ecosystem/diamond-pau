@@ -15,12 +15,21 @@ interface ISparkVaultFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Takes `assetAmount` of `asset` from the Spark vault.
+     * @param  sparkVault  Spark vault address.
+     * @param  assetAmount Amount of `asset` to take.
+     */
     function take(address sparkVault, uint256 assetAmount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for take operations.
+     * @return bytes32 Key for take limit.
+     */
     function LIMIT_TAKE() external pure returns (bytes32);
 
 }

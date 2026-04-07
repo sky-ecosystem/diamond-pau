@@ -15,12 +15,19 @@ interface IWrapProxyETHFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev Wraps all proxy ETH.
+     */
     function wrapAll() external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    WETH contract address.
+     * @return address WETH contract address.
+     */
     function weth() external view returns (address);
 
 }

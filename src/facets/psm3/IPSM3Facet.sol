@@ -17,18 +17,42 @@ interface IPSM3Facet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Deposits `amount` of `asset` into the PSM.
+     * @param  asset  Asset address.
+     * @param  amount Amount of `asset` to deposit.
+     * @return shares Amount of shares received.
+     */
     function deposit(address asset, uint256 amount) external returns (uint256 shares);
 
+    /**
+     * @dev    Withdraws `maxAmount` of `asset` from the PSM.
+     * @param  asset           Asset address.
+     * @param  maxAmount       Maximum amount of `asset` to withdraw.
+     * @return assetsWithdrawn Amount of `asset` withdrawn.
+     */
     function withdraw(address asset, uint256 maxAmount) external returns (uint256 assetsWithdrawn);
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for deposit operations.
+     * @return bytes32 Key for deposit limit.
+     */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
+    /**
+     * @dev    Limit for withdraw operations.
+     * @return bytes32 Key for withdraw limit.
+     */
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
+    /**
+     * @dev    PSM contract address.
+     * @return address PSM contract address.
+     */
     function psm() external view returns (address);
 
 }

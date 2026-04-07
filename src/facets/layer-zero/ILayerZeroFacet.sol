@@ -9,6 +9,11 @@ interface ILayerZeroFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a recipient is set.
+     * @param destinationEndpointId Destination endpoint ID.
+     * @param layerZeroRecipient    LayerZero recipient.
+     */
     event LayerZeroRecipientSet(uint32 indexed destinationEndpointId, bytes32 layerZeroRecipient);
 
     event LayerZeroTransfer(
@@ -22,8 +27,19 @@ interface ILayerZeroFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Sets a recipient for a destination endpoint ID.
+     * @param destinationEndpointId Destination endpoint ID.
+     * @param recipient             LayerZero recipient.
+     */
     function setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
+    /**
+     * @dev   Transfers `amount` of tokens to a destination endpoint ID.
+     * @param oftAddress            OFT address.
+     * @param amount                Amount of tokens to transfer.
+     * @param destinationEndpointId Destination endpoint ID.
+     */
     function transfer(address oftAddress, uint256 amount, uint32 destinationEndpointId)
         external
         payable;
@@ -32,12 +48,21 @@ interface ILayerZeroFacet is IFacetBase {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for transfer operations.
+     * @return bytes32 Key for transfer limit.
+     */
     function LIMIT_TRANSFER() external pure returns (bytes32);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Gets a recipient for a destination endpoint ID.
+     * @param  destinationEndpointId Destination endpoint ID.
+     * @return layerZeroRecipient    LayerZero recipient.
+     */
     function getRecipient(uint32 destinationEndpointId) external view returns (bytes32);
 
 }

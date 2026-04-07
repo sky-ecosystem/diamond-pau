@@ -17,16 +17,34 @@ interface IFarmFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Deposits `amount` of tokens to a farm.
+     * @param farm   Farm address.
+     * @param amount Amount of tokens to deposit.
+     */
     function deposit(address farm, uint256 amount) external;
 
+    /**
+     * @dev   Withdraws `amount` of tokens from a farm.
+     * @param farm    Farm address.
+     * @param amount  Amount of tokens to withdraw.
+     */
     function withdraw(address farm, uint256 amount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for deposit operations.
+     * @return bytes32 Key for deposit limit.
+     */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
+    /**
+     * @dev    Limit for withdraw operations.
+     * @return bytes32 Key for withdraw limit.
+     */
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
 }

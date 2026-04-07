@@ -15,12 +15,20 @@ interface IMerklFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Toggles a operator.
+     * @param operator Operator address.
+     */
     function toggleOperator(address operator) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Merkl distributor address.
+     * @return address Merkl distributor address.
+     */
     function distributor() external view returns (address);
 
 }

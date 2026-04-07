@@ -15,14 +15,28 @@ interface IPendleFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Redeems `pyAmountIn` of PY tokens to `minAmountOut` of tokens.
+     * @param market       Pendle market address.
+     * @param pyAmountIn   Amount of PY tokens to redeem.
+     * @param minAmountOut Minimum amount of tokens to receive.
+     */
     function redeem(address market, uint256 pyAmountIn, uint256 minAmountOut) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for redeem operations.
+     * @return bytes32 Key for redeem limit.
+     */
     function LIMIT_REDEEM() external pure returns (bytes32);
 
+    /**
+     * @dev    Pendle router address.
+     * @return address Pendle router address.
+     */
     function router() external view returns (address);
 
 }
