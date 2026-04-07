@@ -19,12 +19,22 @@ interface ITransferAssetFacet is IFacetBase {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Transfers `amount` of `asset` to `destination`.
+     * @param asset        Asset address.
+     * @param destination  Destination address.
+     * @param amount       Amount of `asset` to transfer.
+     */
     function transfer(address asset, address destination, uint256 amount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev    Limit for transfer operations.
+     * @return bytes32 Key for transfer limit.
+     */
     function LIMIT_TRANSFER() external pure returns (bytes32);
 
 }
