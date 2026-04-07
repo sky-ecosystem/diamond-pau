@@ -2105,6 +2105,15 @@ contract MainnetController_UniswapV3_RemoveLiquidity_DAIUSDC_E2ETests is Uniswap
     }
 
     function test_e2e_removeLiquidityUniswapV3_daiUsdc_allLiquidity() public {
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV3Facet.UniswapV3RemoveLiquidity({
+            pool      : _getPool(),
+            tokenId   : 1117588,
+            liquidity : 192838924760199336527,
+            amount0   : 993472.837339547954822405e18,
+            amount1   : 929999.999999e6
+        });
+
         _removeLiquidityAndValidate(
             tokenId,
             totalLiquidity,
@@ -2140,6 +2149,15 @@ contract MainnetController_UniswapV3_RemoveLiquidity_USDCUSDT_E2ETests is Uniswa
     }
 
     function test_e2e_removeLiquidityUniswapV3_usdcUsdt_allLiquidity() public {
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV3Facet.UniswapV3RemoveLiquidity({
+            pool      : _getPool(),
+            tokenId   : 1117588,
+            liquidity : 199862513752444,
+            amount0   : 993536.864930e6,
+            amount1   : 999999.999999e6
+        });
+
         _removeLiquidityAndValidate(
             tokenId,
             totalLiquidity,
