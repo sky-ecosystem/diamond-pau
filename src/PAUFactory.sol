@@ -17,46 +17,37 @@ import { IPAUFactory } from "./interfaces/IPAUFactory.sol";
 contract PAUFactory is IPAUFactory, AccessControlEnumerable {
 
     /**********************************************************************************************/
-    /*** Constants                                                                              ***/
-    /**********************************************************************************************/
-
-    bytes32 public constant override FACET_VALIDATOR_ROLE = keccak256("FACET_VALIDATOR_ROLE");
-
-    /**********************************************************************************************/
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    mapping (address facet => bool valid) public override isValidFacet;
+    address public override registry;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address admin, address facetValidator) {
-        _grantRole(DEFAULT_ADMIN_ROLE,   admin);
-        _grantRole(FACET_VALIDATOR_ROLE, facetValidator);
+    constructor(address admin, address registry_) {
+        require(registry_ != address(0), ZeroRegistry());
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+
+        registry = registry_;
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Facet Validator Functions                                         ***/
+    /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function setValidFacet(address facet, bool valid)
+    function setRegistry(address newRegistry)
         external
         override
-        onlyRole(FACET_VALIDATOR_ROLE)
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        _setValidFacet(facet, valid);
-    }
+        require(newRegistry != address(0), ZeroRegistry());
 
-    function setValidFacets(address[] calldata facets, bool[] calldata valid)
-        external
-        override
-        onlyRole(FACET_VALIDATOR_ROLE)
-    {
-        for (uint256 i = 0; i < facets.length; ++i) {
-            _setValidFacet(facets[i], valid[i]);
-        }
+        emit RegistryUpdated(registry, newRegistry);
+
+        registry = newRegistry;
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -84,7 +75,7 @@ contract PAUFactory is IPAUFactory, AccessControlEnumerable {
             accessControls_ : accessControls,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits),
-            factory_        : address(this)
+            registry_       : registry
         }));
 
         // Step 2: Grant CONTROLLER role on ALMProxy and RateLimits to the Controller.
@@ -114,12 +105,5 @@ contract PAUFactory is IPAUFactory, AccessControlEnumerable {
     /**********************************************************************************************/
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
-
-    function _setValidFacet(address facet, bool valid) internal {
-        require(facet != address(0),   ZeroFacet());
-        require(facet.code.length > 0, EmptyFacet());
-
-        emit ValidFacetSet(facet, isValidFacet[facet] = valid);
-    }
 
 }

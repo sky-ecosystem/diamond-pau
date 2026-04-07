@@ -8,11 +8,16 @@ import { ControllerSharedStorage } from "./ControllerSharedStorage.sol";
 
 import { IAccessControls } from "./interfaces/IAccessControls.sol";
 import { IController }     from "./interfaces/IController.sol";
-import { IPAUFactory }     from "./interfaces/IPAUFactory.sol";
+import { IPAURegistry }    from "./interfaces/IPAURegistry.sol";
 
+/**
+ * @title  Controller
+ * @notice Diamond-proxy-style controller that queries a centralized PAURegistry for dispatch info.
+ *         Each controller maintains a local whitelist of facet identifiers it has opted into.
+ *         Defaults to `allowAllFacets = true` (trust-all mode).
+ */
 contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
-    using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**********************************************************************************************/
@@ -21,10 +26,9 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        address                  factory;
-        EnumerableSet.AddressSet facets;
-        mapping (bytes4  => Dispatch)                 dispatches;
-        mapping (address => EnumerableSet.Bytes32Set) wiring;
+        address                  registry;
+        bool                     allowAllFacets;
+        EnumerableSet.Bytes32Set whitelistedFacetHashes;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.Controller")) - 1)) & ~bytes32(uint256(0xff))
@@ -56,66 +60,65 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address accessControls_, address proxy_, address rateLimits_, address factory_) {
+    constructor(
+        address accessControls_,
+        address proxy_,
+        address rateLimits_,
+        address registry_
+    ) {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         $.accessControls = accessControls_;
         $.proxy          = proxy_;
         $.rateLimits     = rateLimits_;
 
-        _getControllerStorage().factory = factory_;
+        ControllerStorage storage cs = _getControllerStorage();
+
+        cs.registry        = registry_;
+        cs.allowAllFacets  = true;
     }
 
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function addWire(address facet, Wire calldata wire) external override nonReentrant onlyAdmin {
-        _validateFacet(facet);
-        _addWire(facet, wire);
+    function optInToFacet(string calldata identifier) external override nonReentrant onlyAdmin {
+        _optIn(identifier);
     }
 
-    function addWires(address facet, Wire[] calldata wires)
+    function optInToFacets(string[] calldata identifiers)
         external
         override
         nonReentrant
         onlyAdmin
     {
-        require(wires.length > 0, EmptyArray());
+        require(identifiers.length > 0, EmptyArray());
 
-        _validateFacet(facet);
-
-        for (uint256 i = 0; i < wires.length; ++i) {
-            _addWire(facet, wires[i]);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            _optIn(identifiers[i]);
         }
     }
 
-    function removeWire(bytes4 callSelector) external override nonReentrant onlyAdmin {
-        _removeWire(callSelector);
+    function optOutOfFacet(string calldata identifier) external override nonReentrant onlyAdmin {
+        _optOut(identifier);
     }
 
-    function removeWires(bytes4[] calldata callSelectors) external override nonReentrant onlyAdmin {
-        require(callSelectors.length > 0, EmptyArray());
+    function optOutOfFacets(string[] calldata identifiers)
+        external
+        override
+        nonReentrant
+        onlyAdmin
+    {
+        require(identifiers.length > 0, EmptyArray());
 
-        for (uint256 i = 0; i < callSelectors.length; ++i) {
-            _removeWire(callSelectors[i]);
+        for (uint256 i = 0; i < identifiers.length; ++i) {
+            _optOut(identifiers[i]);
         }
     }
 
-    function removeAllWiresFor(address facet) external override nonReentrant onlyAdmin {
-        EnumerableSet.Bytes32Set storage wiring = _getControllerStorage().wiring[facet];
-
-        uint256 wiringCount = wiring.length();
-
-        require(wiringCount > 0, EmptyArray());
-
-        while (wiringCount > 0) {
-            ( bytes4 callSelector, ) = _fromWiring(wiring.at(0));
-
-            _removeWire(callSelector);
-
-            --wiringCount;
-        }
+    function setAllowAllFacets(bool allowAll) external override nonReentrant onlyAdmin {
+        _getControllerStorage().allowAllFacets = allowAll;
+        emit AllowAllFacetsSet(allowAll);
     }
 
     /**********************************************************************************************/
@@ -126,8 +129,14 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         return _getSharedControllerStorage().accessControls;
     }
 
-    function factory() external view override returns (address) {
-        return _getControllerStorage().factory;
+    function allowAllFacets() external view override returns (bool) {
+        return _getControllerStorage().allowAllFacets;
+    }
+
+    function isFacetWhitelisted(string calldata identifier) external view override returns (bool) {
+        return _getControllerStorage().whitelistedFacetHashes.contains(
+            keccak256(bytes(identifier))
+        );
     }
 
     function proxy() external view override returns (address) {
@@ -138,17 +147,23 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         return _getSharedControllerStorage().rateLimits;
     }
 
-    function circuits() external view override returns (Circuit[] memory circuits_) {
+    function registry() external view override returns (address) {
+        return _getControllerStorage().registry;
+    }
+
+    function whitelistedFacets() external view override returns (string[] memory identifiers) {
         ControllerStorage storage $ = _getControllerStorage();
 
-        uint256 facetCount = $.facets.length();
+        uint256 count = $.whitelistedFacetHashes.length();
+        identifiers = new string[](count);
 
-        circuits_ = new Circuit[](facetCount);
+        IPAURegistry reg = IPAURegistry($.registry);
 
-        for (uint256 i = 0; i < facetCount; ++i) {
-            address facet = $.facets.at(i);
-
-            circuits_[i] = Circuit(facet, _toWires($.wiring[facet]));
+        for (uint256 i = 0; i < count; ++i) {
+            bytes32 identifierHash = $.whitelistedFacetHashes.at(i);
+            // Look up the string from the registry — we need the facet address first
+            address facet = reg.getFacetAddress(_identifierStringFromHash(identifierHash, reg));
+            identifiers[i] = reg.getFacetIdentifier(facet);
         }
     }
 
@@ -160,43 +175,13 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         external
         view
         override
-        returns (Dispatch memory dispatch)
+        returns (Dispatch memory)
     {
-        return _getControllerStorage().dispatches[callSelector];
-    }
+        IPAURegistry.Dispatch memory registryDispatch = IPAURegistry(
+            _getControllerStorage().registry
+        ).getDispatch(callSelector);
 
-    function getDispatches(bytes4[] calldata callSelectors)
-        external
-        view
-        override
-        returns (Dispatch[] memory dispatches)
-    {
-        dispatches = new Dispatch[](callSelectors.length);
-
-        ControllerStorage storage $ = _getControllerStorage();
-
-        for (uint256 i = 0; i < callSelectors.length; ++i) {
-            dispatches[i] = $.dispatches[callSelectors[i]];
-        }
-    }
-
-    function getWiring(address facet) external view override returns (Wire[] memory wiring) {
-        return _toWires(_getControllerStorage().wiring[facet]);
-    }
-
-    function getWirings(address[] calldata facets)
-        external
-        view
-        override
-        returns (Wire[][] memory wirings)
-    {
-        wirings = new Wire[][](facets.length);
-
-        ControllerStorage storage $ = _getControllerStorage();
-
-        for (uint256 i = 0; i < facets.length; ++i) {
-            wirings[i] = _toWires($.wiring[facets[i]]);
-        }
+        return Dispatch(registryDispatch.facet, registryDispatch.delegateSelector);
     }
 
     /**********************************************************************************************/
@@ -204,13 +189,29 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /**********************************************************************************************/
 
     fallback() external payable {
-        Dispatch storage dispatch = _getControllerStorage().dispatches[msg.sig];
+        ControllerStorage storage cs = _getControllerStorage();
+
+        // Query the central registry for the dispatch
+        IPAURegistry reg = IPAURegistry(cs.registry);
+
+        IPAURegistry.Dispatch memory dispatch = reg.getDispatch(msg.sig);
 
         address facet = dispatch.facet;
 
         require(facet != address(0), CallSelectorNotWired(msg.sig));
 
-        // Replace the incoming selector with the delegate selector.
+        // If not in trust-all mode, check local whitelist
+        if (!cs.allowAllFacets) {
+            string memory identifier = reg.getFacetIdentifier(facet);
+            bytes32 identifierHash = keccak256(bytes(identifier));
+
+            require(
+                cs.whitelistedFacetHashes.contains(identifierHash),
+                FacetNotWhitelisted(msg.sig, identifier)
+            );
+        }
+
+        // Replace the incoming selector with the delegate selector and delegatecall.
         ( bool success, bytes memory returnData ) = facet.delegatecall(
             abi.encodePacked(dispatch.delegateSelector, msg.data[4:])
         );
@@ -228,88 +229,29 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _addWire(address facet, Wire memory wire) internal {
-        bytes4 callSelector     = wire.callSelector;
-        bytes4 delegateSelector = wire.delegateSelector;
+    function _optIn(string calldata identifier) internal {
+        require(bytes(identifier).length > 0, EmptyIdentifier());
 
-        _revertIfCallSelectorIsHardcoded(callSelector);
+        bytes32 identifierHash = keccak256(bytes(identifier));
 
-        ControllerStorage storage $ = _getControllerStorage();
+        _getControllerStorage().whitelistedFacetHashes.add(identifierHash);
 
-        require(
-            $.dispatches[callSelector].facet == address(0),
-            CallSelectorAlreadyWired(callSelector)
-        );
-
-        $.facets.add(facet);
-
-        $.dispatches[callSelector] = Dispatch(facet, delegateSelector);
-
-        $.wiring[facet].add(_toWiring(callSelector, delegateSelector));
-
-        emit WireAdded(callSelector, delegateSelector, facet);
+        emit FacetOptedIn(identifier);
     }
 
-    function _removeWire(bytes4 callSelector) internal {
-        _revertIfCallSelectorIsHardcoded(callSelector);
+    function _optOut(string calldata identifier) internal {
+        require(bytes(identifier).length > 0, EmptyIdentifier());
 
-        ControllerStorage storage $ = _getControllerStorage();
+        bytes32 identifierHash = keccak256(bytes(identifier));
 
-        Dispatch storage dispatch = $.dispatches[callSelector];
+        _getControllerStorage().whitelistedFacetHashes.remove(identifierHash);
 
-        address facet = dispatch.facet;
-
-        require(dispatch.facet != address(0), CallSelectorNotWired(callSelector));
-
-        EnumerableSet.Bytes32Set storage wiring = $.wiring[facet];
-
-        wiring.remove(_toWiring(callSelector, dispatch.delegateSelector));
-
-        delete $.dispatches[callSelector];
-
-        if (wiring.length() == 0) {
-            $.facets.remove(facet);
-        }
-
-        emit WireRemoved(callSelector);
+        emit FacetOptedOut(identifier);
     }
 
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
-
-    function _fromWiring(bytes32 wiring)
-        internal
-        pure
-        returns (bytes4 callSelector, bytes4 delegateSelector)
-    {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return (bytes4(wiring), bytes4(wiring << 32));
-    }
-
-    function _toWiring(bytes4 callSelector, bytes4 delegateSelector)
-        internal
-        pure
-        returns (bytes32 wiring)
-    {
-        return bytes32(abi.encodePacked(callSelector, delegateSelector));
-    }
-
-    function _toWires(EnumerableSet.Bytes32Set storage wiring)
-        internal
-        view
-        returns (Wire[] memory wires)
-    {
-        uint256 wiringCount = wiring.length();
-
-        wires = new Wire[](wiringCount);
-
-        for (uint256 i = 0; i < wiringCount; ++i) {
-            ( bytes4 callSelector, bytes4 delegateSelector ) = _fromWiring(wiring.at(i));
-
-            wires[i] = Wire(callSelector, delegateSelector);
-        }
-    }
 
     function _revertIfNotAdmin() internal view {
         require(
@@ -321,32 +263,43 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         );
     }
 
-    function _revertIfCallSelectorIsHardcoded(bytes4 callSelector) internal pure {
-        require(
-            callSelector != IController.addWire.selector &&
-            callSelector != IController.addWires.selector &&
-            callSelector != IController.removeWire.selector &&
-            callSelector != IController.removeWires.selector &&
-            callSelector != IController.removeAllWiresFor.selector &&
-            callSelector != IController.accessControls.selector &&
-            callSelector != IController.factory.selector &&
-            callSelector != IController.proxy.selector &&
-            callSelector != IController.rateLimits.selector &&
-            callSelector != IController.circuits.selector &&
-            callSelector != IController.getDispatch.selector &&
-            callSelector != IController.getDispatches.selector &&
-            callSelector != IController.getWiring.selector &&
-            callSelector != IController.getWirings.selector,
-            CallSelectorHardcoded(callSelector)
-        );
+    /**
+     * @dev   Helper to get the string identifier from a hash. Since we don't store strings
+     *        locally, we iterate the registry's identifiers. This is only used in view functions.
+     */
+    function _identifierStringFromHash(bytes32 identifierHash, IPAURegistry reg)
+        internal
+        view
+        returns (string memory)
+    {
+        // Get all identifiers and find the matching one
+        string[] memory allIdentifiers = reg.getFacetIdentifiers();
+
+        for (uint256 i = 0; i < allIdentifiers.length; ++i) {
+            if (keccak256(bytes(allIdentifiers[i])) == identifierHash) {
+                return allIdentifiers[i];
+            }
+        }
+
+        return "";
     }
 
-    function _validateFacet(address facet) internal view {
-        require(facet != address(0), ZeroFacet());
-
+    function _revertIfCallSelectorIsHardcoded(bytes4 callSelector) internal pure {
         require(
-            IPAUFactory(_getControllerStorage().factory).isValidFacet(facet),
-            InvalidFacet(facet)
+            callSelector != IController.optInToFacet.selector &&
+            callSelector != IController.optInToFacets.selector &&
+            callSelector != IController.optOutOfFacet.selector &&
+            callSelector != IController.optOutOfFacets.selector &&
+            callSelector != IController.setAllowAllFacets.selector &&
+            callSelector != IController.accessControls.selector &&
+            callSelector != IController.allowAllFacets.selector &&
+            callSelector != IController.isFacetWhitelisted.selector &&
+            callSelector != IController.proxy.selector &&
+            callSelector != IController.rateLimits.selector &&
+            callSelector != IController.registry.selector &&
+            callSelector != IController.whitelistedFacets.selector &&
+            callSelector != IController.getDispatch.selector,
+            CallSelectorNotWired(callSelector)
         );
     }
 

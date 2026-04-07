@@ -7,71 +7,53 @@ interface IController {
     /*** Structs                                                                                ***/
     /**********************************************************************************************/
 
-    struct Circuit {
-        address facet;
-        Wire[]  wires;
-    }
-
     struct Dispatch {
         address facet;
         bytes4  delegateSelector;
-    }
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
     }
 
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event WireAdded(
-        bytes4  indexed callSelector,
-        bytes4  indexed delegateSelector,
-        address indexed facet
-    );
+    event FacetOptedIn(string indexed identifier);
 
-    event WireRemoved(bytes4 indexed callSelector);
+    event FacetOptedOut(string indexed identifier);
+
+    event AllowAllFacetsSet(bool allowAll);
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
     /**********************************************************************************************/
 
-    /// @notice Thrown when a when a call selector is already wired to a facet.
-    error CallSelectorAlreadyWired(bytes4 callSelector);
-
-    /// @notice Thrown when the call selector is hardcoded.
-    error CallSelectorHardcoded(bytes4 callSelector);
-
-    /// @notice Thrown when a call selector is not wired to a facet.
+    /// @notice Thrown when a call selector is not wired in the registry.
     error CallSelectorNotWired(bytes4 callSelector);
 
     /// @notice Thrown when an argument array is empty.
     error EmptyArray();
 
-    /// @notice Thrown when the facet is not registered as valid on the factory.
-    error InvalidFacet(address facet);
+    /// @notice Thrown when the facet is not in this controller's whitelist.
+    error FacetNotWhitelisted(bytes4 callSelector, string identifier);
 
     /// @notice Thrown when the caller is not an admin.
     error NotAdmin(address caller);
 
-    /// @notice Thrown when the dispatch is invalid.
-    error ZeroFacet();
+    /// @notice Thrown when an identifier string is empty.
+    error EmptyIdentifier();
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function addWire(address facet, Wire calldata wire) external;
+    function optInToFacet(string calldata identifier) external;
 
-    function addWires(address facet, Wire[] calldata wires) external;
+    function optInToFacets(string[] calldata identifiers) external;
 
-    function removeAllWiresFor(address facet) external;
+    function optOutOfFacet(string calldata identifier) external;
 
-    function removeWire(bytes4 callSelector) external;
+    function optOutOfFacets(string[] calldata identifiers) external;
 
-    function removeWires(bytes4[] calldata callSelectors) external;
+    function setAllowAllFacets(bool allowAll) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
@@ -79,27 +61,22 @@ interface IController {
 
     function accessControls() external view returns (address);
 
-    function circuits() external view returns (Circuit[] memory);
+    function allowAllFacets() external view returns (bool);
 
-    function factory() external view returns (address);
+    function isFacetWhitelisted(string calldata identifier) external view returns (bool);
 
     function proxy() external view returns (address);
 
     function rateLimits() external view returns (address);
+
+    function registry() external view returns (address);
+
+    function whitelistedFacets() external view returns (string[] memory);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
-
-    function getDispatches(bytes4[] calldata callSelectors)
-        external
-        view
-        returns (Dispatch[] memory);
-
-    function getWiring(address facet) external view returns (Wire[] memory);
-
-    function getWirings(address[] calldata facets) external view returns (Wire[][] memory);
 
 }

@@ -19,15 +19,13 @@ interface IPAUFactory is IAccessControlEnumerable {
         address         rateLimits
     );
 
-    event ValidFacetSet( address indexed facet, bool valid);
+    event RegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
     /**********************************************************************************************/
 
-    error EmptyFacet();
-
-    error ZeroFacet();
+    error ZeroRegistry();
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -35,17 +33,13 @@ interface IPAUFactory is IAccessControlEnumerable {
 
     function deploy(address admin) external returns (address controller);
 
-    function setValidFacet(address facet, bool valid) external;
-
-    function setValidFacets(address[] calldata facets, bool[] calldata valid) external;
+    function setRegistry(address newRegistry) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    function FACET_VALIDATOR_ROLE() external view returns (bytes32);
-
-    function isValidFacet(address facet) external view returns (bool);
+    function registry() external view returns (address);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
