@@ -186,9 +186,9 @@ interface IOTCFacet is IFacetBase {
     /**
      * @dev    Gets a state.
      * @param  exchange Exchange address.
-     * @return uint256  Normalized sent.
-     * @return uint256  Sent timestamp.
-     * @return uint256  Normalized claimed.
+     * @return normalizedSent    Normalized sent.
+     * @return sentTimestamp     Sent timestamp.
+     * @return normalizedClaimed Normalized claimed.
      */
     function getState(address exchange)
         external

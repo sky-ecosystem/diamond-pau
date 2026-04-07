@@ -20,16 +20,14 @@ interface IPSMFacet is IFacetBase {
     /**
      * @dev    Swaps `usdcAmount` of USDC to `usdsAmount` of USDS.
      * @param  usdcAmount Amount of USDC to swap.
-     * @return usdsAmount Amount of USDS to receive.
      */
     function swapUSDCToUSDS(uint256 usdcAmount) external;
 
     /**
      * @dev    Swaps `usdsAmount` of USDS to `usdcAmount` of USDC.
      * @param  usdsAmount Amount of USDS to swap.
-     * @return usdcAmount Amount of USDC to receive.
      */
-    function swapUSDSToUSDC(uint256 usdcAmount) external;
+    function swapUSDSToUSDC(uint256 usdsAmount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
