@@ -409,7 +409,12 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         uint256 token1BalanceBefore = token1.balanceOf(address(almProxy));
 
         vm.expectEmit(address(mainnetController));
-        emit IUniswapV3Facet.UniswapV3Swap(_getPool(), address(token0), amountIn, 249_932.354229e6);
+        emit IUniswapV3Facet.UniswapV3Swap({
+            pool          : _getPool(),
+            tokenIn       : address(token0),
+            amountInSpent : amountIn,
+            amountOut     : 249_932.354229e6
+        });
 
         uint256 amountOut = _swap(address(token0), amountIn, amountIn * 999/1000);
 
@@ -442,7 +447,12 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         uint256 token1BalanceBefore = token1.balanceOf(address(almProxy));
 
         vm.expectEmit(address(mainnetController));
-        emit IUniswapV3Facet.UniswapV3Swap(_getPool(), address(token1), amountIn, 300_018.569643e6);
+        emit IUniswapV3Facet.UniswapV3Swap({
+            pool          : _getPool(),
+            tokenIn       : address(token1),
+            amountInSpent : amountIn,
+            amountOut     : 300_018.569643e6
+        });
 
         uint256 amountOut = _swap(address(token1), amountIn, amountIn * 999/1000);
 
@@ -488,12 +498,12 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
         uint256 token1BalanceBefore = token1.balanceOf(address(almProxy));
 
         vm.expectEmit(address(mainnetController));
-        emit IUniswapV3Facet.UniswapV3Swap(
-            _getPool(),
-            address(token0),
-            2_140_038.431336e6,
-            2_139_359.691608e6
-        );
+        emit IUniswapV3Facet.UniswapV3Swap({
+            pool          : _getPool(),
+            tokenIn       : address(token0),
+            amountInSpent : 2_140_038.431336e6,
+            amountOut     : 2_139_359.691608e6
+        });
 
         vm.startPrank(relayer);
         uint256 amountOut = mainnetController.swapUniswapV3(
@@ -1467,15 +1477,15 @@ contract MainnetController_UniswapV3_AddLiquidity_TWAPProtectionTests is Uniswap
         });
 
         vm.expectEmit(address(mainnetController));
-        emit IUniswapV3Facet.UniswapV3AddLiquidity(
-            _getPool(),
-            1117588,
-            tick.lower,
-            tick.upper,
-            1_998_625.137524e6,
-            9_935.368650e6,
-            10_000.000000e6
-        );
+        emit IUniswapV3Facet.UniswapV3AddLiquidity({
+            pool      : _getPool(),
+            tokenId   : 1117588,
+            tickLower : tick.lower,
+            tickUpper : tick.upper,
+            liquidity : 1_998_625.137524e6,
+            amount0   : 9_935.368650e6,
+            amount1   : 10_000.000000e6
+        });
 
         vm.startPrank(relayer);
         ( uint256 tokenId, uint128 liquidity, ) = mainnetController.addLiquidityUniswapV3(

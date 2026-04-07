@@ -112,7 +112,11 @@ contract MainnetController_TransferAsset_Tests is TransferAsset_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit ITransferAssetFacet.TransferAssetFacetTransfer(Ethereum.USDC, receiver, 1_000_000e6);
+        emit ITransferAssetFacet.TransferAssetFacetTransfer({
+            asset       : Ethereum.USDC,
+            destination : receiver,
+            amount      : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDC, receiver, 1_000_000e6);
@@ -144,7 +148,11 @@ contract MainnetController_TransferAsset_Tests is TransferAsset_TestBase {
         assertEq(USDT.balanceOf(address(almProxy)), 1_000_000e6);
 
         vm.expectEmit(address(mainnetController));
-        emit ITransferAssetFacet.TransferAssetFacetTransfer(Ethereum.USDT, receiver, 1_000_000e6);
+        emit ITransferAssetFacet.TransferAssetFacetTransfer({
+            asset       : Ethereum.USDT,
+            destination : receiver,
+            amount      : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.transferAsset(Ethereum.USDT, receiver, 1_000_000e6);

@@ -215,7 +215,11 @@ contract ForeignController_Morpho_Deposit_SuccessTests is Morpho_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDS,
+            assets : 1_000_000e18,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         assertEq(
@@ -238,7 +242,11 @@ contract ForeignController_Morpho_Deposit_SuccessTests is Morpho_TestBase {
         assertEq(IERC20Like(Base.USDC).allowance(address(almProxy), MORPHO_VAULT_USDC), 0);
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDC,
+            assets : 1_000_000e6,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         assertEq(
@@ -341,7 +349,11 @@ contract ForeignController_Morpho_Withdraw_SuccessTests is Morpho_TestBase {
         deal(Base.USDS, address(almProxy), 1_000_000e18);
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDS,
+            assets : 1_000_000e18,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
@@ -355,7 +367,11 @@ contract ForeignController_Morpho_Withdraw_SuccessTests is Morpho_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Withdraw(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Withdraw({
+            token  : MORPHO_VAULT_USDS,
+            assets : 1_000_000e18,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         assertEq(
@@ -379,7 +395,11 @@ contract ForeignController_Morpho_Withdraw_SuccessTests is Morpho_TestBase {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDC,
+            assets : 1_000_000e6,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e18);
@@ -393,7 +413,11 @@ contract ForeignController_Morpho_Withdraw_SuccessTests is Morpho_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Withdraw(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Withdraw({
+            token  : MORPHO_VAULT_USDC,
+            assets : 1_000_000e6,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         assertEq(
@@ -522,7 +546,11 @@ contract ForeignController_Morpho_Redeem_SuccessTests is Morpho_TestBase {
         deal(Base.USDS, address(almProxy), 1_000_000e18);
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDS,
+            assets : 1_000_000e18,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18, 1_000_000e18);
@@ -538,7 +566,11 @@ contract ForeignController_Morpho_Redeem_SuccessTests is Morpho_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Redeem(MORPHO_VAULT_USDS, shares, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Redeem({
+            token  : MORPHO_VAULT_USDS,
+            shares : shares,
+            assets : 1_000_000e18
+        });
 
         vm.prank(relayer);
         assertEq(
@@ -562,7 +594,11 @@ contract ForeignController_Morpho_Redeem_SuccessTests is Morpho_TestBase {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Deposit(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e18);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : MORPHO_VAULT_USDC,
+            assets : 1_000_000e6,
+            shares : 1_000_000e18
+        });
 
         vm.prank(relayer);
         foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6, 1_000_000e6);
@@ -578,7 +614,11 @@ contract ForeignController_Morpho_Redeem_SuccessTests is Morpho_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IERC4626Facet.ERC4626Redeem(MORPHO_VAULT_USDC, shares, 1_000_000e6);
+        emit IERC4626Facet.ERC4626Redeem({
+            token  : MORPHO_VAULT_USDC,
+            shares : shares,
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         assertEq(

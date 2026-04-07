@@ -184,7 +184,11 @@ contract MainnetController_ERC4626_Maple_Deposit_Tests is Maple_TestBase {
         assertEq(SYRUP.balanceOf(address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC4626Facet.ERC4626Deposit(address(SYRUP), 1_000_000e6, syrupConvertedShares);
+        emit IERC4626Facet.ERC4626Deposit({
+            token  : address(SYRUP),
+            assets : 1_000_000e6,
+            shares : syrupConvertedShares
+        });
 
         vm.prank(relayer);
         uint256 shares = mainnetController.depositERC4626(
@@ -273,7 +277,10 @@ contract MainnetController_Maple_RequestRedemption_Tests is Maple_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), proxyShares);
+        emit IMapleFacet.MapleRequestRedemption({
+            mapleToken : address(SYRUP),
+            shares     : proxyShares
+        });
 
         vm.prank(relayer);
         mainnetController.requestMapleRedemption(address(SYRUP), proxyShares);
@@ -320,7 +327,10 @@ contract MainnetController_Maple_CancelRedemption_Tests is Maple_TestBase {
         uint256 proxyShares = mainnetController.depositERC4626(address(SYRUP), 1_000_000e6, 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleRequestRedemption(address(SYRUP), proxyShares);
+        emit IMapleFacet.MapleRequestRedemption({
+            mapleToken : address(SYRUP),
+            shares     : proxyShares
+        });
 
         mainnetController.requestMapleRedemption(address(SYRUP), proxyShares);
 
@@ -330,7 +340,7 @@ contract MainnetController_Maple_CancelRedemption_Tests is Maple_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IMapleFacet.MapleCancelRedemption(address(SYRUP), proxyShares);
+        emit IMapleFacet.MapleCancelRedemption({ mapleToken: address(SYRUP), shares: proxyShares });
 
         mainnetController.cancelMapleRedemption(address(SYRUP), proxyShares);
 

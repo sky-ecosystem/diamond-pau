@@ -132,7 +132,7 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         vm.record();
 
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 1_000_000e6);
+        emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDC, amount: 1_000_000e6 });
 
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
@@ -213,7 +213,7 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         deal(Base.USDC, address(almProxy), 500_000e6);
 
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 500_000e6);
+        emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDC, amount: 500_000e6 });
 
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 500_000e6);
@@ -239,7 +239,7 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         // Partial withdraw
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, 400_000e6);
+        emit IAaveFacet.AaveWithdraw({ aToken: ATOKEN_USDC, amountWithdrawn: 400_000e6 });
 
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, 400_000e6), 400_000e6);
@@ -255,7 +255,10 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         // Withdraw all
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, aTokenBalance - 400_000e6 + 1);  // Rounding
+        emit IAaveFacet.AaveWithdraw({
+            aToken          : ATOKEN_USDC,
+            amountWithdrawn : aTokenBalance - 400_000e6 + 1  // Rounding
+        });
 
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance - 400_000e6 + 1);  // Rounding
@@ -281,7 +284,7 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
 
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveDeposit(ATOKEN_USDC, 1_000_000e6);
+        emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDC, amount: 1_000_000e6 });
 
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
@@ -305,7 +308,7 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
 
         // Full withdraw
         vm.expectEmit(address(foreignController));
-        emit IAaveFacet.AaveWithdraw(ATOKEN_USDC, aTokenBalance);
+        emit IAaveFacet.AaveWithdraw({ aToken: ATOKEN_USDC, amountWithdrawn: aTokenBalance });
 
         vm.prank(relayer);
         assertEq(foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max), aTokenBalance);

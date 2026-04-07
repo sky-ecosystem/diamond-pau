@@ -107,7 +107,10 @@ contract MainnetController_Centrifuge_RequestDepositERC7540_Tests is Centrifuge_
         assertEq(jTreasuryVault.pendingDepositRequest(REQUEST_ID, address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -164,7 +167,10 @@ contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
         // Request deposit into JTRSY by supplying USDC
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -199,7 +205,10 @@ contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
         // Claim shares
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540ClaimDeposit(address(jTreasuryVault), 500_000e6);
+        emit IERC7540Facet.ERC7540ClaimDeposit({
+            token  : address(jTreasuryVault),
+            shares : 500_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.claimDepositERC7540(address(jTreasuryVault));
@@ -219,7 +228,10 @@ contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
         // Request deposit into JTRSY by supplying USDC
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -236,7 +248,10 @@ contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
         // Request another deposit into JTRSY by supplying more USDC
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 500_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 500_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 500_000e6);
@@ -267,7 +282,10 @@ contract MainnetController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
         // Claim shares
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540ClaimDeposit(address(jTreasuryVault), 750_000e6);
+        emit IERC7540Facet.ERC7540ClaimDeposit({
+            token  : address(jTreasuryVault),
+            shares : 750_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.claimDepositERC7540(address(jTreasuryVault));
@@ -317,7 +335,10 @@ contract MainnetController_Centrifuge_CancelDeposit_Tests is Centrifuge_TestBase
         deal(address(usdc), address(almProxy), 1_000_000e6);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -326,7 +347,7 @@ contract MainnetController_Centrifuge_CancelDeposit_Tests is Centrifuge_TestBase
         assertEq(jTreasuryVault.pendingCancelDepositRequest(REQUEST_ID, address(almProxy)), false);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeCancelDepositRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeCancelDepositRequest({ token: address(jTreasuryVault) });
 
         vm.prank(relayer);
         mainnetController.cancelCentrifugeDepositRequest(address(jTreasuryVault));
@@ -382,13 +403,16 @@ contract MainnetController_Centrifuge_ClaimCancelDeposit_Tests is Centrifuge_Tes
         assertEq(jTreasuryVault.claimableCancelDepositRequest(REQUEST_ID, address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestDeposit(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestDeposit({
+            token  : address(jTreasuryVault),
+            assets : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeCancelDepositRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeCancelDepositRequest({ token: address(jTreasuryVault) });
 
         vm.prank(relayer);
         mainnetController.cancelCentrifugeDepositRequest(address(jTreasuryVault));
@@ -416,7 +440,9 @@ contract MainnetController_Centrifuge_ClaimCancelDeposit_Tests is Centrifuge_Tes
         assertEq(jTreasuryVault.claimableCancelDepositRequest(REQUEST_ID, address(almProxy)), 1_000_000e6);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeClaimCancelDepositRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeClaimCancelDepositRequest({
+            token : address(jTreasuryVault)
+        });
 
         vm.prank(relayer);
         mainnetController.claimCentrifugeCancelDepositRequest(address(jTreasuryVault));
@@ -504,7 +530,7 @@ contract MainnetController_Centrifuge_RequestRedeemERC7540_Tests is Centrifuge_T
         assertEq(jTreasuryVault.pendingRedeemRequest(REQUEST_ID, address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), shares);
+        emit IERC7540Facet.ERC7540RequestRedeem({ token: address(jTreasuryVault), shares: shares });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), shares);
@@ -566,7 +592,10 @@ contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
 
         // Request JTRSY redemption
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestRedeem({
+            token  : address(jTreasuryVault),
+            shares : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -603,7 +632,10 @@ contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
 
         // Claim assets
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540ClaimRedeem(address(jTreasuryVault), 2_000_000e6);
+        emit IERC7540Facet.ERC7540ClaimRedeem({
+            token  : address(jTreasuryVault),
+            assets : 2_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.claimRedeemERC7540(address(jTreasuryVault));
@@ -629,7 +661,10 @@ contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
 
         // Request JTRSY redemption
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), 1_000_000e6);
+        emit IERC7540Facet.ERC7540RequestRedeem({
+            token  : address(jTreasuryVault),
+            shares : 1_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), 1_000_000e6);
@@ -644,7 +679,10 @@ contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
 
         // Request another JTRSY redemption
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), 500_000e6);
+        emit IERC7540Facet.ERC7540RequestRedeem({
+            token  : address(jTreasuryVault),
+            shares : 500_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), 500_000e6);
@@ -679,7 +717,10 @@ contract MainnetController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
 
         // Claim assets
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540ClaimRedeem(address(jTreasuryVault), 3_000_000e6);
+        emit IERC7540Facet.ERC7540ClaimRedeem({
+            token  : address(jTreasuryVault),
+            assets : 3_000_000e6
+        });
 
         vm.prank(relayer);
         mainnetController.claimRedeemERC7540(address(jTreasuryVault));
@@ -733,7 +774,7 @@ contract MainnetController_Centrifuge_CancelRedeemRequest_Tests is Centrifuge_Te
         jTreasuryToken.mint(address(almProxy), shares);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), shares);
+        emit IERC7540Facet.ERC7540RequestRedeem({ token: address(jTreasuryVault), shares: shares });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), shares);
@@ -742,7 +783,7 @@ contract MainnetController_Centrifuge_CancelRedeemRequest_Tests is Centrifuge_Te
         assertEq(jTreasuryVault.pendingCancelRedeemRequest(REQUEST_ID, address(almProxy)), false);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeCancelRedeemRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeCancelRedeemRequest({ token: address(jTreasuryVault) });
 
         vm.prank(relayer);
         mainnetController.cancelCentrifugeRedeemRequest(address(jTreasuryVault));
@@ -802,13 +843,13 @@ contract MainnetController_Centrifuge_ClaimCancelRedeemRequest_Tests is Centrifu
         assertEq(jTreasuryVault.claimableCancelRedeemRequest(REQUEST_ID, address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IERC7540Facet.ERC7540RequestRedeem(address(jTreasuryVault), shares);
+        emit IERC7540Facet.ERC7540RequestRedeem({ token: address(jTreasuryVault), shares: shares });
 
         vm.prank(relayer);
         mainnetController.requestRedeemERC7540(address(jTreasuryVault), shares);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeCancelRedeemRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeCancelRedeemRequest({ token: address(jTreasuryVault) });
 
         vm.prank(relayer);
         mainnetController.cancelCentrifugeRedeemRequest(address(jTreasuryVault));
@@ -835,7 +876,9 @@ contract MainnetController_Centrifuge_ClaimCancelRedeemRequest_Tests is Centrifu
         assertEq(jTreasuryVault.claimableCancelRedeemRequest(REQUEST_ID, address(almProxy)), shares);
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeClaimCancelRedeemRequest(address(jTreasuryVault));
+        emit ICentrifugeFacet.CentrifugeClaimCancelRedeemRequest({
+            token : address(jTreasuryVault)
+        });
 
         vm.prank(relayer);
         mainnetController.claimCentrifugeCancelRedeemRequest(address(jTreasuryVault));

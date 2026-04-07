@@ -195,7 +195,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         uint256 exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 500_000e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 500_000e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
@@ -209,7 +213,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         exactAmountOut = 500_000e18 * 1e18 / pyIndexCurrent;
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 500_000e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 500_000e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
@@ -248,7 +256,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         assertEq(exactAmountOut, 500_000e18);
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 500_000e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 500_000e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
@@ -262,7 +274,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         assertEq(pyIndexCurrent, 1e18);
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 500_000e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 500_000e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, exactAmountOut);
@@ -298,7 +314,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         uint256 exactAmountOut = 5e18 * 1e18 / pyIndexCurrent;
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 5e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 5e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 5e18, exactAmountOut);
@@ -311,7 +331,11 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
         exactAmountOut = 5e18 * 1e18 / pyIndexCurrent;
 
         vm.expectEmit(address(mainnetController));
-        emit IPendleFacet.PendleRedeem(address(pendleMarket), 5e18, exactAmountOut);
+        emit IPendleFacet.PendleRedeem({
+            market              : address(pendleMarket),
+            pyAmountIn          : 5e18,
+            totalTokenOutAmount : exactAmountOut
+        });
 
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 5e18, exactAmountOut);

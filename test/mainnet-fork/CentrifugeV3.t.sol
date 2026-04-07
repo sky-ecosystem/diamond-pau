@@ -178,21 +178,21 @@ contract MainnetController_CentrifugeV3_TransferShares_SuccessTests is Centrifug
         uint256 shareTotalSupplyBefore = IERC20Like(vaultToken).totalSupply();
 
         vm.expectEmit(address(spoke));
-        emit InitiateTransferShares(
-            DESTINATION_CENTRIFUGE_ID,
-            poolId,
-            scId,
-            address(almProxy),
-            target,
-            10_000_000e6
-        );
+        emit InitiateTransferShares({
+            centrifugeId       : DESTINATION_CENTRIFUGE_ID,
+            poolId             : poolId,
+            scId               : scId,
+            sender             : address(almProxy),
+            destinationAddress : target,
+            amount             : 10_000_000e6
+        });
 
         vm.expectEmit(address(mainnetController));
-        emit ICentrifugeFacet.CentrifugeTransferShares(
-            CENTRIFUGE_VAULT,
-            10_000_000e6,
-            DESTINATION_CENTRIFUGE_ID
-        );
+        emit ICentrifugeFacet.CentrifugeTransferShares({
+            token        : CENTRIFUGE_VAULT,
+            amount       : 10_000_000e6,
+            centrifugeId : DESTINATION_CENTRIFUGE_ID
+        });
 
         vm.startPrank(relayer);
         mainnetController.transferSharesCentrifuge{value: 0.1 ether}(

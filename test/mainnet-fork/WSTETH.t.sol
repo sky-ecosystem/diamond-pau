@@ -91,7 +91,7 @@ contract MainnetController_WSTETH_Deposit_Tests is WSTETH_TestBase {
         mainnetController.depositToWstETH(1_000e18 + 1);
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+        emit IWSTETHFacet.WSTETHDeposit({ amount: 1_000e18 });
 
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
@@ -113,7 +113,7 @@ contract MainnetController_WSTETH_Deposit_Tests is WSTETH_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+        emit IWSTETHFacet.WSTETHDeposit({ amount: 1_000e18 });
 
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
@@ -188,7 +188,7 @@ contract MainnetController_WSTETH_RequestWithdraw_Tests is WSTETH_TestBase {
         assertEq(WSTETH.balanceOf(address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+        emit IWSTETHFacet.WSTETHDeposit({ amount: 1_000e18 });
 
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
@@ -212,7 +212,11 @@ contract MainnetController_WSTETH_RequestWithdraw_Tests is WSTETH_TestBase {
         expectedRequestIds[0] = WITHDRAW_QUEUE.getLastRequestId() + 1;
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHRequestWithdraw(500e18, expectedStETHWithdrawal, expectedRequestIds);
+        emit IWSTETHFacet.WSTETHRequestWithdraw({
+            amountToRedeem : 500e18,
+            stethAmount    : expectedStETHWithdrawal,
+            requestIds     : expectedRequestIds
+        });
 
         vm.prank(relayer);
         uint256[] memory requestIds = mainnetController.requestWithdrawFromWstETH(500e18);
@@ -277,7 +281,7 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         assertEq(WSTETH.balanceOf(address(almProxy)), 0);
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHDeposit(1_000e18);
+        emit IWSTETHFacet.WSTETHDeposit({ amount: 1_000e18 });
 
         vm.prank(relayer);
         mainnetController.depositToWstETH(1_000e18);
@@ -299,7 +303,11 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         expectedRequestIds[0] = WITHDRAW_QUEUE.getLastRequestId() + 1;
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHRequestWithdraw(5e18, expectedStETHWithdrawal, expectedRequestIds);
+        emit IWSTETHFacet.WSTETHRequestWithdraw({
+            amountToRedeem : 5e18,
+            stethAmount    : expectedStETHWithdrawal,
+            requestIds     : expectedRequestIds
+        });
 
         // NOTE: Requesting for a small withdrawal so that it can be finalized.
         vm.prank(relayer);
@@ -335,7 +343,10 @@ contract MainnetController_WSTETH_ClaimWithdrawal_Tests is WSTETH_TestBase {
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IWSTETHFacet.WSTETHClaimWithdrawal(requestIds[0], expectedStETHWithdrawal);
+        emit IWSTETHFacet.WSTETHClaimWithdrawal({
+            requestId   : requestIds[0],
+            wethClaimed : expectedStETHWithdrawal
+        });
 
         vm.prank(relayer);
         mainnetController.claimWithdrawalFromWstETH(requestIds[0]);
