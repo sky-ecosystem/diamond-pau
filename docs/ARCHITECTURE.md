@@ -18,10 +18,12 @@ The proxy contract that holds custody of all funds. This contract routes calls t
 The unified controller contract that serves as the entry point for all relayer operations. Inspired by the [EIP-2535 Diamond Proxy](https://eips.ethereum.org/EIPS/eip-2535) pattern, the Controller uses dispatch-based routing to delegate calls to specialized facets. Rather than maintaining separate controllers per domain (e.g., mainnet vs L2), a single Controller is deployed on each chain and configured with only the facets relevant to that deployment.
 
 **Key characteristics:**
-- Dispatch-based call routing: admin maps call selectors to (facet address, delegate selector) pairs via `setDispatch`
+- Dispatch-based call routing: admin maps call selectors to (facet address, delegate selector) pairs via `addWire`
 - Each facet uses its own ERC-7201 namespaced storage domain, preventing storage collisions
 - Shared state (access controls, proxy, rate limits) is accessible to all facets via `ControllerSharedStorage`
 - Reentrancy protection across all facet calls
+- Wiring uses `Wire` structs (`callSelector` + `delegateSelector` pairs) for configuration; `circuits()` returns `Circuit` structs (a facet address together with all its wires)
+- Enumerable introspection via `circuits()`, `getDispatch()`, `getDispatches()`, `getWiring()`, and `getWirings()`
 
 **Capabilities (determined by which facets are wired):**
 - Interact with the Sky allocation system to mint and burn USDS
@@ -30,6 +32,14 @@ The unified controller contract that serves as the entry point for all relayer o
 - Interact with external protocols (Aave, ERC-4626 vaults, Curve, Uniswap, etc.)
 - Bridge USDC via CCTP and OFTs with LayerZero
 - Transfer shares via Centrifuge cross-chain
+
+### PAUFactory
+
+Factory contract for deploying PAU systems and managing facet validation. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller`, wires their roles, and transfers admin ownership to the caller-specified admin. The factory also maintains a `ValidFacet` registry (controlled by `FACET_VALIDATOR_ROLE`) that the Controller checks when wiring new facets.
+
+### AccessControls
+
+Wraps OpenZeppelin `AccessControlEnumerable` to define the PAU-specific roles used by facets at runtime. Declares `FREEZER_ROLE` and `RELAYER_ROLE` as constants. Provides a `removeRelayer` function gated by `FREEZER_ROLE` for emergency revocation of a compromised relayer without requiring a slower governance process.
 
 ### RateLimits
 
@@ -47,8 +57,8 @@ See [RATE_LIMITS.md](./RATE_LIMITS.md) for detailed rate limit documentation.
 A variant of the `ALMProxy` that is not intended to hold funds or have critical authority. It defines low-risk parameters within the PAU ecosystem.
 
 **Architectural differences from standard ALMProxy:**
-- **Controller role usage:** In the standard `ALMProxy`, the controller is the `Controller` contract that acts when approved relayers interact with it. In `ALMProxyFreezable`, the "controllers" are the relayers themselves (granted the `CONTROLLER` role directly).
-- **Additional safety mechanism:** The `FREEZER` role can remove controllers via `removeController`, providing quick revocation of access from compromised or malicious relayers without slower governance processes.
+- **Controller role usage:** In the standard `ALMProxy`, the controller is the `Controller` contract that acts when approved relayers interact with it. In `ALMProxyFreezable`, the relayers are granted the `RELAYER` role directly (there is no intermediary Controller contract), so they can call `doCall` and `doCallWithValue` without a Controller.
+- **Additional safety mechanism:** The `FREEZER` role can remove relayers via `removeRelayer`, providing quick revocation of access from compromised or malicious relayers without slower governance processes.
 
 ### OTCBuffer
 
@@ -86,27 +96,35 @@ All contracts in this repo inherit and implement the `AccessControl` contract fr
 | `RELAYER` | Used for the offchain relayer system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`. |
 | `FREEZER` | Allows removal of a compromised `RELAYER`. Intended for use with a backup relayer that the system can fall back to. |
 | `CONTROLLER` | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits. |
+| `FACET_VALIDATOR` | Used in `PAUFactory` to control which facets can be wired to Controllers. Only validated facets can be added via `addWire`. |
 
 ## Contract Interactions
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│     Relayer     │────▶│   Controller     │────▶│    ALMProxy     │
-│   (External)    │     │  (Dispatches to  │     │ (Funds Custody) │
-└─────────────────┘     │    Facets)       │     └─────────────────┘
-                        └──────────────────┘              │
-                                   │                      │
-                                   │                      │
-                                   ▼                      ▼
-                        ┌──────────────────┐    ┌────────────────────┐
-                        │   RateLimits     │    │ External Protocols │
-                        │   (State Store)  │    │  (Sky, PSM, etc.)  │
-                        └──────────────────┘    └────────────────────┘
+┌─────────────────┐
+│   PAUFactory    │─── deploys ──┬──────────────────────┬─────────────────────┬─────────────────────┐
+│ (Facet Registry)│              │                      │                     │                     │
+└─────────────────┘              ▼                      ▼                     ▼                     ▼
+                        ┌──────────────────┐    ┌─────────────────┐  ┌──────────────────┐ ┌────────────────┐
+┌─────────────────┐     │   Controller     │    │    ALMProxy     │  │   RateLimits     │ │ AccessControls │
+│     Relayer     │────▶│  (Dispatches to  │───▶│ (Funds Custody) │  │   (State Store)  │ │  (Role Store)  │
+│   (External)    │     │    Facets)       │    └─────────────────┘  └──────────────────┘ └────────────────┘
+└─────────────────┘     └──────────────────┘           │                       ▲                    ▲
+                                   │                   │                       │                    │
+                                   │                   ▼                       │                    │
+                                   │          ┌────────────────────┐           │                    │
+                                   │          │ External Protocols │           │                    │
+                                   │          │  (Sky, PSM, etc.)  │           │                    │
+                                   │          └────────────────────┘           │                    │
+                                   │                                           │                    │
+                                   └───────── reads/updates ───────────────────┘                    │
+                                   │                                                                │
+                                   └───────── checks roles ─────────────────────────────────────────┘
 ```
 
 ## Facets
 
-The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
+The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase`, which inherits `ControllerSharedStorage` and `ReentrancyGuard`, providing the `onlyRole` modifier and shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
 | Facet | Purpose |
 |-------|---------|

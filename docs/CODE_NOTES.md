@@ -52,6 +52,14 @@ See [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md#curve-pool-seeding)
 
 ---
 
+## CCTPFacet.transferWithFee - CCTPv2 Fee Handling
+
+**Location:** `src/facets/cctp/CCTPFacet.sol` - `transferWithFee` function
+
+The current CCTPFacet targets CCTPv2, which will enable a non-zero `maxFee` in the future. To handle this, `transferWithFee` allows the relayer to fetch the CCTPv2 fee off-chain and submit it as a parameter. The original `transfer` function (which hardcodes `maxFee = 0`) is kept for backward compatibility. These two functions may be unified into one after CCTPv2 fees are fully enabled.
+
+---
+
 ## Error Message Prefixes
 
 Error messages follow the pattern `ComponentName/error-description`. Each facet and supporting contract uses its own prefix:
@@ -64,6 +72,20 @@ Error messages follow the pattern `ComponentName/error-description`. Each facet 
 | `RateLimits/` | RateLimits contract |
 | `OTCBuffer/` | OTCBuffer contract |
 | `WEETHModule/` | WEETHModule contract |
+
+Additionally, some core contracts use Solidity custom errors (not string-prefix `require` messages):
+
+| Custom Error | Source |
+|-------------|--------|
+| `InvalidFacet(address)` | IController |
+| `CallSelectorAlreadyWired(bytes4)` | IController |
+| `CallSelectorHardcoded(bytes4)` | IController |
+| `CallSelectorNotWired(bytes4)` | IController |
+| `EmptyArray()` | IController |
+| `NotAdmin(address)` | IController |
+| `ZeroFacet()` | IController, IPAUFactory |
+| `EmptyFacet()` | IPAUFactory |
+| `ZeroAdmin()` | IAccessControls |
 
 ### Facet Prefixes
 
@@ -82,6 +104,7 @@ Error messages follow the pattern `ComponentName/error-description`. Each facet 
 | `UniswapV3Facet/` | Uniswap V3 operations |
 | `UniswapV4Facet/` | Uniswap V4 operations |
 | `WEETHFacet/` | weETH deposit/withdraw operations |
+| `ERC7540Facet/` | ERC-7540 async vault operations |
 
 ### Library Prefixes
 
@@ -128,3 +151,43 @@ Rate limit keys combine a function identifier with contextual data via `keccak25
 | `makeAddressAddressKey` | `(bytes32 limit, address, address)` | TransferAssetFacet (asset + destination) |
 
 See [Rate Limits](./RATE_LIMITS.md#whitelisting-via-rate-limit-keys) for design rationale.
+
+---
+
+## Function Overloading in Facets
+
+Function overloading is not recommended in facets. When a facet has overloaded functions (multiple functions with the same name but different parameter types), `Interface.func.selector` will not compile because Solidity cannot disambiguate which overload to use. Instead, you must manually specify the function signature string to get the selector, e.g., `bytes4(keccak256("func(address,uint256)"))`. This adds complexity to wiring and is easy to get wrong.
+
+---
+
+## Rate Limit Gate-Check Pattern
+
+Some operations use a "gate-check" pattern where they verify a rate limit is configured (`maxAmount > 0`) without actually decreasing the rate limit. This serves as an implicit whitelist mechanism. Used by:
+- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_REQUEST_WITHDRAW.maxAmount > 0`
+- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule).maxAmount > 0`
+
+This ensures the corresponding request-withdraw rate limit key was configured by governance before claims are allowed.
+
+---
+
+## No Shared Facet Storage
+
+Facets cannot access each other's ERC-7201 storage domains. Each facet's namespaced storage is private to that facet. Cross-facet communication happens exclusively through `ControllerSharedStorage`, which holds references shared by all facets (e.g., `proxy`, `rateLimits`, `circuits`).
+
+---
+
+## maxSlippage Per-Facet
+
+Shared concepts like `maxSlippage` are intentionally duplicated in each facet's own ERC-7201 storage domain rather than stored in a single shared location. This gives governance granular control over slippage tolerance per integration and avoids coupling facets to each other's storage.
+
+---
+
+## Storage Field Caching
+
+When a storage field such as `$.proxy` or `$.rateLimits` is accessed two or more times within a function, it should be cached into a local variable to avoid repeated `SLOAD` operations. This is a gas optimization pattern used throughout the codebase.
+
+---
+
+## Hardcoded Selector Protection
+
+The Controller protects its own core function selectors from being overwritten by `addWire`. The internal function `_revertIfCallSelectorIsHardcoded` checks against a fixed list of selectors (`addWire`, `addWires`, `removeWire`, `removeWires`, `removeAllWiresFor`, `accessControls`, `factory`, `proxy`, `rateLimits`, `circuits`, `getDispatch`, `getDispatches`, `getWiring`, `getWirings`) and reverts with `CallSelectorHardcoded(bytes4)` if a match is found. This prevents accidental or malicious replacement of the Controller's own routing and admin functions.
