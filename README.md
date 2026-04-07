@@ -28,13 +28,15 @@ This repository contains the onchain components of the PAU system. The system en
 | -------------------------------------------------------------- | ----------------------------------------------------------- |
 | [Architecture](./docs/ARCHITECTURE.md)                         | System architecture, contract interactions, and permissions |
 | [Rate Limits](./docs/RATE_LIMITS.md)                           | Rate limit design, calculations, and configuration          |
-| [Liquidity Operations](./docs/LIQUIDITY_OPERATIONS.md)         | Curve, Uniswap V4, OTC, and PSM integrations                |
+| [Liquidity Operations](./docs/LIQUIDITY_OPERATIONS.md)         | Curve, Uniswap V3, Uniswap V4, OTC, and PSM integrations   |
 | [weETH Integration](./docs/WEETH_INTEGRATION.md)               | EtherFi weETH module architecture and withdrawal flow       |
 | [Threat Model](./docs/THREAT_MODEL.md)                         | Attack vectors, trust assumptions, and security invariants  |
 | [Security](./docs/SECURITY.md)                                 | Protocol-specific considerations and audit information      |
 | [Operational Requirements](./docs/OPERATIONAL_REQUIREMENTS.md) | Seeding, configuration, and onboarding checklists           |
 | [Development](./docs/DEVELOPMENT.md)                           | Testing, deployment, and upgrade procedures                 |
 | [Code Notes](./docs/CODE_NOTES.md)                             | Implementation details and design decisions                 |
+| [PAU Factory](./docs/PAU_FACTORY.md)                           | Factory deployment, facet validation registry               |
+| [UniV3/V4 Comparison](./docs/UNIV3_UNIV4_COMPARISON.md)        | Functional differences between UniswapV3 and V4 facets      |
 
 ## Quick Start
 
@@ -48,21 +50,28 @@ See [Development Guide](./docs/DEVELOPMENT.md) for detailed instructions.
 
 ## Architecture Overview
 
-The Controller is the entry point for all calls. It dispatches to the appropriate facet, which checks rate limits and executes logic, performing calls to the ALMProxy atomically.
+The PAUFactory deploys complete PAU systems atomically. The Controller is the entry point for all relayer calls. It dispatches to the appropriate facet, which checks rate limits and executes logic, performing calls to the ALMProxy atomically.
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│     Relayer     │────▶│   Controller     │────▶│    ALMProxy     │
-│   (External)    │     │  (Dispatches to  │     │ (Funds Custody) │
-└─────────────────┘     │    Facets)       │     └─────────────────┘
-                        └──────────────────┘              │
-                                   │                      │
-                                   │                      ▼
-                                   ▼            ┌────────────────────┐
-                         ┌──────────────────┐   │ External Protocols │
-                         │   RateLimits     │   │  (Sky, PSM, etc.)  │
-                         │   (State Store)  │   └────────────────────┘
-                         └──────────────────┘
+┌─────────────────┐
+│   PAUFactory    │─── deploys ──┬──────────────────────┬─────────────────────┬─────────────────────┐
+│ (Facet Registry)│              │                      │                     │                     │
+└─────────────────┘              ▼                      ▼                     ▼                     ▼
+                        ┌──────────────────┐    ┌─────────────────┐  ┌──────────────────┐ ┌────────────────┐
+┌─────────────────┐     │   Controller     │    │    ALMProxy     │  │   RateLimits     │ │ AccessControls │
+│     Relayer     │────▶│  (Dispatches to  │───▶│ (Funds Custody) │  │   (State Store)  │ │  (Role Store)  │
+│   (External)    │     │    Facets)       │    └─────────────────┘  └──────────────────┘ └────────────────┘
+└─────────────────┘     └──────────────────┘           │                       ▲                    ▲
+                                   │                   │                       │                    │
+                                   │                   ▼                       │                    │
+                                   │          ┌────────────────────┐           │                    │
+                                   │          │ External Protocols │           │                    │
+                                   │          │  (Sky, PSM, etc.)  │           │                    │
+                                   │          └────────────────────┘           │                    │
+                                   │                                           │                    │
+                                   └───────── reads/updates ───────────────────┘                    │
+                                   │                                                                │
+                                   └───────── checks roles ─────────────────────────────────────────┘
 ```
 
 See [Architecture Documentation](./docs/ARCHITECTURE.md) for detailed diagrams and explanations.
@@ -104,6 +113,7 @@ Particularly for the UniswapV4 integration, since the pools being interacted wit
 - **`DEFAULT_ADMIN_ROLE`**: Fully trusted, run by governance
 - **`RELAYER`**: Assumed compromisable - logic prevents unauthorized value movement
 - **`FREEZER`**: Can stop compromised relayers via `removeRelayer`
+- **`FACET_VALIDATOR_ROLE`**: Controls which facets can be wired to Controllers via PAUFactory
 
 See [Security Documentation](./docs/SECURITY.md) for complete trust assumptions and mitigations.
 
