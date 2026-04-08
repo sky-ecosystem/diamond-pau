@@ -42,7 +42,7 @@ interface IOTCBuffer is IAccessControlEnumerable {
     /**
      * @dev    Supports the interface.
      * @param  interfaceId Interface ID.
-     * @return bool True if the interface is supported.
+     * @return bool        True if the interface is supported.
      */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 

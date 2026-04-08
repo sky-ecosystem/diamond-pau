@@ -55,7 +55,7 @@ interface IWEETHModule is IAccessControlEnumerable {
     /**
      * @dev    Supports an interface.
      * @param  interfaceId Interface ID.
-     * @return bool Result.
+     * @return bool        True if the interface is supported.
      */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
