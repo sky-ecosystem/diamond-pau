@@ -57,13 +57,13 @@ contract PAUFactory_Tests is Test {
         address expectedController     = vm.computeCreateAddress(address(factory), nonce + 3);
 
         vm.expectEmit(address(factory));
-        emit IPAUFactory.PAUDeployed(
-            admin,
-            expectedController,
-            expectedAccessControls,
-            expectedAlmProxy,
-            expectedRateLimits
-        );
+        emit IPAUFactory.PAUDeployed({
+            admin          : admin,
+            controller     : expectedController,
+            accessControls : expectedAccessControls,
+            almProxy       : expectedAlmProxy,
+            rateLimits     : expectedRateLimits
+        });
 
         vm.prank(admin);
         IController controller = IController(payable(factory.deploy(admin)));

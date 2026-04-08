@@ -121,7 +121,7 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit ICCTPFacet.CCTPMaxFeeCapSet(1e18);
+        emit ICCTPFacet.CCTPMaxFeeCapSet({ maxFeeCap: 1e18 });
 
         vm.prank(admin);
         controller.setCCTPMaxFeeCap(1e18);
@@ -155,7 +155,10 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
         assertEq(controller.getCCTPMintRecipient(2), bytes32(0));
 
         vm.expectEmit(address(controller));
-        emit ICCTPFacet.CCTPMintRecipientSet(1, mintRecipient1);
+        emit ICCTPFacet.CCTPMintRecipientSet({
+            destinationDomain : 1,
+            mintRecipient     : mintRecipient1
+        });
 
         vm.prank(admin);
         controller.setCCTPMintRecipient(1, mintRecipient1);
@@ -163,7 +166,10 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
         assertEq(controller.getCCTPMintRecipient(1), mintRecipient1);
 
         vm.expectEmit(address(controller));
-        emit ICCTPFacet.CCTPMintRecipientSet(2, mintRecipient2);
+        emit ICCTPFacet.CCTPMintRecipientSet({
+            destinationDomain : 2,
+            mintRecipient     : mintRecipient2
+        });
 
         vm.prank(admin);
         controller.setCCTPMintRecipient(2, mintRecipient2);
@@ -173,7 +179,10 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit ICCTPFacet.CCTPMintRecipientSet(1, mintRecipient2);
+        emit ICCTPFacet.CCTPMintRecipientSet({
+            destinationDomain : 1,
+            mintRecipient     : mintRecipient2
+        });
 
         vm.prank(admin);
         controller.setCCTPMintRecipient(1, mintRecipient2);

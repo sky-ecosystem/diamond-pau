@@ -311,6 +311,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         // Rate limit decreased by value of tokenIn (the amount actually spent).
         _decreaseRateLimit(LIMIT_SWAP, tokenIn, pool, amountSpent);
+
+        emit UniswapV3Swap(pool, tokenIn, amountSpent, amountOut);
     }
 
     function addLiquidity(
@@ -364,6 +366,16 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts.amount0);
         _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts.amount1);
+
+        emit UniswapV3AddLiquidity(
+            pool,
+            resultingTokenId,
+            ticks.lower,
+            ticks.upper,
+            liquidity,
+            amounts.amount0,
+            amounts.amount1
+        );
     }
 
     function removeLiquidity(
@@ -401,6 +413,8 @@ contract UniswapV3Facet is IUniswapV3Facet, FacetBase {
 
         _decreaseRateLimit(LIMIT_WITHDRAW, token0, pool, amounts.amount0);
         _decreaseRateLimit(LIMIT_WITHDRAW, token1, pool, amounts.amount1);
+
+        emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
 
     /**********************************************************************************************/
