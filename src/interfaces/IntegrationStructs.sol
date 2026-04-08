@@ -13,7 +13,7 @@ struct Dispatch {
 
 struct Integration {
     bytes32 id;
-    Config config;
+    Config  config;
 }
 
 struct Wire {
