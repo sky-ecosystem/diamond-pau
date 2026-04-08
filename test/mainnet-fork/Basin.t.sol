@@ -7,6 +7,8 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { IBasinFacet } from "../../src/facets/basin/IBasinFacet.sol";
+
 import { MockBasin } from "../mocks/MockBasin.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
@@ -109,8 +111,20 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IBasinFacet.BasinDeposit({
+            basin  : address(mockBasin),
+            asset  : Ethereum.USDS,
+            amount : depositAmount,
+            shares : depositAmount
+        });
+
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, depositAmount);
+        uint256 shares = mainnetController.depositBasin(
+            address(mockBasin),
+            Ethereum.USDS,
+            depositAmount
+        );
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -129,8 +143,20 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
         mockBasin.setDepositShares(customShares);
         deal(Ethereum.USDS, address(almProxy), depositAmount);
 
+        vm.expectEmit(address(mainnetController));
+        emit IBasinFacet.BasinDeposit({
+            basin  : address(mockBasin),
+            asset  : Ethereum.USDS,
+            amount : depositAmount,
+            shares : customShares
+        });
+
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositBasin(address(mockBasin), Ethereum.USDS, depositAmount);
+        uint256 shares = mainnetController.depositBasin(
+            address(mockBasin),
+            Ethereum.USDS,
+            depositAmount
+        );
 
         assertEq(shares, customShares);
         assertEq(IERC20Like(Ethereum.USDS).balanceOf(address(almProxy)),  0);
@@ -228,8 +254,19 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         vm.record();
 
+        vm.expectEmit(address(mainnetController));
+        emit IBasinFacet.BasinWithdraw({
+            basin           : address(mockBasin),
+            asset           : Ethereum.USDS,
+            assetsWithdrawn : withdrawAmount
+        });
+
         vm.prank(relayer);
-        uint256 assetsWithdrawn = mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, withdrawAmount);
+        uint256 assetsWithdrawn = mainnetController.withdrawBasin(
+            address(mockBasin),
+            Ethereum.USDS,
+            withdrawAmount
+        );
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -246,8 +283,19 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         mockBasin.setWithdrawAmount(customAmount);
         deal(Ethereum.USDS, address(mockBasin), customAmount);
 
+        vm.expectEmit(address(mainnetController));
+        emit IBasinFacet.BasinWithdraw({
+            basin           : address(mockBasin),
+            asset           : Ethereum.USDS,
+            assetsWithdrawn : customAmount
+        });
+
         vm.prank(relayer);
-        uint256 assetsWithdrawn = mainnetController.withdrawBasin(address(mockBasin), Ethereum.USDS, maxAmount);
+        uint256 assetsWithdrawn = mainnetController.withdrawBasin(
+            address(mockBasin),
+            Ethereum.USDS,
+            maxAmount
+        );
 
         assertEq(assetsWithdrawn, customAmount);
         assertEq(IERC20Like(Ethereum.USDS).balanceOf(address(almProxy)),  customAmount);

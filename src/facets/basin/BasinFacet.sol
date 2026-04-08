@@ -53,13 +53,15 @@ contract BasinFacet is IBasinFacet, FacetBase {
         ApproveLib.approve(asset, proxy, basin, amount);
 
         // Deposit `amount` of `asset` in the Basin, decode the result to get `shares`.
-        return abi.decode(
+        shares = abi.decode(
             IALMProxy(proxy).doCall(
                 basin,
                 abi.encodeCall(IBasinLike.deposit, (asset, proxy, amount))
             ),
             (uint256)
         );
+
+        emit BasinDeposit(basin, asset, amount, shares);
     }
 
     function withdraw(address basin, address asset, uint256 maxAmount)
@@ -83,6 +85,8 @@ contract BasinFacet is IBasinFacet, FacetBase {
         );
 
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
+
+        emit BasinWithdraw(basin, asset, assetsWithdrawn);
     }
 
     /**********************************************************************************************/
