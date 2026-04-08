@@ -17,25 +17,25 @@ interface IPSMFacet is IFacetBase {
 
     /**
      * @dev   Event emitted when USDS is swapped to USDC.
-     * @param usdsAmount Amount of USDS swapped.
+     * @param usdcAmount Amount of USDC swapped.
      */
-    event PSMSwapUSDSToUSDC(uint256 usdsAmount);
+    event PSMSwapUSDSToUSDC(uint256 usdcAmount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
     /**
-     * @dev   Swaps `usdcAmount` of USDC to `usdsAmount` of USDS.
+     * @dev   Swaps USDC to USDS.
      * @param usdcAmount Amount of USDC to swap.
      */
     function swapUSDCToUSDS(uint256 usdcAmount) external;
 
     /**
-     * @dev   Swaps `usdsAmount` of USDS to `usdcAmount` of USDC.
-     * @param usdsAmount Amount of USDS to swap.
+     * @dev   Swaps USDS to USDC.
+     * @param usdcAmount Amount of USDC to swap.
      */
-    function swapUSDSToUSDC(uint256 usdsAmount) external;
+    function swapUSDSToUSDC(uint256 usdcAmount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
