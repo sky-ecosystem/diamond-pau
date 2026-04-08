@@ -3,20 +3,15 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { IBeacon }       from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
 import { IERC4626Facet } from "../../../src/facets/erc4626/IERC4626Facet.sol";
-import { ERC4626Facet }  from "../../../src/facets/erc4626/ERC4626Facet.sol";
+
+import { ERC4626Facet } from "../../../src/facets/erc4626/ERC4626Facet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
 
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
 
@@ -31,30 +26,27 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(beaconAdmin);
 
         address facet = address(new ERC4626Facet());
 
         vm.label(facet, "ERC4626Facet");
 
-        factory.setValidFacet(facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IBeacon.Wire(
             IControllerLike.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IBeacon.Wire(
             IControllerLike.getMaxExchangeRate.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        beacon.addWires(facet, wires);
+
+        vm.stopPrank();
     }
 
 }

@@ -3,20 +3,15 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase } from "../../../src/facets/IFacetBase.sol";
 import { IOTCFacet }  from "../../../src/facets/otc/IOTCFacet.sol";
-import { OTCFacet }   from "../../../src/facets/otc/OTCFacet.sol";
+
+import { OTCFacet } from "../../../src/facets/otc/OTCFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
 
     function setBuffer(address exchange, address buffer) external;
 
@@ -43,60 +38,57 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(beaconAdmin);
 
         address facet = address(new OTCFacet());
 
         vm.label(facet, "OTCFacet");
 
-        factory.setValidFacet(facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](8);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IBeacon.Wire(
             IControllerLike.setBuffer.selector,
             IOTCFacet.setBuffer.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IBeacon.Wire(
             IControllerLike.setMaxSlippage.selector,
             IOTCFacet.setMaxSlippage.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IBeacon.Wire(
             IControllerLike.setRechargeRate.selector,
             IOTCFacet.setRechargeRate.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IBeacon.Wire(
             IControllerLike.setIsWhitelisted.selector,
             IOTCFacet.setIsWhitelisted.selector
         );
 
-        wires[4] = IControllerLike.Wire(
+        wires[4] = IBeacon.Wire(
             IControllerLike.getBuffer.selector,
             IOTCFacet.getBuffer.selector
         );
 
-        wires[5] = IControllerLike.Wire(
+        wires[5] = IBeacon.Wire(
             IControllerLike.getMaxSlippage.selector,
             IOTCFacet.getMaxSlippage.selector
         );
 
-        wires[6] = IControllerLike.Wire(
+        wires[6] = IBeacon.Wire(
             IControllerLike.getRechargeRate.selector,
             IOTCFacet.getRechargeRate.selector
         );
 
-        wires[7] = IControllerLike.Wire(
+        wires[7] = IBeacon.Wire(
             IControllerLike.getIsWhitelisted.selector,
             IOTCFacet.getIsWhitelisted.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        beacon.addWires(facet, wires);
+
+        vm.stopPrank();
     }
 
 }

@@ -3,20 +3,15 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { IBeacon }         from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { ILayerZeroFacet } from "../../../src/facets/layer-zero/ILayerZeroFacet.sol";
-import { LayerZeroFacet }  from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
+
+import { LayerZeroFacet } from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
 
     function setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
@@ -31,30 +26,27 @@ abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(beaconAdmin);
 
         address facet = address(new LayerZeroFacet());
 
         vm.label(facet, "LayerZeroFacet");
 
-        factory.setValidFacet(facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IBeacon.Wire(
             IControllerLike.setRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IBeacon.Wire(
             IControllerLike.getRecipient.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        beacon.addWires(facet, wires);
+
+        vm.stopPrank();
     }
 
 }

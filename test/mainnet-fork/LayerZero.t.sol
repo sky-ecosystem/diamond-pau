@@ -21,13 +21,15 @@ import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol"
 
 import { makeAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IBeacon } from "../../src/interfaces/IBeacon.sol";
 
-import { AccessControls } from "../../src/AccessControls.sol";
-import { ALMProxy }       from "../../src/ALMProxy.sol";
-import { Controller }     from "../../src/Controller.sol";
-import { PAUFactory }     from "../../src/PAUFactory.sol";
-import { RateLimits }     from "../../src/RateLimits.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
+
+import { Beacon }     from "../../src/Beacon.sol";
+import { PAUFactory } from "../../src/PAUFactory.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -396,10 +398,10 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy               internal foreignAlmProxy;
+    Beacon                 internal foreignBeacon;
+    IALMProxy              internal foreignAlmProxy;
     IForeignControllerFull internal foreignController;
-    PAUFactory             internal foreignFactory;
-    RateLimits             internal foreignRateLimits;
+    IRateLimits            internal foreignRateLimits;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -442,28 +444,20 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         /*** Step 3: Deploy and configure ALM system ***/
 
-        foreignAlmProxy   = new ALMProxy(SPARK_EXECUTOR);
-        foreignRateLimits = new RateLimits(SPARK_EXECUTOR);
+        foreignBeacon = new Beacon(SPARK_EXECUTOR);
 
-        AccessControls foreignAccessControls = new AccessControls(SPARK_EXECUTOR);
+        PAUFactory foreignFactory = new PAUFactory(address(foreignBeacon));
 
-        foreignFactory = new PAUFactory(SPARK_EXECUTOR, SPARK_EXECUTOR);
+        foreignController = IForeignControllerFull(payable(foreignFactory.deploy(SPARK_EXECUTOR)));
+        foreignAlmProxy   = IALMProxy(payable(foreignController.proxy()));
+        foreignRateLimits = IRateLimits(foreignController.rateLimits());
 
-        foreignController = IForeignControllerFull(payable(address(new Controller({
-            accessControls_ : address(foreignAccessControls),
-            factory_        : address(foreignFactory),
-            proxy_          : address(foreignAlmProxy),
-            rateLimits_     : address(foreignRateLimits)
-        }))));
+        IAccessControls foreignAccessControls = IAccessControls(foreignController.accessControls());
 
         vm.startPrank(SPARK_EXECUTOR);
 
-        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
         foreignAccessControls.grantRole(foreignAccessControls.FREEZER_ROLE(), freezer);
-
-        foreignAlmProxy.grantRole(foreignAlmProxy.CONTROLLER(), address(foreignController));
-
-        foreignRateLimits.grantRole(foreignRateLimits.CONTROLLER(), address(foreignController));
+        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
 
         // Facet wiring
         _wireLayerZeroFacetForeignController();
@@ -476,31 +470,29 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        foreignFactory.setValidFacet(layerZeroFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IForeignControllerFull.setLayerZeroRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IForeignControllerFull.transferTokenLayerZero.selector,
             ILayerZeroFacet.transfer.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IForeignControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IForeignControllerFull.layerZeroRecipients.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
-        foreignController.addWires(layerZeroFacet, wires);
+        foreignBeacon.addWires(layerZeroFacet, wires);
     }
 
     function _getBlock() internal pure override returns (uint256) {

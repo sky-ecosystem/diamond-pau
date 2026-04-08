@@ -18,13 +18,13 @@ import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { CentrifugeFacet } from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { ERC7540Facet }    from "../../src/facets/erc7540/ERC7540Facet.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 
-import { AccessControls } from "../../src/AccessControls.sol";
-import { ALMProxy }       from "../../src/ALMProxy.sol";
-import { Controller }     from "../../src/Controller.sol";
-import { PAUFactory }     from "../../src/PAUFactory.sol";
-import { RateLimits }     from "../../src/RateLimits.sol";
+import { Beacon }     from "../../src/Beacon.sol";
+import { PAUFactory } from "../../src/PAUFactory.sol";
 
 import { IForeignControllerFull } from "../interfaces/IForeignControllerFull.sol";
 
@@ -68,10 +68,11 @@ contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    AccessControls         accessControls;
-    ALMProxy               almProxy;
+    Beacon                 beacon;
+    IAccessControls        accessControls;
+    IALMProxy              almProxy;
     IForeignControllerFull foreignController;
-    RateLimits             rateLimits;
+    IRateLimits            rateLimits;
     PAUFactory             factory;
 
     /**********************************************************************************************/
@@ -117,28 +118,18 @@ contract ForkTestBase is Test {
 
         /*** Step 3: Deploy ALM system ***/
 
-        almProxy   = new ALMProxy(GROVE_EXECUTOR);
-        rateLimits = new RateLimits(GROVE_EXECUTOR);
+        beacon  = new Beacon(GROVE_EXECUTOR);
+        factory = new PAUFactory(address(beacon));
 
-        accessControls = new AccessControls(GROVE_EXECUTOR);
-
-        factory = new PAUFactory(GROVE_EXECUTOR, GROVE_EXECUTOR);
-
-        foreignController = IForeignControllerFull(payable(new Controller({
-            proxy_          : address(almProxy),
-            factory_        : address(factory),
-            rateLimits_     : address(rateLimits),
-            accessControls_ : address(accessControls)
-        })));
+        foreignController = IForeignControllerFull(payable(factory.deploy(GROVE_EXECUTOR)));
+        almProxy          = IALMProxy(payable(foreignController.proxy()));
+        rateLimits        = IRateLimits(foreignController.rateLimits());
+        accessControls    = IAccessControls(foreignController.accessControls());
 
         vm.startPrank(GROVE_EXECUTOR);
 
         accessControls.grantRole(accessControls.FREEZER_ROLE(), ALM_FREEZER);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
-
-        almProxy.grantRole(almProxy.CONTROLLER(), address(foreignController));
-
-        rateLimits.grantRole(rateLimits.CONTROLLER(), address(foreignController));
 
         // Facet wiring
         _wireCentrifugeFacet();
@@ -163,51 +154,49 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        factory.setValidFacet(centrifugeFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IForeignControllerFull.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IForeignControllerFull.transferSharesCentrifuge.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IForeignControllerFull.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
-        foreignController.addWires(centrifugeFacet, wires);
+        beacon.addWires(centrifugeFacet, wires);
     }
 
     function _wireERC7540Facet() internal {
@@ -215,41 +204,39 @@ contract ForkTestBase is Test {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        factory.setValidFacet(erc7540Facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](6);
 
-        IController.Wire[] memory wires = new IController.Wire[](6);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IForeignControllerFull.requestDepositERC7540.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IForeignControllerFull.claimDepositERC7540.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IForeignControllerFull.requestRedeemERC7540.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IForeignControllerFull.claimRedeemERC7540.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
             IERC7540Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IForeignControllerFull.LIMIT_7540_REDEEM.selector,
             IERC7540Facet.LIMIT_REDEEM.selector
         );
 
-        foreignController.addWires(erc7540Facet, wires);
+        beacon.addWires(erc7540Facet, wires);
     }
 
 }

@@ -4,18 +4,13 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IAaveFacet } from "../../../src/facets/aave/IAaveFacet.sol";
-import { AaveFacet }  from "../../../src/facets/aave/AaveFacet.sol";
+import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
+
+import { AaveFacet } from "../../../src/facets/aave/AaveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
@@ -30,30 +25,27 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(beaconAdmin);
 
         address facet = address(new AaveFacet());
 
         vm.label(facet, "AaveFacet");
 
-        factory.setValidFacet(facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IBeacon.Wire(
             IControllerLike.setAaveMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IBeacon.Wire(
             IControllerLike.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        beacon.addWires(facet, wires);
+
+        vm.stopPrank();
     }
 
 }

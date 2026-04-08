@@ -3,19 +3,14 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { ICCTPFacet } from "../../../src/facets/cctp/ICCTPFacet.sol";
-import { CCTPFacet }  from "../../../src/facets/cctp/CCTPFacet.sol";
+
+import { CCTPFacet } from "../../../src/facets/cctp/CCTPFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
 
     function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
 
@@ -37,40 +32,37 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
+        vm.startPrank(beaconAdmin);
 
         address facet = address(new CCTPFacet(makeAddr("cctp"), makeAddr("usdc")));
 
         vm.label(facet, "CCTPFacet");
 
-        factory.setValidFacet(facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](4);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IBeacon.Wire(
             IControllerLike.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IBeacon.Wire(
             IControllerLike.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[2] = IControllerLike.Wire(
+        wires[2] = IBeacon.Wire(
             IControllerLike.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[3] = IControllerLike.Wire(
+        wires[3] = IBeacon.Wire(
             IControllerLike.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        vm.prank(admin);
-        controller.addWires(facet, wires);
+        beacon.addWires(facet, wires);
+
+        vm.stopPrank();
     }
 
     /**********************************************************************************************/

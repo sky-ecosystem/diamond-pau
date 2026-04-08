@@ -75,13 +75,13 @@ import { WSTETHFacet }        from "../../src/facets/wsteth/WSTETHFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IController } from "../../src/interfaces/IController.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 
-import { AccessControls } from "../../src/AccessControls.sol";
-import { ALMProxy }       from "../../src/ALMProxy.sol";
-import { Controller }     from "../../src/Controller.sol";
-import { PAUFactory }     from "../../src/PAUFactory.sol";
-import { RateLimits }     from "../../src/RateLimits.sol";
+import { Beacon }     from "../../src/Beacon.sol";
+import { PAUFactory } from "../../src/PAUFactory.sol";
 
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
@@ -195,10 +195,11 @@ abstract contract ForkTestBase is DssTest {
     /*** ALM system and allocation system deployments                                           ***/
     /**********************************************************************************************/
 
-    AccessControls         accessControls;
-    ALMProxy               almProxy;
+    Beacon                 beacon;
+    IAccessControls        accessControls;
+    IALMProxy              almProxy;
     IMainnetControllerFull mainnetController;
-    RateLimits             rateLimits;
+    IRateLimits            rateLimits;
     PAUFactory             factory;
 
     address buffer;
@@ -272,29 +273,19 @@ abstract contract ForkTestBase is DssTest {
 
         /*** Step 3: Deploy ALM system ***/
 
-        almProxy   = new ALMProxy(Ethereum.SPARK_PROXY);
-        rateLimits = new RateLimits(Ethereum.SPARK_PROXY);
+        beacon  = new Beacon(Ethereum.SPARK_PROXY);
+        factory = new PAUFactory(address(beacon));
 
-        accessControls = new AccessControls(Ethereum.SPARK_PROXY);
-
-        factory = new PAUFactory(Ethereum.SPARK_PROXY, Ethereum.SPARK_PROXY);
-
-        mainnetController = IMainnetControllerFull(payable(new Controller({
-            accessControls_ : address(accessControls),
-            factory_        : address(factory),
-            proxy_          : address(almProxy),
-            rateLimits_     : address(rateLimits)
-        })));
+        mainnetController = IMainnetControllerFull(payable(factory.deploy(Ethereum.SPARK_PROXY)));
+        almProxy          = IALMProxy(payable(mainnetController.proxy()));
+        rateLimits        = IRateLimits(mainnetController.rateLimits());
+        accessControls    = IAccessControls(mainnetController.accessControls());
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
-
-        almProxy.grantRole(almProxy.CONTROLLER(), address(mainnetController));
-
-        rateLimits.grantRole(rateLimits.CONTROLLER(), address(mainnetController));
 
         // Facet wiring
         _wireAaveFacet();
@@ -421,51 +412,49 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        factory.setValidFacet(centrifugeFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.cancelCentrifugeDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.claimCentrifugeCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.cancelCentrifugeRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.transferSharesCentrifuge.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
-        mainnetController.addWires(centrifugeFacet, wires);
+        beacon.addWires(centrifugeFacet, wires);
     }
 
     function _wireCurveFacet() internal {
@@ -473,51 +462,49 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(curveFacet, "CurveFacet");
 
-        factory.setValidFacet(curveFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setCurveMaxSlippage.selector,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.getCurveMaxSlippage.selector,
             ICurveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.swapCurve.selector,
             ICurveFacet.swap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.addLiquidityCurve.selector,
             ICurveFacet.addLiquidity.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.removeLiquidityCurve.selector,
             ICurveFacet.removeLiquidity.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_CURVE_SWAP.selector,
             ICurveFacet.LIMIT_SWAP.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             ICurveFacet.LIMIT_WITHDRAW.selector
         );
 
-        mainnetController.addWires(curveFacet, wires);
+        beacon.addWires(curveFacet, wires);
     }
 
     function _wireCCTPFacet() internal {
@@ -525,51 +512,49 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        factory.setValidFacet(cctpFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.transferUSDCToCCTP.selector,
             ICCTPFacet.transfer.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.transferUSDCToCCTPWithFee.selector,
             ICCTPFacet.transferWithFee.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDC_TO_CCTP.selector,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
 
-        mainnetController.addWires(cctpFacet, wires);
+        beacon.addWires(cctpFacet, wires);
     }
 
     function _wireAaveFacet() internal {
@@ -577,41 +562,39 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        factory.setValidFacet(aaveFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](6);
 
-        IController.Wire[] memory wires = new IController.Wire[](6);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setAaveMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.depositAave.selector,
             IAaveFacet.deposit.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.withdrawAave.selector,
             IAaveFacet.withdraw.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             IAaveFacet.LIMIT_WITHDRAW.selector
         );
 
-        mainnetController.addWires(aaveFacet, wires);
+        beacon.addWires(aaveFacet, wires);
     }
 
     function _wireDAIUSDSFacet() internal {
@@ -623,21 +606,19 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(daiUSDSFacet, "DAIUSDSFacet");
 
-        factory.setValidFacet(daiUSDSFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.swapUSDSToDAI.selector,
             IDAIUSDSFacet.swapUSDSToDAI.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.swapDAIToUSDS.selector,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
 
-        mainnetController.addWires(daiUSDSFacet, wires);
+        beacon.addWires(daiUSDSFacet, wires);
     }
 
     function _wireMerklFacet() internal {
@@ -645,11 +626,9 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(merklFacet, "MerklFacet");
 
-        factory.setValidFacet(merklFacet, true);
-
-        mainnetController.addWire(
+        beacon.addWire(
             merklFacet,
-            IController.Wire(
+            IBeacon.Wire(
                 IMainnetControllerFull.toggleOperatorMerkl.selector,
                 IMerklFacet.toggleOperator.selector
             )
@@ -661,51 +640,49 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
-        factory.setValidFacet(erc4626Facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
 
-        IController.Wire[] memory wires = new IController.Wire[](8);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.maxExchangeRates.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.depositERC4626.selector,
             IERC4626Facet.deposit.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.withdrawERC4626.selector,
             IERC4626Facet.withdraw.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.redeemERC4626.selector,
             IERC4626Facet.redeem.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_4626_DEPOSIT.selector,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_4626_WITHDRAW.selector,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.EXCHANGE_RATE_PRECISION.selector,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
 
-        mainnetController.addWires(erc4626Facet, wires);
+        beacon.addWires(erc4626Facet, wires);
     }
 
     function _wireERC7540Facet() internal {
@@ -713,41 +690,39 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        factory.setValidFacet(erc7540Facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](6);
 
-        IController.Wire[] memory wires = new IController.Wire[](6);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.requestDepositERC7540.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.claimDepositERC7540.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.requestRedeemERC7540.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.claimRedeemERC7540.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_7540_DEPOSIT.selector,
             IERC7540Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_7540_REDEEM.selector,
             IERC7540Facet.LIMIT_REDEEM.selector
         );
 
-        mainnetController.addWires(erc7540Facet, wires);
+        beacon.addWires(erc7540Facet, wires);
     }
 
     function _wireFarmFacet() internal {
@@ -755,31 +730,29 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(farmFacet, "FarmFacet");
 
-        factory.setValidFacet(farmFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.depositToFarm.selector,
             IFarmFacet.deposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.withdrawFromFarm.selector,
             IFarmFacet.withdraw.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_FARM_DEPOSIT.selector,
             IFarmFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
             IFarmFacet.LIMIT_WITHDRAW.selector
         );
 
-        mainnetController.addWires(farmFacet, wires);
+        beacon.addWires(farmFacet, wires);
     }
 
     function _wireLayerZeroFacet() internal {
@@ -787,31 +760,29 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        factory.setValidFacet(layerZeroFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setLayerZeroRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.transferTokenLayerZero.selector,
             ILayerZeroFacet.transfer.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.layerZeroRecipients.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
-        mainnetController.addWires(layerZeroFacet, wires);
+        beacon.addWires(layerZeroFacet, wires);
     }
 
     function _wireOTCFacet() internal {
@@ -819,66 +790,64 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(otcFacet, "OTCFacet");
 
-        factory.setValidFacet(otcFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](11);
 
-        IController.Wire[] memory wires = new IController.Wire[](11);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.setOTCMaxSlippage.selector,
             IOTCFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.setOTCBuffer.selector,
             IOTCFacet.setBuffer.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.setOTCRechargeRate.selector,
             IOTCFacet.setRechargeRate.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.setOTCWhitelistedAsset.selector,
             IOTCFacet.setIsWhitelisted.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.otcSend.selector,
             IOTCFacet.send.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.otcClaim.selector,
             IOTCFacet.claim.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_OTC_SWAP.selector,
             IOTCFacet.LIMIT_SWAP.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.getOtcClaimWithRecharge.selector,
             IOTCFacet.getClaimWithRecharge.selector
         );
 
-        wires[8] = IController.Wire(
+        wires[8] = IBeacon.Wire(
             IMainnetControllerFull.isOtcSwapReady.selector,
             IOTCFacet.isSwapReady.selector
         );
 
-        wires[9] = IController.Wire(
+        wires[9] = IBeacon.Wire(
             IMainnetControllerFull.otcs.selector,
             IOTCFacet.getState.selector
         );
 
-        wires[10] = IController.Wire(
+        wires[10] = IBeacon.Wire(
             IMainnetControllerFull.otcWhitelistedAssets.selector,
             IOTCFacet.getIsWhitelisted.selector
         );
 
-        mainnetController.addWires(otcFacet, wires);
+        beacon.addWires(otcFacet, wires);
     }
 
     function _wireSparkVaultFacet() internal {
@@ -886,21 +855,19 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
-        factory.setValidFacet(sparkVaultFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.takeFromSparkVault.selector,
             ISparkVaultFacet.take.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
             ISparkVaultFacet.LIMIT_TAKE.selector
         );
 
-        mainnetController.addWires(sparkVaultFacet, wires);
+        beacon.addWires(sparkVaultFacet, wires);
     }
 
     function _wirePSMFacet() internal {
@@ -914,31 +881,29 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(psmFacet, "PSMFacet");
 
-        factory.setValidFacet(psmFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
 
-        IController.Wire[] memory wires = new IController.Wire[](4);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.swapUSDSToUSDC.selector,
             IPSMFacet.swapUSDSToUSDC.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.swapUSDCToUSDS.selector,
             IPSMFacet.swapUSDCToUSDS.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.psmTo18ConversionFactor.selector,
             IPSMFacet.to18ConversionFactor.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDS_TO_USDC.selector,
             IPSMFacet.LIMIT_USDS_TO_USDC.selector
         );
 
-        mainnetController.addWires(psmFacet, wires);
+        beacon.addWires(psmFacet, wires);
     }
 
     function _wireTransferAssetFacet() internal {
@@ -946,21 +911,19 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
-        factory.setValidFacet(transferAssetFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.transferAsset.selector,
             ITransferAssetFacet.transfer.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_ASSET_TRANSFER.selector,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
         );
 
-        mainnetController.addWires(transferAssetFacet, wires);
+        beacon.addWires(transferAssetFacet, wires);
     }
 
     function _wireMapleFacet() internal {
@@ -968,26 +931,24 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(mapleFacet, "MapleFacet");
 
-        factory.setValidFacet(mapleFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](3);
 
-        IController.Wire[] memory wires = new IController.Wire[](3);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.requestMapleRedemption.selector,
             IMapleFacet.requestRedemption.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.cancelMapleRedemption.selector,
             IMapleFacet.cancelRedemption.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_MAPLE_REDEEM.selector,
             IMapleFacet.LIMIT_REDEEM.selector
         );
 
-        mainnetController.addWires(mapleFacet, wires);
+        beacon.addWires(mapleFacet, wires);
     }
 
     function _wirePendleFacet() internal {
@@ -995,21 +956,19 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(pendleFacet, "PendleFacet");
 
-        factory.setValidFacet(pendleFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.redeemPendlePT.selector,
             IPendleFacet.redeem.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             IPendleFacet.LIMIT_REDEEM.selector
         );
 
-        mainnetController.addWires(pendleFacet, wires);
+        beacon.addWires(pendleFacet, wires);
     }
 
     function _wireSuperstateFacet() internal {
@@ -1017,21 +976,19 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(superstateFacet, "SuperstateFacet");
 
-        factory.setValidFacet(superstateFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
 
-        IController.Wire[] memory wires = new IController.Wire[](2);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.subscribeSuperstate.selector,
             ISuperstateFacet.subscribe.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_SUPERSTATE_SUBSCRIBE.selector,
             ISuperstateFacet.LIMIT_SUBSCRIBE.selector
         );
 
-        mainnetController.addWires(superstateFacet, wires);
+        beacon.addWires(superstateFacet, wires);
     }
 
     function _wireWEETHFacet() internal {
@@ -1039,36 +996,34 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(weethFacet, "WEETHFacet");
 
-        factory.setValidFacet(weethFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](5);
 
-        IController.Wire[] memory wires = new IController.Wire[](5);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.depositToWeETH.selector,
             IWEETHFacet.deposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.requestWithdrawFromWeETH.selector,
             IWEETHFacet.requestWithdraw.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.claimWithdrawalFromWeETH.selector,
             IWEETHFacet.claimWithdrawal.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_WEETH_DEPOSIT.selector,
             IWEETHFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_WEETH_REQUEST_WITHDRAW.selector,
             IWEETHFacet.LIMIT_REQUEST_WITHDRAW.selector
         );
 
-        mainnetController.addWires(weethFacet, wires);
+        beacon.addWires(weethFacet, wires);
     }
 
     function _wireWSTETHFacet() internal {
@@ -1080,36 +1035,34 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(wstethFacet, "WSTETHFacet");
 
-        factory.setValidFacet(wstethFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](5);
 
-        IController.Wire[] memory wires = new IController.Wire[](5);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.depositToWstETH.selector,
             IWSTETHFacet.deposit.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.requestWithdrawFromWstETH.selector,
             IWSTETHFacet.requestWithdraw.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.claimWithdrawalFromWstETH.selector,
             IWSTETHFacet.claimWithdrawal.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_WSTETH_DEPOSIT.selector,
             IWSTETHFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_WSTETH_REQUEST_WITHDRAW.selector,
             IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
         );
 
-        mainnetController.addWires(wstethFacet, wires);
+        beacon.addWires(wstethFacet, wires);
     }
 
     function _wireUSDEFacet() internal {
@@ -1122,61 +1075,59 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(usdeFacet, "USDEFacet");
 
-        factory.setValidFacet(usdeFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](10);
 
-        IController.Wire[] memory wires = new IController.Wire[](10);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.cooldownAssetsSUSDe.selector,
             IUSDEFacet.cooldownAssets.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.cooldownSharesSUSDe.selector,
             IUSDEFacet.cooldownShares.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.prepareUSDeMint.selector,
             IUSDEFacet.prepareMint.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.prepareUSDeBurn.selector,
             IUSDEFacet.prepareBurn.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.removeDelegatedSigner.selector,
             IUSDEFacet.removeDelegatedSigner.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.setDelegatedSigner.selector,
             IUSDEFacet.setDelegatedSigner.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.unstakeSUSDe.selector,
             IUSDEFacet.unstakeSUSDE.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDE_BURN.selector,
             IUSDEFacet.LIMIT_USDE_BURN.selector
         );
 
-        wires[8] = IController.Wire(
+        wires[8] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDE_MINT.selector,
             IUSDEFacet.LIMIT_USDE_MINT.selector
         );
 
-        wires[9] = IController.Wire(
+        wires[9] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
             IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
         );
 
-        mainnetController.addWires(usdeFacet, wires);
+        beacon.addWires(usdeFacet, wires);
     }
 
     function _wireWrapProxyETHFacet() internal {
@@ -1184,11 +1135,9 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
 
-        factory.setValidFacet(wrapProxyETHFacet, true);
-
-        mainnetController.addWire(
+        beacon.addWire(
             wrapProxyETHFacet,
-            IController.Wire(
+            IBeacon.Wire(
                 IMainnetControllerFull.wrapAllProxyETH.selector,
                 IWrapProxyETHFacet.wrapAll.selector
             )
@@ -1200,26 +1149,24 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(usdsFacet, "USDSFacet");
 
-        factory.setValidFacet(usdsFacet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](3);
 
-        IController.Wire[] memory wires = new IController.Wire[](3);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.mintUSDS.selector,
             IUSDSFacet.mint.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.burnUSDS.selector,
             IUSDSFacet.burn.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_USDS_MINT.selector,
             IUSDSFacet.LIMIT_MINT.selector
         );
 
-        mainnetController.addWires(usdsFacet, wires);
+        beacon.addWires(usdsFacet, wires);
     }
 
     function _wireUniswapV4Facet() internal {
@@ -1231,66 +1178,64 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(uniswapV4Facet, "UniswapV4Facet");
 
-        factory.setValidFacet(uniswapV4Facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](11);
 
-        IController.Wire[] memory wires = new IController.Wire[](11);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.decreaseLiquidityUniswapV4.selector,
             IUniswapV4Facet.decreasePosition.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.increaseLiquidityUniswapV4.selector,
             IUniswapV4Facet.increasePosition.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.mintPositionUniswapV4.selector,
             IUniswapV4Facet.mintPosition.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV4MaxSlippage.selector,
             IUniswapV4Facet.setMaxSlippage.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV4TickLimits.selector,
             IUniswapV4Facet.setTickLimits.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.swapUniswapV4.selector,
             IUniswapV4Facet.swap.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V4_DEPOSIT.selector,
             IUniswapV4Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V4_WITHDRAW.selector,
             IUniswapV4Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[8] = IController.Wire(
+        wires[8] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V4_SWAP.selector,
             IUniswapV4Facet.LIMIT_SWAP.selector
         );
 
-        wires[9] = IController.Wire(
+        wires[9] = IBeacon.Wire(
             IMainnetControllerFull.uniswapV4MaxSlippages.selector,
             IUniswapV4Facet.getMaxSlippage.selector
         );
 
-        wires[10] = IController.Wire(
+        wires[10] = IBeacon.Wire(
             IMainnetControllerFull.uniswapV4TickLimits.selector,
             IUniswapV4Facet.getTickLimits.selector
         );
 
-        mainnetController.addWires(uniswapV4Facet, wires);
+        beacon.addWires(uniswapV4Facet, wires);
     }
 
     function _wireUniswapV3Facet() internal {
@@ -1298,86 +1243,84 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 
-        factory.setValidFacet(uniswapV3Facet, true);
+        IBeacon.Wire[] memory wires = new IBeacon.Wire[](15);
 
-        IController.Wire[] memory wires = new IController.Wire[](15);
-
-        wires[0] = IController.Wire(
+        wires[0] = IBeacon.Wire(
             IMainnetControllerFull.addLiquidityUniswapV3.selector,
             IUniswapV3Facet.addLiquidity.selector
         );
 
-        wires[1] = IController.Wire(
+        wires[1] = IBeacon.Wire(
             IMainnetControllerFull.removeLiquidityUniswapV3.selector,
             IUniswapV3Facet.removeLiquidity.selector
         );
 
-        wires[2] = IController.Wire(
+        wires[2] = IBeacon.Wire(
             IMainnetControllerFull.swapUniswapV3.selector,
             IUniswapV3Facet.swap.selector
         );
 
-        wires[3] = IController.Wire(
+        wires[3] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
-        wires[4] = IController.Wire(
+        wires[4] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
-        wires[5] = IController.Wire(
+        wires[5] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV3AddLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
-        wires[6] = IController.Wire(
+        wires[6] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV3AddLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
-        wires[7] = IController.Wire(
+        wires[7] = IBeacon.Wire(
             IMainnetControllerFull.setUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
-        wires[8] = IController.Wire(
+        wires[8] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V3_DEPOSIT.selector,
             IUniswapV3Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[9] = IController.Wire(
+        wires[9] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V3_SWAP.selector,
             IUniswapV3Facet.LIMIT_SWAP.selector
         );
 
-        wires[10] = IController.Wire(
+        wires[10] = IBeacon.Wire(
             IMainnetControllerFull.LIMIT_UNISWAP_V3_WITHDRAW.selector,
             IUniswapV3Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[11] = IController.Wire(
+        wires[11] = IBeacon.Wire(
             IMainnetControllerFull.getUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        wires[12] = IController.Wire(
+        wires[12] = IBeacon.Wire(
             IMainnetControllerFull.getUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        wires[13] = IController.Wire(
+        wires[13] = IBeacon.Wire(
             IMainnetControllerFull.getUniswapV3AddLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        wires[14] = IController.Wire(
+        wires[14] = IBeacon.Wire(
             IMainnetControllerFull.getUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
-        mainnetController.addWires(uniswapV3Facet, wires);
+        beacon.addWires(uniswapV3Facet, wires);
     }
 
 }
