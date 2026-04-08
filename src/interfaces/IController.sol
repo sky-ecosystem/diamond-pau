@@ -70,9 +70,9 @@ interface IController {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getIntegration(bytes32 integrationId) external view returns (IntegrationConfig memory);
+    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig memory);
 
-    function getIntegrations(bytes32[] calldata integrationIds)
+    function getIntegrationConfigs(bytes32[] calldata integrationIds)
         external
         view
         returns (IntegrationConfig[] memory);

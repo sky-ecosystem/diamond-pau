@@ -26,7 +26,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
 
     EnumerableSet.Bytes32Set internal _integrationIds;
 
-    mapping (bytes32 integrationId => IntegrationConfig config) internal _integrationsConfig;
+    mapping (bytes32 integrationId => IntegrationConfig config) internal _integrationConfigs;
     mapping (bytes4  callSelector  => Dispatch dispatch)        internal _dispatches;
 
     /**********************************************************************************************/
@@ -70,7 +70,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
 
         _integrationIds.add(integrationId);
 
-        _integrationsConfig[integrationId] = integrationConfig;
+        _integrationConfigs[integrationId] = integrationConfig;
 
         emit IntegrationSet(integrationId, integrationConfig);
     }
@@ -100,7 +100,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         for (uint256 i = 0; i < integrationCount; ++i) {
             bytes32 id = _integrationIds.at(i);
 
-            integrations_[i] = Integration(id, _integrationsConfig[id]);
+            integrations_[i] = Integration(id, _integrationConfigs[id]);
         }
     }
 
@@ -111,7 +111,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     function getIntegrationConfig(bytes32 integrationId)
         external view override returns (IntegrationConfig memory)
     {
-        return _integrationsConfig[integrationId];
+        return _integrationConfigs[integrationId];
     }
 
     function getIntegrationConfigs(bytes32[] calldata integrationIds)
@@ -123,7 +123,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         integrationsConfig_ = new IntegrationConfig[](integrationIds.length);
 
         for (uint256 i = 0; i < integrationIds.length; ++i) {
-            integrationsConfig_[i] = _integrationsConfig[integrationIds[i]];
+            integrationsConfig_[i] = _integrationConfigs[integrationIds[i]];
         }
     }
 
@@ -163,7 +163,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /**********************************************************************************************/
 
     function _deleteIntegrationConfigAndDispatches(bytes32 integrationId) internal {
-        IntegrationConfig storage integrationConfig = _integrationsConfig[integrationId];
+        IntegrationConfig storage integrationConfig = _integrationConfigs[integrationId];
 
         if (integrationConfig.facet == address(0)) return;
 
@@ -171,7 +171,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
             delete _dispatches[integrationConfig.wires[i].callSelector];
         }
 
-        delete _integrationsConfig[integrationId];
+        delete _integrationConfigs[integrationId];
     }
 
     /**********************************************************************************************/

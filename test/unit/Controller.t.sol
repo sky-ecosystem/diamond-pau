@@ -2,6 +2,7 @@
 pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IBeacon }     from "../../src/interfaces/IBeacon.sol";
 import { IController } from "../../src/interfaces/IController.sol";
@@ -63,6 +64,9 @@ interface IMockController {
 }
 
 contract Controller_Tests is Test {
+
+    bytes32 internal constant _REENTRANCY_GUARD_SLOT    = bytes32(uint256(0));
+    bytes32 internal constant _REENTRANCY_GUARD_ENTERED = bytes32(uint256(2));
 
     address internal accessControls = makeAddr("accessControls");
     address internal admin          = makeAddr("admin");

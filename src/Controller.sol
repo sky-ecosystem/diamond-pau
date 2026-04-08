@@ -28,7 +28,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     struct ControllerStorage {
         address                  beacon;
         EnumerableSet.Bytes32Set integrationIds;
-        mapping (bytes32 integrationId => IntegrationConfig config) integrations;
+        mapping (bytes32 integrationId => IntegrationConfig config) integrationConfigs;
         mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
     }
 
@@ -81,11 +81,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /**********************************************************************************************/
 
     function updateIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
-        IntegrationConfig[] memory integrationsConfig =
-            IBeacon(_getControllerStorage().beacon).getIntegrations(ids);
+        IntegrationConfig[] memory integrationConfigs =
+            IBeacon(_getControllerStorage().beacon).getIntegrationConfigs(ids);
 
         for (uint256 i = 0; i < ids.length; ++i) {
-            _setIntegration(ids[i], integrationsConfig[i]);
+            _setIntegration(ids[i], integrationConfigs[i]);
         }
     }
 
@@ -117,7 +117,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         for (uint256 i = 0; i < integrationCount; ++i) {
             bytes32 id = $.integrationIds.at(i);
 
-            integrations_[i] = Integration(id, $.integrations[id]);
+            integrations_[i] = Integration(id, $.integrationConfigs[id]);
         }
     }
 
@@ -133,16 +133,16 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function getIntegration(bytes32 integrationId)
+    function getIntegrationConfig(bytes32 integrationId)
         external
         view
         override
         returns (IntegrationConfig memory)
     {
-        return _getControllerStorage().integrations[integrationId];
+        return _getControllerStorage().integrationConfigs[integrationId];
     }
 
-    function getIntegrations(bytes32[] calldata integrationIds)
+    function getIntegrationConfigs(bytes32[] calldata integrationIds)
         external
         view
         override
@@ -153,7 +153,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         ControllerStorage storage $ = _getControllerStorage();
 
         for (uint256 i = 0; i < integrationIds.length; ++i) {
-            integrationsConfig_[i] = $.integrations[integrationIds[i]];
+            integrationsConfig_[i] = $.integrationConfigs[integrationIds[i]];
         }
     }
 
@@ -212,10 +212,10 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _removeIntegrationData(bytes32 integrationId) internal {
+    function _deleteIntegrationConfigAndDispatches(bytes32 integrationId) internal {
         ControllerStorage storage $ = _getControllerStorage();
 
-        IntegrationConfig storage integrationConfig = $.integrations[integrationId];
+        IntegrationConfig storage integrationConfig = $.integrationConfigs[integrationId];
 
         if (integrationConfig.facet == address(0)) return;
 
@@ -223,11 +223,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
             delete $.dispatches[integrationConfig.wires[i].callSelector];
         }
 
-        delete $.integrations[integrationId];
+        delete $.integrationConfigs[integrationId];
     }
 
     function _removeIntegration(bytes32 id) internal {
-        _removeIntegrationData(id);
+        _deleteIntegrationConfigAndDispatches(id);
 
         require(_getControllerStorage().integrationIds.remove(id), IntegrationNotFound(id));
 
@@ -235,7 +235,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     function _setIntegration(bytes32 id, IntegrationConfig memory integrationConfig) internal {
-        _removeIntegrationData(id);
+        _deleteIntegrationConfigAndDispatches(id);
 
         ControllerStorage storage $ = _getControllerStorage();
 
@@ -253,7 +253,13 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
         $.integrationIds.add(id);
 
-        $.integrations[id] = integrationConfig;
+        IntegrationConfig storage storedConfig = $.integrationConfigs[id];
+
+        storedConfig.facet = integrationConfig.facet;
+
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            storedConfig.wires.push(integrationConfig.wires[i]);
+        }
 
         emit IntegrationSet(id, integrationConfig);
     }

@@ -84,11 +84,11 @@ contract BeaconHarness is Beacon {
     }
 
     function __setIntegrationConfig(bytes32 integrationId, IntegrationConfig memory integrationConfig) external {
-        _integrationsConfig[integrationId] = integrationConfig;
+        _integrationConfigs[integrationId] = integrationConfig;
     }
 
     function __removeIntegrationConfig(bytes32 integrationId) external {
-        delete _integrationsConfig[integrationId];
+        delete _integrationConfigs[integrationId];
     }
 
     function __setDispatch(bytes4 callSelector, Dispatch memory dispatch) external {
@@ -104,7 +104,7 @@ contract BeaconHarness is Beacon {
     }
 
     function __getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig memory) {
-        return _integrationsConfig[integrationId];
+        return _integrationConfigs[integrationId];
     }
 
     function __getDispatch(bytes4 callSelector) external view returns (Dispatch memory) {

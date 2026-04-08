@@ -93,7 +93,7 @@ contract BeaconIntegration_Tests is Test {
         vm.prank(admin);
         beacon.setIntegration(integrationId, integrationConfig);
 
-        IntegrationConfig memory returnedIntegrationConfig = beacon.getIntegration(integrationId);
+        IntegrationConfig memory returnedIntegrationConfig = beacon.getIntegrationConfig(integrationId);
 
         assertEq(returnedIntegrationConfig.facet,        facet);
         assertEq(returnedIntegrationConfig.wires.length, wires.length);
