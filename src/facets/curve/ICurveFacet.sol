@@ -18,8 +18,8 @@ interface ICurveFacet is IFacetBase {
 
     /**
      * @dev   Event emitted when max slippage is set.
-     * @param pool          Pool address.
-     * @param maxSlippage   Max slippage allowed.
+     * @param pool        Pool address.
+     * @param maxSlippage Max slippage allowed.
      */
     event CurveMaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
@@ -122,8 +122,8 @@ interface ICurveFacet is IFacetBase {
 
     /**
      * @dev    Gets max slippage for a pool.
-     * @param  pool          Pool address.
-     * @return maxSlippage   Max slippage allowed.
+     * @param  pool        Pool address.
+     * @return maxSlippage Max slippage allowed.
      */
     function getMaxSlippage(address pool) external view returns (uint256);
 

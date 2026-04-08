@@ -20,7 +20,7 @@ interface ICentrifugeFacet is IFacetBase {
     /**
      * @dev   Event emitted when a recipient is set.
      * @param centrifugeId Centrifuge ID.
-     * @param recipient     Recipient.
+     * @param recipient    Recipient.
      */
     event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 indexed recipient);
 
@@ -57,15 +57,15 @@ interface ICentrifugeFacet is IFacetBase {
     /**
      * @dev   Sets a recipient for a centrifuge ID.
      * @param centrifugeId Centrifuge ID.
-     * @param recipient     Recipient.
+     * @param recipient    Recipient.
      */
     function setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     /**
-     * @dev   Transfers shares to a recipient.
-     * @param token         Token address.
-     * @param amount        Amount of shares to transfer.
-     * @param centrifugeId  Centrifuge ID.
+     * @dev   Transfer shares to a recipient of centrifugeId.
+     * @param token        Token address.
+     * @param amount       Amount of shares to transfer.
+     * @param centrifugeId Centrifuge ID.
      */
     function transferShares(address token, uint128 amount, uint16 centrifugeId) external payable;
 
@@ -104,7 +104,7 @@ interface ICentrifugeFacet is IFacetBase {
     /**
      * @dev    Gets a recipient for a centrifuge ID.
      * @param  centrifugeId Centrifuge ID.
-     * @return recipient     Recipient.
+     * @return recipient    Recipient.
      */
     function getRecipient(uint16 centrifugeId) external view returns (bytes32);
 

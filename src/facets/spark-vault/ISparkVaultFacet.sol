@@ -16,9 +16,9 @@ interface ISparkVaultFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Takes `assetAmount` of `asset` from the Spark vault.
-     * @param  sparkVault  Spark vault address.
-     * @param  assetAmount Amount of `asset` to take.
+     * @dev   Takes `assetAmount` of `asset` from the Spark vault.
+     * @param sparkVault  Spark vault address.
+     * @param assetAmount Amount of `asset` to take.
      */
     function take(address sparkVault, uint256 assetAmount) external;
 

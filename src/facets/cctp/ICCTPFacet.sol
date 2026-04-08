@@ -78,13 +78,13 @@ interface ICCTPFacet is IFacetBase {
     function DESTINATION_CALLER() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for CCTP transfers.
+     * @dev    Limit for per CCTP transfer.
      * @return bytes32 Key for CCTP limit.
      */
     function LIMIT_TO_CCTP() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for domain transfers.
+     * @dev    Limit for per domain transfers.
      * @return bytes32 Key for domain limit.
      */
     function LIMIT_TO_DOMAIN() external pure returns (bytes32);

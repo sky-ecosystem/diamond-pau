@@ -26,8 +26,8 @@ interface IAaveFacet is IFacetBase {
 
     /**
      * @dev   Deposits `amount` of underlying asset into Aave.
-     * @param aToken    Address of aToken.
-     * @param amount    Amount of underlying asset to deposit.
+     * @param aToken Address of aToken.
+     * @param amount Amount of underlying asset to deposit.
      */
     function deposit(address aToken, uint256 amount) external;
 
@@ -40,8 +40,8 @@ interface IAaveFacet is IFacetBase {
 
     /**
      * @dev    Withdraws `amount` of underlying asset from Aave.
-     * @param  aToken    Address of aToken.
-     * @param  amount    Amount of underlying asset to withdraw.
+     * @param  aToken          Address of aToken.
+     * @param  amount          Amount of underlying asset to withdraw.
      * @return amountWithdrawn Amount of underlying asset withdrawn.
      */
     function withdraw(address aToken, uint256 amount) external returns (uint256 amountWithdrawn);
@@ -68,7 +68,7 @@ interface IAaveFacet is IFacetBase {
 
     /**
      * @dev    Gets max slippage for aToken.
-     * @param  aToken Address of aToken.
+     * @param  aToken      Address of aToken.
      * @return maxSlippage Max slippage allowed.
      */
     function getMaxSlippage(address aToken) external view returns (uint256);

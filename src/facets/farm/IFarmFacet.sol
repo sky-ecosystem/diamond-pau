@@ -26,8 +26,8 @@ interface IFarmFacet is IFacetBase {
 
     /**
      * @dev   Withdraws `amount` of tokens from a farm.
-     * @param farm    Farm address.
-     * @param amount  Amount of tokens to withdraw.
+     * @param farm   Farm address.
+     * @param amount Amount of tokens to withdraw.
      */
     function withdraw(address farm, uint256 amount) external;
 
