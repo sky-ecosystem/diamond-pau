@@ -23,7 +23,7 @@ contract Controller_DAIUSDSFacet_Tests is Controller_TestBase {
 
     function test_constructor_zeroUSDS() external {
         vm.expectRevert("DAIUSDSFacet/zero-usds");
-        new DAIUSDSFacet({ 
+        new DAIUSDSFacet({
             dai_     : makeAddr("dai"),
             daiUSDS_ : makeAddr("daiUSDS"),
             usds_    : address(0)

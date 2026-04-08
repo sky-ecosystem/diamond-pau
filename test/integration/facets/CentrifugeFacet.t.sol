@@ -3,23 +3,20 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { ICentrifugeFacet } from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
-import { CentrifugeFacet }  from "../../../src/facets/centrifuge/CentrifugeFacet.sol";
+import { ICentrifugeFacet }        from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
+import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
+
+import { CentrifugeFacet } from "../../../src/facets/centrifuge/CentrifugeFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
-
-    function addWires(address facet, Wire[] calldata wires) external;
-
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -33,30 +30,32 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(facetValidator);
-
         address facet = address(new CentrifugeFacet());
 
         vm.label(facet, "CentrifugeFacet");
 
-        factory.setValidFacet(facet, true);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
-        vm.stopPrank();
-
-        IControllerLike.Wire[] memory wires = new IControllerLike.Wire[](2);
-
-        wires[0] = IControllerLike.Wire(
+        wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IControllerLike.Wire(
+        wires[1] = IEnumerableIntegrations.Wire(
             IControllerLike.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("CENTIFUGE_FACET", config);
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "CENTIFUGE_FACET";
+
         vm.prank(admin);
-        controller.addWires(facet, wires);
+        controller.updateIntegrations(integrationIds);
     }
 
 }
