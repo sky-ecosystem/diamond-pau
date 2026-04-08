@@ -429,8 +429,8 @@ contract UniswapV4Facet is IUniswapV4Facet, FacetBase {
         _approveWithPermit2(token0, positionManager, 0);
         _approveWithPermit2(token1, positionManager, 0);
 
-        amount0 = uint128(_clampedSub(endingBalance0, startingBalance0));
-        amount1 = uint128(_clampedSub(endingBalance1, startingBalance1));
+        amount0 = uint128(_clampedSub(startingBalance0, endingBalance0));
+        amount1 = uint128(_clampedSub(startingBalance1, endingBalance1));
     }
 
     function _decreaseLiquidity(

@@ -188,8 +188,8 @@ contract MainnetController_WEETH_Deposit_Tests is WEETH_TestBase {
         vm.expectEmit(address(mainnetController));
         emit IWEETHFacet.WEETHDeposit({
             amount     : 1_000e18,
-            eethAmount : 1_000e18 - 1,
-            shares     : 927.715236537415314851e18 // Rounding
+            eethAmount : 1_000e18 - 1, // Rounding
+            shares     : 927.715236537415314851e18
         });
 
         vm.prank(relayer);

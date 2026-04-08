@@ -834,10 +834,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved({callSelector : secondHalfCallSelectors[0]});
+        emit IController.WireRemoved({ callSelector : secondHalfCallSelectors[0] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved({callSelector : secondHalfCallSelectors[1]});
+        emit IController.WireRemoved({ callSelector : secondHalfCallSelectors[1] });
 
         vm.prank(admin);
         controller.removeWires(secondHalfCallSelectors);

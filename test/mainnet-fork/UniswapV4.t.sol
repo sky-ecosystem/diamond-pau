@@ -1137,8 +1137,8 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
             tickLower : -10,
             tickUpper : 0,
             liquidity : 1_000_000e6,
-            amount0   : 0,
-            amount1   : 0
+            amount0   : 340.756158e6,
+            amount1   : 159.209953e6
         });
 
         IncreasePositionResult memory result = _mintPosition({
@@ -1419,8 +1419,8 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_TestBase {
             poolId            : _POOL_ID,
             tokenId           : minted.tokenId,
             liquidityIncrease : 1_000_000e6,
-            amount0           : 0,
-            amount1           : 0
+            amount0           : 340.756158e6,
+            amount1           : 159.209953e6
         });
 
         IncreasePositionResult memory result = _increasePosition(
@@ -2953,8 +2953,8 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
             tickLower : 276_000,
             tickUpper : 276_600,
             liquidity : 1_000_000e12,
-            amount0   : 0,
-            amount1   : 0
+            amount0   : 12871.843781e6,
+            amount1   : 16902.069677368778256533e18
         });
 
         IncreasePositionResult memory result = _mintPosition({
@@ -3265,8 +3265,8 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_TestBase {
             poolId            : _POOL_ID,
             tokenId           : minted.tokenId,
             liquidityIncrease : 1_000_000e12,
-            amount0           : 0,
-            amount1           : 0
+            amount0           : 12871.843781e6,
+            amount1           : 16902.069677368778256533e18
         });
 
         IncreasePositionResult memory result = _increasePosition(
