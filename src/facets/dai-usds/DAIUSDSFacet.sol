@@ -24,7 +24,7 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 public constant LIMIT_SWAP = keccak256("LIMIT_DAIUSDS_SWAP");
+    bytes32 public constant override LIMIT_SWAP = keccak256("LIMIT_DAIUSDS_SWAP");
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
@@ -56,10 +56,7 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            LIMIT_SWAP,
-            usdsAmount
-        );
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_SWAP, usdsAmount);
 
         address proxy = $.proxy;
 
@@ -79,10 +76,7 @@ contract DAIUSDSFacet is IDAIUSDSFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        IRateLimits($.rateLimits).triggerRateLimitIncrease(
-            LIMIT_SWAP,
-            daiAmount
-        );
+        IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_SWAP, daiAmount);
 
         address proxy = $.proxy;
 

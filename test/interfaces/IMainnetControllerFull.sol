@@ -104,11 +104,11 @@ abstract contract IMainnetControllerFull is IController, Controller {
     /*** DaiUsdsFacet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function LIMIT_DAIUSDS_SWAP() external pure virtual returns (bytes32);
+
     function swapUSDSToDAI(uint256 usdsAmount) external virtual;
 
     function swapDAIToUSDS(uint256 daiAmount) external virtual;
-
-    function LIMIT_DAIUSDS_SWAP() external pure virtual returns (bytes32);
 
     /**********************************************************************************************/
     /*** ERC4626 actions                                                                        ***/
