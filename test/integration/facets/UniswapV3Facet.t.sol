@@ -169,7 +169,7 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit IUniswapV3Facet.UniswapV3MaxSlippageSet(pool, 0.99e18);
+        emit IUniswapV3Facet.UniswapV3MaxSlippageSet({ pool: pool, maxSlippage: 0.99e18 });
 
         vm.prank(admin);
         controller.setMaxSlippage(pool, 0.99e18);
@@ -237,7 +237,7 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit IUniswapV3Facet.UniswapV3MaxTickDeltaSet(pool, 1);
+        emit IUniswapV3Facet.UniswapV3MaxTickDeltaSet({ pool: pool, maxTickDelta: 1 });
 
         vm.prank(admin);
         controller.setMaxTickDelta(pool, 1);
@@ -315,7 +315,7 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit IUniswapV3Facet.UniswapV3LowerTickUpdated(pool, 500);
+        emit IUniswapV3Facet.UniswapV3LowerTickUpdated({ pool: pool, lowerTick: 500 });
 
         vm.prank(admin);
         controller.setLiquidityLowerTickBound(pool, 500);
@@ -387,7 +387,7 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit IUniswapV3Facet.UniswapV3UpperTickUpdated(pool, 1000);
+        emit IUniswapV3Facet.UniswapV3UpperTickUpdated({ pool: pool, upperTick: 1000 });
 
         vm.prank(admin);
         controller.setLiquidityUpperTickBound(pool, 1000);
@@ -449,7 +449,7 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
         vm.record();
 
         vm.expectEmit(address(controller));
-        emit IUniswapV3Facet.UniswapV3TWAPSecondsAgoUpdated(pool, 300);
+        emit IUniswapV3Facet.UniswapV3TWAPSecondsAgoUpdated({ pool: pool, twapSecondsAgo: 300 });
 
         vm.prank(admin);
         controller.setTWAPSecondsAgo(pool, 300);

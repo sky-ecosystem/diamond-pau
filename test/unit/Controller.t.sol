@@ -299,7 +299,11 @@ contract Controller_Tests is Test {
         _expectAndMockFactoryCall(facet,       true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireAdded(callSelector, delegateSelector, facet);
+        emit IController.WireAdded({
+            callSelector     : callSelector,
+            delegateSelector : delegateSelector,
+            facet            : facet
+        });
 
         vm.prank(admin);
         controller.addWire(facet, IController.Wire(callSelector, delegateSelector));
@@ -451,10 +455,18 @@ contract Controller_Tests is Test {
         _expectAndMockFactoryCall(facet,       true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireAdded(0x12345678, 0x87654321, makeAddr("facet"));
+        emit IController.WireAdded({
+            callSelector     : 0x12345678,
+            delegateSelector : 0x87654321,
+            facet            : makeAddr("facet")
+        });
 
         vm.expectEmit(address(controller));
-        emit IController.WireAdded(0xFEDCBA98, 0x89ABCDEF, makeAddr("facet"));
+        emit IController.WireAdded({
+            callSelector     : 0xFEDCBA98,
+            delegateSelector : 0x89ABCDEF,
+            facet            : makeAddr("facet")
+        });
 
         vm.prank(admin);
         controller.addWires(facet, wires);
@@ -535,7 +547,7 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelector);
+        emit IController.WireRemoved({ callSelector: callSelector });
 
         vm.prank(admin);
         controller.removeWire(callSelector);
@@ -580,7 +592,7 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[0]);
+        emit IController.WireRemoved({ callSelector : callSelectors[0] });
 
         vm.prank(admin);
         controller.removeWire(callSelectors[0]);
@@ -598,7 +610,7 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[1]);
+        emit IController.WireRemoved({ callSelector : callSelectors[1] });
 
         vm.prank(admin);
         controller.removeWire(callSelectors[1]);
@@ -738,10 +750,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[0]);
+        emit IController.WireRemoved({ callSelector : callSelectors[0] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[1]);
+        emit IController.WireRemoved({ callSelector : callSelectors[1] });
 
         vm.prank(admin);
         controller.removeWires(callSelectors);
@@ -812,10 +824,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(firstHalfCallSelectors[0]);
+        emit IController.WireRemoved({ callSelector : firstHalfCallSelectors[0] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(firstHalfCallSelectors[1]);
+        emit IController.WireRemoved({ callSelector : firstHalfCallSelectors[1] });
 
         vm.prank(admin);
         controller.removeWires(firstHalfCallSelectors);
@@ -842,10 +854,10 @@ contract Controller_Tests is Test {
         _expectAndMockAccessControlCall(admin, true);
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(secondHalfCallSelectors[0]);
+        emit IController.WireRemoved({ callSelector : secondHalfCallSelectors[0] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(secondHalfCallSelectors[1]);
+        emit IController.WireRemoved({ callSelector : secondHalfCallSelectors[1] });
 
         vm.prank(admin);
         controller.removeWires(secondHalfCallSelectors);
@@ -948,16 +960,16 @@ contract Controller_Tests is Test {
         // NOTE: Ordering is 0 then reverse order of 1, 2, 3 due to how EnumerableSet inserts work.
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[0]);
+        emit IController.WireRemoved({ callSelector : callSelectors[0] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[3]);
+        emit IController.WireRemoved({ callSelector : callSelectors[3] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[2]);
+        emit IController.WireRemoved({ callSelector : callSelectors[2] });
 
         vm.expectEmit(address(controller));
-        emit IController.WireRemoved(callSelectors[1]);
+        emit IController.WireRemoved({ callSelector : callSelectors[1] });
 
         vm.prank(admin);
         controller.removeAllWiresFor(facet);
