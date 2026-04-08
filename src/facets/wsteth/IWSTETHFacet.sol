@@ -9,10 +9,25 @@ interface IWSTETHFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a withdrawal is claimed.
+     * @param requestId   Request ID.
+     * @param wethClaimed Amount of WETH claimed.
+     */
     event WSTETHClaimWithdrawal(uint256 indexed requestId, uint256 wethClaimed);
 
+    /**
+     * @dev   Event emitted when WSTETH is deposited.
+     * @param amount Amount of WSTETH deposited.
+     */
     event WSTETHDeposit(uint256 amount);
 
+    /**
+     * @dev   Event emitted when a withdrawal is requested.
+     * @param amountToRedeem Amount of WSTETH to redeem.
+     * @param stethAmount    Amount of stETH.
+     * @param requestIds     Request IDs.
+     */
     event WSTETHRequestWithdraw(uint256 amountToRedeem, uint256 stethAmount, uint256[] requestIds);
 
     /**********************************************************************************************/

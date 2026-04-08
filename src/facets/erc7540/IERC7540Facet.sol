@@ -9,12 +9,32 @@ interface IERC7540Facet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a deposit is claimed.
+     * @param token  Token address.
+     * @param shares Amount of shares claimed.
+     */
     event ERC7540ClaimDeposit(address indexed token, uint256 shares);
 
+    /**
+     * @dev   Event emitted when a redeem is claimed.
+     * @param token  Token address.
+     * @param assets Amount of assets claimed.
+     */
     event ERC7540ClaimRedeem(address indexed token, uint256 assets);
 
+    /**
+     * @dev   Event emitted when a deposit is requested.
+     * @param token  Token address.
+     * @param assets Amount of assets requested.
+     */
     event ERC7540RequestDeposit(address indexed token, uint256 assets);
 
+    /**
+     * @dev   Event emitted when a redeem is requested.
+     * @param token  Token address.
+     * @param shares Amount of shares requested.
+     */
     event ERC7540RequestRedeem(address indexed token, uint256 shares);
 
     /**********************************************************************************************/

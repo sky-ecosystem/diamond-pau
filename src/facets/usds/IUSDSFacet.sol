@@ -9,8 +9,16 @@ interface IUSDSFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when USDS is burnt.
+     * @param usdsAmount Amount of USDS burnt.
+     */
     event USDSBurn(uint256 usdsAmount);
 
+    /**
+     * @dev   Event emitted when USDS is minted.
+     * @param usdsAmount Amount of USDS minted.
+     */
     event USDSMint(uint256 usdsAmount);
 
     /**********************************************************************************************/

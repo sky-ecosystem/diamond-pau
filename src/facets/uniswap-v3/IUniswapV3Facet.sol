@@ -29,6 +29,16 @@ interface IUniswapV3Facet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when liquidity is added.
+     * @param pool      Pool address.
+     * @param tokenId   Token ID.
+     * @param tickLower Lower tick.
+     * @param tickUpper Upper tick.
+     * @param liquidity Liquidity added.
+     * @param amount0   Amount of token0.
+     * @param amount1   Amount of token1.
+     */
     event UniswapV3AddLiquidity(
         address indexed pool,
         uint256 indexed tokenId,
@@ -53,6 +63,14 @@ interface IUniswapV3Facet is IFacetBase {
      */
     event UniswapV3MaxTickDeltaSet(address indexed pool, uint24 maxTickDelta);
 
+    /**
+     * @dev   Event emitted when liquidity is removed.
+     * @param pool      Pool address.
+     * @param tokenId   Token ID.
+     * @param liquidity Liquidity removed.
+     * @param amount0   Amount of token0.
+     * @param amount1   Amount of token1.
+     */
     event UniswapV3RemoveLiquidity(
         address indexed pool,
         uint256 indexed tokenId,
@@ -61,6 +79,13 @@ interface IUniswapV3Facet is IFacetBase {
         uint256         amount1
     );
 
+    /**
+     * @dev   Event emitted when a swap is executed.
+     * @param pool          Pool address.
+     * @param tokenIn       Token in address.
+     * @param amountInSpent Amount of input tokens spent.
+     * @param amountOut     Amount of output tokens received.
+     */
     event UniswapV3Swap(
         address indexed pool,
         address indexed tokenIn,

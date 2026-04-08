@@ -9,14 +9,33 @@ interface IWEETHFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a withdrawal is claimed.
+     * @param weethModule Weeth module address.
+     * @param requestId   Request ID.
+     * @param ethReceived Amount of ETH received.
+     */
     event WEETHClaimWithdrawal(
         address indexed weethModule,
         uint256 indexed requestId,
         uint256         ethReceived
     );
 
+    /**
+     * @dev   Event emitted when a deposit is made.
+     * @param amount     Amount of ETH deposited.
+     * @param eethAmount Amount of eETH received.
+     * @param shares     Amount of shares received.
+     */
     event WEETHDeposit(uint256 amount, uint256 eethAmount, uint256 shares);
 
+    /**
+     * @dev   Event emitted when a withdrawal is requested.
+     * @param weethModule Weeth module address.
+     * @param requestId   Request ID.
+     * @param eethAmount  Amount of eETH.
+     * @param weethShares Amount of weETH shares.
+     */
     event WEETHRequestWithdraw(
         address indexed weethModule,
         uint256 indexed requestId,

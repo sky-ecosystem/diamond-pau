@@ -9,8 +9,18 @@ interface IFarmFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when tokens are deposited to a farm.
+     * @param farmToken Farm token address.
+     * @param amount    Amount of tokens deposited.
+     */
     event FarmDeposit(address indexed farmToken, uint256 amount);
 
+    /**
+     * @dev   Event emitted when tokens are withdrawn from a farm.
+     * @param farmToken Farm token address.
+     * @param amount    Amount of tokens withdrawn.
+     */
     event FarmWithdraw(address indexed farmToken, uint256 amount);
 
     /**********************************************************************************************/

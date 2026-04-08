@@ -9,6 +9,12 @@ interface IPendleFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when PY tokens are redeemed.
+     * @param market              Pendle market address.
+     * @param pyAmountIn          Amount of PY tokens redeemed.
+     * @param totalTokenOutAmount Total amount of tokens received.
+     */
     event PendleRedeem(address indexed market, uint256 pyAmountIn, uint256 totalTokenOutAmount);
 
     /**********************************************************************************************/

@@ -9,6 +9,10 @@ interface IWrapProxyETHFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when proxy ETH is wrapped.
+     * @param ethAmount Amount of ETH wrapped.
+     */
     event WrapProxyETHWrap(uint256 ethAmount);
 
     /**********************************************************************************************/

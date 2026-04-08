@@ -9,8 +9,20 @@ interface IPSM3Facet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a deposit is made.
+     * @param asset  Asset address.
+     * @param amount Amount of asset deposited.
+     * @param shares Amount of shares received.
+     */
     event PSM3Deposit(address indexed asset, uint256 amount, uint256 shares);
 
+    /**
+     * @dev   Event emitted when a withdrawal is made.
+     * @param asset           Asset address.
+     * @param assetsWithdrawn Amount of assets withdrawn.
+     * @param sharesBurnt     Amount of shares burnt.
+     */
     event PSM3Withdraw(address indexed asset, uint256 assetsWithdrawn, uint256 sharesBurnt);
 
     /**********************************************************************************************/

@@ -16,6 +16,13 @@ interface ILayerZeroFacet is IFacetBase {
      */
     event LayerZeroRecipientSet(uint32 indexed destinationEndpointId, bytes32 layerZeroRecipient);
 
+    /**
+     * @dev   Event emitted when a transfer is initiated.
+     * @param oftAddress            OFT address.
+     * @param destinationEndpointId Destination endpoint ID.
+     * @param amount                Amount of tokens transferred.
+     * @param nativeFeePaid         Native fee paid.
+     */
     event LayerZeroTransfer(
         address indexed oftAddress,
         uint32  indexed destinationEndpointId,

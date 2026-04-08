@@ -9,6 +9,11 @@ interface ISparkVaultFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when assets are taken from a Spark vault.
+     * @param sparkVault  Spark vault address.
+     * @param assetAmount Amount of assets taken.
+     */
     event SparkVaultTake(address indexed sparkVault, uint256 assetAmount);
 
     /**********************************************************************************************/

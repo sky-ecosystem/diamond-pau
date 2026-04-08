@@ -9,18 +9,48 @@ interface IUSDEFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when assets are cooled down.
+     * @param usdeAmount Amount of USDE cooled down.
+     * @param shares     Amount of shares received.
+     */
     event USDECooldownAssets(uint256 usdeAmount, uint256 shares);
 
+    /**
+     * @dev   Event emitted when shares are cooled down.
+     * @param susdeAmount Amount of SUSDE cooled down.
+     * @param assets      Amount of assets received.
+     */
     event USDECooldownShares(uint256 susdeAmount, uint256 assets);
 
+    /**
+     * @dev   Event emitted when a USDE burn is prepared.
+     * @param usdeAmount Amount of USDE to burn.
+     */
     event USDEPrepareBurn(uint256 usdeAmount);
 
+    /**
+     * @dev   Event emitted when a USDE mint is prepared.
+     * @param usdcAmount Amount of USDC to mint.
+     */
     event USDEPrepareMint(uint256 usdcAmount);
 
+    /**
+     * @dev   Event emitted when a delegated signer is removed.
+     * @param delegatedSigner Delegated signer address.
+     */
     event USDERemoveDelegatedSigner(address indexed delegatedSigner);
 
+    /**
+     * @dev   Event emitted when a delegated signer is set.
+     * @param delegatedSigner Delegated signer address.
+     */
     event USDESetDelegatedSigner(address indexed delegatedSigner);
 
+    /**
+     * @dev   Event emitted when SUSDE is unstaked.
+     * @param assets Amount of assets unstaked.
+     */
     event USDEUnstakeSUSDE(uint256 assets);
 
     /**********************************************************************************************/

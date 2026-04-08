@@ -9,6 +9,12 @@ interface ITransferAssetFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when an asset is transferred.
+     * @param asset       Asset address.
+     * @param destination Destination address.
+     * @param amount      Amount of asset transferred.
+     */
     event TransferAssetFacetTransfer(
         address indexed asset,
         address indexed destination,

@@ -9,6 +9,13 @@ interface ICurveFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when liquidity is added.
+     * @param pool           Pool address.
+     * @param shares         Amount of LP tokens received.
+     * @param valueDeposited Value deposited.
+     * @param depositAmounts Amounts of tokens deposited.
+     */
     event CurveAddLiquidity(
         address indexed pool,
         uint256         shares,
@@ -23,6 +30,13 @@ interface ICurveFacet is IFacetBase {
      */
     event CurveMaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
+    /**
+     * @dev   Event emitted when liquidity is removed.
+     * @param pool            Pool address.
+     * @param lpBurnAmount    Amount of LP tokens burnt.
+     * @param valueWithdrawn  Value withdrawn.
+     * @param withdrawnTokens Amounts of tokens withdrawn.
+     */
     event CurveRemoveLiquidity(
         address indexed pool,
         uint256         lpBurnAmount,
@@ -30,6 +44,14 @@ interface ICurveFacet is IFacetBase {
         uint256[]       withdrawnTokens
     );
 
+    /**
+     * @dev   Event emitted when a swap is executed.
+     * @param pool        Pool address.
+     * @param inputIndex  Index of the input token.
+     * @param outputIndex Index of the output token.
+     * @param amountIn    Amount of input tokens swapped.
+     * @param amountOut   Amount of output tokens received.
+     */
     event CurveSwap(
         address indexed pool,
         uint256 indexed inputIndex,

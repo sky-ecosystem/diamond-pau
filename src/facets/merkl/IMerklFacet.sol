@@ -9,6 +9,10 @@ interface IMerklFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when an operator is toggled.
+     * @param operator Operator address.
+     */
     event MerklToggleOperator(address indexed operator);
 
     /**********************************************************************************************/

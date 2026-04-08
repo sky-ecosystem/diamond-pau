@@ -9,12 +9,28 @@ interface ICentrifugeFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a deposit request is cancelled.
+     * @param token Token address.
+     */
     event CentrifugeCancelDepositRequest(address indexed token);
 
+    /**
+     * @dev   Event emitted when a redeem request is cancelled.
+     * @param token Token address.
+     */
     event CentrifugeCancelRedeemRequest(address indexed token);
 
+    /**
+     * @dev   Event emitted when a cancelled deposit request is claimed.
+     * @param token Token address.
+     */
     event CentrifugeClaimCancelDepositRequest(address indexed token);
 
+    /**
+     * @dev   Event emitted when a cancelled redeem request is claimed.
+     * @param token Token address.
+     */
     event CentrifugeClaimCancelRedeemRequest(address indexed token);
 
     /**
@@ -24,6 +40,12 @@ interface ICentrifugeFacet is IFacetBase {
      */
     event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 indexed recipient);
 
+    /**
+     * @dev   Event emitted when shares are transferred.
+     * @param token        Token address.
+     * @param amount       Amount of shares transferred.
+     * @param centrifugeId Centrifuge ID.
+     */
     event CentrifugeTransferShares(address indexed token, uint128 amount, uint16 indexed centrifugeId);
 
     /**********************************************************************************************/

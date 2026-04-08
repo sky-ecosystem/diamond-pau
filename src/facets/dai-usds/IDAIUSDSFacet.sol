@@ -9,8 +9,16 @@ interface IDAIUSDSFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when DAI is swapped to USDS.
+     * @param daiAmount Amount of DAI swapped.
+     */
     event DAIUSDSSwapDAIToUSDS(uint256 daiAmount);
 
+    /**
+     * @dev   Event emitted when USDS is swapped to DAI.
+     * @param usdsAmount Amount of USDS swapped.
+     */
     event DAIUSDSSwapUSDSToDAI(uint256 usdsAmount);
 
     /**********************************************************************************************/

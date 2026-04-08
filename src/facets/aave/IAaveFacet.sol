@@ -9,6 +9,11 @@ interface IAaveFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a deposit is made.
+     * @param aToken Address of aToken.
+     * @param amount Amount of underlying asset deposited.
+     */
     event AaveDeposit(address indexed aToken, uint256 amount);
 
     /**
@@ -18,6 +23,11 @@ interface IAaveFacet is IFacetBase {
      */
     event AaveMaxSlippageSet(address indexed aToken, uint256 maxSlippage);
 
+    /**
+     * @dev   Event emitted when a withdrawal is made.
+     * @param aToken          Address of aToken.
+     * @param amountWithdrawn Amount of underlying asset withdrawn.
+     */
     event AaveWithdraw(address indexed aToken, uint256 amountWithdrawn);
 
     /**********************************************************************************************/

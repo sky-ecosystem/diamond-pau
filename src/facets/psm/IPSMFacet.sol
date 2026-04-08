@@ -9,9 +9,17 @@ interface IPSMFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when USDC is swapped to USDS.
+     * @param usdcAmount Amount of USDC swapped.
+     */
     event PSMSwapUSDCToUSDS(uint256 usdcAmount);
 
-    event PSMSwapUSDSToUSDC(uint256 usdcAmount);
+    /**
+     * @dev   Event emitted when USDS is swapped to USDC.
+     * @param usdsAmount Amount of USDS swapped.
+     */
+    event PSMSwapUSDSToUSDC(uint256 usdsAmount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

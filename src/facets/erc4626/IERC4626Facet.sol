@@ -9,6 +9,12 @@ interface IERC4626Facet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a deposit is made.
+     * @param token  Token address.
+     * @param assets Amount of assets deposited.
+     * @param shares Amount of shares received.
+     */
     event ERC4626Deposit(address indexed token, uint256 assets, uint256 shares);
 
     /**
@@ -18,8 +24,20 @@ interface IERC4626Facet is IFacetBase {
      */
     event ERC4626MaxExchangeRateSet(address indexed token, uint256 maxExchangeRate);
 
+    /**
+     * @dev   Event emitted when shares are redeemed.
+     * @param token  Token address.
+     * @param shares Amount of shares redeemed.
+     * @param assets Amount of assets received.
+     */
     event ERC4626Redeem(address indexed token, uint256 shares, uint256 assets);
 
+    /**
+     * @dev   Event emitted when assets are withdrawn.
+     * @param token  Token address.
+     * @param assets Amount of assets withdrawn.
+     * @param shares Amount of shares burnt.
+     */
     event ERC4626Withdraw(address indexed token, uint256 assets, uint256 shares);
 
     /**********************************************************************************************/

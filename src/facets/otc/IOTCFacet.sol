@@ -79,6 +79,12 @@ interface IOTCFacet is IFacetBase {
         uint256         normalizedAmountSent
     );
 
+    /**
+     * @dev   Event emitted when a whitelisted asset is set.
+     * @param exchange      Exchange address.
+     * @param asset         Asset address.
+     * @param isWhitelisted True if the asset is whitelisted.
+     */
     event OTCWhitelistedAssetSet(
         address indexed exchange,
         address indexed asset,

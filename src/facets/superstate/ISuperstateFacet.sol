@@ -9,6 +9,10 @@ interface ISuperstateFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a subscription is made.
+     * @param usdcAmount Amount of USDC subscribed.
+     */
     event SuperstateSubscribe(uint256 usdcAmount);
 
     /**********************************************************************************************/

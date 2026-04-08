@@ -9,8 +9,18 @@ interface IMapleFacet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a redemption is cancelled.
+     * @param mapleToken Maple token address.
+     * @param shares     Amount of shares cancelled.
+     */
     event MapleCancelRedemption(address indexed mapleToken, uint256 shares);
 
+    /**
+     * @dev   Event emitted when a redemption is requested.
+     * @param mapleToken Maple token address.
+     * @param shares     Amount of shares requested.
+     */
     event MapleRequestRedemption(address indexed mapleToken, uint256 shares);
 
     /**********************************************************************************************/

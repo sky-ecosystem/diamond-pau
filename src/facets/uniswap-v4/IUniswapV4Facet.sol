@@ -19,6 +19,14 @@ interface IUniswapV4Facet is IFacetBase {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    /**
+     * @dev   Event emitted when a position's liquidity is decreased.
+     * @param poolId            Pool ID.
+     * @param tokenId           Token ID.
+     * @param liquidityDecrease Amount of liquidity decreased.
+     * @param amount0           Amount of token0.
+     * @param amount1           Amount of token1.
+     */
     event UniswapV4DecreasePosition(
         bytes32 indexed poolId,
         uint256 indexed tokenId,
@@ -27,6 +35,14 @@ interface IUniswapV4Facet is IFacetBase {
         uint128         amount1
     );
 
+    /**
+     * @dev   Event emitted when a position's liquidity is increased.
+     * @param poolId            Pool ID.
+     * @param tokenId           Token ID.
+     * @param liquidityIncrease Amount of liquidity increased.
+     * @param amount0           Amount of token0.
+     * @param amount1           Amount of token1.
+     */
     event UniswapV4IncreasePosition(
         bytes32 indexed poolId,
         uint256 indexed tokenId,
@@ -42,6 +58,16 @@ interface IUniswapV4Facet is IFacetBase {
      */
     event UniswapV4MaxSlippageSet(bytes32 indexed poolId, uint256 maxSlippage);
 
+    /**
+     * @dev   Event emitted when a position is minted.
+     * @param poolId    Pool ID.
+     * @param tokenId   Token ID.
+     * @param tickLower Lower tick.
+     * @param tickUpper Upper tick.
+     * @param liquidity Liquidity minted.
+     * @param amount0   Amount of token0.
+     * @param amount1   Amount of token1.
+     */
     event UniswapV4MintPosition(
         bytes32 indexed poolId,
         uint256 indexed tokenId,
@@ -52,6 +78,14 @@ interface IUniswapV4Facet is IFacetBase {
         uint128         amount1
     );
 
+    /**
+     * @dev   Event emitted when a swap is executed.
+     * @param poolId    Pool ID.
+     * @param tokenIn   Token in address.
+     * @param tokenOut  Token out address.
+     * @param amountIn  Amount of input tokens.
+     * @param amountOut Amount of output tokens.
+     */
     event UniswapV4Swap(
         bytes32 indexed poolId,
         address indexed tokenIn,
