@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase } from "../../../src/facets/IFacetBase.sol";
 import { IOTCFacet }  from "../../../src/facets/otc/IOTCFacet.sol";
@@ -44,44 +46,44 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
 
         vm.label(facet, "OTCFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
+        Wire[] memory wires = new Wire[](8);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.setBuffer.selector,
             IOTCFacet.setBuffer.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.setMaxSlippage.selector,
             IOTCFacet.setMaxSlippage.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IControllerLike.setRechargeRate.selector,
             IOTCFacet.setRechargeRate.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IControllerLike.setIsWhitelisted.selector,
             IOTCFacet.setIsWhitelisted.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IControllerLike.getBuffer.selector,
             IOTCFacet.getBuffer.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IControllerLike.getMaxSlippage.selector,
             IOTCFacet.getMaxSlippage.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IControllerLike.getRechargeRate.selector,
             IOTCFacet.getRechargeRate.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IControllerLike.getIsWhitelisted.selector,
             IOTCFacet.getIsWhitelisted.selector
         );

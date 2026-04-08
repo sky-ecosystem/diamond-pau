@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { ICCTPFacet } from "../../../src/facets/cctp/ICCTPFacet.sol";
 
@@ -38,24 +40,24 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
 
         vm.label(facet, "CCTPFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
+        Wire[] memory wires = new Wire[](4);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IControllerLike.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IControllerLike.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );

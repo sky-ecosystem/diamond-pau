@@ -5,38 +5,17 @@ import {
     IAccessControlEnumerable
 } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
+import { Circuit, Dispatch, Integration } from "./IntegrationStructs.sol";
+
 interface IBeacon is IAccessControlEnumerable {
-
-    /**********************************************************************************************/
-    /*** Structs                                                                                ***/
-    /**********************************************************************************************/
-
-    struct Circuit {
-        address facet;
-        Wire[]  wires;
-    }
-
-    struct Dispatch {
-        address facet;
-        bytes4  delegateSelector;
-    }
-
-    struct Wire {
-        bytes4 callSelector;
-        bytes4 delegateSelector;
-    }
 
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event WireAdded(
-        bytes4  indexed callSelector,
-        bytes4  indexed delegateSelector,
-        address indexed facet
-    );
+    event CircuitSet(bytes32 indexed integrationId, Circuit circuit);
 
-    event WireRemoved(bytes4 indexed callSelector);
+    event CircuitRemoved(bytes32 indexed integrationId);
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
@@ -48,59 +27,42 @@ interface IBeacon is IAccessControlEnumerable {
     /// @notice Thrown when the call selector is hardcoded.
     error CallSelectorHardcoded(bytes4 callSelector);
 
-    /// @notice Thrown when a call selector is not wired to a facet.
-    error CallSelectorNotWired(bytes4 callSelector);
+    /// @notice Thrown when the circuit is not found.
+    error CircuitNotFound(bytes32 integrationId);
 
     /// @notice Thrown when an argument array is empty.
     error EmptyArray();
 
-    /// @notice Thrown when the call data length is less than 4.
-    error InvalidCallDataLength(uint256 callDataLength);
-
-    /// @notice Thrown when the facet is not registered as valid on the factory.
-    error InvalidFacet(address facet);
-
-    /// @notice Thrown when the caller is not an admin.
-    error NotAdmin(address caller);
-
     /// @notice Thrown when the admin is the zero address.
     error ZeroAdmin();
 
-    /// @notice Thrown when the beacon is the zero address.
-    error ZeroBeacon();
-
     /// @notice Thrown when the dispatch is invalid.
     error ZeroFacet();
-
-    /// @notice Thrown when the proxy is the zero address.
-    error ZeroProxy();
-
-    /// @notice Thrown when the rate limits is the zero address.
-    error ZeroRateLimits();
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function addWire(address facet, Wire calldata wire) external;
+    function setCircuit(bytes32 integrationId, Circuit calldata circuit) external;
 
-    function addWires(address facet, Wire[] calldata wires) external;
-
-    function removeAllWiresFor(address facet) external;
-
-    function removeWire(bytes4 callSelector) external;
-
-    function removeWires(bytes4[] calldata callSelectors) external;
+    function removeCircuit(bytes32 integrationId) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    function circuits() external view returns (Circuit[] memory);
+    function integrations() external view returns (Integration[] memory);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
+
+    function getCircuit(bytes32 integrationId) external view returns (Circuit memory);
+
+    function getCircuits(bytes32[] calldata integrationIds)
+        external
+        view
+        returns (Circuit[] memory);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 
@@ -108,10 +70,6 @@ interface IBeacon is IAccessControlEnumerable {
         external
         view
         returns (Dispatch[] memory);
-
-    function getWiring(address facet) external view returns (Wire[] memory);
-
-    function getWirings(address[] calldata facets) external view returns (Wire[][] memory);
 
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 

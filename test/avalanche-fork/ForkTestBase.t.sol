@@ -18,9 +18,10 @@ import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { CentrifugeFacet } from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { ERC7540Facet }    from "../../src/facets/erc7540/ERC7540Facet.sol";
 
+import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
-import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
 import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
@@ -154,44 +155,44 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
+        Wire[] memory wires = new Wire[](8);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.transferSharesCentrifuge.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
             ICentrifugeFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IForeignControllerFull.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
@@ -204,34 +205,34 @@ contract ForkTestBase is Test {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](6);
+        Wire[] memory wires = new Wire[](6);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.requestDepositERC7540.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.claimDepositERC7540.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.requestRedeemERC7540.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.claimRedeemERC7540.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
             IERC7540Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.LIMIT_7540_REDEEM.selector,
             IERC7540Facet.LIMIT_REDEEM.selector
         );

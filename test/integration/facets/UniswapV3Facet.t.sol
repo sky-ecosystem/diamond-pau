@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }         from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { IUniswapV3Facet } from "../../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
@@ -51,49 +53,49 @@ contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
 
         vm.label(facet, "UniswapV3Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](9);
+        Wire[] memory wires = new Wire[](9);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.setMaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.setMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IControllerLike.setLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IControllerLike.setLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IControllerLike.setTWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IControllerLike.getMaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IControllerLike.getMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IControllerLike.getLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        wires[8] = IBeacon.Wire(
+        wires[8] = Wire(
             IControllerLike.getTWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );

@@ -11,22 +11,23 @@ import {
     AccessControlEnumerable
 } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 
+import { Circuit, Dispatch, Integration } from "./interfaces/IntegrationStructs.sol";
+
 import { IBeacon }     from "./interfaces/IBeacon.sol";
 import { IController } from "./interfaces/IController.sol";
 
 contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
 
-    using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    EnumerableSet.AddressSet internal _facets;
+    EnumerableSet.Bytes32Set internal _integrationIds;
 
-    mapping (bytes4  => Dispatch)                 internal _dispatches;
-    mapping (address => EnumerableSet.Bytes32Set) internal _wiring;
+    mapping (bytes32 integrationId => Circuit  circuit)  internal _circuits;
+    mapping (bytes4  callSelector  => Dispatch dispatch) internal _dispatches;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
@@ -42,92 +43,87 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function addWire(address facet, Wire calldata wire)
+    function setCircuit(bytes32 integrationId, Circuit calldata circuit)
         external
         override
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(facet != address(0), ZeroFacet());
-        _addWire(facet, wire);
-    }
+        _removeCircuit(integrationId);
 
-    function addWires(address facet, Wire[] calldata wires)
-        external
-        override
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        require(wires.length > 0,    EmptyArray());
-        require(facet != address(0), ZeroFacet());
+        require(circuit.facet != address(0), ZeroFacet());
+        require(circuit.wires.length > 0,    EmptyArray());
 
-        for (uint256 i = 0; i < wires.length; ++i) {
-            _addWire(facet, wires[i]);
+        for (uint256 i = 0; i < circuit.wires.length; ++i) {
+            bytes4 callSelector     = circuit.wires[i].callSelector;
+            bytes4 delegateSelector = circuit.wires[i].delegateSelector;
+
+            _revertIfCallSelectorIsHardcoded(callSelector);
+
+            require(
+                _dispatches[callSelector].facet == address(0),
+                CallSelectorAlreadyWired(callSelector)
+            );
+
+            _dispatches[callSelector] = Dispatch(circuit.facet, delegateSelector);
         }
+
+        _integrationIds.add(integrationId);
+
+        _circuits[integrationId] = circuit;
+
+        emit CircuitSet(integrationId, circuit);
     }
 
-    function removeWire(bytes4 callSelector)
+    function removeCircuit(bytes32 integrationId)
         external
         override
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        _removeWire(callSelector);
-    }
+        _removeCircuit(integrationId);
 
-    function removeWires(bytes4[] calldata callSelectors)
-        external
-        override
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        require(callSelectors.length > 0, EmptyArray());
+        require(_integrationIds.remove(integrationId), CircuitNotFound(integrationId));
 
-        for (uint256 i = 0; i < callSelectors.length; ++i) {
-            _removeWire(callSelectors[i]);
-        }
-    }
-
-    function removeAllWiresFor(address facet)
-        external
-        override
-        nonReentrant
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        EnumerableSet.Bytes32Set storage wiring = _wiring[facet];
-
-        uint256 wiringCount = wiring.length();
-
-        require(wiringCount > 0, EmptyArray());
-
-        while (wiringCount > 0) {
-            ( bytes4 callSelector, ) = _fromWiring(wiring.at(0));
-
-            _removeWire(callSelector);
-
-            --wiringCount;
-        }
+        emit CircuitRemoved(integrationId);
     }
 
     /**********************************************************************************************/
     /*** External Variable Getters                                                              ***/
     /**********************************************************************************************/
 
-    function circuits() external view override returns (Circuit[] memory circuits_) {
-        uint256 facetCount = _facets.length();
+    function integrations() external view override returns (Integration[] memory integrations_) {
+        uint256 integrationCount = _integrationIds.length();
 
-        circuits_ = new Circuit[](facetCount);
+        integrations_ = new Integration[](integrationCount);
 
-        for (uint256 i = 0; i < facetCount; ++i) {
-            address facet = _facets.at(i);
+        for (uint256 i = 0; i < integrationCount; ++i) {
+            bytes32 id = _integrationIds.at(i);
 
-            circuits_[i] = Circuit(facet, _toWires(_wiring[facet]));
+            integrations_[i] = Integration(id, _circuits[id]);
         }
     }
 
     /**********************************************************************************************/
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
+
+    function getCircuit(bytes32 integrationId) external view override returns (Circuit memory) {
+        return _circuits[integrationId];
+    }
+
+    function getCircuits(bytes32[] calldata integrationIds)
+        external
+        view
+        override
+        returns (Circuit[] memory circuits_)
+    {
+        circuits_ = new Circuit[](integrationIds.length);
+
+        for (uint256 i = 0; i < integrationIds.length; ++i) {
+            circuits_[i] = _circuits[integrationIds[i]];
+        }
+    }
 
     function getDispatch(bytes4 callSelector)
         external
@@ -151,23 +147,6 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         }
     }
 
-    function getWiring(address facet) external view override returns (Wire[] memory wiring) {
-        return _toWires(_wiring[facet]);
-    }
-
-    function getWirings(address[] calldata facets)
-        external
-        view
-        override
-        returns (Wire[][] memory wirings)
-    {
-        wirings = new Wire[][](facets.length);
-
-        for (uint256 i = 0; i < facets.length; ++i) {
-            wirings[i] = _toWires(_wiring[facets[i]]);
-        }
-    }
-
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -181,91 +160,35 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _addWire(address facet, Wire memory wire) internal {
-        bytes4 callSelector     = wire.callSelector;
-        bytes4 delegateSelector = wire.delegateSelector;
+    function _removeCircuit(bytes32 integrationId) internal {
+        Circuit storage circuit = _circuits[integrationId];
 
-        _revertIfCallSelectorIsHardcoded(callSelector);
+        if (circuit.facet == address(0)) return;
 
-        require(
-            _dispatches[callSelector].facet == address(0),
-            CallSelectorAlreadyWired(callSelector)
-        );
-
-        _facets.add(facet);
-
-        _dispatches[callSelector] = Dispatch(facet, delegateSelector);
-
-        _wiring[facet].add(_toWiring(callSelector, delegateSelector));
-
-        emit WireAdded(callSelector, delegateSelector, facet);
-    }
-
-    function _removeWire(bytes4 callSelector) internal {
-        _revertIfCallSelectorIsHardcoded(callSelector);
-
-        Dispatch storage dispatch = _dispatches[callSelector];
-
-        address facet = dispatch.facet;
-
-        require(dispatch.facet != address(0), CallSelectorNotWired(callSelector));
-
-        EnumerableSet.Bytes32Set storage wiring = _wiring[facet];
-
-        wiring.remove(_toWiring(callSelector, dispatch.delegateSelector));
-
-        delete _dispatches[callSelector];
-
-        if (wiring.length() == 0) {
-            _facets.remove(facet);
+        for (uint256 i = 0; i < circuit.wires.length; ++i) {
+            delete _dispatches[circuit.wires[i].callSelector];
         }
 
-        emit WireRemoved(callSelector);
+        delete _circuits[integrationId];
     }
 
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _fromWiring(bytes32 wiring)
-        internal
-        pure
-        returns (bytes4 callSelector, bytes4 delegateSelector)
-    {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return (bytes4(wiring), bytes4(wiring << 32));
-    }
-
-    function _toWiring(bytes4 callSelector, bytes4 delegateSelector)
-        internal
-        pure
-        returns (bytes32 wiring)
-    {
-        return bytes32(abi.encodePacked(callSelector, delegateSelector));
-    }
-
-    function _toWires(EnumerableSet.Bytes32Set storage wiring)
-        internal
-        view
-        returns (Wire[] memory wires)
-    {
-        uint256 wiringCount = wiring.length();
-
-        wires = new Wire[](wiringCount);
-
-        for (uint256 i = 0; i < wiringCount; ++i) {
-            ( bytes4 callSelector, bytes4 delegateSelector ) = _fromWiring(wiring.at(i));
-
-            wires[i] = Wire(callSelector, delegateSelector);
-        }
-    }
-
     function _revertIfCallSelectorIsHardcoded(bytes4 callSelector) internal pure {
         require(
+            callSelector != IController.updateIntegrations.selector &&
+            callSelector != IController.removeIntegrations.selector &&
             callSelector != IController.accessControls.selector &&
             callSelector != IController.beacon.selector &&
+            callSelector != IController.integrations.selector &&
             callSelector != IController.proxy.selector &&
-            callSelector != IController.rateLimits.selector,
+            callSelector != IController.rateLimits.selector &&
+            callSelector != IBeacon.getCircuit.selector &&
+            callSelector != IBeacon.getCircuits.selector &&
+            callSelector != IBeacon.getDispatch.selector &&
+            callSelector != IBeacon.getDispatches.selector,
             CallSelectorHardcoded(callSelector)
         );
     }

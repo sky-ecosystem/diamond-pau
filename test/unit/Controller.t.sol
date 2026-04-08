@@ -65,9 +65,11 @@ interface IMockController {
 contract Controller_Tests is Test {
 
     address internal accessControls = makeAddr("accessControls");
+    address internal admin          = makeAddr("admin");
     address internal beacon         = makeAddr("beacon");
     address internal proxy          = makeAddr("proxy");
     address internal rateLimits     = makeAddr("rateLimits");
+    address internal unauthorized   = makeAddr("unauthorized");
 
     Controller internal controller;
 
@@ -105,6 +107,48 @@ contract Controller_Tests is Test {
         assertEq(controller.proxy(),          proxy);
         assertEq(controller.rateLimits(),     rateLimits);
     }
+
+    /**********************************************************************************************/
+    /*** updateIntegrations Tests                                                               ***/
+    /**********************************************************************************************/
+
+    function test_updateIntegrations_reentrancy() external {
+        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        controller.updateIntegrations(new bytes32[](0));
+    }
+
+    function test_updateIntegrations_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.updateIntegrations(new bytes32[](0));
+    }
+
+    // TODO: test_updateIntegrations_callSelectorAlreadyWired
+
+    // TODO: test_updateIntegrations (showing overwrite)
+
+    /**********************************************************************************************/
+    /*** removeIntegrations Tests                                                               ***/
+    /**********************************************************************************************/
+
+    function test_removeIntegrations_reentrancy() external {
+        vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        controller.removeIntegrations(new bytes32[](0));
+    }
+
+    function test_removeIntegrations_notAdmin() external {
+        vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
+        vm.prank(unauthorized);
+        controller.removeIntegrations(new bytes32[](0));
+    }
+
+    // TODO: test_removeIntegrations_circuitNotFound
+
+    // TODO: test_removeIntegrations
 
     /**********************************************************************************************/
     /*** Fallback Tests                                                                         ***/

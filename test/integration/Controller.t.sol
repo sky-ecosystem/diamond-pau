@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }     from "../../src/interfaces/IBeacon.sol";
 import { IController } from "../../src/interfaces/IController.sol";
 
@@ -91,7 +93,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(dispatches[1].facet,            address(0));
         assertEq(dispatches[1].delegateSelector, bytes4(0));
 
-        IBeacon.Wire[][] memory wirings = beacon.getWirings(facets);
+        Wire[][] memory wirings = beacon.getWirings(facets);
 
         assertEq(wirings.length,    2);
         assertEq(wirings[0].length, 0);
@@ -99,9 +101,9 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         // Wire div to facet1.divideBy2 and mul to facet1.multiplyBy2
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
-        wires[0] = IBeacon.Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
-        wires[1] = IBeacon.Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
+        Wire[] memory wires = new Wire[](2);
+        wires[0] = Wire(IMockController.div.selector, MockFacet1.divideBy2.selector);
+        wires[1] = Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
 
         vm.prank(beaconAdmin);
         beacon.addWires(facet1, wires);
@@ -146,7 +148,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         vm.startPrank(beaconAdmin);
         beacon.removeWire(IMockController.div.selector);
-        beacon.addWire(facet2, IBeacon.Wire(IMockController.div.selector, MockFacet2.divideBy4.selector));
+        beacon.addWire(facet2, Wire(IMockController.div.selector, MockFacet2.divideBy4.selector));
         vm.stopPrank();
 
         assertEq(controller.div(12), 3);
@@ -193,7 +195,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         vm.startPrank(beaconAdmin);
         beacon.removeAllWiresFor(facet1);
-        beacon.addWire(facet2, IBeacon.Wire(IMockController.mul.selector, MockFacet2.multiplyBy4.selector));
+        beacon.addWire(facet2, Wire(IMockController.mul.selector, MockFacet2.multiplyBy4.selector));
         vm.stopPrank();
 
         assertEq(controller.div(12), 3);

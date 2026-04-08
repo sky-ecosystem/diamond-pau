@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }       from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }    from "../../../src/facets/IFacetBase.sol";
 import { IERC4626Facet } from "../../../src/facets/erc4626/IERC4626Facet.sol";
@@ -32,14 +34,14 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
 
         vm.label(facet, "ERC4626Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
+        Wire[] memory wires = new Wire[](2);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.getMaxExchangeRate.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );

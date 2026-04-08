@@ -5,6 +5,8 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
+import { Circuit, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon } from "../../src/interfaces/IBeacon.sol";
 
 import { Beacon } from "../../src/Beacon.sol";
@@ -47,10 +49,10 @@ contract BeaconIntegration_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** addWire Tests                                                                          ***/
+    /*** setCircuit Tests                                                                       ***/
     /**********************************************************************************************/
 
-    function test_addWire_notAdmin() external {
+    function test_setCircuit_notAdmin() external {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -60,43 +62,57 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.addWire(address(0), IBeacon.Wire(bytes4(0), bytes4(0)));
+        beacon.setCircuit(bytes32(0), Circuit(address(0), new Wire[](0)));
     }
 
-    function test_addWire() external {
-        address facet = address(new MockFacet1());
+    function test_setCircuit() external {
+        bytes32 integrationId = "SOME_INTEGRATION";
 
-        bytes4 callSelector     = 0x12345678;
-        bytes4 delegateSelector = 0x87654321;
+        address facet = makeAddr("facet");
+
+        bytes4[] memory callSelectors = new bytes4[](3);
+        callSelectors[0] = 0x12345678;
+        callSelectors[1] = 0x89ABCDEF;
+        callSelectors[2] = 0x11111111;
+
+        bytes4[] memory delegateSelectors = new bytes4[](3);
+        delegateSelectors[0] = 0x87654321;
+        delegateSelectors[1] = 0xFECDAB98;
+        delegateSelectors[2] = 0x33333333;
+
+        Wire[] memory wires = new Wire[](3);
+        wires[0] = Wire(callSelectors[0], delegateSelectors[0]);
+        wires[1] = Wire(callSelectors[1], delegateSelectors[1]);
+        wires[2] = Wire(callSelectors[2], delegateSelectors[2]);
+
+        Circuit memory circuit = Circuit(facet, wires);
 
         vm.expectEmit(address(beacon));
-        emit IBeacon.WireAdded(callSelector, delegateSelector, facet);
+        emit IBeacon.CircuitSet(integrationId, circuit);
 
         vm.prank(admin);
-        beacon.addWire(facet, IBeacon.Wire(callSelector, delegateSelector));
+        beacon.setCircuit(integrationId, circuit);
 
-        IBeacon.Dispatch memory dispatch = beacon.getDispatch(callSelector);
+        Circuit memory returnedCircuit = beacon.getCircuit(integrationId);
 
-        assertEq(dispatch.facet,            facet);
-        assertEq(dispatch.delegateSelector, delegateSelector);
+        assertEq(returnedCircuit.facet,        facet);
+        assertEq(returnedCircuit.wires.length, wires.length);
 
-        vm.expectEmit(address(beacon));
-        emit IBeacon.WireRemoved(callSelector);
+        assertEq(returnedCircuit.wires[0].callSelector,     wires[0].callSelector);
+        assertEq(returnedCircuit.wires[0].delegateSelector, wires[0].delegateSelector);
 
-        vm.prank(admin);
-        beacon.removeWire(callSelector);
+        assertEq(returnedCircuit.wires[1].callSelector,     wires[1].callSelector);
+        assertEq(returnedCircuit.wires[1].delegateSelector, wires[1].delegateSelector);
 
-        dispatch = beacon.getDispatch(callSelector);
-
-        assertEq(dispatch.facet,            address(0));
-        assertEq(dispatch.delegateSelector, bytes4(0));
+        assertEq(returnedCircuit.wires[2].callSelector,     wires[2].callSelector);
+        assertEq(returnedCircuit.wires[2].delegateSelector, wires[2].delegateSelector);
     }
 
     /**********************************************************************************************/
-    /*** addWires Tests                                                                         ***/
+    /*** removeCircuit Tests                                                                    ***/
     /**********************************************************************************************/
 
-    function test_addWires_notAdmin() external {
+    function test_removeCircuit_notAdmin() external {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -106,58 +122,7 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.addWires(address(0), new IBeacon.Wire[](0));
-    }
-
-    /**********************************************************************************************/
-    /*** removeWire Tests                                                                       ***/
-    /**********************************************************************************************/
-
-    function test_removeWire_notAdmin() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                unauthorized,
-                DEFAULT_ADMIN_ROLE
-            )
-        );
-
-        vm.prank(unauthorized);
-        beacon.removeWire(bytes4(0));
-    }
-
-    /**********************************************************************************************/
-    /*** removeWires Tests                                                                      ***/
-    /**********************************************************************************************/
-
-    function test_removeWires_notAdmin() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                unauthorized,
-                DEFAULT_ADMIN_ROLE
-            )
-        );
-
-        vm.prank(unauthorized);
-        beacon.removeWires(new bytes4[](0));
-    }
-
-    /**********************************************************************************************/
-    /*** removeAllWiresFor Tests                                                                ***/
-    /**********************************************************************************************/
-
-    function test_removeAllWiresFor_notAdmin() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                unauthorized,
-                DEFAULT_ADMIN_ROLE
-            )
-        );
-
-        vm.prank(unauthorized);
-        beacon.removeAllWiresFor(address(0));
+        beacon.removeCircuit(bytes32(0));
     }
 
 }

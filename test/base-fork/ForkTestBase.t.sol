@@ -38,9 +38,10 @@ import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.s
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
-import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
 import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
@@ -221,44 +222,44 @@ abstract contract ForkTestBase is Test {
 
         vm.label(curveFacet, "CurveFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
+        Wire[] memory wires = new Wire[](8);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setCurveMaxSlippage.selector,
             ICurveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.getCurveMaxSlippage.selector,
             ICurveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.swapCurve.selector,
             ICurveFacet.swap.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.addLiquidityCurve.selector,
             ICurveFacet.addLiquidity.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.removeLiquidityCurve.selector,
             ICurveFacet.removeLiquidity.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.LIMIT_CURVE_DEPOSIT.selector,
             ICurveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IForeignControllerFull.LIMIT_CURVE_SWAP.selector,
             ICurveFacet.LIMIT_SWAP.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IForeignControllerFull.LIMIT_CURVE_WITHDRAW.selector,
             ICurveFacet.LIMIT_WITHDRAW.selector
         );
@@ -273,7 +274,7 @@ abstract contract ForkTestBase is Test {
 
         beacon.addWire(
             merklFacet,
-            IBeacon.Wire(
+            Wire(
                 IForeignControllerFull.toggleOperatorMerkl.selector,
                 IMerklFacet.toggleOperator.selector
             )
@@ -285,14 +286,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(pendleFacet, "PendleFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
+        Wire[] memory wires = new Wire[](2);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.redeemPendlePT.selector,
             IPendleFacet.redeem.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.LIMIT_PENDLE_PT_REDEEM.selector,
             IPendleFacet.LIMIT_REDEEM.selector
         );
@@ -305,34 +306,34 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](6);
+        Wire[] memory wires = new Wire[](6);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setAaveMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.depositAave.selector,
             IAaveFacet.deposit.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.withdrawAave.selector,
             IAaveFacet.withdraw.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.LIMIT_AAVE_DEPOSIT.selector,
             IAaveFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             IAaveFacet.LIMIT_WITHDRAW.selector
         );
@@ -345,44 +346,44 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
+        Wire[] memory wires = new Wire[](8);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.maxExchangeRates.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.depositERC4626.selector,
             IERC4626Facet.deposit.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.withdrawERC4626.selector,
             IERC4626Facet.withdraw.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.redeemERC4626.selector,
             IERC4626Facet.redeem.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.LIMIT_4626_DEPOSIT.selector,
             IERC4626Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IForeignControllerFull.LIMIT_4626_WITHDRAW.selector,
             IERC4626Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IForeignControllerFull.EXCHANGE_RATE_PRECISION.selector,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
@@ -395,14 +396,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
+        Wire[] memory wires = new Wire[](2);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.takeFromSparkVault.selector,
             ISparkVaultFacet.take.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.LIMIT_SPARK_VAULT_TAKE.selector,
             ISparkVaultFacet.LIMIT_TAKE.selector
         );
@@ -415,14 +416,14 @@ abstract contract ForkTestBase is Test {
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
+        Wire[] memory wires = new Wire[](2);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.transferAsset.selector,
             ITransferAssetFacet.transfer.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.LIMIT_ASSET_TRANSFER.selector,
             ITransferAssetFacet.LIMIT_TRANSFER.selector
         );
@@ -435,24 +436,24 @@ abstract contract ForkTestBase is Test {
 
         vm.label(psm3Facet, "PSM3Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
+        Wire[] memory wires = new Wire[](4);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.depositPSM.selector,
             IPSM3Facet.deposit.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.withdrawPSM.selector,
             IPSM3Facet.withdraw.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.LIMIT_PSM_DEPOSIT.selector,
             IPSM3Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.LIMIT_PSM_WITHDRAW.selector,
             IPSM3Facet.LIMIT_WITHDRAW.selector
         );
@@ -465,79 +466,79 @@ abstract contract ForkTestBase is Test {
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](15);
+        Wire[] memory wires = new Wire[](15);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.addLiquidityUniswapV3.selector,
             IUniswapV3Facet.addLiquidity.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.removeLiquidityUniswapV3.selector,
             IUniswapV3Facet.removeLiquidity.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.swapUniswapV3.selector,
             IUniswapV3Facet.swap.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.setUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.setUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.setUniswapV3AddLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IForeignControllerFull.setUniswapV3AddLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IForeignControllerFull.setUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
-        wires[8] = IBeacon.Wire(
+        wires[8] = Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_DEPOSIT.selector,
             IUniswapV3Facet.LIMIT_DEPOSIT.selector
         );
 
-        wires[9] = IBeacon.Wire(
+        wires[9] = Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_SWAP.selector,
             IUniswapV3Facet.LIMIT_SWAP.selector
         );
 
-        wires[10] = IBeacon.Wire(
+        wires[10] = Wire(
             IForeignControllerFull.LIMIT_UNISWAP_V3_WITHDRAW.selector,
             IUniswapV3Facet.LIMIT_WITHDRAW.selector
         );
 
-        wires[11] = IBeacon.Wire(
+        wires[11] = Wire(
             IForeignControllerFull.getUniswapV3MaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
-        wires[12] = IBeacon.Wire(
+        wires[12] = Wire(
             IForeignControllerFull.getUniswapV3PoolMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
-        wires[13] = IBeacon.Wire(
+        wires[13] = Wire(
             IForeignControllerFull.getUniswapV3AddLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
-        wires[14] = IBeacon.Wire(
+        wires[14] = Wire(
             IForeignControllerFull.getUniswapV3TWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );

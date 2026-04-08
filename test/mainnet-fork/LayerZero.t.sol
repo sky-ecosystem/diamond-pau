@@ -21,11 +21,10 @@ import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol"
 
 import { makeAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IBeacon } from "../../src/interfaces/IBeacon.sol";
+import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
-import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
 import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
@@ -470,24 +469,24 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
+        Wire[] memory wires = new Wire[](4);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setLayerZeroRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.transferTokenLayerZero.selector,
             ILayerZeroFacet.transfer.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.LIMIT_LAYERZERO_TRANSFER.selector,
             ILayerZeroFacet.LIMIT_TRANSFER.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.layerZeroRecipients.selector,
             ILayerZeroFacet.getRecipient.selector
         );

@@ -17,6 +17,8 @@ import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
+import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
 import { IBeacon }         from "../../src/interfaces/IBeacon.sol";
@@ -526,44 +528,44 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](8);
+        Wire[] memory wires = new Wire[](8);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IForeignControllerFull.setCCTPMaxFeeCap.selector,
             ICCTPFacet.setMaxFeeCap.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IForeignControllerFull.setCCTPMintRecipient.selector,
             ICCTPFacet.setMintRecipient.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IForeignControllerFull.getCCTPMaxFeeCap.selector,
             ICCTPFacet.maxFeeCap.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IForeignControllerFull.getCCTPMintRecipient.selector,
             ICCTPFacet.getMintRecipient.selector
         );
 
-        wires[4] = IBeacon.Wire(
+        wires[4] = Wire(
             IForeignControllerFull.transferUSDCToCCTP.selector,
             ICCTPFacet.transfer.selector
         );
 
-        wires[5] = IBeacon.Wire(
+        wires[5] = Wire(
             IForeignControllerFull.transferUSDCToCCTPWithFee.selector,
             ICCTPFacet.transferWithFee.selector
         );
 
-        wires[6] = IBeacon.Wire(
+        wires[6] = Wire(
             IForeignControllerFull.LIMIT_USDC_TO_CCTP.selector,
             ICCTPFacet.LIMIT_TO_CCTP.selector
         );
 
-        wires[7] = IBeacon.Wire(
+        wires[7] = Wire(
             IForeignControllerFull.LIMIT_USDC_TO_DOMAIN.selector,
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );

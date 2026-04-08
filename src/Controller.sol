@@ -3,14 +3,22 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { ControllerSharedStorage } from "./ControllerSharedStorage.sol";
+import {
+    EnumerableSet
+} from "../lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+
+import { Circuit, Dispatch, Integration } from "./interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "./interfaces/IAccessControls.sol";
 import { IBeacon }         from "./interfaces/IBeacon.sol";
 import { IController }     from "./interfaces/IController.sol";
 import { IPAUFactory }     from "./interfaces/IPAUFactory.sol";
 
+import { ControllerSharedStorage } from "./ControllerSharedStorage.sol";
+
 contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
+
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**********************************************************************************************/
     /*** Controller Storage Domain                                                              ***/
@@ -18,7 +26,10 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        address beacon;
+        address                  beacon;
+        EnumerableSet.Bytes32Set circuitIds;
+        mapping (bytes32 integrationId => Circuit  circuit)  circuits;
+        mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.Controller")) - 1)) & ~bytes32(uint256(0xff))
@@ -66,6 +77,24 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    function updateIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
+        Circuit[] memory circuits = IBeacon(_getControllerStorage().beacon).getCircuits(ids);
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            _setIntegration(ids[i], circuits[i]);
+        }
+    }
+
+    function removeIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
+        for (uint256 i = 0; i < ids.length; ++i) {
+            _removeIntegration(ids[i]);
+        }
+    }
+
+    /**********************************************************************************************/
     /*** External Variable Getters                                                              ***/
     /**********************************************************************************************/
 
@@ -77,6 +106,20 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         return _getControllerStorage().beacon;
     }
 
+    function integrations() external view override returns (Integration[] memory integrations_) {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        uint256 integrationCount = $.circuitIds.length();
+
+        integrations_ = new Integration[](integrationCount);
+
+        for (uint256 i = 0; i < integrationCount; ++i) {
+            bytes32 id = $.circuitIds.at(i);
+
+            integrations_[i] = Integration(id, $.circuits[id]);
+        }
+    }
+
     function proxy() external view override returns (address) {
         return _getSharedControllerStorage().proxy;
     }
@@ -86,14 +129,60 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function getCircuit(bytes32 integrationId) external view override returns (Circuit memory) {
+        return _getControllerStorage().circuits[integrationId];
+    }
+
+    function getCircuits(bytes32[] calldata integrationIds)
+        external
+        view
+        override
+        returns (Circuit[] memory circuits_)
+    {
+        circuits_ = new Circuit[](integrationIds.length);
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        for (uint256 i = 0; i < integrationIds.length; ++i) {
+            circuits_[i] = $.circuits[integrationIds[i]];
+        }
+    }
+
+    function getDispatch(bytes4 callSelector)
+        external
+        view
+        override
+        returns (Dispatch memory dispatch)
+    {
+        return _getControllerStorage().dispatches[callSelector];
+    }
+
+    function getDispatches(bytes4[] calldata callSelectors)
+        external
+        view
+        override
+        returns (Dispatch[] memory dispatches)
+    {
+        dispatches = new Dispatch[](callSelectors.length);
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        for (uint256 i = 0; i < callSelectors.length; ++i) {
+            dispatches[i] = $.dispatches[callSelectors[i]];
+        }
+    }
+
+    /**********************************************************************************************/
     /*** Fallback Functions                                                                     ***/
     /**********************************************************************************************/
 
     fallback() external payable {
         require(msg.data.length >= 4, InvalidCallDataLength(msg.data.length));
 
-        IBeacon.Dispatch memory dispatch =
-            IBeacon(_getControllerStorage().beacon).getDispatch(msg.sig);
+        Dispatch storage dispatch = _getControllerStorage().dispatches[msg.sig];
 
         address facet = dispatch.facet;
 
@@ -111,6 +200,56 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
             case 0  { revert(add(returnData, 0x20), mload(returnData)) }
             default { return(add(returnData, 0x20), mload(returnData)) }
         }
+    }
+
+    /**********************************************************************************************/
+    /*** Internal Interactive Functions                                                         ***/
+    /**********************************************************************************************/
+
+    function _removeCircuit(bytes32 integrationId) internal {
+        ControllerStorage storage $ = _getControllerStorage();
+
+        Circuit storage circuit = $.circuits[integrationId];
+
+        if (circuit.facet == address(0)) return;
+
+        for (uint256 i = 0; i < circuit.wires.length; ++i) {
+            delete $.dispatches[circuit.wires[i].callSelector];
+        }
+
+        delete $.circuits[integrationId];
+    }
+
+    function _removeIntegration(bytes32 id) internal {
+        _removeCircuit(id);
+
+        require(_getControllerStorage().circuitIds.remove(id), CircuitNotFound(id));
+
+        emit IntegrationRemoved(id);
+    }
+
+    function _setIntegration(bytes32 id, Circuit memory circuit) internal {
+        _removeCircuit(id);
+
+        ControllerStorage storage $ = _getControllerStorage();
+
+        for (uint256 i = 0; i < circuit.wires.length; ++i) {
+            bytes4 callSelector     = circuit.wires[i].callSelector;
+            bytes4 delegateSelector = circuit.wires[i].delegateSelector;
+
+            require(
+                $.dispatches[callSelector].facet == address(0),
+                CallSelectorAlreadyWired(callSelector)
+            );
+
+            $.dispatches[callSelector] = Dispatch(circuit.facet, delegateSelector);
+        }
+
+        $.circuitIds.add(id);
+
+        $.circuits[id] = circuit;
+
+        emit IntegrationSet(id, circuit);
     }
 
     /**********************************************************************************************/

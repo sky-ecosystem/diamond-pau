@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }         from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
 import { IUniswapV4Facet } from "../../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
@@ -50,24 +52,24 @@ contract Controller_UniswapV4Facet_Tests is Controller_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](4);
+        Wire[] memory wires = new Wire[](4);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.setMaxSlippage.selector,
             IUniswapV4Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.setTickLimits.selector,
             IUniswapV4Facet.setTickLimits.selector
         );
 
-        wires[2] = IBeacon.Wire(
+        wires[2] = Wire(
             IControllerLike.getMaxSlippage.selector,
             IUniswapV4Facet.getMaxSlippage.selector
         );
 
-        wires[3] = IBeacon.Wire(
+        wires[3] = Wire(
             IControllerLike.getTickLimits.selector,
             IUniswapV4Facet.getTickLimits.selector
         );

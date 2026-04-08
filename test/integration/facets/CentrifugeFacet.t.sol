@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
+import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+
 import { IBeacon }          from "../../../src/interfaces/IBeacon.sol";
 import { ICentrifugeFacet } from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
 
@@ -34,14 +36,14 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
 
         vm.label(facet, "CentrifugeFacet");
 
-        IBeacon.Wire[] memory wires = new IBeacon.Wire[](2);
+        Wire[] memory wires = new Wire[](2);
 
-        wires[0] = IBeacon.Wire(
+        wires[0] = Wire(
             IControllerLike.setCentrifugeRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
-        wires[1] = IBeacon.Wire(
+        wires[1] = Wire(
             IControllerLike.getCentrifugeRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
