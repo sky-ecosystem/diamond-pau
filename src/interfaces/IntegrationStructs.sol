@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-struct IntegrationConfig {
+struct Config {
     address facet;
     Wire[]  wires;
 }
@@ -13,7 +13,7 @@ struct Dispatch {
 
 struct Integration {
     bytes32 id;
-    IntegrationConfig config;
+    Config config;
 }
 
 struct Wire {

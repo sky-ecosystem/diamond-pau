@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { Dispatch, Integration, IntegrationConfig } from "./IntegrationStructs.sol";
+import { Dispatch, Integration, Config } from "./IntegrationStructs.sol";
 
 interface IController {
 
@@ -9,7 +9,7 @@ interface IController {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event IntegrationSet(bytes32 indexed id, IntegrationConfig config);
+    event IntegrationSet(bytes32 indexed id, Config config);
 
     event IntegrationRemoved(bytes32 indexed id);
 
@@ -70,12 +70,12 @@ interface IController {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig memory);
+    function getConfig(bytes32 integrationId) external view returns (Config memory);
 
-    function getIntegrationConfigs(bytes32[] calldata integrationIds)
+    function getConfigs(bytes32[] calldata integrationIds)
         external
         view
-        returns (IntegrationConfig[] memory);
+        returns (Config[] memory);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }          from "../../../src/interfaces/IBeacon.sol";
 import { ICentrifugeFacet } from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
@@ -48,13 +48,13 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
             ICentrifugeFacet.getRecipient.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : facet,
             wires : wires
         });
 
         vm.prank(beaconAdmin);
-        beacon.setIntegration("CENTIFUGE_FACET", integrationConfig);
+        beacon.setIntegration("CENTIFUGE_FACET", config);
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "CENTIFUGE_FACET";

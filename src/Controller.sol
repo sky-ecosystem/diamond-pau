@@ -7,7 +7,7 @@ import {
     EnumerableSet
 } from "../lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
-import { Dispatch, Integration, IntegrationConfig } from "./interfaces/IntegrationStructs.sol";
+import { Dispatch, Integration, Config } from "./interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "./interfaces/IAccessControls.sol";
 import { IBeacon }         from "./interfaces/IBeacon.sol";
@@ -28,7 +28,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     struct ControllerStorage {
         address beacon;
         EnumerableSet.Bytes32Set integrationIds;
-        mapping (bytes32 integrationId => IntegrationConfig config) integrationConfigs;
+        mapping (bytes32 integrationId => Config config) configs;
         mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
     }
 
@@ -81,12 +81,12 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /**********************************************************************************************/
 
     function updateIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
-        IntegrationConfig[] memory integrationConfigs =
-            IBeacon(_getControllerStorage().beacon).getIntegrationConfigs(ids);
+        Config[] memory configs =
+            IBeacon(_getControllerStorage().beacon).getConfigs(ids);
 
         // Iterate over all integrationIds and set/overwrite each integration config
         for (uint256 i = 0; i < ids.length; ++i) {
-            _setIntegration(ids[i], integrationConfigs[i]);
+            _setIntegration(ids[i], configs[i]);
         }
     }
 
@@ -118,7 +118,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         for (uint256 i = 0; i < integrationCount; ++i) {
             bytes32 id = $.integrationIds.at(i);
 
-            integrations_[i] = Integration(id, $.integrationConfigs[id]);
+            integrations_[i] = Integration(id, $.configs[id]);
         }
     }
 
@@ -134,27 +134,27 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function getIntegrationConfig(bytes32 integrationId)
+    function getConfig(bytes32 integrationId)
         external
         view
         override
-        returns (IntegrationConfig memory)
+        returns (Config memory)
     {
-        return _getControllerStorage().integrationConfigs[integrationId];
+        return _getControllerStorage().configs[integrationId];
     }
 
-    function getIntegrationConfigs(bytes32[] calldata integrationIds)
+    function getConfigs(bytes32[] calldata integrationIds)
         external
         view
         override
-        returns (IntegrationConfig[] memory integrationsConfig_)
+        returns (Config[] memory integrationsConfig_)
     {
-        integrationsConfig_ = new IntegrationConfig[](integrationIds.length);
+        integrationsConfig_ = new Config[](integrationIds.length);
 
         ControllerStorage storage $ = _getControllerStorage();
 
         for (uint256 i = 0; i < integrationIds.length; ++i) {
-            integrationsConfig_[i] = $.integrationConfigs[integrationIds[i]];
+            integrationsConfig_[i] = $.configs[integrationIds[i]];
         }
     }
 
@@ -213,24 +213,24 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _deleteIntegrationConfigAndDispatches(bytes32 integrationId) internal {
+    function _deleteConfigAndDispatches(bytes32 integrationId) internal {
         ControllerStorage storage $ = _getControllerStorage();
 
-        IntegrationConfig storage integrationConfig = $.integrationConfigs[integrationId];
+        Config storage config = $.configs[integrationId];
 
-        if (integrationConfig.facet == address(0)) return;
+        if (config.facet == address(0)) return;
 
-        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
-            delete $.dispatches[integrationConfig.wires[i].callSelector];
+        for (uint256 i = 0; i < config.wires.length; ++i) {
+            delete $.dispatches[config.wires[i].callSelector];
         }
 
-        delete $.integrationConfigs[integrationId];
+        delete $.configs[integrationId];
     }
 
     function _removeIntegration(bytes32 id) internal {
         // 1. If the integration exists, remove its config and dispatches.
 
-        _deleteIntegrationConfigAndDispatches(id);
+        _deleteConfigAndDispatches(id);
 
         // 2. Remove the integrationId from the enumerable index.
 
@@ -239,25 +239,25 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         emit IntegrationRemoved(id);
     }
 
-    function _setIntegration(bytes32 id, IntegrationConfig memory integrationConfig) internal {
+    function _setIntegration(bytes32 id, Config memory config) internal {
         // 1. If the integration exists, remove its config and dispatches.
 
-        _deleteIntegrationConfigAndDispatches(id);
+        _deleteConfigAndDispatches(id);
 
         // 2. Wire the new config's dispatches.
 
         ControllerStorage storage $ = _getControllerStorage();
 
-        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
-            bytes4 callSelector     = integrationConfig.wires[i].callSelector;
-            bytes4 delegateSelector = integrationConfig.wires[i].delegateSelector;
+        for (uint256 i = 0; i < config.wires.length; ++i) {
+            bytes4 callSelector     = config.wires[i].callSelector;
+            bytes4 delegateSelector = config.wires[i].delegateSelector;
 
             require(
                 $.dispatches[callSelector].facet == address(0),
                 CallSelectorAlreadyWired(callSelector)
             );
 
-            $.dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
+            $.dispatches[callSelector] = Dispatch(config.facet, delegateSelector);
         }
 
         // 3. Add the new integrationId to the enumerable index.
@@ -266,15 +266,15 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
         // 4. Store the new config in the mapping by integrationId.
 
-        IntegrationConfig storage storedConfig = $.integrationConfigs[id];
+        Config storage storedConfig = $.configs[id];
 
-        storedConfig.facet = integrationConfig.facet;
+        storedConfig.facet = config.facet;
 
-        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
-            storedConfig.wires.push(integrationConfig.wires[i]);
+        for (uint256 i = 0; i < config.wires.length; ++i) {
+            storedConfig.wires.push(config.wires[i]);
         }
 
-        emit IntegrationSet(id, integrationConfig);
+        emit IntegrationSet(id, config);
     }
 
     /**********************************************************************************************/

@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }     from "../../../src/interfaces/IBeacon.sol";
 import { ICurveFacet } from "../../../src/facets/curve/ICurveFacet.sol";
@@ -45,13 +45,13 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
             ICurveFacet.getMaxSlippage.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : facet,
             wires : wires
         });
 
         vm.prank(beaconAdmin);
-        beacon.setIntegration("CURVE_FACET", integrationConfig);
+        beacon.setIntegration("CURVE_FACET", config);
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "CURVE_FACET";

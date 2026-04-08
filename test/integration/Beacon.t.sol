@@ -5,7 +5,7 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
-import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon } from "../../src/interfaces/IBeacon.sol";
 
@@ -62,12 +62,12 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : address(0),
             wires : new Wire[](0)
         });
 
-        beacon.setIntegration(bytes32(0), integrationConfig);
+        beacon.setIntegration(bytes32(0), config);
     }
 
     function test_setIntegration() external {
@@ -90,30 +90,30 @@ contract BeaconIntegration_Tests is Test {
         wires[1] = Wire(callSelectors[1], delegateSelectors[1]);
         wires[2] = Wire(callSelectors[2], delegateSelectors[2]);
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : facet,
             wires : wires
         });
 
         vm.expectEmit(address(beacon));
-        emit IBeacon.IntegrationSet(integrationId, integrationConfig);
+        emit IBeacon.IntegrationSet(integrationId, config);
 
         vm.prank(admin);
-        beacon.setIntegration(integrationId, integrationConfig);
+        beacon.setIntegration(integrationId, config);
 
-        IntegrationConfig memory returnedIntegrationConfig = beacon.getIntegrationConfig(integrationId);
+        Config memory returnedConfig = beacon.getConfig(integrationId);
 
-        assertEq(returnedIntegrationConfig.facet,        facet);
-        assertEq(returnedIntegrationConfig.wires.length, wires.length);
+        assertEq(returnedConfig.facet,        facet);
+        assertEq(returnedConfig.wires.length, wires.length);
 
-        assertEq(returnedIntegrationConfig.wires[0].callSelector,     wires[0].callSelector);
-        assertEq(returnedIntegrationConfig.wires[0].delegateSelector, wires[0].delegateSelector);
+        assertEq(returnedConfig.wires[0].callSelector,     wires[0].callSelector);
+        assertEq(returnedConfig.wires[0].delegateSelector, wires[0].delegateSelector);
 
-        assertEq(returnedIntegrationConfig.wires[1].callSelector,     wires[1].callSelector);
-        assertEq(returnedIntegrationConfig.wires[1].delegateSelector, wires[1].delegateSelector);
+        assertEq(returnedConfig.wires[1].callSelector,     wires[1].callSelector);
+        assertEq(returnedConfig.wires[1].delegateSelector, wires[1].delegateSelector);
 
-        assertEq(returnedIntegrationConfig.wires[2].callSelector,     wires[2].callSelector);
-        assertEq(returnedIntegrationConfig.wires[2].delegateSelector, wires[2].delegateSelector);
+        assertEq(returnedConfig.wires[2].callSelector,     wires[2].callSelector);
+        assertEq(returnedConfig.wires[2].delegateSelector, wires[2].delegateSelector);
     }
 
     /**********************************************************************************************/

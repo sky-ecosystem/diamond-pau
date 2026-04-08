@@ -5,7 +5,7 @@ import {
     IAccessControlEnumerable
 } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
-import { Dispatch, Integration, IntegrationConfig } from "./IntegrationStructs.sol";
+import { Dispatch, Integration, Config } from "./IntegrationStructs.sol";
 
 interface IBeacon is IAccessControlEnumerable {
 
@@ -13,7 +13,7 @@ interface IBeacon is IAccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event IntegrationSet(bytes32 indexed integrationId, IntegrationConfig config);
+    event IntegrationSet(bytes32 indexed integrationId, Config config);
 
     event IntegrationRemoved(bytes32 indexed integrationId);
 
@@ -43,7 +43,7 @@ interface IBeacon is IAccessControlEnumerable {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function setIntegration(bytes32 integrationId, IntegrationConfig calldata integrationConfig) external;
+    function setIntegration(bytes32 integrationId, Config calldata config) external;
 
     function removeIntegration(bytes32 integrationId) external;
 
@@ -57,12 +57,12 @@ interface IBeacon is IAccessControlEnumerable {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig calldata);
+    function getConfig(bytes32 integrationId) external view returns (Config calldata);
 
-    function getIntegrationConfigs(bytes32[] calldata integrationIds)
+    function getConfigs(bytes32[] calldata integrationIds)
         external
         view
-        returns (IntegrationConfig[] calldata);
+        returns (Config[] calldata);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 

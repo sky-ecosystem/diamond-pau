@@ -17,7 +17,7 @@ import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -579,12 +579,12 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : cctpFacet,
             wires : wires
         });
 
-        foreignBeacon.setIntegration("CCTP_FACET", integrationConfig);
+        foreignBeacon.setIntegration("CCTP_FACET", config);
     }
 
 }

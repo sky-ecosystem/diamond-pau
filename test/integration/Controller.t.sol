@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { Dispatch, Integration, IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Dispatch, Integration, Config, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }     from "../../src/interfaces/IBeacon.sol";
 import { IController } from "../../src/interfaces/IController.sol";
@@ -96,12 +96,12 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         wires[1] = Wire(IMockController.mul.selector, MockFacet1.multiplyBy2.selector);
 
         vm.prank(beaconAdmin);
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : facet1,
             wires : wires
         });
 
-        beacon.setIntegration("MOCK_FACET_1", integrationConfig);
+        beacon.setIntegration("MOCK_FACET_1", config);
 
         assertEq(controller.div(12), 6);
         assertEq(controller.mul(12), 24);
@@ -136,12 +136,12 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         facet2DivWires[0] = Wire(IMockController.div.selector, MockFacet2.divideBy4.selector);
 
         vm.startPrank(beaconAdmin);
-        beacon.setIntegration("MOCK_FACET_1", IntegrationConfig({
+        beacon.setIntegration("MOCK_FACET_1", Config({
             facet : facet1,
             wires : facet1Wires
         }));
 
-        beacon.setIntegration("MOCK_FACET_2", IntegrationConfig({
+        beacon.setIntegration("MOCK_FACET_2", Config({
             facet : facet2,
             wires : facet2DivWires
         }));
@@ -184,7 +184,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         vm.startPrank(beaconAdmin);
         beacon.removeIntegration("MOCK_FACET_1");
 
-        beacon.setIntegration("MOCK_FACET_2", IntegrationConfig({
+        beacon.setIntegration("MOCK_FACET_2", Config({
             facet : facet2,
             wires : facet2Both
         }));

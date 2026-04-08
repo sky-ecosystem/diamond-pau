@@ -18,7 +18,7 @@ import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { CentrifugeFacet } from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { ERC7540Facet }    from "../../src/facets/erc7540/ERC7540Facet.sol";
 
-import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -208,12 +208,12 @@ contract ForkTestBase is Test {
             ICentrifugeFacet.getRecipient.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : centrifugeFacet,
             wires : wires
         });
 
-        beacon.setIntegration("CENTIFUGE_FACET", integrationConfig);
+        beacon.setIntegration("CENTIFUGE_FACET", config);
     }
 
     function _wireERC7540Facet() internal {
@@ -253,12 +253,12 @@ contract ForkTestBase is Test {
             IERC7540Facet.LIMIT_REDEEM.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : erc7540Facet,
             wires : wires
         });
 
-        beacon.setIntegration("ERC7540_FACET", integrationConfig);
+        beacon.setIntegration("ERC7540_FACET", config);
     }
 
 }

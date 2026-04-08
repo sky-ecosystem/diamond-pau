@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IAaveFacet }  from "../../../src/facets/aave/IAaveFacet.sol";
 import { IBeacon }     from "../../../src/interfaces/IBeacon.sol";
@@ -48,12 +48,12 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
             IAaveFacet.getMaxSlippage.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : facet,
             wires : wires
         });
 
-        beacon.setIntegration("AAVE_FACET", integrationConfig);
+        beacon.setIntegration("AAVE_FACET", config);
 
         vm.stopPrank();
 

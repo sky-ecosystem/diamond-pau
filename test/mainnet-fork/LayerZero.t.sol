@@ -21,7 +21,7 @@ import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol"
 
 import { makeAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Config, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -517,12 +517,12 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
             ILayerZeroFacet.getRecipient.selector
         );
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig({
+        Config memory config = Config({
             facet : layerZeroFacet,
             wires : wires
         });
 
-        foreignBeacon.setIntegration("LAYER_ZERO_FACET", integrationConfig);
+        foreignBeacon.setIntegration("LAYER_ZERO_FACET", config);
     }
 
     function _getBlock() internal pure override returns (uint256) {
