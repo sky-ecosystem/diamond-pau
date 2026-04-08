@@ -26,7 +26,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        address                  beacon;
+        address beacon;
         EnumerableSet.Bytes32Set integrationIds;
         mapping (bytes32 integrationId => IntegrationConfig config) integrationConfigs;
         mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
@@ -84,6 +84,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         IntegrationConfig[] memory integrationConfigs =
             IBeacon(_getControllerStorage().beacon).getIntegrationConfigs(ids);
 
+        // Iterate over all integrationIds and set/overwrite each integration config
         for (uint256 i = 0; i < ids.length; ++i) {
             _setIntegration(ids[i], integrationConfigs[i]);
         }
@@ -227,7 +228,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     function _removeIntegration(bytes32 id) internal {
+        // 1. If the integration exists, remove its config and dispatches.
+
         _deleteIntegrationConfigAndDispatches(id);
+
+        // 2. Remove the integrationId from the enumerable index.
 
         require(_getControllerStorage().integrationIds.remove(id), IntegrationNotFound(id));
 
@@ -235,7 +240,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     }
 
     function _setIntegration(bytes32 id, IntegrationConfig memory integrationConfig) internal {
+        // 1. If the integration exists, remove its config and dispatches.
+
         _deleteIntegrationConfigAndDispatches(id);
+
+        // 2. Wire the new config's dispatches.
 
         ControllerStorage storage $ = _getControllerStorage();
 
@@ -251,7 +260,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
             $.dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
         }
 
+        // 3. Add the new integrationId to the enumerable index.
+
         $.integrationIds.add(id);
+
+        // 4. Store the new config in the mapping by integrationId.
 
         IntegrationConfig storage storedConfig = $.integrationConfigs[id];
 

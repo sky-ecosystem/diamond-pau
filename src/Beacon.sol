@@ -24,10 +24,14 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
+    // Enumerable index of configured integrations (mappings are not enumerable).
     EnumerableSet.Bytes32Set internal _integrationIds;
 
+    // Canonical configuration per integration id.
     mapping (bytes32 integrationId => IntegrationConfig config) internal _integrationConfigs;
-    mapping (bytes4  callSelector  => Dispatch dispatch)        internal _dispatches;
+
+    // Hot-path selector lookup used to ensure no override of a call selector.
+    mapping (bytes4 callSelector => Dispatch dispatch) internal _dispatches;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
@@ -49,30 +53,20 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        // 1. If the integration exists, remove its config and dispatches.
         _deleteIntegrationConfigAndDispatches(integrationId);
 
-        require(integrationConfig.facet != address(0), ZeroFacet());
-        require(integrationConfig.wires.length > 0,   EmptyArray());
+        // 2. Validate the integration config.
+        _validateIntegrationConfig(integrationConfig);
 
-        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
-            bytes4 callSelector     = integrationConfig.wires[i].callSelector;
-            bytes4 delegateSelector = integrationConfig.wires[i].delegateSelector;
+        // 3. Wire the dispatches.
+        _wireDispatches(integrationConfig);
 
-            _revertIfCallSelectorIsHardcoded(callSelector);
-
-            require(
-                _dispatches[callSelector].facet == address(0),
-                CallSelectorAlreadyWired(callSelector)
-            );
-
-            _dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
-        }
-
+        // 4. Add the integrationId to the enumerable index.
         _integrationIds.add(integrationId);
 
-        _integrationConfigs[integrationId] = integrationConfig;
-
-        emit IntegrationSet(integrationId, integrationConfig);
+        // 5. Store the new config in the mapping by integrationId.
+        emit IntegrationSet(integrationId, _integrationConfigs[integrationId] = integrationConfig);
     }
 
     function removeIntegration(bytes32 integrationId)
@@ -81,8 +75,10 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        // 1. If the integration exists, remove its config and dispatches.
         _deleteIntegrationConfigAndDispatches(integrationId);
 
+        // 2. Remove the integrationId from the enumerable index.
         require(_integrationIds.remove(integrationId), IntegrationNotFound(integrationId));
 
         emit IntegrationRemoved(integrationId);
@@ -172,6 +168,27 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         }
 
         delete _integrationConfigs[integrationId];
+    }
+
+    function _validateIntegrationConfig(IntegrationConfig calldata integrationConfig) internal pure {
+        require(integrationConfig.facet != address(0), ZeroFacet());
+        require(integrationConfig.wires.length > 0,   EmptyArray());
+    }
+
+    function _wireDispatches(IntegrationConfig calldata integrationConfig) internal {
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            bytes4 callSelector     = integrationConfig.wires[i].callSelector;
+            bytes4 delegateSelector = integrationConfig.wires[i].delegateSelector;
+
+            _revertIfCallSelectorIsHardcoded(callSelector);
+
+            require(
+                _dispatches[callSelector].facet == address(0),
+                CallSelectorAlreadyWired(callSelector)
+            );
+
+            _dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
+        }
     }
 
     /**********************************************************************************************/

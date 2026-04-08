@@ -57,12 +57,12 @@ interface IBeacon is IAccessControlEnumerable {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig memory);
+    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig calldata);
 
     function getIntegrationConfigs(bytes32[] calldata integrationIds)
         external
         view
-        returns (IntegrationConfig[] memory);
+        returns (IntegrationConfig[] calldata);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 
