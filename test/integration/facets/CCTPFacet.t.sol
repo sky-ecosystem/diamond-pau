@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { ICCTPFacet } from "../../../src/facets/cctp/ICCTPFacet.sol";
@@ -21,6 +21,8 @@ interface IControllerLike {
     function getCCTPMaxFeeCap() external view returns (uint256);
 
     function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -62,9 +64,20 @@ contract Controller_CCTPFacet_Tests is Controller_TestBase {
             ICCTPFacet.setMintRecipient.selector
         );
 
-        beacon.addWires(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CCTP_FACET", integrationConfig);
 
         vm.stopPrank();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "CCTP_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
     }
 
     /**********************************************************************************************/

@@ -21,7 +21,7 @@ import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol"
 
 import { makeAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -381,7 +381,8 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
-    address internal pocket = makeAddr("pocket");
+    address internal pocket   = makeAddr("pocket");
+    address internal skyAdmin = makeAddr("skyAdmin");
 
     /**********************************************************************************************/
     /*** Arbitrum addresses                                                                     ***/
@@ -443,7 +444,7 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         /*** Step 3: Deploy and configure ALM system ***/
 
-        foreignBeacon = new Beacon(SPARK_EXECUTOR);
+        foreignBeacon = new Beacon(skyAdmin);
 
         PAUFactory foreignFactory = new PAUFactory(address(foreignBeacon));
 
@@ -453,13 +454,22 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         IAccessControls foreignAccessControls = IAccessControls(foreignController.accessControls());
 
+        vm.startPrank(skyAdmin);
+
+        // Facet wiring
+        _wireLayerZeroFacetForeignController();
+
+        vm.stopPrank();
+
         vm.startPrank(SPARK_EXECUTOR);
 
         foreignAccessControls.grantRole(foreignAccessControls.FREEZER_ROLE(), freezer);
         foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
 
-        // Facet wiring
-        _wireLayerZeroFacetForeignController();
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "LAYER_ZERO_FACET";
+
+        foreignController.updateIntegrations(integrationIds);
 
         vm.stopPrank();
     }
@@ -491,7 +501,12 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
             ILayerZeroFacet.getRecipient.selector
         );
 
-        foreignBeacon.addWires(layerZeroFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : layerZeroFacet,
+            wires : wires
+        });
+
+        foreignBeacon.setIntegration("LAYER_ZERO_FACET", integrationConfig);
     }
 
     function _getBlock() internal pure override returns (uint256) {

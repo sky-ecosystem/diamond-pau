@@ -75,7 +75,7 @@ import { WSTETHFacet }        from "../../src/facets/wsteth/WSTETHFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -274,7 +274,7 @@ abstract contract ForkTestBase is DssTest {
 
         /*** Step 3: Deploy ALM system ***/
 
-        beacon  = new Beacon(Ethereum.SPARK_PROXY);
+        beacon  = new Beacon(Ethereum.PAUSE_PROXY);
         factory = new PAUFactory(address(beacon));
 
         mainnetController = IMainnetControllerFull(payable(factory.deploy(Ethereum.SPARK_PROXY)));
@@ -282,11 +282,8 @@ abstract contract ForkTestBase is DssTest {
         rateLimits        = IRateLimits(mainnetController.rateLimits());
         accessControls    = IAccessControls(mainnetController.accessControls());
 
-        vm.startPrank(Ethereum.SPARK_PROXY);
 
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+        vm.startPrank(Ethereum.PAUSE_PROXY);
 
         // Facet wiring
         _wireAaveFacet();
@@ -316,13 +313,6 @@ abstract contract ForkTestBase is DssTest {
 
         vm.stopPrank();
 
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-        });
-
         // Step 4: Initialize through Sky governance (Sky spell payload)
 
         _pauseProxyInitAlmSystem(Ethereum.PSM, address(almProxy));
@@ -330,6 +320,46 @@ abstract contract ForkTestBase is DssTest {
         // Step 5: Initialize through Spark governance (Spark spell payload)
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
+
+        bytes32[] memory integrationIds = new bytes32[](24);
+        integrationIds[0] = "AAVE_FACET";
+        integrationIds[1] = "CCTP_FACET";
+        integrationIds[2] = "CENTIFUGE_FACET";
+        integrationIds[3] = "CURVE_FACET";
+        integrationIds[4] = "DAIUSDS_FACET";
+        integrationIds[5] = "ERC4626_FACET";
+        integrationIds[6] = "ERC7540_FACET";
+        integrationIds[7] = "FARM_FACET";
+        integrationIds[8] = "LAYER_ZERO_FACET";
+        integrationIds[9] = "MAPLE_FACET";
+        integrationIds[10] = "MERKL_FACET";
+        integrationIds[11] = "OTC_FACET";
+        integrationIds[12] = "PENDLE_FACET";
+        integrationIds[13] = "PSM_FACET";
+        integrationIds[14] = "SPARK_VAULT_FACET";
+        integrationIds[15] = "SUPERSTATE_FACET";
+        integrationIds[16] = "TRANSFER_ASSET_FACET";
+        integrationIds[17] = "UNISWAP_V3_FACET";
+        integrationIds[18] = "UNISWAP_V4_FACET";
+        integrationIds[19] = "USDE_FACET";
+        integrationIds[20] = "USDS_FACET";
+        integrationIds[21] = "WEETH_FACET";
+        integrationIds[22] = "WRAP_PROXY_ETH_FACET";
+        integrationIds[23] = "WSTETH_FACET";
+
+        mainnetController.updateIntegrations(integrationIds);
+
+        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
+
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        });
+
 
         for (uint256 i; i < mintRecipients.length; ++i) {
             mainnetController.setCCTPMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
@@ -455,7 +485,12 @@ abstract contract ForkTestBase is DssTest {
             ICentrifugeFacet.getRecipient.selector
         );
 
-        beacon.addWires(centrifugeFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : centrifugeFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CENTIFUGE_FACET", integrationConfig);
     }
 
     function _wireCurveFacet() internal {
@@ -505,7 +540,12 @@ abstract contract ForkTestBase is DssTest {
             ICurveFacet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(curveFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : curveFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CURVE_FACET", integrationConfig);
     }
 
     function _wireCCTPFacet() internal {
@@ -555,7 +595,12 @@ abstract contract ForkTestBase is DssTest {
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
 
-        beacon.addWires(cctpFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : cctpFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CCTP_FACET", integrationConfig);
     }
 
     function _wireAaveFacet() internal {
@@ -595,7 +640,12 @@ abstract contract ForkTestBase is DssTest {
             IAaveFacet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(aaveFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : aaveFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("AAVE_FACET", integrationConfig);
     }
 
     function _wireDAIUSDSFacet() internal {
@@ -619,7 +669,12 @@ abstract contract ForkTestBase is DssTest {
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
 
-        beacon.addWires(daiUSDSFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : daiUSDSFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("DAIUSDS_FACET", integrationConfig);
     }
 
     function _wireMerklFacet() internal {
@@ -627,13 +682,18 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(merklFacet, "MerklFacet");
 
-        beacon.addWire(
-            merklFacet,
-            Wire(
-                IMainnetControllerFull.toggleOperatorMerkl.selector,
-                IMerklFacet.toggleOperator.selector
-            )
+        Wire[] memory merklWires = new Wire[](1);
+        merklWires[0] = Wire(
+            IMainnetControllerFull.toggleOperatorMerkl.selector,
+            IMerklFacet.toggleOperator.selector
         );
+
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : merklFacet,
+            wires : merklWires
+        });
+
+        beacon.setIntegration("MERKL_FACET", integrationConfig);
     }
 
     function _wireERC4626Facet() internal {
@@ -683,7 +743,12 @@ abstract contract ForkTestBase is DssTest {
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
 
-        beacon.addWires(erc4626Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : erc4626Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("ERC4626_FACET", integrationConfig);
     }
 
     function _wireERC7540Facet() internal {
@@ -723,7 +788,12 @@ abstract contract ForkTestBase is DssTest {
             IERC7540Facet.LIMIT_REDEEM.selector
         );
 
-        beacon.addWires(erc7540Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : erc7540Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("ERC7540_FACET", integrationConfig);
     }
 
     function _wireFarmFacet() internal {
@@ -753,7 +823,12 @@ abstract contract ForkTestBase is DssTest {
             IFarmFacet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(farmFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : farmFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("FARM_FACET", integrationConfig);
     }
 
     function _wireLayerZeroFacet() internal {
@@ -783,7 +858,12 @@ abstract contract ForkTestBase is DssTest {
             ILayerZeroFacet.getRecipient.selector
         );
 
-        beacon.addWires(layerZeroFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : layerZeroFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("LAYER_ZERO_FACET", integrationConfig);
     }
 
     function _wireOTCFacet() internal {
@@ -848,7 +928,12 @@ abstract contract ForkTestBase is DssTest {
             IOTCFacet.getIsWhitelisted.selector
         );
 
-        beacon.addWires(otcFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : otcFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("OTC_FACET", integrationConfig);
     }
 
     function _wireSparkVaultFacet() internal {
@@ -868,7 +953,12 @@ abstract contract ForkTestBase is DssTest {
             ISparkVaultFacet.LIMIT_TAKE.selector
         );
 
-        beacon.addWires(sparkVaultFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : sparkVaultFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("SPARK_VAULT_FACET", integrationConfig);
     }
 
     function _wirePSMFacet() internal {
@@ -904,7 +994,12 @@ abstract contract ForkTestBase is DssTest {
             IPSMFacet.LIMIT_USDS_TO_USDC.selector
         );
 
-        beacon.addWires(psmFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : psmFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PSM_FACET", integrationConfig);
     }
 
     function _wireTransferAssetFacet() internal {
@@ -924,7 +1019,12 @@ abstract contract ForkTestBase is DssTest {
             ITransferAssetFacet.LIMIT_TRANSFER.selector
         );
 
-        beacon.addWires(transferAssetFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : transferAssetFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("TRANSFER_ASSET_FACET", integrationConfig);
     }
 
     function _wireMapleFacet() internal {
@@ -949,7 +1049,12 @@ abstract contract ForkTestBase is DssTest {
             IMapleFacet.LIMIT_REDEEM.selector
         );
 
-        beacon.addWires(mapleFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : mapleFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("MAPLE_FACET", integrationConfig);
     }
 
     function _wirePendleFacet() internal {
@@ -969,7 +1074,12 @@ abstract contract ForkTestBase is DssTest {
             IPendleFacet.LIMIT_REDEEM.selector
         );
 
-        beacon.addWires(pendleFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : pendleFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PENDLE_FACET", integrationConfig);
     }
 
     function _wireSuperstateFacet() internal {
@@ -989,7 +1099,12 @@ abstract contract ForkTestBase is DssTest {
             ISuperstateFacet.LIMIT_SUBSCRIBE.selector
         );
 
-        beacon.addWires(superstateFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : superstateFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("SUPERSTATE_FACET", integrationConfig);
     }
 
     function _wireWEETHFacet() internal {
@@ -1024,7 +1139,12 @@ abstract contract ForkTestBase is DssTest {
             IWEETHFacet.LIMIT_REQUEST_WITHDRAW.selector
         );
 
-        beacon.addWires(weethFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : weethFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("WEETH_FACET", integrationConfig);
     }
 
     function _wireWSTETHFacet() internal {
@@ -1063,7 +1183,12 @@ abstract contract ForkTestBase is DssTest {
             IWSTETHFacet.LIMIT_REQUEST_WITHDRAW.selector
         );
 
-        beacon.addWires(wstethFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : wstethFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("WSTETH_FACET", integrationConfig);
     }
 
     function _wireUSDEFacet() internal {
@@ -1128,7 +1253,12 @@ abstract contract ForkTestBase is DssTest {
             IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
         );
 
-        beacon.addWires(usdeFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : usdeFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("USDE_FACET", integrationConfig);
     }
 
     function _wireWrapProxyETHFacet() internal {
@@ -1136,13 +1266,18 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(wrapProxyETHFacet, "WrapProxyETHFacet");
 
-        beacon.addWire(
-            wrapProxyETHFacet,
-            Wire(
-                IMainnetControllerFull.wrapAllProxyETH.selector,
-                IWrapProxyETHFacet.wrapAll.selector
-            )
+        Wire[] memory wrapWires = new Wire[](1);
+        wrapWires[0] = Wire(
+            IMainnetControllerFull.wrapAllProxyETH.selector,
+            IWrapProxyETHFacet.wrapAll.selector
         );
+
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : wrapProxyETHFacet,
+            wires : wrapWires
+        });
+
+        beacon.setIntegration("WRAP_PROXY_ETH_FACET", integrationConfig);
     }
 
     function _wireUSDSFacet() internal {
@@ -1167,7 +1302,12 @@ abstract contract ForkTestBase is DssTest {
             IUSDSFacet.LIMIT_MINT.selector
         );
 
-        beacon.addWires(usdsFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : usdsFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("USDS_FACET", integrationConfig);
     }
 
     function _wireUniswapV4Facet() internal {
@@ -1236,7 +1376,12 @@ abstract contract ForkTestBase is DssTest {
             IUniswapV4Facet.getTickLimits.selector
         );
 
-        beacon.addWires(uniswapV4Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : uniswapV4Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("UNISWAP_V4_FACET", integrationConfig);
     }
 
     function _wireUniswapV3Facet() internal {
@@ -1321,7 +1466,12 @@ abstract contract ForkTestBase is DssTest {
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
-        beacon.addWires(uniswapV3Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : uniswapV3Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("UNISWAP_V3_FACET", integrationConfig);
     }
 
 }

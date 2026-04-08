@@ -62,7 +62,12 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.setIntegration(bytes32(0), IntegrationConfig(address(0), new Wire[](0)));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : address(0),
+            wires : new Wire[](0)
+        });
+
+        beacon.setIntegration(bytes32(0), integrationConfig);
     }
 
     function test_setIntegration() external {
@@ -85,7 +90,10 @@ contract BeaconIntegration_Tests is Test {
         wires[1] = Wire(callSelectors[1], delegateSelectors[1]);
         wires[2] = Wire(callSelectors[2], delegateSelectors[2]);
 
-        IntegrationConfig memory integrationConfig = IntegrationConfig(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
 
         vm.expectEmit(address(beacon));
         emit IBeacon.IntegrationSet(integrationId, integrationConfig);

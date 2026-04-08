@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase } from "../../../src/facets/IFacetBase.sol";
@@ -30,6 +30,8 @@ interface IControllerLike {
     function getMaxSlippage(address exchange) external view returns (uint256);
 
     function getRechargeRate(address exchange) external view returns (uint256);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -88,9 +90,20 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
             IOTCFacet.getIsWhitelisted.selector
         );
 
-        beacon.addWires(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("OTC_FACET", integrationConfig);
 
         vm.stopPrank();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "OTC_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
     }
 
 }

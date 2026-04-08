@@ -84,7 +84,12 @@ contract BeaconHarness is Beacon {
     }
 
     function __setIntegrationConfig(bytes32 integrationId, IntegrationConfig memory integrationConfig) external {
-        _integrationConfigs[integrationId] = integrationConfig;
+        delete _integrationConfigs[integrationId];
+        _integrationConfigs[integrationId].facet = integrationConfig.facet;
+        uint256 wireCount = integrationConfig.wires.length;
+        for (uint256 i = 0; i < wireCount; ++i) {
+            _integrationConfigs[integrationId].wires.push(integrationConfig.wires[i]);
+        }
     }
 
     function __removeIntegrationConfig(bytes32 integrationId) external {
@@ -153,7 +158,12 @@ contract Beacon_Tests is Test {
         vm.store(address(beacon), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(address(0), new Wire[](0)));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : address(0),
+            wires : new Wire[](0)
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
     }
 
     function test_setIntegration_notAdmin() external {
@@ -166,19 +176,34 @@ contract Beacon_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(address(0), new Wire[](0)));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : address(0),
+            wires : new Wire[](0)
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
     }
 
     function test_setIntegration_zeroFacet() external {
         vm.expectRevert(IBeacon.ZeroFacet.selector);
         vm.prank(admin);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(address(0), new Wire[](0)));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : address(0),
+            wires : new Wire[](0)
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
     }
 
     function test_setIntegration_emptyArray() external {
         vm.expectRevert(IBeacon.EmptyArray.selector);
         vm.prank(admin);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(makeAddr("facet"), new Wire[](0)));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : makeAddr("facet"),
+            wires : new Wire[](0)
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
     }
 
     function test_setIntegration_callSelectorHardcoded() external {
@@ -190,8 +215,8 @@ contract Beacon_Tests is Test {
         hardcodedCallSelectors[4] = IController.integrations.selector;
         hardcodedCallSelectors[5] = IController.proxy.selector;
         hardcodedCallSelectors[6] = IController.rateLimits.selector;
-        hardcodedCallSelectors[7] = IBeacon.getIntegration.selector;
-        hardcodedCallSelectors[8] = IBeacon.getIntegrations.selector;
+        hardcodedCallSelectors[7] = IBeacon.getIntegrationConfig.selector;
+        hardcodedCallSelectors[8] = IBeacon.getIntegrationConfigs.selector;
         hardcodedCallSelectors[9] = IBeacon.getDispatch.selector;
         hardcodedCallSelectors[10] = IBeacon.getDispatches.selector;
 
@@ -211,7 +236,12 @@ contract Beacon_Tests is Test {
             );
 
             vm.prank(admin);
-            beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(facet, wires));
+            IntegrationConfig memory integrationConfig = IntegrationConfig({
+                facet : facet,
+                wires : wires
+            });
+
+            beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
         }
     }
 
@@ -227,14 +257,24 @@ contract Beacon_Tests is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IBeacon.CallSelectorAlreadyWired.selector, callSelector));
         vm.prank(admin);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(facet, wires));
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
 
         wires[0] = Wire(0x87654321,   bytes4(0));
         wires[1] = Wire(callSelector, bytes4(0));
 
         vm.expectRevert(abi.encodeWithSelector(IBeacon.CallSelectorAlreadyWired.selector, callSelector));
         vm.prank(admin);
-        beacon.setIntegration("SOME_INTEGRATION", IntegrationConfig(facet, wires));
+        integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("SOME_INTEGRATION", integrationConfig);
     }
 
     function test_setIntegration() external {
@@ -249,7 +289,10 @@ contract Beacon_Tests is Test {
         oldWires[1] = Wire(0xAAAAAAAA, 0x89ABCDEF);
         oldWires[2] = Wire(0xBBBBBBBB, 0xCCCCCCCC);
 
-        beacon.__setIntegrationConfig(integrationId, IntegrationConfig(oldFacet, oldWires));
+        beacon.__setIntegrationConfig(integrationId, IntegrationConfig({
+            facet : oldFacet,
+            wires : oldWires
+        }));
 
         address facet = makeAddr("facet");
 
@@ -271,11 +314,16 @@ contract Beacon_Tests is Test {
         assertEq(beacon.__getDispatch(oldWires[2].callSelector).facet,            oldFacet);
         assertEq(beacon.__getDispatch(oldWires[2].callSelector).delegateSelector, oldWires[2].delegateSelector);
 
+        IntegrationConfig memory newIntegrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
         vm.expectEmit(address(beacon));
-        emit IBeacon.IntegrationSet(integrationId, IntegrationConfig(facet, wires));
+        emit IBeacon.IntegrationSet(integrationId, newIntegrationConfig);
 
         vm.prank(admin);
-        beacon.setIntegration(integrationId, IntegrationConfig(facet, wires));
+        beacon.setIntegration(integrationId, newIntegrationConfig);
 
         assertEq(beacon.__getHasIntegrationId(integrationId), true);
 
@@ -316,8 +364,6 @@ contract Beacon_Tests is Test {
     function test_removeIntegration_integrationNotFound() external {
         bytes32 integrationId = "SOME_INTEGRATION";
 
-        beacon.__addIntegrationId(integrationId);
-
         vm.expectRevert(abi.encodeWithSelector(IBeacon.IntegrationNotFound.selector, integrationId));
         vm.prank(admin);
         beacon.removeIntegration(integrationId);
@@ -342,7 +388,10 @@ contract Beacon_Tests is Test {
 
         beacon.__addIntegrationId(integrationId);
 
-        beacon.__setIntegrationConfig(integrationId, IntegrationConfig(facet, wires));
+        beacon.__setIntegrationConfig(integrationId, IntegrationConfig({
+            facet : facet,
+            wires : wires
+        }));
 
         beacon.__setDispatch(callSelectors[0], Dispatch(facet, delegateSelectors[0]));
         beacon.__setDispatch(callSelectors[1], Dispatch(facet, delegateSelectors[1]));
@@ -397,8 +446,14 @@ contract Beacon_Tests is Test {
         beacon.__addIntegrationId(integrationId1);
         beacon.__addIntegrationId(integrationId2);
 
-        beacon.__setIntegrationConfig(integrationId1, IntegrationConfig(facet1, wires1));
-        beacon.__setIntegrationConfig(integrationId2, IntegrationConfig(facet2, wires2));
+        beacon.__setIntegrationConfig(integrationId1, IntegrationConfig({
+            facet : facet1,
+            wires : wires1
+        }));
+        beacon.__setIntegrationConfig(integrationId2, IntegrationConfig({
+            facet : facet2,
+            wires : wires2
+        }));
 
         Integration[] memory integrations = beacon.integrations();
 
@@ -446,9 +501,12 @@ contract Beacon_Tests is Test {
         wires[1] = Wire(callSelectors[1], delegateSelectors[1]);
         wires[2] = Wire(callSelectors[2], delegateSelectors[2]);
 
-        beacon.__setIntegrationConfig(integrationId, IntegrationConfig(facet, wires));
+        beacon.__setIntegrationConfig(integrationId, IntegrationConfig({
+            facet : facet,
+            wires : wires
+        }));
 
-        IntegrationConfig memory integrationConfig = beacon.getIntegration(integrationId);
+        IntegrationConfig memory integrationConfig = beacon.getIntegrationConfig(integrationId);
 
         assertEq(integrationConfig.facet,        facet);
         assertEq(integrationConfig.wires.length, wires.length);
@@ -481,14 +539,20 @@ contract Beacon_Tests is Test {
         wires2[0] = Wire(0x89ABCDEF, 0xFECDAB98);
         wires2[1] = Wire(0x11111111, 0x33333333);
 
-        beacon.__setIntegrationConfig(integrationId1, IntegrationConfig(facet1, wires1));
-        beacon.__setIntegrationConfig(integrationId2, IntegrationConfig(facet2, wires2));
+        beacon.__setIntegrationConfig(integrationId1, IntegrationConfig({
+            facet : facet1,
+            wires : wires1
+        }));
+        beacon.__setIntegrationConfig(integrationId2, IntegrationConfig({
+            facet : facet2,
+            wires : wires2
+        }));
 
         bytes32[] memory integrationIds = new bytes32[](2);
         integrationIds[0] = integrationId1;
         integrationIds[1] = integrationId2;
 
-        IntegrationConfig[] memory integrationsConfig = beacon.getIntegrations(integrationIds);
+        IntegrationConfig[] memory integrationsConfig = beacon.getIntegrationConfigs(integrationIds);
 
         assertEq(integrationsConfig.length, 2);
 

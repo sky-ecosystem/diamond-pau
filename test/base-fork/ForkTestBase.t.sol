@@ -38,7 +38,7 @@ import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.s
 
 import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -75,7 +75,8 @@ abstract contract ForkTestBase is Test {
     address freezer = Base.ALM_FREEZER_MULTISIG;
     address relayer = Base.ALM_RELAYER_MULTISIG;
 
-    address pocket = makeAddr("pocket");
+    address pocket   = makeAddr("pocket");
+    address skyAdmin = makeAddr("skyAdmin");
 
     /**********************************************************************************************/
     /*** Base addresses                                                                         ***/
@@ -135,7 +136,7 @@ abstract contract ForkTestBase is Test {
 
         /*** Step 3: Deploy ALM system ***/
 
-        beacon  = new Beacon(SPARK_EXECUTOR);
+        beacon  = new Beacon(skyAdmin);
         factory = new PAUFactory(address(beacon));
 
         foreignController = IForeignControllerFull(payable(factory.deploy(SPARK_EXECUTOR)));
@@ -143,10 +144,8 @@ abstract contract ForkTestBase is Test {
         almProxy          = IALMProxy(payable(foreignController.proxy()));
         rateLimits        = IRateLimits(foreignController.rateLimits());
 
-        vm.startPrank(SPARK_EXECUTOR);
 
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+        vm.startPrank(skyAdmin);
 
         // Facet wiring
         _wireAaveFacet();
@@ -161,9 +160,25 @@ abstract contract ForkTestBase is Test {
 
         vm.stopPrank();
 
-        /*** Step 4: Configure ALM system parameters through Spark governance ***/
-
         vm.startPrank(SPARK_EXECUTOR);
+
+        accessControls.grantRole(accessControls.FREEZER_ROLE(), freezer);
+        accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
+
+        bytes32[] memory integrationIds = new bytes32[](9);
+        integrationIds[0] = "AAVE_FACET";
+        integrationIds[1] = "CURVE_FACET";
+        integrationIds[2] = "ERC4626_FACET";
+        integrationIds[3] = "MERKL_FACET";
+        integrationIds[4] = "PENDLE_FACET";
+        integrationIds[5] = "PSM3_FACET";
+        integrationIds[6] = "SPARK_VAULT_FACET";
+        integrationIds[7] = "TRANSFER_ASSET_FACET";
+        integrationIds[8] = "UNISWAP_V3_FACET";
+
+        foreignController.updateIntegrations(integrationIds);
+
+        /*** Step 4: Configure ALM system parameters through Spark governance ***/
 
         uint256 usdcMaxAmount = 5_000_000e6;
         uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
@@ -264,7 +279,12 @@ abstract contract ForkTestBase is Test {
             ICurveFacet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(curveFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : curveFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CURVE_FACET", integrationConfig);
     }
 
     function _wireMerklFacet() internal {
@@ -272,13 +292,18 @@ abstract contract ForkTestBase is Test {
 
         vm.label(merklFacet, "MerklFacet");
 
-        beacon.addWire(
-            merklFacet,
-            Wire(
-                IForeignControllerFull.toggleOperatorMerkl.selector,
-                IMerklFacet.toggleOperator.selector
-            )
+        Wire[] memory merklWires = new Wire[](1);
+        merklWires[0] = Wire(
+            IForeignControllerFull.toggleOperatorMerkl.selector,
+            IMerklFacet.toggleOperator.selector
         );
+
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : merklFacet,
+            wires : merklWires
+        });
+
+        beacon.setIntegration("MERKL_FACET", integrationConfig);
     }
 
     function _wirePendleFacet() internal {
@@ -298,7 +323,12 @@ abstract contract ForkTestBase is Test {
             IPendleFacet.LIMIT_REDEEM.selector
         );
 
-        beacon.addWires(pendleFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : pendleFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PENDLE_FACET", integrationConfig);
     }
 
     function _wireAaveFacet() internal {
@@ -338,7 +368,12 @@ abstract contract ForkTestBase is Test {
             IAaveFacet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(aaveFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : aaveFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("AAVE_FACET", integrationConfig);
     }
 
     function _wireERC4626Facet() internal {
@@ -388,7 +423,12 @@ abstract contract ForkTestBase is Test {
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
 
-        beacon.addWires(erc4626Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : erc4626Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("ERC4626_FACET", integrationConfig);
     }
 
     function _wireSparkVaultFacet() internal {
@@ -408,7 +448,12 @@ abstract contract ForkTestBase is Test {
             ISparkVaultFacet.LIMIT_TAKE.selector
         );
 
-        beacon.addWires(sparkVaultFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : sparkVaultFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("SPARK_VAULT_FACET", integrationConfig);
     }
 
     function _wireTransferAssetFacet() internal {
@@ -428,7 +473,12 @@ abstract contract ForkTestBase is Test {
             ITransferAssetFacet.LIMIT_TRANSFER.selector
         );
 
-        beacon.addWires(transferAssetFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : transferAssetFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("TRANSFER_ASSET_FACET", integrationConfig);
     }
 
     function _wirePSM3Facet() internal {
@@ -458,7 +508,12 @@ abstract contract ForkTestBase is Test {
             IPSM3Facet.LIMIT_WITHDRAW.selector
         );
 
-        beacon.addWires(psm3Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : psm3Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PSM3_FACET", integrationConfig);
     }
 
     function _wireUniswapV3Facet() internal {
@@ -543,7 +598,12 @@ abstract contract ForkTestBase is Test {
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
-        beacon.addWires(uniswapV3Facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : uniswapV3Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("UNISWAP_V3_FACET", integrationConfig);
     }
 
 }

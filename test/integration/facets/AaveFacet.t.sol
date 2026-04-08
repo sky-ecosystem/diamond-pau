@@ -3,20 +3,23 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
-import { IAaveFacet } from "../../../src/facets/aave/IAaveFacet.sol";
-import { IBeacon }    from "../../../src/interfaces/IBeacon.sol";
+import { IAaveFacet }  from "../../../src/facets/aave/IAaveFacet.sol";
+import { IBeacon }     from "../../../src/interfaces/IBeacon.sol";
+import { IController } from "../../../src/interfaces/IController.sol";
 
 import { AaveFacet } from "../../../src/facets/aave/AaveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike {
+interface IControllerLike is IController {
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
     function getAaveMaxSlippage(address aToken) external view returns (uint256);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -45,9 +48,20 @@ abstract contract AaveFacet_TestBase is Controller_TestBase {
             IAaveFacet.getMaxSlippage.selector
         );
 
-        beacon.addWires(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("AAVE_FACET", integrationConfig);
 
         vm.stopPrank();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "AAVE_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
     }
 
 }

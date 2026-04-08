@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }          from "../../../src/interfaces/IBeacon.sol";
 import { ICentrifugeFacet } from "../../../src/facets/centrifuge/ICentrifugeFacet.sol";
@@ -17,6 +17,8 @@ interface IControllerLike {
     function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -48,9 +50,20 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
             ICentrifugeFacet.getRecipient.selector
         );
 
-        beacon.addWires(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("CENTIFUGE_FACET", integrationConfig);
 
         vm.stopPrank();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "CENTIFUGE_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
     }
 
 }

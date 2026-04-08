@@ -17,7 +17,7 @@ import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
 import { makeUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
-import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
@@ -420,6 +420,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
     uint256 internal constant CCTP_MAX_FEE_CAP = 100e6;
 
+    address internal skyAdmin = makeAddr("skyAdmin");
+
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
@@ -452,7 +454,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         // Deploy and configure ALM system
 
-        foreignBeacon = new Beacon(Base.SPARK_EXECUTOR);
+        foreignBeacon = new Beacon(skyAdmin);
 
         PAUFactory foreignFactory = new PAUFactory(address(foreignBeacon));
 
@@ -462,15 +464,25 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         IAccessControls foreignAccessControls = IAccessControls(foreignController.accessControls());
 
-        vm.startPrank(Base.SPARK_EXECUTOR);
-
-        foreignAccessControls.grantRole(foreignAccessControls.FREEZER_ROLE(), freezer);
-        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
+        vm.startPrank(skyAdmin);
 
         // Facet wiring
         _wireForeignCCTPFacet();
 
         vm.stopPrank();
+
+        vm.startPrank(Base.SPARK_EXECUTOR);
+
+        foreignAccessControls.grantRole(foreignAccessControls.FREEZER_ROLE(), freezer);
+        foreignAccessControls.grantRole(foreignAccessControls.RELAYER_ROLE(), relayer);
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "CCTP_FACET";
+
+        vm.prank(skyAdmin);
+        foreignController.updateIntegrations(integrationIds);
+
+
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
 
@@ -570,7 +582,12 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
             ICCTPFacet.LIMIT_TO_DOMAIN.selector
         );
 
-        foreignBeacon.addWires(cctpFacet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : cctpFacet,
+            wires : wires
+        });
+
+        foreignBeacon.setIntegration("CCTP_FACET", integrationConfig);
     }
 
 }

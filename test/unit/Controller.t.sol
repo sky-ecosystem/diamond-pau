@@ -2,12 +2,25 @@
 pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
+import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IBeacon }     from "../../src/interfaces/IBeacon.sol";
+import { Dispatch }    from "../../src/interfaces/IntegrationStructs.sol";
 import { IController } from "../../src/interfaces/IController.sol";
 
 import { Controller } from "../../src/Controller.sol";
+
+contract ControllerHarness is Controller {
+
+    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
+        Controller(accessControls_, beacon_, proxy_, rateLimits_)
+    {}
+
+    function __setDispatch(bytes4 callSelector, Dispatch memory dispatch) external {
+        _getControllerStorage().dispatches[callSelector] = dispatch;
+    }
+
+}
 
 interface IMockFacet {
 
@@ -75,10 +88,10 @@ contract Controller_Tests is Test {
     address internal rateLimits     = makeAddr("rateLimits");
     address internal unauthorized   = makeAddr("unauthorized");
 
-    Controller internal controller;
+    ControllerHarness internal controller;
 
     function setUp() external {
-        controller = new Controller(accessControls, beacon, proxy, rateLimits);
+        controller = new ControllerHarness(accessControls, beacon, proxy, rateLimits);
     }
 
     /**********************************************************************************************/
@@ -124,6 +137,12 @@ contract Controller_Tests is Test {
     }
 
     function test_updateIntegrations_notAdmin() external {
+        vm.mockCall(
+            accessControls,
+            abi.encodeWithSelector(IAccessControl.hasRole.selector, bytes32(0), unauthorized),
+            abi.encode(false)
+        );
+
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
         controller.updateIntegrations(new bytes32[](0));
@@ -145,6 +164,12 @@ contract Controller_Tests is Test {
     }
 
     function test_removeIntegrations_notAdmin() external {
+        vm.mockCall(
+            accessControls,
+            abi.encodeWithSelector(IAccessControl.hasRole.selector, bytes32(0), unauthorized),
+            abi.encode(false)
+        );
+
         vm.expectRevert(abi.encodeWithSelector(IController.NotAdmin.selector, unauthorized));
         vm.prank(unauthorized);
         controller.removeIntegrations(new bytes32[](0));
@@ -164,12 +189,6 @@ contract Controller_Tests is Test {
     }
 
     function test_fallback_callSelectorNotFound() external {
-        _expectAndMockCall(
-            beacon,
-            abi.encodeWithSelector(IBeacon.getDispatch.selector, IMockController.facetFoo.selector),
-            abi.encode(IBeacon.Dispatch(address(0), 0x12345678))
-        );
-
         vm.expectRevert(
             abi.encodeWithSelector(IController.CallSelectorNotWired.selector, IMockController.facetFoo.selector)
         );
@@ -180,10 +199,9 @@ contract Controller_Tests is Test {
     function test_fallback_facetRevert() external {
         address facet = 0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD;
 
-        _expectAndMockCall(
-            beacon,
-            abi.encodeWithSelector(IBeacon.getDispatch.selector, IMockController.facetFoo.selector),
-            abi.encode(IBeacon.Dispatch(facet, IMockFacet.foo.selector))
+        controller.__setDispatch(
+            IMockController.facetFoo.selector,
+            Dispatch(facet, IMockFacet.foo.selector)
         );
 
         bytes memory revertData = abi.encodeWithSelector(IMockFacet.MockError.selector, 111222);
@@ -229,10 +247,9 @@ contract Controller_Tests is Test {
         arg6[1] = "world";
         arg6[2] = "foobar";
 
-        _expectAndMockCall(
-            beacon,
-            abi.encodeWithSelector(IBeacon.getDispatch.selector, IMockController.facetBar.selector),
-            abi.encode(IBeacon.Dispatch(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, IMockFacet.bar.selector))
+        controller.__setDispatch(
+            IMockController.facetBar.selector,
+            Dispatch(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, IMockFacet.bar.selector)
         );
 
         _expectAndMockCall(

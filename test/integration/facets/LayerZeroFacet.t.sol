@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { Wire } from "../../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }         from "../../../src/interfaces/IBeacon.sol";
 import { IFacetBase }      from "../../../src/facets/IFacetBase.sol";
@@ -18,6 +18,8 @@ interface IControllerLike {
     function setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
     function getRecipient(uint32 destinationEndpointId) external view returns (bytes32);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
@@ -46,9 +48,20 @@ abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
             ILayerZeroFacet.getRecipient.selector
         );
 
-        beacon.addWires(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig({
+            facet : facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("LAYER_ZERO_FACET", integrationConfig);
 
         vm.stopPrank();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "LAYER_ZERO_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
     }
 
 }
