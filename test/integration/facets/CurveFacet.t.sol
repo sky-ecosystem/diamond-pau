@@ -29,8 +29,6 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(beaconAdmin);
-
         address facet = address(new CurveFacet());
 
         vm.label(facet, "CurveFacet");
@@ -52,9 +50,8 @@ abstract contract CurveFacet_TestBase is Controller_TestBase {
             wires : wires
         });
 
+        vm.prank(beaconAdmin);
         beacon.setIntegration("CURVE_FACET", integrationConfig);
-
-        vm.stopPrank();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "CURVE_FACET";

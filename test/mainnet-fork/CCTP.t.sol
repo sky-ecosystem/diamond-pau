@@ -479,10 +479,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "CCTP_FACET";
 
-        vm.prank(skyAdmin);
         foreignController.updateIntegrations(integrationIds);
-
-
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
 

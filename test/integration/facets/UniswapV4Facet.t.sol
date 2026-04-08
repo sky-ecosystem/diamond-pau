@@ -44,8 +44,6 @@ contract Controller_UniswapV4Facet_Tests is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(beaconAdmin);
-
         address facet = address(new UniswapV4Facet({
             permit2_         : makeAddr("permit2"),
             positionManager_ : makeAddr("positionManager"),
@@ -81,9 +79,8 @@ contract Controller_UniswapV4Facet_Tests is Controller_TestBase {
             wires : wires
         });
 
+        vm.prank(beaconAdmin);
         beacon.setIntegration("UNISWAP_V4_FACET", integrationConfig);
-
-        vm.stopPrank();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "UNISWAP_V4_FACET";

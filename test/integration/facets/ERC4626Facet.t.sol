@@ -30,8 +30,6 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(beaconAdmin);
-
         address facet = address(new ERC4626Facet());
 
         vm.label(facet, "ERC4626Facet");
@@ -53,9 +51,8 @@ contract ERC4626Facet_TestBase is Controller_TestBase {
             wires : wires
         });
 
+        vm.prank(beaconAdmin);
         beacon.setIntegration("ERC4626_FACET", integrationConfig);
-
-        vm.stopPrank();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "ERC4626_FACET";

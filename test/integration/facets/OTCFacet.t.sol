@@ -42,8 +42,6 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        vm.startPrank(beaconAdmin);
-
         address facet = address(new OTCFacet());
 
         vm.label(facet, "OTCFacet");
@@ -95,9 +93,8 @@ abstract contract OTCFacet_TestBase is Controller_TestBase {
             wires : wires
         });
 
+        vm.prank(beaconAdmin);
         beacon.setIntegration("OTC_FACET", integrationConfig);
-
-        vm.stopPrank();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "OTC_FACET";
