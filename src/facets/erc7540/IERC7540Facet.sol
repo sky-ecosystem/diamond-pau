@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IERC7540Facet
+ * @notice DiamondPAU facet for interacting with ERC-7540 asynchronous vaults.
+ *         Supports the async request/claim lifecycle for both deposits and
+ *         redemptions.
+ */
 interface IERC7540Facet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,30 +16,30 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a deposit is claimed.
-     * @param token  Token address.
-     * @param shares Amount of shares claimed.
+     * @dev   Emitted when a fulfilled deposit request is claimed.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param shares Amount of vault shares claimed.
      */
     event ERC7540ClaimDeposit(address indexed token, uint256 shares);
 
     /**
-     * @dev   Event emitted when a redeem is claimed.
-     * @param token  Token address.
-     * @param assets Amount of assets claimed.
+     * @dev   Emitted when a fulfilled redeem request is claimed.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param assets Amount of underlying assets claimed.
      */
     event ERC7540ClaimRedeem(address indexed token, uint256 assets);
 
     /**
-     * @dev   Event emitted when a deposit is requested.
-     * @param token  Token address.
-     * @param assets Amount of assets requested.
+     * @dev   Emitted when a deposit request is submitted.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param assets Amount of underlying assets submitted for deposit.
      */
     event ERC7540RequestDeposit(address indexed token, uint256 assets);
 
     /**
-     * @dev   Event emitted when a redeem is requested.
-     * @param token  Token address.
-     * @param shares Amount of shares requested.
+     * @dev   Emitted when a redeem request is submitted.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param shares Amount of vault shares submitted for redemption.
      */
     event ERC7540RequestRedeem(address indexed token, uint256 shares);
 
@@ -42,28 +48,30 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Claims a deposit request.
-     * @param token Token address.
+     * @dev   Claims shares from a fulfilled deposit request by minting the
+     *        maximum claimable amount.
+     * @param token Address of the ERC-7540 vault token.
      */
     function claimDeposit(address token) external;
 
     /**
-     * @dev   Claims a redeem request.
-     * @param token Token address.
+     * @dev   Claims assets from a fulfilled redeem request by withdrawing the
+     *        maximum claimable amount.
+     * @param token Address of the ERC-7540 vault token.
      */
     function claimRedeem(address token) external;
 
     /**
-     * @dev   Requests a deposit.
-     * @param token  Token address.
-     * @param amount Amount of tokens to deposit.
+     * @dev   Submits an async deposit request to the ERC-7540 vault.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param amount Amount of underlying assets to request for deposit.
      */
     function requestDeposit(address token, uint256 amount) external;
 
     /**
-     * @dev   Requests a redeem.
-     * @param token  Token address.
-     * @param shares Amount of shares to redeem.
+     * @dev   Submits an async redeem request to the ERC-7540 vault.
+     * @param token  Address of the ERC-7540 vault token.
+     * @param shares Amount of vault shares to request for redemption.
      */
     function requestRedeem(address token, uint256 shares) external;
 
@@ -72,14 +80,16 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for deposit operations, combined with the vault
+     *         token address to form per-vault keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for redeem operations.
-     * @return bytes32 Key for redeem limit.
+     * @dev    Rate limit key for redeem operations, combined with the vault
+     *         token address to form per-vault keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_REDEEM() external pure returns (bytes32);
 

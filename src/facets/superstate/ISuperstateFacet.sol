@@ -3,6 +3,11 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  ISuperstateFacet
+ * @notice DiamondPAU facet for subscribing to Superstate USTB using USDC.
+ *         Only compatible with USTB and USDC.
+ */
 interface ISuperstateFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,8 +15,8 @@ interface ISuperstateFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a subscription is made.
-     * @param usdcAmount Amount of USDC subscribed.
+     * @dev   Emitted when USDC is subscribed to Superstate USTB.
+     * @param usdcAmount Amount of USDC subscribed (6-decimal precision).
      */
     event SuperstateSubscribe(uint256 usdcAmount);
 
@@ -20,8 +25,8 @@ interface ISuperstateFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Subscribes to Superstate.
-     * @param usdcAmount Amount of USDC to subscribe.
+     * @dev   Subscribes USDC to Superstate USTB.
+     * @param usdcAmount Amount of USDC to subscribe (6-decimal precision).
      */
     function subscribe(uint256 usdcAmount) external;
 
@@ -30,20 +35,20 @@ interface ISuperstateFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for subscribe operations.
-     * @return bytes32 Key for subscribe limit.
+     * @dev    Rate limit key for Superstate subscribe operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_SUBSCRIBE() external pure returns (bytes32);
 
     /**
-     * @dev    USDC contract address.
-     * @return address USDC contract address.
+     * @dev    Address of the USDC token contract (immutable).
+     * @return address The USDC contract address.
      */
     function usdc() external view returns (address);
 
     /**
-     * @dev    USTB contract address.
-     * @return address USTB contract address.
+     * @dev    Address of the Superstate USTB token contract (immutable).
+     * @return address The USTB contract address.
      */
     function ustb() external view returns (address);
 

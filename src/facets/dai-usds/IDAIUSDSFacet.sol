@@ -3,6 +3,11 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IDAIUSDSFacet
+ * @notice DiamondPAU facet for 1:1 swaps between DAI and USDS using the
+ *         SKY DaiUsds migrator contract.
+ */
 interface IDAIUSDSFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,14 +15,14 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when DAI is swapped to USDS.
-     * @param daiAmount Amount of DAI swapped.
+     * @dev   Emitted when DAI is converted to USDS.
+     * @param daiAmount Amount of DAI swapped (18-decimal precision).
      */
     event DAIUSDSSwapDAIToUSDS(uint256 daiAmount);
 
     /**
-     * @dev   Event emitted when USDS is swapped to DAI.
-     * @param usdsAmount Amount of USDS swapped.
+     * @dev   Emitted when USDS is converted to DAI.
+     * @param usdsAmount Amount of USDS swapped (18-decimal precision).
      */
     event DAIUSDSSwapUSDSToDAI(uint256 usdsAmount);
 
@@ -26,14 +31,14 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Swaps DAI to USDS.
-     * @param daiAmount Amount of DAI to swap.
+     * @dev   Converts DAI to USDS 1:1 via the DaiUsds migrator.
+     * @param daiAmount Amount of DAI to swap (18-decimal precision).
      */
     function swapDAIToUSDS(uint256 daiAmount) external;
 
     /**
-     * @dev   Swaps USDS to DAI.
-     * @param usdsAmount Amount of USDS to swap.
+     * @dev   Converts USDS to DAI 1:1 via the DaiUsds migrator.
+     * @param usdsAmount Amount of USDS to swap (18-decimal precision).
      */
     function swapUSDSToDAI(uint256 usdsAmount) external;
 
@@ -42,20 +47,20 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    DAI contract address.
-     * @return address DAI contract address.
+     * @dev    Address of the DAI token contract (immutable).
+     * @return address The DAI contract address.
      */
     function dai() external view returns (address);
 
     /**
-     * @dev    DAI/USDS contract address.
-     * @return address DAIUSDS contract address.
+     * @dev    Address of the DaiUsds migrator contract (immutable).
+     * @return address The DaiUsds contract address.
      */
     function daiUSDS() external view returns (address);
 
     /**
-     * @dev    USDS contract address.
-     * @return address USDS contract address.
+     * @dev    Address of the USDS token contract (immutable).
+     * @return address The USDS contract address.
      */
     function usds() external view returns (address);
 

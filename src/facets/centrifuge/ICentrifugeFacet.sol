@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  ICentrifugeFacet
+ * @notice DiamondPAU facet for interacting with Centrifuge V3 vaults. Supports
+ *         deposit/redeem request lifecycle (submit, cancel, claim) and
+ *         cross-chain share transfers via Centrifuge spokes.
+ */
 interface ICentrifugeFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,41 +16,41 @@ interface ICentrifugeFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a deposit request is cancelled.
-     * @param token Token address.
+     * @dev   Emitted when a pending deposit request is cancelled.
+     * @param token Address of the Centrifuge vault token.
      */
     event CentrifugeCancelDepositRequest(address indexed token);
 
     /**
-     * @dev   Event emitted when a redeem request is cancelled.
-     * @param token Token address.
+     * @dev   Emitted when a pending redeem request is cancelled.
+     * @param token Address of the Centrifuge vault token.
      */
     event CentrifugeCancelRedeemRequest(address indexed token);
 
     /**
-     * @dev   Event emitted when a cancelled deposit request is claimed.
-     * @param token Token address.
+     * @dev   Emitted when assets from a cancelled deposit request are claimed.
+     * @param token Address of the Centrifuge vault token.
      */
     event CentrifugeClaimCancelDepositRequest(address indexed token);
 
     /**
-     * @dev   Event emitted when a cancelled redeem request is claimed.
-     * @param token Token address.
+     * @dev   Emitted when shares from a cancelled redeem request are claimed.
+     * @param token Address of the Centrifuge vault token.
      */
     event CentrifugeClaimCancelRedeemRequest(address indexed token);
 
     /**
-     * @dev   Event emitted when a recipient is set.
-     * @param centrifugeId Centrifuge ID.
-     * @param recipient    Recipient.
+     * @dev   Emitted when a cross-chain recipient is configured for a centrifuge ID.
+     * @param centrifugeId Centrifuge chain identifier for the destination.
+     * @param recipient    Bytes32-encoded recipient address on the destination chain.
      */
     event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 indexed recipient);
 
     /**
-     * @dev   Event emitted when shares are transferred.
-     * @param token        Token address.
+     * @dev   Emitted when vault shares are transferred cross-chain.
+     * @param token        Address of the Centrifuge vault token.
      * @param amount       Amount of shares transferred.
-     * @param centrifugeId Centrifuge ID.
+     * @param centrifugeId Centrifuge chain identifier for the destination.
      */
     event CentrifugeTransferShares(address indexed token, uint128 amount, uint16 indexed centrifugeId);
 
@@ -53,41 +59,42 @@ interface ICentrifugeFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Cancels a deposit request.
-     * @param token Token address.
+     * @dev   Cancels a pending deposit request on a Centrifuge vault.
+     * @param token Address of the Centrifuge vault token.
      */
     function cancelDepositRequest(address token) external;
 
     /**
-     * @dev   Cancels a redeem request.
-     * @param token Token address.
+     * @dev   Cancels a pending redeem request on a Centrifuge vault.
+     * @param token Address of the Centrifuge vault token.
      */
     function cancelRedeemRequest(address token) external;
 
     /**
-     * @dev   Claims a cancelled deposit request.
-     * @param token Token address.
+     * @dev   Claims assets returned from a cancelled deposit request.
+     * @param token Address of the Centrifuge vault token.
      */
     function claimCancelDepositRequest(address token) external;
 
     /**
-     * @dev   Claims a cancelled redeem request.
-     * @param token Token address.
+     * @dev   Claims shares returned from a cancelled redeem request.
+     * @param token Address of the Centrifuge vault token.
      */
     function claimCancelRedeemRequest(address token) external;
 
     /**
-     * @dev   Sets a recipient for a centrifuge ID.
-     * @param centrifugeId Centrifuge ID.
-     * @param recipient    Recipient.
+     * @dev   Sets the cross-chain recipient for a given centrifuge chain ID.
+     * @param centrifugeId Centrifuge chain identifier.
+     * @param recipient    Bytes32-encoded recipient address.
      */
     function setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     /**
-     * @dev   Transfer shares to a recipient of centrifugeId.
-     * @param token        Token address.
+     * @dev   Transfers vault shares cross-chain via the Centrifuge spoke.
+     *        Requires ETH for cross-chain messaging fees (payable).
+     * @param token        Address of the Centrifuge vault token.
      * @param amount       Amount of shares to transfer.
-     * @param centrifugeId Centrifuge ID.
+     * @param centrifugeId Centrifuge chain identifier for the destination.
      */
     function transferShares(address token, uint128 amount, uint16 centrifugeId) external payable;
 
@@ -96,26 +103,30 @@ interface ICentrifugeFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for deposit operations, combined with the vault
+     *         token address to form per-vault keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for redeem operations.
-     * @return bytes32 Key for redeem limit.
+     * @dev    Rate limit key for redeem operations, combined with the vault
+     *         token address to form per-vault keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_REDEEM() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for transfer operations.
-     * @return bytes32 Key for transfer limit.
+     * @dev    Rate limit key for cross-chain share transfers, combined with the
+     *         vault token and centrifuge ID to form per-route keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_TRANSFER() external pure returns (bytes32);
 
     /**
-     * @dev    Request ID.
-     * @return uint256 Request ID.
+     * @dev    Always zero. Centrifuge V3 vault requests are non-fungible and
+     *         use a fixed request ID of 0.
+     * @return uint256 The request ID (0).
      */
     function REQUEST_ID() external pure returns (uint256);
 
@@ -124,9 +135,9 @@ interface ICentrifugeFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Gets a recipient for a centrifuge ID.
-     * @param  centrifugeId Centrifuge ID.
-     * @return recipient    Recipient.
+     * @dev    Returns the configured recipient for a centrifuge chain ID.
+     * @param  centrifugeId Centrifuge chain identifier.
+     * @return recipient    Bytes32-encoded recipient. Zero if not set.
      */
     function getRecipient(uint16 centrifugeId) external view returns (bytes32);
 

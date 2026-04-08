@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IWSTETHFacet
+ * @notice DiamondPAU facet for interacting with Lido's wstETH. Supports
+ *         depositing WETH to receive wstETH, requesting stETH withdrawals
+ *         via the Lido withdrawal queue, and claiming completed withdrawals.
+ */
 interface IWSTETHFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,23 +16,24 @@ interface IWSTETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a withdrawal is claimed.
-     * @param requestId   Request ID.
-     * @param wethClaimed Amount of WETH claimed.
+     * @dev   Emitted when a withdrawal is claimed from the Lido queue.
+     * @param requestId   ID of the withdrawal request being claimed.
+     * @param wethClaimed Amount of WETH received (ETH claimed and wrapped).
      */
     event WSTETHClaimWithdrawal(uint256 indexed requestId, uint256 wethClaimed);
 
     /**
-     * @dev   Event emitted when WSTETH is deposited.
-     * @param amount Amount of WSTETH deposited.
+     * @dev   Emitted when WETH is deposited to receive wstETH. Unwraps WETH to ETH and sends
+     *        to the wstETH contract.
+     * @param amount Amount of WETH deposited.
      */
     event WSTETHDeposit(uint256 amount);
 
     /**
-     * @dev   Event emitted when a withdrawal is requested.
-     * @param amountToRedeem Amount of WSTETH to redeem.
-     * @param stethAmount    Amount of stETH.
-     * @param requestIds     Request IDs.
+     * @dev   Emitted when a withdrawal is requested from the Lido queue.
+     * @param amountToRedeem Amount of wstETH submitted for withdrawal.
+     * @param stethAmount    Equivalent stETH amount at the time of request.
+     * @param requestIds     IDs of the created withdrawal requests.
      */
     event WSTETHRequestWithdraw(uint256 amountToRedeem, uint256 stethAmount, uint256[] requestIds);
 
@@ -35,21 +42,24 @@ interface IWSTETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Claims a withdrawal.
-     * @param requestId Request ID.
+     * @dev   Claims a completed withdrawal from the Lido queue.
+     *        The received ETH is automatically wrapped to WETH.
+     * @param requestId ID of the withdrawal request to claim.
      */
     function claimWithdrawal(uint256 requestId) external;
 
     /**
-     * @dev   Deposits WSTETH.
-     * @param amount Amount of WSTETH to deposit.
+     * @dev   Deposits WETH to receive wstETH. Unwraps WETH to ETH and sends
+     *        it to the wstETH contract.
+     * @param amount Amount of WETH to deposit.
      */
     function deposit(uint256 amount) external;
 
     /**
-     * @dev    Requests a withdrawal.
-     * @param  amountToRedeem Amount of WSTETH to redeem.
-     * @return requestIds Request IDs.
+     * @dev    Requests a withdrawal of wstETH via the Lido withdrawal queue.
+     *         Rate limited by the equivalent stETH amount.
+     * @param  amountToRedeem Amount of wstETH to submit for withdrawal.
+     * @return requestIds     IDs of the created withdrawal requests.
      */
     function requestWithdraw(uint256 amountToRedeem) external returns (uint256[] memory requestIds);
 
@@ -58,32 +68,32 @@ interface IWSTETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for wstETH deposit operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for request withdrawal operations.
-     * @return bytes32 Key for request withdrawal limit.
+     * @dev    Rate limit key for wstETH withdrawal request operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_REQUEST_WITHDRAW() external pure returns (bytes32);
 
     /**
-     * @dev    WETH contract address.
-     * @return address WETH contract address.
+     * @dev    Address of the WETH token contract (immutable).
+     * @return address The WETH contract address.
      */
     function weth() external view returns (address);
 
     /**
-     * @dev    Withdraw queue contract address.
-     * @return address Withdraw queue contract address.
+     * @dev    Address of the Lido withdrawal queue contract (immutable).
+     * @return address The withdrawal queue contract address.
      */
     function withdrawQueue() external view returns (address);
 
     /**
-     * @dev    WSTETH contract address.
-     * @return address WSTETH contract address.
+     * @dev    Address of the wstETH token contract (immutable).
+     * @return address The wstETH contract address.
      */
     function wsteth() external view returns (address);
 

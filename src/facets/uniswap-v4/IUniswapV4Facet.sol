@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IUniswapV4Facet
+ * @notice DiamondPAU facet for interacting with Uniswap V4 pools. Supports
+ *         minting, increasing, and decreasing concentrated liquidity positions,
+ *         and exact-input token swaps via the Universal Router.
+ */
 interface IUniswapV4Facet is IFacetBase {
 
     /**********************************************************************************************/
@@ -20,12 +26,12 @@ interface IUniswapV4Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a position's liquidity is decreased.
-     * @param poolId            Pool ID.
-     * @param tokenId           Token ID.
-     * @param liquidityDecrease Amount of liquidity decreased.
-     * @param amount0           Amount of token0.
-     * @param amount1           Amount of token1.
+     * @dev   Emitted when a position's liquidity is decreased.
+     * @param poolId            Uniswap V4 pool identifier.
+     * @param tokenId           NFT token ID of the position.
+     * @param liquidityDecrease Amount of liquidity removed.
+     * @param amount0           Amount of token0 received.
+     * @param amount1           Amount of token1 received.
      */
     event UniswapV4DecreasePosition(
         bytes32 indexed poolId,
@@ -36,12 +42,12 @@ interface IUniswapV4Facet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when a position's liquidity is increased.
-     * @param poolId            Pool ID.
-     * @param tokenId           Token ID.
-     * @param liquidityIncrease Amount of liquidity increased.
-     * @param amount0           Amount of token0.
-     * @param amount1           Amount of token1.
+     * @dev   Emitted when a position's liquidity is increased.
+     * @param poolId            Uniswap V4 pool identifier.
+     * @param tokenId           NFT token ID of the position.
+     * @param liquidityIncrease Amount of liquidity added.
+     * @param amount0           Amount of token0 deposited.
+     * @param amount1           Amount of token1 deposited.
      */
     event UniswapV4IncreasePosition(
         bytes32 indexed poolId,
@@ -52,21 +58,21 @@ interface IUniswapV4Facet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when a max slippage is set.
-     * @param poolId      Pool ID.
-     * @param maxSlippage Max slippage allowed.
+     * @dev   Emitted when the max slippage for a pool is updated.
+     * @param poolId      Uniswap V4 pool identifier.
+     * @param maxSlippage New max slippage in 1e18 precision (1e18 = no slippage).
      */
     event UniswapV4MaxSlippageSet(bytes32 indexed poolId, uint256 maxSlippage);
 
     /**
-     * @dev   Event emitted when a position is minted.
-     * @param poolId    Pool ID.
-     * @param tokenId   Token ID.
-     * @param tickLower Lower tick.
-     * @param tickUpper Upper tick.
-     * @param liquidity Liquidity minted.
-     * @param amount0   Amount of token0.
-     * @param amount1   Amount of token1.
+     * @dev   Emitted when a new liquidity position is minted.
+     * @param poolId    Uniswap V4 pool identifier.
+     * @param tokenId   NFT token ID of the new position.
+     * @param tickLower Lower tick of the position range.
+     * @param tickUpper Upper tick of the position range.
+     * @param liquidity Amount of liquidity minted.
+     * @param amount0   Amount of token0 deposited.
+     * @param amount1   Amount of token1 deposited.
      */
     event UniswapV4MintPosition(
         bytes32 indexed poolId,
@@ -79,12 +85,12 @@ interface IUniswapV4Facet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when a swap is executed.
-     * @param poolId    Pool ID.
-     * @param tokenIn   Token in address.
-     * @param tokenOut  Token out address.
-     * @param amountIn  Amount of input tokens.
-     * @param amountOut Amount of output tokens.
+     * @dev   Emitted when a token swap is executed.
+     * @param poolId    Uniswap V4 pool identifier.
+     * @param tokenIn   Address of the input token.
+     * @param tokenOut  Address of the output token.
+     * @param amountIn  Amount of input tokens spent.
+     * @param amountOut Amount of output tokens received.
      */
     event UniswapV4Swap(
         bytes32 indexed poolId,
@@ -95,11 +101,11 @@ interface IUniswapV4Facet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when tick limits are set.
-     * @param poolId         Pool ID.
-     * @param tickLowerMin   Minimum lower tick.
-     * @param tickUpperMax   Maximum upper tick.
-     * @param maxTickSpacing Maximum tick spacing.
+     * @dev   Emitted when tick limits for a pool are updated.
+     * @param poolId         Uniswap V4 pool identifier.
+     * @param tickLowerMin   Minimum allowed lower tick for positions.
+     * @param tickUpperMax   Maximum allowed upper tick for positions.
+     * @param maxTickSpacing Maximum allowed tick spacing between lower and upper.
      */
     event UniswapV4TickLimitsSet(
         bytes32 indexed poolId,
@@ -107,15 +113,16 @@ interface IUniswapV4Facet is IFacetBase {
         int24           tickUpperMax,
         uint24          maxTickSpacing
     );
+
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
     /**
-     * @dev   Decreases the liquidity of a position.
-     * @param poolId            Pool ID.
-     * @param tokenId           Token ID.
-     * @param liquidityDecrease Amount of liquidity to decrease.
+     * @dev   Decreases the liquidity of an existing position.
+     * @param poolId            Uniswap V4 pool identifier.
+     * @param tokenId           NFT token ID of the position.
+     * @param liquidityDecrease Amount of liquidity to remove.
      * @param amount0Min        Minimum amount of token0 to receive.
      * @param amount1Min        Minimum amount of token1 to receive.
      */
@@ -129,10 +136,10 @@ interface IUniswapV4Facet is IFacetBase {
         external;
 
     /**
-     * @dev   Increases the liquidity of a position.
-     * @param poolId            Pool ID.
-     * @param tokenId           Token ID.
-     * @param liquidityIncrease Amount of liquidity to increase.
+     * @dev   Increases the liquidity of an existing position.
+     * @param poolId            Uniswap V4 pool identifier.
+     * @param tokenId           NFT token ID of the position.
+     * @param liquidityIncrease Amount of liquidity to add.
      * @param amount0Max        Maximum amount of token0 to spend.
      * @param amount1Max        Maximum amount of token1 to spend.
      */
@@ -146,11 +153,11 @@ interface IUniswapV4Facet is IFacetBase {
         external;
 
     /**
-     * @dev   Mints a position.
-     * @param poolId     Pool ID.
-     * @param tickLower  Lower tick.
-     * @param tickUpper  Upper tick.
-     * @param liquidity  Liquidity.
+     * @dev   Mints a new liquidity position in a Uniswap V4 pool.
+     * @param poolId     Uniswap V4 pool identifier.
+     * @param tickLower  Lower tick of the position range.
+     * @param tickUpper  Upper tick of the position range.
+     * @param liquidity  Amount of liquidity to mint.
      * @param amount0Max Maximum amount of token0 to spend.
      * @param amount1Max Maximum amount of token1 to spend.
      */
@@ -165,18 +172,18 @@ interface IUniswapV4Facet is IFacetBase {
         external;
 
     /**
-     * @dev   Sets a max slippage.
-     * @param poolId      Pool ID.
-     * @param maxSlippage Max slippage allowed.
+     * @dev   Sets the max slippage for a Uniswap V4 pool.
+     * @param poolId      Uniswap V4 pool identifier.
+     * @param maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
      */
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     /**
-     * @dev   Sets tick limits.
-     * @param poolId         Pool ID.
-     * @param tickLowerMin   Minimum lower tick.
-     * @param tickUpperMax   Maximum upper tick.
-     * @param maxTickSpacing Maximum tick spacing.
+     * @dev   Sets the tick limits for liquidity positions on a pool.
+     * @param poolId         Uniswap V4 pool identifier.
+     * @param tickLowerMin   Minimum allowed lower tick.
+     * @param tickUpperMax   Maximum allowed upper tick.
+     * @param maxTickSpacing Maximum allowed tick spacing between bounds.
      */
     function setTickLimits(
         bytes32 poolId,
@@ -187,11 +194,11 @@ interface IUniswapV4Facet is IFacetBase {
         external;
 
     /**
-     * @dev   Swaps tokens in a pool.
-     * @param poolId       Pool ID.
-     * @param tokenIn      Token in.
-     * @param amountIn     Amount in.
-     * @param amountOutMin Minimum amount out.
+     * @dev   Swaps tokens via the Uniswap V4 Universal Router (exact input).
+     * @param poolId       Uniswap V4 pool identifier.
+     * @param tokenIn      Address of the input token.
+     * @param amountIn     Amount of input tokens to swap.
+     * @param amountOutMin Minimum output tokens to receive.
      */
     function swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin) external;
 
@@ -200,38 +207,41 @@ interface IUniswapV4Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for Uniswap V4 deposit (mint/increase) operations,
+     *         combined with the pool ID to form per-pool keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for swap operations.
-     * @return bytes32 Key for swap limit.
+     * @dev    Rate limit key for Uniswap V4 swap operations, combined with the
+     *         pool ID to form per-pool keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_SWAP() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for withdraw operations.
-     * @return bytes32 Key for withdraw limit.
+     * @dev    Rate limit key for Uniswap V4 withdraw (decrease) operations,
+     *         combined with the pool ID to form per-pool keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     /**
-     * @dev    Permit2 contract address.
-     * @return address Permit2 contract address.
+     * @dev    Address of the Permit2 contract used for token approvals (immutable).
+     * @return address The Permit2 contract address.
      */
     function permit2() external view returns (address);
 
     /**
-     * @dev    Position manager address.
-     * @return address Position manager address.
+     * @dev    Address of the Uniswap V4 PositionManager contract (immutable).
+     * @return address The position manager contract address.
      */
     function positionManager() external view returns (address);
 
     /**
-     * @dev    Router address.
-     * @return address Router address.
+     * @dev    Address of the Uniswap V4 Universal Router contract (immutable).
+     * @return address The router contract address.
      */
     function router() external view returns (address);
 
@@ -240,18 +250,18 @@ interface IUniswapV4Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Gets a max slippage.
-     * @param  poolId  Pool ID.
-     * @return uint256 Max slippage allowed.
+     * @dev    Returns the configured max slippage for a Uniswap V4 pool.
+     * @param  poolId  Uniswap V4 pool identifier.
+     * @return uint256 Max slippage in 1e18 precision. Zero means not set.
      */
     function getMaxSlippage(bytes32 poolId) external view returns (uint256);
 
     /**
-     * @dev    Gets tick limits.
-     * @param  poolId         Pool ID.
-     * @return tickLowerMin   Minimum lower tick.
-     * @return tickUpperMax   Maximum upper tick.
-     * @return maxTickSpacing Maximum tick spacing.
+     * @dev    Returns the configured tick limits for a Uniswap V4 pool.
+     * @param  poolId         Uniswap V4 pool identifier.
+     * @return tickLowerMin   Minimum allowed lower tick.
+     * @return tickUpperMax   Maximum allowed upper tick.
+     * @return maxTickSpacing Maximum allowed tick spacing.
      */
     function getTickLimits(bytes32 poolId)
         external

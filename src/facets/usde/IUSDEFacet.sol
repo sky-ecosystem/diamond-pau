@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IUSDEFacet
+ * @notice DiamondPAU facet for interacting with Ethena's USDe ecosystem.
+ *         Supports minting/burning USDe via the Ethena minter, staking/unstaking
+ *         sUSDe, and managing the sUSDe cooldown process.
+ */
 interface IUSDEFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,46 +16,46 @@ interface IUSDEFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when assets are cooled down.
-     * @param usdeAmount Amount of USDE cooled down.
-     * @param shares     Amount of shares received.
+     * @dev   Emitted when a USDe cooldown is initiated by asset amount.
+     * @param usdeAmount Amount of USDe queued for cooldown.
+     * @param shares     Amount of sUSDe shares locked.
      */
     event USDECooldownAssets(uint256 usdeAmount, uint256 shares);
 
     /**
-     * @dev   Event emitted when shares are cooled down.
-     * @param susdeAmount Amount of SUSDE cooled down.
-     * @param assets      Amount of assets received.
+     * @dev   Emitted when a USDe cooldown is initiated by share amount.
+     * @param susdeAmount Amount of sUSDe shares queued for cooldown.
+     * @param assets      Amount of USDe assets that will be received.
      */
     event USDECooldownShares(uint256 susdeAmount, uint256 assets);
 
     /**
-     * @dev   Event emitted when a USDE burn is prepared.
-     * @param usdeAmount Amount of USDE to burn.
+     * @dev   Emitted when a USDe burn is prepared by approving USDe to the Ethena minter.
+     * @param usdeAmount Amount of USDe approved for burning.
      */
     event USDEPrepareBurn(uint256 usdeAmount);
 
     /**
-     * @dev   Event emitted when a USDE mint is prepared.
-     * @param usdcAmount Amount of USDC to mint.
+     * @dev   Emitted when a USDe mint is prepared by approving USDC to the Ethena minter.
+     * @param usdcAmount Amount of USDC approved for minting (6-decimal precision).
      */
     event USDEPrepareMint(uint256 usdcAmount);
 
     /**
-     * @dev   Event emitted when a delegated signer is removed.
-     * @param delegatedSigner Delegated signer address.
+     * @dev   Emitted when a delegated signer is removed from the Ethena minter.
+     * @param delegatedSigner Address of the removed delegated signer.
      */
     event USDERemoveDelegatedSigner(address indexed delegatedSigner);
 
     /**
-     * @dev   Event emitted when a delegated signer is set.
-     * @param delegatedSigner Delegated signer address.
+     * @dev   Emitted when a delegated signer is set on the Ethena minter.
+     * @param delegatedSigner Address of the delegated signer.
      */
     event USDESetDelegatedSigner(address indexed delegatedSigner);
 
     /**
-     * @dev   Event emitted when SUSDE is unstaked.
-     * @param assets Amount of assets unstaked.
+     * @dev   Emitted when sUSDe is unstaked after the cooldown period.
+     * @param assets Amount of USDe assets received from unstaking.
      */
     event USDEUnstakeSUSDE(uint256 assets);
 
@@ -58,45 +64,47 @@ interface IUSDEFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Cooldowns assets.
-     * @param  usdeAmount Amount of USDE to cooldown.
-     * @return shares     Amount of shares received.
+     * @dev    Initiates sUSDe cooldown by specifying a USDe asset amount.
+     * @param  usdeAmount Amount of USDe to cooldown.
+     * @return shares     Amount of sUSDe shares locked in cooldown.
      */
     function cooldownAssets(uint256 usdeAmount) external returns (uint256 shares);
 
     /**
-     * @dev    Cooldowns shares.
-     * @param  susdeAmount Amount of SUSDE to cooldown.
-     * @return assets      Amount of assets received.
+     * @dev    Initiates sUSDe cooldown by specifying a share amount.
+     * @param  susdeAmount Amount of sUSDe shares to cooldown.
+     * @return assets      Amount of USDe assets queued for withdrawal.
      */
     function cooldownShares(uint256 susdeAmount) external returns (uint256 assets);
 
     /**
-     * @dev   Prepares to burn USDE.
-     * @param usdeAmount Amount of USDE to burn.
+     * @dev   Prepares a USDe burn by approving USDe to the Ethena minter.
+     *        The actual burn is executed off-chain by the delegated signer.
+     * @param usdeAmount Amount of USDe to approve for burning.
      */
     function prepareBurn(uint256 usdeAmount) external;
 
     /**
-     * @dev   Prepares to mint USDE.
-     * @param usdcAmount Amount of USDC to mint.
+     * @dev   Prepares a USDe mint by approving USDC to the Ethena minter.
+     *        The actual mint is executed off-chain by the delegated signer.
+     * @param usdcAmount Amount of USDC to approve for minting (6-decimal precision).
      */
     function prepareMint(uint256 usdcAmount) external;
 
     /**
-     * @dev   Removes a delegated signer.
-     * @param delegatedSigner Delegated signer address.
+     * @dev   Removes a delegated signer from the Ethena minter for the proxy.
+     * @param delegatedSigner Address of the delegated signer to remove.
      */
     function removeDelegatedSigner(address delegatedSigner) external;
 
     /**
-     * @dev   Sets a delegated signer.
-     * @param delegatedSigner Delegated signer address.
+     * @dev   Sets a delegated signer on the Ethena minter for the proxy.
+     * @param delegatedSigner Address of the delegated signer to set.
      */
     function setDelegatedSigner(address delegatedSigner) external;
 
     /**
-     * @dev Unstakes SUSDE.
+     * @dev Unstakes sUSDe after the cooldown period, receiving USDe.
      */
     function unstakeSUSDE() external;
 
@@ -105,44 +113,44 @@ interface IUSDEFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for USDE burn operations.
-     * @return bytes32 Key for USDE burn limit.
+     * @dev    Rate limit key for USDe burn operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_USDE_BURN() external view returns (bytes32);
 
     /**
-     * @dev    Limit for USDE mint operations.
-     * @return bytes32 Key for USDE mint limit.
+     * @dev    Rate limit key for USDe mint operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_USDE_MINT() external view returns (bytes32);
 
     /**
-     * @dev    Limit for SUSDE cooldown operations.
-     * @return bytes32 Key for SUSDE cooldown limit.
+     * @dev    Rate limit key for sUSDe cooldown operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_SUSDE_COOLDOWN() external view returns (bytes32);
 
     /**
-     * @dev    Ethena minter address.
-     * @return address Ethena minter address.
+     * @dev    Address of the Ethena minter contract (immutable).
+     * @return address The Ethena minter contract address.
      */
     function ethenaMinter() external view returns (address);
 
     /**
-     * @dev    SUSDE contract address.
-     * @return address SUSDE contract address.
+     * @dev    Address of the sUSDe (staked USDe) token contract (immutable).
+     * @return address The sUSDe contract address.
      */
     function susde() external view returns (address);
 
     /**
-     * @dev    USDC contract address.
-     * @return address USDC contract address.
+     * @dev    Address of the USDC token contract (immutable).
+     * @return address The USDC contract address.
      */
     function usdc() external view returns (address);
 
     /**
-     * @dev    USDE contract address.
-     * @return address USDE contract address.
+     * @dev    Address of the USDe token contract (immutable).
+     * @return address The USDe contract address.
      */
     function usde() external view returns (address);
 

@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  IWEETHFacet
+ * @notice DiamondPAU facet for interacting with EtherFi's weETH. Supports
+ *         depositing WETH to receive weETH (via eETH wrapping), requesting
+ *         withdrawals back to ETH, and claiming completed withdrawals.
+ */
 interface IWEETHFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,10 +16,10 @@ interface IWEETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when a withdrawal is claimed.
-     * @param weethModule Weeth module address.
-     * @param requestId   Request ID.
-     * @param ethReceived Amount of ETH received.
+     * @dev   Emitted when a withdrawal is claimed from a weETH module.
+     * @param weethModule Address of the weETH withdrawal module.
+     * @param requestId   ID of the withdrawal request being claimed.
+     * @param ethReceived Amount of ETH received from the claim.
      */
     event WEETHClaimWithdrawal(
         address indexed weethModule,
@@ -22,19 +28,19 @@ interface IWEETHFacet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when a deposit is made.
-     * @param amount     Amount of ETH deposited.
-     * @param eethAmount Amount of eETH received.
-     * @param shares     Amount of shares received.
+     * @dev   Emitted when WETH is deposited to receive weETH.
+     * @param amount     Amount of WETH deposited.
+     * @param eethAmount Amount of eETH received (intermediate step).
+     * @param shares     Amount of weETH shares received.
      */
     event WEETHDeposit(uint256 amount, uint256 eethAmount, uint256 shares);
 
     /**
-     * @dev   Event emitted when a withdrawal is requested.
-     * @param weethModule Weeth module address.
-     * @param requestId   Request ID.
-     * @param eethAmount  Amount of eETH.
-     * @param weethShares Amount of weETH shares.
+     * @dev   Emitted when an ETH withdrawal is requested from weETH.
+     * @param weethModule Address of the weETH withdrawal module.
+     * @param requestId   ID of the created withdrawal request.
+     * @param eethAmount  Amount of eETH submitted for withdrawal.
+     * @param weethShares Amount of weETH shares unwrapped.
      */
     event WEETHRequestWithdraw(
         address indexed weethModule,
@@ -48,9 +54,9 @@ interface IWEETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Claims a withdrawal.
-     * @param  weethModule Weeth module address.
-     * @param  requestId   Request ID.
+     * @dev    Claims a completed withdrawal from a weETH module.
+     * @param  weethModule Address of the weETH withdrawal module.
+     * @param  requestId   ID of the withdrawal request to claim.
      * @return ethReceived Amount of ETH received.
      */
     function claimWithdrawal(address weethModule, uint256 requestId)
@@ -58,19 +64,21 @@ interface IWEETHFacet is IFacetBase {
         returns (uint256 ethReceived);
 
     /**
-     * @dev    Deposits ETH into Weeth.
-     * @param  amount       Amount of ETH to deposit.
-     * @param  minSharesOut Minimum amount of shares to receive.
-     * @return shares       Amount of shares received.
+     * @dev    Deposits WETH to receive weETH. Unwraps WETH to ETH, deposits
+     *        into EtherFi liquidity pool for eETH, then wraps eETH to weETH.
+     * @param  amount       Amount of WETH to deposit.
+     * @param  minSharesOut Minimum weETH shares to receive.
+     * @return shares       Actual weETH shares received.
      */
     function deposit(uint256 amount, uint256 minSharesOut) external returns (uint256 shares);
 
     /**
-     * @dev    Requests a withdrawal.
-     * @param  weethModule   Weeth module address.
+     * @dev    Requests an ETH withdrawal by unwrapping weETH to eETH, then
+     *         submitting the eETH to the EtherFi liquidity pool for withdrawal.
+     * @param  weethModule   Address of the weETH withdrawal module.
      * @param  weethShares   Amount of weETH shares to withdraw.
-     * @param  minEETHShares Minimum amount of eETH shares to receive.
-     * @return requestId     Request ID.
+     * @param  minEETHShares Minimum eETH shares after unwrapping (slippage check).
+     * @return requestId     ID of the created withdrawal request.
      */
     function requestWithdraw(address weethModule, uint256 weethShares, uint256 minEETHShares)
         external
@@ -81,26 +89,27 @@ interface IWEETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for weETH deposit operations.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for request withdrawal operations.
-     * @return bytes32 Key for request withdrawal limit.
+     * @dev    Rate limit key for weETH withdrawal request operations, combined
+     *         with the weETH module address to form per-module keys.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_REQUEST_WITHDRAW() external pure returns (bytes32);
 
     /**
-     * @dev    WETH contract address.
-     * @return address WETH contract address.
+     * @dev    Address of the WETH token contract (immutable).
+     * @return address The WETH contract address.
      */
     function weth() external view returns (address);
 
     /**
-     * @dev    Weeth contract address.
-     * @return address Weeth contract address.
+     * @dev    Address of the weETH token contract (immutable).
+     * @return address The weETH contract address.
      */
     function weeth() external view returns (address);
 

@@ -3,6 +3,12 @@ pragma solidity ^0.8.34;
 
 import { IFacetBase } from "../IFacetBase.sol";
 
+/**
+ * @title  ICurveFacet
+ * @notice DiamondPAU facet for interacting with Curve pools. Supports adding
+ *         and removing liquidity, and token swaps. All value calculations use
+ *         18-decimal normalized USD amounts derived from Curve stored_rates.
+ */
 interface ICurveFacet is IFacetBase {
 
     /**********************************************************************************************/
@@ -10,11 +16,11 @@ interface ICurveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Event emitted when liquidity is added.
-     * @param pool           Pool address.
+     * @dev   Emitted when liquidity is added to a Curve pool.
+     * @param pool           Address of the Curve pool.
      * @param shares         Amount of LP tokens received.
-     * @param valueDeposited Value deposited.
-     * @param depositAmounts Amounts of tokens deposited.
+     * @param valueDeposited Aggregate deposited value, 18-decimal normalized USD.
+     * @param depositAmounts Per-token amounts deposited (native token decimals).
      */
     event CurveAddLiquidity(
         address indexed pool,
@@ -24,18 +30,18 @@ interface ICurveFacet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when max slippage is set.
-     * @param pool        Pool address.
-     * @param maxSlippage Max slippage allowed.
+     * @dev   Emitted when the max slippage for a Curve pool is updated.
+     * @param pool        Address of the Curve pool.
+     * @param maxSlippage New max slippage in 1e18 precision (1e18 = no slippage).
      */
     event CurveMaxSlippageSet(address indexed pool, uint256 maxSlippage);
 
     /**
-     * @dev   Event emitted when liquidity is removed.
-     * @param pool            Pool address.
-     * @param lpBurnAmount    Amount of LP tokens burnt.
-     * @param valueWithdrawn  Value withdrawn.
-     * @param withdrawnTokens Amounts of tokens withdrawn.
+     * @dev   Emitted when liquidity is removed from a Curve pool.
+     * @param pool            Address of the Curve pool.
+     * @param lpBurnAmount    Amount of LP tokens burned.
+     * @param valueWithdrawn  Aggregate withdrawn value, 18-decimal normalized USD.
+     * @param withdrawnTokens Per-token amounts withdrawn (native token decimals).
      */
     event CurveRemoveLiquidity(
         address indexed pool,
@@ -45,12 +51,12 @@ interface ICurveFacet is IFacetBase {
     );
 
     /**
-     * @dev   Event emitted when a swap is executed.
-     * @param pool        Pool address.
-     * @param inputIndex  Index of the input token.
-     * @param outputIndex Index of the output token.
-     * @param amountIn    Amount of input tokens swapped.
-     * @param amountOut   Amount of output tokens received.
+     * @dev   Emitted when a token swap is executed on a Curve pool.
+     * @param pool        Address of the Curve pool.
+     * @param inputIndex  Index of the input token in the pool.
+     * @param outputIndex Index of the output token in the pool.
+     * @param amountIn    Amount of input tokens swapped (native decimals).
+     * @param amountOut   Amount of output tokens received (native decimals).
      */
     event CurveSwap(
         address indexed pool,
@@ -65,10 +71,10 @@ interface ICurveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Adds liquidity to a pool.
-     * @param  pool           Pool address.
-     * @param  depositAmounts Amounts of tokens to deposit.
-     * @param  minLpAmount    Minimum amount of LP tokens to receive.
+     * @dev    Adds liquidity to a Curve pool.
+     * @param  pool           Address of the Curve pool.
+     * @param  depositAmounts Per-token amounts to deposit (native token decimals).
+     * @param  minLpAmount    Minimum LP tokens to receive.
      * @return shares         Amount of LP tokens received.
      */
     function addLiquidity(address pool, uint256[] calldata depositAmounts, uint256 minLpAmount)
@@ -76,11 +82,11 @@ interface ICurveFacet is IFacetBase {
         returns (uint256 shares);
 
     /**
-     * @dev    Removes liquidity from a pool.
-     * @param  pool               Pool address.
+     * @dev    Removes liquidity from a Curve pool proportionally.
+     * @param  pool               Address of the Curve pool.
      * @param  lpBurnAmount       Amount of LP tokens to burn.
-     * @param  minWithdrawAmounts Minimum amounts of tokens to withdraw.
-     * @return withdrawnTokens    Amounts of tokens withdrawn.
+     * @param  minWithdrawAmounts Per-token minimum amounts to receive.
+     * @return withdrawnTokens    Per-token amounts actually withdrawn.
      */
     function removeLiquidity(
         address            pool,
@@ -91,20 +97,20 @@ interface ICurveFacet is IFacetBase {
         returns (uint256[] memory withdrawnTokens);
 
     /**
-     * @dev   Sets max slippage for a pool.
-     * @param pool        Pool address.
-     * @param maxSlippage Max slippage allowed.
+     * @dev   Sets the max slippage for a Curve pool.
+     * @param pool        Address of the Curve pool.
+     * @param maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
      */
     function setMaxSlippage(address pool, uint256 maxSlippage) external;
 
     /**
-     * @dev    Swaps tokens in a pool.
-     * @param  pool         Pool address.
-     * @param  inputIndex   Index of the input token.
-     * @param  outputIndex  Index of the output token.
-     * @param  amountIn     Amount of input tokens to swap.
-     * @param  minAmountOut Minimum amount of output tokens to receive.
-     * @return amountOut    Amount of output tokens received.
+     * @dev    Swaps tokens within a Curve pool.
+     * @param  pool         Address of the Curve pool.
+     * @param  inputIndex   Index of the input token in the pool.
+     * @param  outputIndex  Index of the output token in the pool.
+     * @param  amountIn     Amount of input tokens to swap (native decimals).
+     * @param  minAmountOut Minimum output tokens to receive (native decimals).
+     * @return amountOut    Actual amount of output tokens received.
      */
     function swap(
         address pool,
@@ -121,20 +127,23 @@ interface ICurveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Limit for deposit operations.
-     * @return bytes32 Key for deposit limit.
+     * @dev    Rate limit key for Curve deposit operations, combined with the
+     *         pool address. Rate limited by 18-decimal normalized USD value.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for swap operations.
-     * @return bytes32 Key for swap limit.
+     * @dev    Rate limit key for Curve swap operations, combined with the pool
+     *         address. Rate limited by 18-decimal normalized USD value.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_SWAP() external pure returns (bytes32);
 
     /**
-     * @dev    Limit for withdraw operations.
-     * @return bytes32 Key for withdraw limit.
+     * @dev    Rate limit key for Curve withdraw operations, combined with the
+     *         pool address. Rate limited by 18-decimal normalized USD value.
+     * @return bytes32 The rate limit key identifier.
      */
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
@@ -143,9 +152,9 @@ interface ICurveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Gets max slippage for a pool.
-     * @param  pool        Pool address.
-     * @return maxSlippage Max slippage allowed.
+     * @dev    Returns the configured max slippage for a Curve pool.
+     * @param  pool        Address of the Curve pool.
+     * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
      */
     function getMaxSlippage(address pool) external view returns (uint256);
 
