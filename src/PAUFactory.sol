@@ -33,7 +33,7 @@ contract PAUFactory is IPAUFactory, AccessControlEnumerable {
     /**********************************************************************************************/
 
     constructor(address admin, address facetValidator) {
-        require(admin != address(0),          ZeroAdmin());
+        require(admin          != address(0), ZeroAdmin());
         require(facetValidator != address(0), ZeroFacetValidator());
 
         _grantRole(DEFAULT_ADMIN_ROLE,   admin);

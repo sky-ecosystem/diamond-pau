@@ -1157,9 +1157,17 @@ contract Controller_Tests is Test {
     /*** Fallback Tests                                                                         ***/
     /**********************************************************************************************/
 
-    function test_fallback_invalidCallDataLength() external {
-        vm.expectRevert(abi.encodeWithSelector(IController.InvalidCallDataLength.selector, 3));
-        address(controller).call(hex"123456");
+    function test_fallback_invalidCallDataLengthBoundary() external {
+        ( bool success, bytes memory data ) = address(controller).call(hex"123456");
+
+        assertEq(success, false);
+        assertEq(data,    abi.encodeWithSelector(IController.InvalidCallDataLength.selector, 3));
+
+        // Expect revert with CallSelectorNotWired error, but not with InvalidCallDataLength.
+        ( success, data ) = address(controller).call(hex"12345678");
+
+        assertEq(success, false);
+        assertEq(data,    abi.encodeWithSelector(IController.CallSelectorNotWired.selector, bytes4(hex"12345678")));
     }
 
     function test_fallback_callSelectorNotFound() external {
