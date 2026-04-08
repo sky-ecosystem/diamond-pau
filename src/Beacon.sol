@@ -11,7 +11,7 @@ import {
     AccessControlEnumerable
 } from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 
-import { Circuit, Dispatch, Integration } from "./interfaces/IntegrationStructs.sol";
+import { Dispatch, Integration, IntegrationConfig } from "./interfaces/IntegrationStructs.sol";
 
 import { IBeacon }     from "./interfaces/IBeacon.sol";
 import { IController } from "./interfaces/IController.sol";
@@ -26,8 +26,8 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
 
     EnumerableSet.Bytes32Set internal _integrationIds;
 
-    mapping (bytes32 integrationId => Circuit  circuit)  internal _circuits;
-    mapping (bytes4  callSelector  => Dispatch dispatch) internal _dispatches;
+    mapping (bytes32 integrationId => IntegrationConfig config) internal _integrationsConfig;
+    mapping (bytes4  callSelector  => Dispatch dispatch)        internal _dispatches;
 
     /**********************************************************************************************/
     /*** Constructor                                                                            ***/
@@ -43,20 +43,20 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function setCircuit(bytes32 integrationId, Circuit calldata circuit)
+    function setIntegration(bytes32 integrationId, IntegrationConfig calldata integrationConfig)
         external
         override
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        _removeCircuit(integrationId);
+        _deleteIntegrationConfigAndDispatches(integrationId);
 
-        require(circuit.facet != address(0), ZeroFacet());
-        require(circuit.wires.length > 0,    EmptyArray());
+        require(integrationConfig.facet != address(0), ZeroFacet());
+        require(integrationConfig.wires.length > 0,   EmptyArray());
 
-        for (uint256 i = 0; i < circuit.wires.length; ++i) {
-            bytes4 callSelector     = circuit.wires[i].callSelector;
-            bytes4 delegateSelector = circuit.wires[i].delegateSelector;
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            bytes4 callSelector     = integrationConfig.wires[i].callSelector;
+            bytes4 delegateSelector = integrationConfig.wires[i].delegateSelector;
 
             _revertIfCallSelectorIsHardcoded(callSelector);
 
@@ -65,27 +65,27 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
                 CallSelectorAlreadyWired(callSelector)
             );
 
-            _dispatches[callSelector] = Dispatch(circuit.facet, delegateSelector);
+            _dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
         }
 
         _integrationIds.add(integrationId);
 
-        _circuits[integrationId] = circuit;
+        _integrationsConfig[integrationId] = integrationConfig;
 
-        emit CircuitSet(integrationId, circuit);
+        emit IntegrationSet(integrationId, integrationConfig);
     }
 
-    function removeCircuit(bytes32 integrationId)
+    function removeIntegration(bytes32 integrationId)
         external
         override
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        _removeCircuit(integrationId);
+        _deleteIntegrationConfigAndDispatches(integrationId);
 
-        require(_integrationIds.remove(integrationId), CircuitNotFound(integrationId));
+        require(_integrationIds.remove(integrationId), IntegrationNotFound(integrationId));
 
-        emit CircuitRemoved(integrationId);
+        emit IntegrationRemoved(integrationId);
     }
 
     /**********************************************************************************************/
@@ -100,7 +100,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         for (uint256 i = 0; i < integrationCount; ++i) {
             bytes32 id = _integrationIds.at(i);
 
-            integrations_[i] = Integration(id, _circuits[id]);
+            integrations_[i] = Integration(id, _integrationsConfig[id]);
         }
     }
 
@@ -108,20 +108,22 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function getCircuit(bytes32 integrationId) external view override returns (Circuit memory) {
-        return _circuits[integrationId];
+    function getIntegrationConfig(bytes32 integrationId)
+        external view override returns (IntegrationConfig memory)
+    {
+        return _integrationsConfig[integrationId];
     }
 
-    function getCircuits(bytes32[] calldata integrationIds)
+    function getIntegrationConfigs(bytes32[] calldata integrationIds)
         external
         view
         override
-        returns (Circuit[] memory circuits_)
+        returns (IntegrationConfig[] memory integrationsConfig_)
     {
-        circuits_ = new Circuit[](integrationIds.length);
+        integrationsConfig_ = new IntegrationConfig[](integrationIds.length);
 
         for (uint256 i = 0; i < integrationIds.length; ++i) {
-            circuits_[i] = _circuits[integrationIds[i]];
+            integrationsConfig_[i] = _integrationsConfig[integrationIds[i]];
         }
     }
 
@@ -160,16 +162,16 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _removeCircuit(bytes32 integrationId) internal {
-        Circuit storage circuit = _circuits[integrationId];
+    function _deleteIntegrationConfigAndDispatches(bytes32 integrationId) internal {
+        IntegrationConfig storage integrationConfig = _integrationsConfig[integrationId];
 
-        if (circuit.facet == address(0)) return;
+        if (integrationConfig.facet == address(0)) return;
 
-        for (uint256 i = 0; i < circuit.wires.length; ++i) {
-            delete _dispatches[circuit.wires[i].callSelector];
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            delete _dispatches[integrationConfig.wires[i].callSelector];
         }
 
-        delete _circuits[integrationId];
+        delete _integrationsConfig[integrationId];
     }
 
     /**********************************************************************************************/
@@ -185,8 +187,8 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
             callSelector != IController.integrations.selector &&
             callSelector != IController.proxy.selector &&
             callSelector != IController.rateLimits.selector &&
-            callSelector != IBeacon.getCircuit.selector &&
-            callSelector != IBeacon.getCircuits.selector &&
+            callSelector != IBeacon.getIntegrationConfig.selector &&
+            callSelector != IBeacon.getIntegrationConfigs.selector &&
             callSelector != IBeacon.getDispatch.selector &&
             callSelector != IBeacon.getDispatches.selector,
             CallSelectorHardcoded(callSelector)

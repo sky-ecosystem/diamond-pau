@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { Circuit, Dispatch, Integration } from "./IntegrationStructs.sol";
+import { Dispatch, Integration, IntegrationConfig } from "./IntegrationStructs.sol";
 
 interface IController {
 
@@ -9,7 +9,7 @@ interface IController {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event IntegrationSet(bytes32 indexed id, Circuit circuit);
+    event IntegrationSet(bytes32 indexed id, IntegrationConfig config);
 
     event IntegrationRemoved(bytes32 indexed id);
 
@@ -23,8 +23,8 @@ interface IController {
     /// @notice Thrown when a call selector is not wired to a facet.
     error CallSelectorNotWired(bytes4 callSelector);
 
-    /// @notice Thrown when the circuit is not found.
-    error CircuitNotFound(bytes32 integrationId);
+    /// @notice Thrown when the integration is not found.
+    error IntegrationNotFound(bytes32 integrationId);
 
     /// @notice Thrown when the call data length is less than 4.
     error InvalidCallDataLength(uint256 callDataLength);
@@ -70,12 +70,12 @@ interface IController {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getCircuit(bytes32 integrationId) external view returns (Circuit memory);
+    function getIntegration(bytes32 integrationId) external view returns (IntegrationConfig memory);
 
-    function getCircuits(bytes32[] calldata integrationIds)
+    function getIntegrations(bytes32[] calldata integrationIds)
         external
         view
-        returns (Circuit[] memory);
+        returns (IntegrationConfig[] memory);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 

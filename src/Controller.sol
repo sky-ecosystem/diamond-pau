@@ -7,7 +7,7 @@ import {
     EnumerableSet
 } from "../lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
-import { Circuit, Dispatch, Integration } from "./interfaces/IntegrationStructs.sol";
+import { Dispatch, Integration, IntegrationConfig } from "./interfaces/IntegrationStructs.sol";
 
 import { IAccessControls } from "./interfaces/IAccessControls.sol";
 import { IBeacon }         from "./interfaces/IBeacon.sol";
@@ -27,8 +27,8 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
         address                  beacon;
-        EnumerableSet.Bytes32Set circuitIds;
-        mapping (bytes32 integrationId => Circuit  circuit)  circuits;
+        EnumerableSet.Bytes32Set integrationIds;
+        mapping (bytes32 integrationId => IntegrationConfig config) integrations;
         mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
     }
 
@@ -81,10 +81,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /**********************************************************************************************/
 
     function updateIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
-        Circuit[] memory circuits = IBeacon(_getControllerStorage().beacon).getCircuits(ids);
+        IntegrationConfig[] memory integrationsConfig =
+            IBeacon(_getControllerStorage().beacon).getIntegrations(ids);
 
         for (uint256 i = 0; i < ids.length; ++i) {
-            _setIntegration(ids[i], circuits[i]);
+            _setIntegration(ids[i], integrationsConfig[i]);
         }
     }
 
@@ -109,14 +110,14 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     function integrations() external view override returns (Integration[] memory integrations_) {
         ControllerStorage storage $ = _getControllerStorage();
 
-        uint256 integrationCount = $.circuitIds.length();
+        uint256 integrationCount = $.integrationIds.length();
 
         integrations_ = new Integration[](integrationCount);
 
         for (uint256 i = 0; i < integrationCount; ++i) {
-            bytes32 id = $.circuitIds.at(i);
+            bytes32 id = $.integrationIds.at(i);
 
-            integrations_[i] = Integration(id, $.circuits[id]);
+            integrations_[i] = Integration(id, $.integrations[id]);
         }
     }
 
@@ -132,22 +133,27 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function getCircuit(bytes32 integrationId) external view override returns (Circuit memory) {
-        return _getControllerStorage().circuits[integrationId];
-    }
-
-    function getCircuits(bytes32[] calldata integrationIds)
+    function getIntegration(bytes32 integrationId)
         external
         view
         override
-        returns (Circuit[] memory circuits_)
+        returns (IntegrationConfig memory)
     {
-        circuits_ = new Circuit[](integrationIds.length);
+        return _getControllerStorage().integrations[integrationId];
+    }
+
+    function getIntegrations(bytes32[] calldata integrationIds)
+        external
+        view
+        override
+        returns (IntegrationConfig[] memory integrationsConfig_)
+    {
+        integrationsConfig_ = new IntegrationConfig[](integrationIds.length);
 
         ControllerStorage storage $ = _getControllerStorage();
 
         for (uint256 i = 0; i < integrationIds.length; ++i) {
-            circuits_[i] = $.circuits[integrationIds[i]];
+            integrationsConfig_[i] = $.integrations[integrationIds[i]];
         }
     }
 
@@ -206,50 +212,50 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function _removeCircuit(bytes32 integrationId) internal {
+    function _removeIntegrationData(bytes32 integrationId) internal {
         ControllerStorage storage $ = _getControllerStorage();
 
-        Circuit storage circuit = $.circuits[integrationId];
+        IntegrationConfig storage integrationConfig = $.integrations[integrationId];
 
-        if (circuit.facet == address(0)) return;
+        if (integrationConfig.facet == address(0)) return;
 
-        for (uint256 i = 0; i < circuit.wires.length; ++i) {
-            delete $.dispatches[circuit.wires[i].callSelector];
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            delete $.dispatches[integrationConfig.wires[i].callSelector];
         }
 
-        delete $.circuits[integrationId];
+        delete $.integrations[integrationId];
     }
 
     function _removeIntegration(bytes32 id) internal {
-        _removeCircuit(id);
+        _removeIntegrationData(id);
 
-        require(_getControllerStorage().circuitIds.remove(id), CircuitNotFound(id));
+        require(_getControllerStorage().integrationIds.remove(id), IntegrationNotFound(id));
 
         emit IntegrationRemoved(id);
     }
 
-    function _setIntegration(bytes32 id, Circuit memory circuit) internal {
-        _removeCircuit(id);
+    function _setIntegration(bytes32 id, IntegrationConfig memory integrationConfig) internal {
+        _removeIntegrationData(id);
 
         ControllerStorage storage $ = _getControllerStorage();
 
-        for (uint256 i = 0; i < circuit.wires.length; ++i) {
-            bytes4 callSelector     = circuit.wires[i].callSelector;
-            bytes4 delegateSelector = circuit.wires[i].delegateSelector;
+        for (uint256 i = 0; i < integrationConfig.wires.length; ++i) {
+            bytes4 callSelector     = integrationConfig.wires[i].callSelector;
+            bytes4 delegateSelector = integrationConfig.wires[i].delegateSelector;
 
             require(
                 $.dispatches[callSelector].facet == address(0),
                 CallSelectorAlreadyWired(callSelector)
             );
 
-            $.dispatches[callSelector] = Dispatch(circuit.facet, delegateSelector);
+            $.dispatches[callSelector] = Dispatch(integrationConfig.facet, delegateSelector);
         }
 
-        $.circuitIds.add(id);
+        $.integrationIds.add(id);
 
-        $.circuits[id] = circuit;
+        $.integrations[id] = integrationConfig;
 
-        emit IntegrationSet(id, circuit);
+        emit IntegrationSet(id, integrationConfig);
     }
 
     /**********************************************************************************************/

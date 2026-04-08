@@ -5,7 +5,7 @@ import {
     IAccessControlEnumerable
 } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
-import { Circuit, Dispatch, Integration } from "./IntegrationStructs.sol";
+import { Dispatch, Integration, IntegrationConfig } from "./IntegrationStructs.sol";
 
 interface IBeacon is IAccessControlEnumerable {
 
@@ -13,9 +13,9 @@ interface IBeacon is IAccessControlEnumerable {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
-    event CircuitSet(bytes32 indexed integrationId, Circuit circuit);
+    event IntegrationSet(bytes32 indexed integrationId, IntegrationConfig config);
 
-    event CircuitRemoved(bytes32 indexed integrationId);
+    event IntegrationRemoved(bytes32 indexed integrationId);
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
@@ -27,8 +27,8 @@ interface IBeacon is IAccessControlEnumerable {
     /// @notice Thrown when the call selector is hardcoded.
     error CallSelectorHardcoded(bytes4 callSelector);
 
-    /// @notice Thrown when the circuit is not found.
-    error CircuitNotFound(bytes32 integrationId);
+    /// @notice Thrown when the integration is not found.
+    error IntegrationNotFound(bytes32 integrationId);
 
     /// @notice Thrown when an argument array is empty.
     error EmptyArray();
@@ -43,9 +43,9 @@ interface IBeacon is IAccessControlEnumerable {
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
-    function setCircuit(bytes32 integrationId, Circuit calldata circuit) external;
+    function setIntegration(bytes32 integrationId, IntegrationConfig calldata integrationConfig) external;
 
-    function removeCircuit(bytes32 integrationId) external;
+    function removeIntegration(bytes32 integrationId) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
@@ -57,12 +57,12 @@ interface IBeacon is IAccessControlEnumerable {
     /*** View/Pure Functions                                                                    ***/
     /**********************************************************************************************/
 
-    function getCircuit(bytes32 integrationId) external view returns (Circuit memory);
+    function getIntegrationConfig(bytes32 integrationId) external view returns (IntegrationConfig memory);
 
-    function getCircuits(bytes32[] calldata integrationIds)
+    function getIntegrationConfigs(bytes32[] calldata integrationIds)
         external
         view
-        returns (Circuit[] memory);
+        returns (IntegrationConfig[] memory);
 
     function getDispatch(bytes4 callSelector) external view returns (Dispatch memory);
 

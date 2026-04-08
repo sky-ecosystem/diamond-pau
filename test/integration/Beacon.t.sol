@@ -5,7 +5,7 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
-import { Circuit, Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { IntegrationConfig, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon } from "../../src/interfaces/IBeacon.sol";
 
@@ -49,10 +49,10 @@ contract BeaconIntegration_Tests is Test {
     }
 
     /**********************************************************************************************/
-    /*** setCircuit Tests                                                                       ***/
+    /*** setIntegration Tests                                                                   ***/
     /**********************************************************************************************/
 
-    function test_setCircuit_notAdmin() external {
+    function test_setIntegration_notAdmin() external {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -62,10 +62,10 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.setCircuit(bytes32(0), Circuit(address(0), new Wire[](0)));
+        beacon.setIntegration(bytes32(0), IntegrationConfig(address(0), new Wire[](0)));
     }
 
-    function test_setCircuit() external {
+    function test_setIntegration() external {
         bytes32 integrationId = "SOME_INTEGRATION";
 
         address facet = makeAddr("facet");
@@ -85,34 +85,34 @@ contract BeaconIntegration_Tests is Test {
         wires[1] = Wire(callSelectors[1], delegateSelectors[1]);
         wires[2] = Wire(callSelectors[2], delegateSelectors[2]);
 
-        Circuit memory circuit = Circuit(facet, wires);
+        IntegrationConfig memory integrationConfig = IntegrationConfig(facet, wires);
 
         vm.expectEmit(address(beacon));
-        emit IBeacon.CircuitSet(integrationId, circuit);
+        emit IBeacon.IntegrationSet(integrationId, integrationConfig);
 
         vm.prank(admin);
-        beacon.setCircuit(integrationId, circuit);
+        beacon.setIntegration(integrationId, integrationConfig);
 
-        Circuit memory returnedCircuit = beacon.getCircuit(integrationId);
+        IntegrationConfig memory returnedIntegrationConfig = beacon.getIntegration(integrationId);
 
-        assertEq(returnedCircuit.facet,        facet);
-        assertEq(returnedCircuit.wires.length, wires.length);
+        assertEq(returnedIntegrationConfig.facet,        facet);
+        assertEq(returnedIntegrationConfig.wires.length, wires.length);
 
-        assertEq(returnedCircuit.wires[0].callSelector,     wires[0].callSelector);
-        assertEq(returnedCircuit.wires[0].delegateSelector, wires[0].delegateSelector);
+        assertEq(returnedIntegrationConfig.wires[0].callSelector,     wires[0].callSelector);
+        assertEq(returnedIntegrationConfig.wires[0].delegateSelector, wires[0].delegateSelector);
 
-        assertEq(returnedCircuit.wires[1].callSelector,     wires[1].callSelector);
-        assertEq(returnedCircuit.wires[1].delegateSelector, wires[1].delegateSelector);
+        assertEq(returnedIntegrationConfig.wires[1].callSelector,     wires[1].callSelector);
+        assertEq(returnedIntegrationConfig.wires[1].delegateSelector, wires[1].delegateSelector);
 
-        assertEq(returnedCircuit.wires[2].callSelector,     wires[2].callSelector);
-        assertEq(returnedCircuit.wires[2].delegateSelector, wires[2].delegateSelector);
+        assertEq(returnedIntegrationConfig.wires[2].callSelector,     wires[2].callSelector);
+        assertEq(returnedIntegrationConfig.wires[2].delegateSelector, wires[2].delegateSelector);
     }
 
     /**********************************************************************************************/
-    /*** removeCircuit Tests                                                                    ***/
+    /*** removeIntegration Tests                                                                ***/
     /**********************************************************************************************/
 
-    function test_removeCircuit_notAdmin() external {
+    function test_removeIntegration_notAdmin() external {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -122,7 +122,7 @@ contract BeaconIntegration_Tests is Test {
         );
 
         vm.prank(unauthorized);
-        beacon.removeCircuit(bytes32(0));
+        beacon.removeIntegration(bytes32(0));
     }
 
 }

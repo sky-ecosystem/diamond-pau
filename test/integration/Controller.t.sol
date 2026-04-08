@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { Wire } from "../../src/interfaces/IntegrationStructs.sol";
+import { Dispatch, Integration, Wire } from "../../src/interfaces/IntegrationStructs.sol";
 
 import { IBeacon }     from "../../src/interfaces/IBeacon.sol";
 import { IController } from "../../src/interfaces/IController.sol";
@@ -82,9 +82,9 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         controller.mul(0);
 
-        assertEq(beacon.circuits().length, 0);
+        assertEq(beacon.integrations().length, 0);
 
-        IBeacon.Dispatch[] memory dispatches = beacon.getDispatches(callSelectors);
+        Dispatch[] memory dispatches = beacon.getDispatches(callSelectors);
 
         assertEq(dispatches.length, 2);
 
@@ -111,17 +111,17 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(controller.div(12), 6);
         assertEq(controller.mul(12), 24);
 
-        IBeacon.Circuit[] memory circuits = beacon.circuits();
+        Integration[] memory integrations = beacon.integrations();
 
-        assertEq(circuits.length, 1);
+        assertEq(integrations.length, 1);
 
-        assertEq(circuits[0].facet,        facet1);
-        assertEq(circuits[0].wires.length, 2);
+        assertEq(integrations[0].config.facet,        facet1);
+        assertEq(integrations[0].config.wires.length, 2);
 
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.divideBy2.selector);
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[1].delegateSelector, MockFacet1.multiplyBy2.selector);
+        assertEq(integrations[0].config.wires[0].callSelector,     IMockController.div.selector);
+        assertEq(integrations[0].config.wires[0].delegateSelector, MockFacet1.divideBy2.selector);
+        assertEq(integrations[0].config.wires[1].callSelector,     IMockController.mul.selector);
+        assertEq(integrations[0].config.wires[1].delegateSelector, MockFacet1.multiplyBy2.selector);
 
         dispatches = beacon.getDispatches(callSelectors);
 
@@ -154,21 +154,21 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 24);
 
-        circuits = beacon.circuits();
+        integrations = beacon.integrations();
 
-        assertEq(circuits.length, 2);
+        assertEq(integrations.length, 2);
 
-        assertEq(circuits[0].facet,        facet1);
-        assertEq(circuits[0].wires.length, 1);
+        assertEq(integrations[0].config.facet,        facet1);
+        assertEq(integrations[0].config.wires.length, 1);
 
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet1.multiplyBy2.selector);
+        assertEq(integrations[0].config.wires[0].callSelector,     IMockController.mul.selector);
+        assertEq(integrations[0].config.wires[0].delegateSelector, MockFacet1.multiplyBy2.selector);
 
-        assertEq(circuits[1].facet,        facet2);
-        assertEq(circuits[1].wires.length, 1);
+        assertEq(integrations[1].config.facet,        facet2);
+        assertEq(integrations[1].config.wires.length, 1);
 
-        assertEq(circuits[1].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[1].wires[0].delegateSelector, MockFacet2.divideBy4.selector);
+        assertEq(integrations[1].config.wires[0].callSelector,     IMockController.div.selector);
+        assertEq(integrations[1].config.wires[0].delegateSelector, MockFacet2.divideBy4.selector);
 
         dispatches = beacon.getDispatches(callSelectors);
 
@@ -201,18 +201,18 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         assertEq(controller.div(12), 3);
         assertEq(controller.mul(12), 48);
 
-        circuits = beacon.circuits();
+        integrations = beacon.integrations();
 
-        assertEq(circuits.length, 1);
+        assertEq(integrations.length, 1);
 
-        assertEq(circuits[0].facet,        facet2);
-        assertEq(circuits[0].wires.length, 2);
+        assertEq(integrations[0].config.facet,        facet2);
+        assertEq(integrations[0].config.wires.length, 2);
 
-        assertEq(circuits[0].wires[0].callSelector,     IMockController.div.selector);
-        assertEq(circuits[0].wires[0].delegateSelector, MockFacet2.divideBy4.selector);
+        assertEq(integrations[0].config.wires[0].callSelector,     IMockController.div.selector);
+        assertEq(integrations[0].config.wires[0].delegateSelector, MockFacet2.divideBy4.selector);
 
-        assertEq(circuits[0].wires[1].callSelector,     IMockController.mul.selector);
-        assertEq(circuits[0].wires[1].delegateSelector, MockFacet2.multiplyBy4.selector);
+        assertEq(integrations[0].config.wires[1].callSelector,     IMockController.mul.selector);
+        assertEq(integrations[0].config.wires[1].delegateSelector, MockFacet2.multiplyBy4.selector);
 
         dispatches = beacon.getDispatches(callSelectors);
 
@@ -243,9 +243,9 @@ contract ControllerIntegration_Tests is Controller_TestBase {
         vm.prank(beaconAdmin);
         beacon.removeWires(callSelectors);
 
-        circuits = beacon.circuits();
+        integrations = beacon.integrations();
 
-        assertEq(circuits.length, 0);
+        assertEq(integrations.length, 0);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -265,7 +265,7 @@ contract ControllerIntegration_Tests is Controller_TestBase {
 
         controller.mul(0);
 
-        assertEq(beacon.circuits().length, 0);
+        assertEq(beacon.integrations().length, 0);
 
         dispatches = beacon.getDispatches(callSelectors);
 
