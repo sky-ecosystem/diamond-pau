@@ -56,7 +56,7 @@ contract Beacon is IBeacon, ReentrancyGuard, AccessControlEnumerable {
         require(config.facet.code.length > 0, EmptyFacet());
         require(config.wires.length > 0,      EmptyArray());
 
-        if (!_integrationIds.add(id)){
+        if (!_integrationIds.add(id)) {
             // Remove the existing config and dispatches for this integration.
             _deleteConfigAndDispatches(id);
         }

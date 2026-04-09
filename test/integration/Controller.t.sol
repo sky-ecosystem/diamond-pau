@@ -91,7 +91,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
     function test_updateIntegrations_callSelectorAlreadyWired() external {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-        wires[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector, MockFacet1.div.selector);
+        wires[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector,   MockFacet1.div.selector);
         wires[1] = IEnumerableIntegrations.Wire(IMockController.multiply.selector, MockFacet1.mul.selector);
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -115,7 +115,82 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         integrationIds[0] = "INTEGRATION_2";
 
-        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.CallSelectorAlreadyWired.selector, IMockController.divide.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEnumerableIntegrations.CallSelectorAlreadyWired.selector,
+                IMockController.divide.selector
+            )
+        );
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+    }
+
+    function test_updateIntegrations_callSelectorAlreadyWired_crossIntegrationSelectorMigration() external {
+        address facet = address(new MockFacet1());
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        wires[0] = IEnumerableIntegrations.Wire(0x11111111, bytes4(0));
+        wires[1] = IEnumerableIntegrations.Wire(0x22222222, bytes4(0));
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("INTEGRATION_1", config);
+
+        wires[0] = IEnumerableIntegrations.Wire(0x33333333, bytes4(0));
+        wires[1] = IEnumerableIntegrations.Wire(0x44444444, bytes4(0));
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("INTEGRATION_2", IEnumerableIntegrations.Config(facet, wires));
+
+        bytes32[] memory integrationIds = new bytes32[](2);
+        integrationIds[0] = "INTEGRATION_1";
+        integrationIds[1] = "INTEGRATION_2";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
+        vm.startPrank(beaconAdmin);
+        beacon.removeIntegration("INTEGRATION_1");
+        beacon.removeIntegration("INTEGRATION_2");
+        vm.stopPrank();
+
+        wires[0] = IEnumerableIntegrations.Wire(0x11111111, bytes4(0));
+        wires[1] = IEnumerableIntegrations.Wire(0x44444444, bytes4(0));
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("INTEGRATION_1", IEnumerableIntegrations.Config(facet, wires));
+
+        wires[0] = IEnumerableIntegrations.Wire(0x22222222, bytes4(0));
+        wires[1] = IEnumerableIntegrations.Wire(0x33333333, bytes4(0));
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("INTEGRATION_2", IEnumerableIntegrations.Config(facet, wires));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEnumerableIntegrations.CallSelectorAlreadyWired.selector,
+                bytes4(0x44444444)
+            )
+        );
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
+        integrationIds[0] = "INTEGRATION_2";
+        integrationIds[1] = "INTEGRATION_1";
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEnumerableIntegrations.CallSelectorAlreadyWired.selector,
+                bytes4(0x22222222)
+            )
+        );
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
+        vm.prank(admin);
+        controller.removeIntegrations(integrationIds);
+
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
     }
@@ -148,10 +223,10 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         assertEq(beacon.integrations().length, 0);
 
-        assertEq(controller.divideBy2(12), 6);
+        assertEq(controller.divideBy2(12),   6);
         assertEq(controller.multiplyBy2(12), 24);
 
-        assertEq(controller.divideBy4(12), 3);
+        assertEq(controller.divideBy4(12),   3);
         assertEq(controller.multiplyBy4(12), 48);
 
         IEnumerableIntegrations.Integration[] memory integrations = controller.integrations();
@@ -159,7 +234,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations.length, 2);
 
         assertEq(integrations[0].config.facet,        twoFactorIntegration.config.facet);
-        assertEq(integrations[0].config.wires.length, 2);
+        assertEq(integrations[0].config.wires.length, twoFactorIntegration.config.wires.length);
 
         assertEq(integrations[0].config.wires[0].callSelector,     twoFactorIntegration.config.wires[0].callSelector);
         assertEq(integrations[0].config.wires[0].delegateSelector, twoFactorIntegration.config.wires[0].delegateSelector);
@@ -167,12 +242,60 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations[0].config.wires[1].delegateSelector, twoFactorIntegration.config.wires[1].delegateSelector);
 
         assertEq(integrations[1].config.facet,        fourFactorIntegration.config.facet);
-        assertEq(integrations[1].config.wires.length, 2);
+        assertEq(integrations[1].config.wires.length, fourFactorIntegration.config.wires.length);
 
         assertEq(integrations[1].config.wires[0].callSelector,     fourFactorIntegration.config.wires[0].callSelector);
         assertEq(integrations[1].config.wires[0].delegateSelector, fourFactorIntegration.config.wires[0].delegateSelector);
         assertEq(integrations[1].config.wires[1].callSelector,     fourFactorIntegration.config.wires[1].callSelector);
         assertEq(integrations[1].config.wires[1].delegateSelector, fourFactorIntegration.config.wires[1].delegateSelector);
+    }
+
+    function test_updateIntegrations_replaceExistingIntegrations() external {
+        IEnumerableIntegrations.Integration memory originalIntegration = _registerTwoFactorIntegration();
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = originalIntegration.id;
+
+        vm.expectEmit(address(controller));
+        emit IEnumerableIntegrations.IntegrationSet(originalIntegration.id, originalIntegration.config);
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
+        IEnumerableIntegrations.Wire[] memory newWires = new IEnumerableIntegrations.Wire[](2);
+        newWires[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector,   MockFacet1.div.selector);
+        newWires[1] = IEnumerableIntegrations.Wire(IMockController.multiply.selector, MockFacet1.mul.selector);
+
+        address newFacet = address(new MockFacet1());
+
+        IEnumerableIntegrations.Config memory newConfig = IEnumerableIntegrations.Config({ facet: newFacet, wires: newWires });
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("TWO_FACTOR_INTEGRATION", newConfig);
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorNotWired.selector, IMockController.divideBy2.selector));
+        controller.divideBy2(12);
+
+        vm.expectRevert(abi.encodeWithSelector(IController.CallSelectorNotWired.selector, IMockController.multiplyBy2.selector));
+        controller.multiplyBy2(12);
+
+        assertEq(controller.divide(12),   6);
+        assertEq(controller.multiply(12), 24);
+
+        IEnumerableIntegrations.Integration[] memory integrations = controller.integrations();
+
+        assertEq(integrations.length, 1);
+
+        assertEq(integrations[0].config.facet,        newFacet);
+        assertEq(integrations[0].config.wires.length, newWires.length);
+
+        assertEq(integrations[0].config.wires[0].callSelector,     newWires[0].callSelector);
+        assertEq(integrations[0].config.wires[0].delegateSelector, newWires[0].delegateSelector);
+        assertEq(integrations[0].config.wires[1].callSelector,     newWires[1].callSelector);
+        assertEq(integrations[0].config.wires[1].delegateSelector, newWires[1].delegateSelector);
     }
 
     /**********************************************************************************************/
@@ -207,6 +330,21 @@ contract Controller_IntegrationTests is Controller_TestBase {
         controller.removeIntegrations(integrationIds);
     }
 
+    function test_removeIntegrations_integrationNotFound_duplicateIds() external {
+        IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration(twoFactorIntegration.id, twoFactorIntegration.config);
+
+        bytes32[] memory integrationIds = new bytes32[](2);
+        integrationIds[0] = twoFactorIntegration.id;
+        integrationIds[1] = twoFactorIntegration.id;
+
+        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.IntegrationNotFound.selector, integrationIds[0]));
+        vm.prank(admin);
+        controller.removeIntegrations(integrationIds);
+    }
+
     function test_removeIntegrations() external {
         IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
         IEnumerableIntegrations.Integration memory fourFactorIntegration = _registerFourFactorIntegration();
@@ -218,10 +356,10 @@ contract Controller_IntegrationTests is Controller_TestBase {
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
-        assertEq(controller.divideBy2(12), 6);
+        assertEq(controller.divideBy2(12),   6);
         assertEq(controller.multiplyBy2(12), 24);
 
-        assertEq(controller.divideBy4(12), 3);
+        assertEq(controller.divideBy4(12),   3);
         assertEq(controller.multiplyBy4(12), 48);
 
         assertEq(beacon.integrations().length,     2);
@@ -275,7 +413,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations[0].id, twoFactorIntegration.id);
 
         assertEq(integrations[0].config.facet,        twoFactorIntegration.config.facet);
-        assertEq(integrations[0].config.wires.length, 2);
+        assertEq(integrations[0].config.wires.length, twoFactorIntegration.config.wires.length);
 
         assertEq(integrations[0].config.wires[0].callSelector,     twoFactorIntegration.config.wires[0].callSelector);
         assertEq(integrations[0].config.wires[0].delegateSelector, twoFactorIntegration.config.wires[0].delegateSelector);
@@ -285,7 +423,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations[1].id, fourFactorIntegration.id);
 
         assertEq(integrations[1].config.facet,        fourFactorIntegration.config.facet);
-        assertEq(integrations[1].config.wires.length, 2);
+        assertEq(integrations[1].config.wires.length, fourFactorIntegration.config.wires.length);
 
         assertEq(integrations[1].config.wires[0].callSelector,     fourFactorIntegration.config.wires[0].callSelector);
         assertEq(integrations[1].config.wires[0].delegateSelector, fourFactorIntegration.config.wires[0].delegateSelector);
@@ -298,40 +436,40 @@ contract Controller_IntegrationTests is Controller_TestBase {
     /**********************************************************************************************/
 
     function test_getConfig() external {
-        IEnumerableIntegrations.Config memory config = controller.getConfig("TWO_FACTOR_INTEGRATION");
-
-        assertEq(config.facet,        address(0));
-        assertEq(config.wires.length, 0);
-
-        config = controller.getConfig("FOUR_FACTOR_INTEGRATION");
-
-        assertEq(config.facet,        address(0));
-        assertEq(config.wires.length, 0);
-
         IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
         IEnumerableIntegrations.Integration memory fourFactorIntegration = _registerFourFactorIntegration();
 
+        IEnumerableIntegrations.Config memory config = controller.getConfig(twoFactorIntegration.id);
+
+        assertEq(config.facet,        address(0));
+        assertEq(config.wires.length, 0);
+
+        config = controller.getConfig(fourFactorIntegration.id);
+
+        assertEq(config.facet,        address(0));
+        assertEq(config.wires.length, 0);
+
         bytes32[] memory integrationIds = new bytes32[](2);
-        integrationIds[0] = "TWO_FACTOR_INTEGRATION";
-        integrationIds[1] = "FOUR_FACTOR_INTEGRATION";
+        integrationIds[0] = twoFactorIntegration.id;
+        integrationIds[1] = fourFactorIntegration.id;
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
-        config = controller.getConfig("TWO_FACTOR_INTEGRATION");
+        config = controller.getConfig(twoFactorIntegration.id);
 
         assertEq(config.facet,        twoFactorIntegration.config.facet);
-        assertEq(config.wires.length, 2);
+        assertEq(config.wires.length, twoFactorIntegration.config.wires.length);
 
         assertEq(config.wires[0].callSelector,     twoFactorIntegration.config.wires[0].callSelector);
         assertEq(config.wires[0].delegateSelector, twoFactorIntegration.config.wires[0].delegateSelector);
         assertEq(config.wires[1].callSelector,     twoFactorIntegration.config.wires[1].callSelector);
         assertEq(config.wires[1].delegateSelector, twoFactorIntegration.config.wires[1].delegateSelector);
 
-        config = controller.getConfig("FOUR_FACTOR_INTEGRATION");
+        config = controller.getConfig(fourFactorIntegration.id);
 
         assertEq(config.facet,        fourFactorIntegration.config.facet);
-        assertEq(config.wires.length, 2);
+        assertEq(config.wires.length, fourFactorIntegration.config.wires.length);
 
         assertEq(config.wires[0].callSelector,     fourFactorIntegration.config.wires[0].callSelector);
         assertEq(config.wires[0].delegateSelector, fourFactorIntegration.config.wires[0].delegateSelector);
@@ -344,31 +482,31 @@ contract Controller_IntegrationTests is Controller_TestBase {
     /**********************************************************************************************/
 
     function test_getConfigs() external {
+        IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
+        IEnumerableIntegrations.Integration memory fourFactorIntegration = _registerFourFactorIntegration();
+
         bytes32[] memory integrationIds = new bytes32[](2);
-        integrationIds[0] = "TWO_FACTOR_INTEGRATION";
-        integrationIds[1] = "FOUR_FACTOR_INTEGRATION";
+        integrationIds[0] = twoFactorIntegration.id;
+        integrationIds[1] = fourFactorIntegration.id;
 
         IEnumerableIntegrations.Config[] memory configs = controller.getConfigs(integrationIds);
 
-        assertEq(configs.length, 2);
+        assertEq(configs.length, integrationIds.length);
 
         assertEq(configs[0].facet,        address(0));
         assertEq(configs[0].wires.length, 0);
         assertEq(configs[1].facet,        address(0));
         assertEq(configs[1].wires.length, 0);
 
-        IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
-        IEnumerableIntegrations.Integration memory fourFactorIntegration = _registerFourFactorIntegration();
-
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
         configs = controller.getConfigs(integrationIds);
 
-        assertEq(configs.length, 2);
+        assertEq(configs.length, integrationIds.length);
 
         assertEq(configs[0].facet,        twoFactorIntegration.config.facet);
-        assertEq(configs[0].wires.length, 2);
+        assertEq(configs[0].wires.length, twoFactorIntegration.config.wires.length);
 
         assertEq(configs[0].wires[0].callSelector,     twoFactorIntegration.config.wires[0].callSelector);
         assertEq(configs[0].wires[0].delegateSelector, twoFactorIntegration.config.wires[0].delegateSelector);
@@ -376,7 +514,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(configs[0].wires[1].delegateSelector, twoFactorIntegration.config.wires[1].delegateSelector);
 
         assertEq(configs[1].facet,        fourFactorIntegration.config.facet);
-        assertEq(configs[1].wires.length, 2);
+        assertEq(configs[1].wires.length, fourFactorIntegration.config.wires.length);
 
         assertEq(configs[1].wires[0].callSelector,     fourFactorIntegration.config.wires[0].callSelector);
         assertEq(configs[1].wires[0].delegateSelector, fourFactorIntegration.config.wires[0].delegateSelector);
@@ -389,6 +527,8 @@ contract Controller_IntegrationTests is Controller_TestBase {
     /**********************************************************************************************/
 
     function test_getDispatch() external {
+        IEnumerableIntegrations.Integration memory integration = _registerTwoFactorIntegration();
+
         IEnumerableIntegrations.Dispatch memory dispatch = controller.getDispatch(IMockController.divideBy2.selector);
 
         assertEq(dispatch.facet,            address(0));
@@ -398,8 +538,6 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         assertEq(dispatch.facet,            address(0));
         assertEq(dispatch.delegateSelector, bytes4(0));
-
-        IEnumerableIntegrations.Integration memory integration = _registerTwoFactorIntegration();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = integration.id;
@@ -423,21 +561,21 @@ contract Controller_IntegrationTests is Controller_TestBase {
     /**********************************************************************************************/
 
     function test_getDispatches() external {
+        IEnumerableIntegrations.Integration memory integration = _registerTwoFactorIntegration();
+
         bytes4[] memory callSelectors = new bytes4[](2);
         callSelectors[0] = IMockController.divideBy2.selector;
         callSelectors[1] = IMockController.multiplyBy2.selector;
 
         IEnumerableIntegrations.Dispatch[] memory dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            address(0));
         assertEq(dispatches[0].delegateSelector, bytes4(0));
 
         assertEq(dispatches[1].facet,            address(0));
         assertEq(dispatches[1].delegateSelector, bytes4(0));
-
-        IEnumerableIntegrations.Integration memory integration = _registerTwoFactorIntegration();
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = integration.id;
@@ -447,7 +585,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            integration.config.facet);
         assertEq(dispatches[0].delegateSelector, MockFacet1.div.selector);
@@ -486,11 +624,12 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         controller.multiply(0);
 
-        assertEq(beacon.integrations().length, 0);
+        assertEq(beacon.integrations().length,     0);
+        assertEq(controller.integrations().length, 0);
 
-        IEnumerableIntegrations.Dispatch[] memory dispatches = beacon.getDispatches(callSelectors);
+        IEnumerableIntegrations.Dispatch[] memory dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            address(0));
         assertEq(dispatches[0].delegateSelector, bytes4(0));
@@ -500,7 +639,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         // IEnumerableIntegrations.Wire divide to facet1.div and multiply to facet1.mul
 
         IEnumerableIntegrations.Wire[] memory allWiresForFacet1 = new IEnumerableIntegrations.Wire[](2);
-        allWiresForFacet1[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector, MockFacet1.div.selector);
+        allWiresForFacet1[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector,   MockFacet1.div.selector);
         allWiresForFacet1[1] = IEnumerableIntegrations.Wire(IMockController.multiply.selector, MockFacet1.mul.selector);
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -511,6 +650,9 @@ contract Controller_IntegrationTests is Controller_TestBase {
         vm.prank(beaconAdmin);
         beacon.setIntegration("INTEGRATION_1", config);
 
+        assertEq(beacon.integrations().length,     1);
+        assertEq(controller.integrations().length, 0); // Unchanged as controller not yet updated.
+
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "INTEGRATION_1";
 
@@ -520,21 +662,21 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(controller.divide(12), 6);
         assertEq(controller.multiply(12), 24);
 
-        IEnumerableIntegrations.Integration[] memory integrations = beacon.integrations();
+        IEnumerableIntegrations.Integration[] memory integrations = controller.integrations();
 
-        assertEq(integrations.length, 1);
+        assertEq(integrations.length, 1); // Changed as controller updated.
 
         assertEq(integrations[0].config.facet,        facet1);
-        assertEq(integrations[0].config.wires.length, 2);
+        assertEq(integrations[0].config.wires.length, allWiresForFacet1.length);
 
         assertEq(integrations[0].config.wires[0].callSelector,     IMockController.divide.selector);
         assertEq(integrations[0].config.wires[0].delegateSelector, MockFacet1.div.selector);
         assertEq(integrations[0].config.wires[1].callSelector,     IMockController.multiply.selector);
         assertEq(integrations[0].config.wires[1].delegateSelector, MockFacet1.mul.selector);
 
-        dispatches = beacon.getDispatches(callSelectors);
+        dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            facet1);
         assertEq(dispatches[0].delegateSelector, MockFacet1.div.selector);
@@ -563,6 +705,9 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         vm.stopPrank();
 
+        assertEq(beacon.integrations().length,     2);
+        assertEq(controller.integrations().length, 1); // Unchanged as controller not yet updated.
+
         integrationIds = new bytes32[](2);
         integrationIds[0] = "INTEGRATION_1";
         integrationIds[1] = "INTEGRATION_2";
@@ -573,9 +718,9 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(controller.divide(12), 3);
         assertEq(controller.multiply(12), 24);
 
-        integrations = beacon.integrations();
+        integrations = controller.integrations();
 
-        assertEq(integrations.length, 2);
+        assertEq(integrations.length, 2); // Changed as controller updated.
 
         assertEq(integrations[0].config.facet,        facet1);
         assertEq(integrations[0].config.wires.length, 1);
@@ -589,9 +734,9 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations[1].config.wires[0].callSelector,     IMockController.divide.selector);
         assertEq(integrations[1].config.wires[0].delegateSelector, MockFacet2.div.selector);
 
-        dispatches = beacon.getDispatches(callSelectors);
+        dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            facet2);
         assertEq(dispatches[0].delegateSelector, MockFacet2.div.selector);
@@ -601,7 +746,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
         // Remove facet1 integration and route both selectors through facet2
 
         IEnumerableIntegrations.Wire[] memory allWiresForFacet2 = new IEnumerableIntegrations.Wire[](2);
-        allWiresForFacet2[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector, MockFacet2.div.selector);
+        allWiresForFacet2[0] = IEnumerableIntegrations.Wire(IMockController.divide.selector,   MockFacet2.div.selector);
         allWiresForFacet2[1] = IEnumerableIntegrations.Wire(IMockController.multiply.selector, MockFacet2.mul.selector);
 
         vm.startPrank(beaconAdmin);
@@ -615,28 +760,41 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         vm.stopPrank();
 
-        vm.startPrank(admin);
+        assertEq(beacon.integrations().length,     1);
+        assertEq(controller.integrations().length, 2); // Unchanged as controller not yet updated.
+
+        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.IntegrationNotFound.selector, "INTEGRATION_1"));
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
 
         integrationIds = new bytes32[](1);
+        integrationIds[0] = "INTEGRATION_2";
+
+        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.CallSelectorAlreadyWired.selector, IMockController.divide.selector));
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+
         integrationIds[0] = "INTEGRATION_1";
 
+        vm.prank(admin);
         controller.removeIntegrations(integrationIds);
+
+        assertEq(controller.integrations().length, 1); // Changed as controller updated.
 
         integrationIds[0] = "INTEGRATION_2";
 
+        vm.prank(admin);
         controller.updateIntegrations(integrationIds);
-
-        vm.stopPrank();
 
         assertEq(controller.divide(12), 3);
         assertEq(controller.multiply(12), 48);
 
-        integrations = beacon.integrations();
+        integrations = controller.integrations();
 
-        assertEq(integrations.length, 1);
+        assertEq(integrations.length, 1); // Unchnaged as controller update did not add any new integrations.
 
         assertEq(integrations[0].config.facet,        facet2);
-        assertEq(integrations[0].config.wires.length, 2);
+        assertEq(integrations[0].config.wires.length, allWiresForFacet2.length);
 
         assertEq(integrations[0].config.wires[0].callSelector,     IMockController.divide.selector);
         assertEq(integrations[0].config.wires[0].delegateSelector, MockFacet2.div.selector);
@@ -644,9 +802,9 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(integrations[0].config.wires[1].callSelector,     IMockController.multiply.selector);
         assertEq(integrations[0].config.wires[1].delegateSelector, MockFacet2.mul.selector);
 
-        dispatches = beacon.getDispatches(callSelectors);
+        dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            facet2);
         assertEq(dispatches[0].delegateSelector, MockFacet2.div.selector);
@@ -656,15 +814,14 @@ contract Controller_IntegrationTests is Controller_TestBase {
         vm.prank(beaconAdmin);
         beacon.removeIntegration("INTEGRATION_2");
 
+        assertEq(beacon.integrations().length,     0);
+        assertEq(controller.integrations().length, 1); // Unchanged as controller not yet updated.
+
         integrationIds = new bytes32[](1);
         integrationIds[0] = "INTEGRATION_2";
 
         vm.prank(admin);
         controller.removeIntegrations(integrationIds);
-
-        integrations = beacon.integrations();
-
-        assertEq(integrations.length, 0);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -684,11 +841,11 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
         controller.multiply(0);
 
-        assertEq(beacon.integrations().length, 0);
+        assertEq(controller.integrations().length, 0); // Changed as controller updated.
 
-        dispatches = beacon.getDispatches(callSelectors);
+        dispatches = controller.getDispatches(callSelectors);
 
-        assertEq(dispatches.length, 2);
+        assertEq(dispatches.length, callSelectors.length);
 
         assertEq(dispatches[0].facet,            address(0));
         assertEq(dispatches[0].delegateSelector, bytes4(0));
@@ -702,7 +859,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
     function _registerTwoFactorIntegration() internal returns (IEnumerableIntegrations.Integration memory integration) {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-        wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy2.selector, MockFacet1.div.selector);
+        wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy2.selector,   MockFacet1.div.selector);
         wires[1] = IEnumerableIntegrations.Wire(IMockController.multiplyBy2.selector, MockFacet1.mul.selector);
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({ facet: address(new MockFacet1()), wires: wires });
@@ -710,20 +867,20 @@ contract Controller_IntegrationTests is Controller_TestBase {
         vm.prank(beaconAdmin);
         beacon.setIntegration("TWO_FACTOR_INTEGRATION", config);
 
-        integration = IEnumerableIntegrations.Integration({ id: "TWO_FACTOR_INTEGRATION", config: config });
+        return IEnumerableIntegrations.Integration({ id: "TWO_FACTOR_INTEGRATION", config: config });
     }
 
     function _registerFourFactorIntegration() internal returns (IEnumerableIntegrations.Integration memory integration) {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-        wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy4.selector, MockFacet1.div.selector);
-        wires[1] = IEnumerableIntegrations.Wire(IMockController.multiplyBy4.selector, MockFacet1.mul.selector);
+        wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy4.selector,   MockFacet2.div.selector);
+        wires[1] = IEnumerableIntegrations.Wire(IMockController.multiplyBy4.selector, MockFacet2.mul.selector);
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({ facet: address(new MockFacet2()), wires: wires });
 
         vm.prank(beaconAdmin);
         beacon.setIntegration("FOUR_FACTOR_INTEGRATION", config);
 
-        integration = IEnumerableIntegrations.Integration({ id: "FOUR_FACTOR_INTEGRATION", config: config });
+        return IEnumerableIntegrations.Integration({ id: "FOUR_FACTOR_INTEGRATION", config: config });
     }
 
 }

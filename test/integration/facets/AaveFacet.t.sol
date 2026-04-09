@@ -4,14 +4,13 @@ pragma solidity ^0.8.34;
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { IAaveFacet }              from "../../../src/facets/aave/IAaveFacet.sol";
-import { IController }             from "../../../src/interfaces/IController.sol";
 import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
 
 import { AaveFacet } from "../../../src/facets/aave/AaveFacet.sol";
 
 import { Controller_TestBase } from "../TestBase.t.sol";
 
-interface IControllerLike is IController {
+interface IControllerLike {
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 

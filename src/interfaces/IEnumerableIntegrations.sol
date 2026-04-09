@@ -42,6 +42,9 @@ interface IEnumerableIntegrations {
     /// @notice Thrown when a call selector is already wired to a facet.
     error CallSelectorAlreadyWired(bytes4 callSelector);
 
+    /// @notice Thrown when the facet has no code.
+    error EmptyFacet();
+
     /// @notice Thrown when the integration is not found.
     error IntegrationNotFound(bytes32 id);
 

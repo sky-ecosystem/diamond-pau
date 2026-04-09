@@ -88,14 +88,16 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         for (uint256 i = 0; i < ids.length; ++i) {
             bytes32 id = ids[i];
 
-            if (!$.integrationIds.add(id)){
+            Config memory config = configs[i];
+
+            require(config.facet != address(0),   IntegrationNotFound(id));
+            require(config.facet.code.length > 0, EmptyFacet());
+            require(config.wires.length > 0,      EmptyArray());
+
+            if (!$.integrationIds.add(id)) {
                 // Remove the existing config and dispatches for this integration.
                 _deleteConfigAndDispatches(id);
             }
-
-            Config memory config = configs[i];
-
-            require(config.facet != address(0), IntegrationNotFound(id));
 
             _setConfigAndDispatches(id, config);
 

@@ -326,7 +326,7 @@ abstract contract ForkTestBase is DssTest {
         bytes32[] memory integrationIds = new bytes32[](24);
         integrationIds[0] = "AAVE_FACET";
         integrationIds[1] = "CCTP_FACET";
-        integrationIds[2] = "CENTIFUGE_FACET";
+        integrationIds[2] = "CENTRIFUGE_FACET";
         integrationIds[3] = "CURVE_FACET";
         integrationIds[4] = "DAIUSDS_FACET";
         integrationIds[5] = "ERC4626_FACET";
@@ -488,7 +488,7 @@ abstract contract ForkTestBase is DssTest {
             wires : wires
         });
 
-        beacon.setIntegration("CENTIFUGE_FACET", config);
+        beacon.setIntegration("CENTRIFUGE_FACET", config);
     }
 
     function _wireCurveFacet() internal {

@@ -36,12 +36,4 @@ contract PAUFactory_Tests is Test {
         assertEq(factory.beacon(), beacon);
     }
 
-    /**********************************************************************************************/
-    /*** supportsInterface Tests                                                                ***/
-    /**********************************************************************************************/
-
-    function test_constructor() external {
-        assertEq(factory.beacon(), beacon);
-    }
-
 }

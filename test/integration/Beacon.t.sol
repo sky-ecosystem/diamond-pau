@@ -69,7 +69,28 @@ contract Beacon_IntegrationTests is Test {
         beacon.setIntegration(bytes32(0), config);
     }
 
-    function test_setIntegration() external {
+    /**********************************************************************************************/
+    /*** removeIntegration Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_removeIntegration_notAdmin() external {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                unauthorized,
+                DEFAULT_ADMIN_ROLE
+            )
+        );
+
+        vm.prank(unauthorized);
+        beacon.removeIntegration(bytes32(0));
+    }
+
+    /**********************************************************************************************/
+    /*** Story Tests                                                                            ***/
+    /**********************************************************************************************/
+
+    function test_setIntegration_removeIntegration() external {
         bytes32 integrationId = "SOME_INTEGRATION";
 
         address facet = address(new MockFacet1());
@@ -110,23 +131,14 @@ contract Beacon_IntegrationTests is Test {
 
         assertEq(returnedConfig.wires[2].callSelector,     wires[2].callSelector);
         assertEq(returnedConfig.wires[2].delegateSelector, wires[2].delegateSelector);
-    }
 
-    /**********************************************************************************************/
-    /*** removeIntegration Tests                                                                ***/
-    /**********************************************************************************************/
+        vm.prank(admin);
+        beacon.removeIntegration(integrationId);
 
-    function test_removeIntegration_notAdmin() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                unauthorized,
-                DEFAULT_ADMIN_ROLE
-            )
-        );
+        returnedConfig = beacon.getConfig(integrationId);
 
-        vm.prank(unauthorized);
-        beacon.removeIntegration(bytes32(0));
+        assertEq(returnedConfig.facet,        address(0));
+        assertEq(returnedConfig.wires.length, 0);
     }
 
 }

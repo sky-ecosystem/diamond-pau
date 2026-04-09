@@ -50,7 +50,7 @@ contract ForkTestBase is Test {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
 
-    address pocket  = makeAddr("pocket");
+    address pocket   = makeAddr("pocket");
     address skyAdmin = makeAddr("skyAdmin");
 
     /**********************************************************************************************/
@@ -141,7 +141,7 @@ contract ForkTestBase is Test {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
 
         bytes32[] memory integrationIds = new bytes32[](2);
-        integrationIds[0] = "CENTIFUGE_FACET";
+        integrationIds[0] = "CENTRIFUGE_FACET";
         integrationIds[1] = "ERC7540_FACET";
 
         foreignController.updateIntegrations(integrationIds);
@@ -212,7 +212,7 @@ contract ForkTestBase is Test {
             wires : wires
         });
 
-        beacon.setIntegration("CENTIFUGE_FACET", config);
+        beacon.setIntegration("CENTRIFUGE_FACET", config);
     }
 
     function _wireERC7540Facet() internal {

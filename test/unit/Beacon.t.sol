@@ -3,7 +3,9 @@ pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
 
-import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControl }           from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControlEnumerable } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
+import { IERC165 }                  from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 
 import { EnumerableSet }   from "../../lib/openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
@@ -13,6 +15,8 @@ import { IController }             from "../../src/interfaces/IController.sol";
 import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
 
 import { Beacon } from "../../src/Beacon.sol";
+
+import { UnitTestBase } from "./UnitTestBase.t.sol";
 
 contract MockFacet {
 
@@ -78,16 +82,7 @@ contract BeaconHarness is Beacon {
 
 }
 
-contract Beacon_Tests is Test {
-
-    bytes32 internal constant _REENTRANCY_GUARD_SLOT        = bytes32(uint256(0));
-    bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
-    bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
-
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
-
-    address internal admin        = makeAddr("admin");
-    address internal unauthorized = makeAddr("unauthorized");
+contract Beacon_Tests is UnitTestBase {
 
     BeaconHarness internal beacon;
 
@@ -160,7 +155,7 @@ contract Beacon_Tests is Test {
             wires : new IEnumerableIntegrations.Wire[](0)
         });
 
-        vm.expectRevert(IBeacon.EmptyFacet.selector);
+        vm.expectRevert(IEnumerableIntegrations.EmptyFacet.selector);
         vm.prank(admin);
         beacon.setIntegration("SOME_INTEGRATION", config);
     }
@@ -193,7 +188,7 @@ contract Beacon_Tests is Test {
         address facet = address(new MockFacet());
 
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-        wires[0] = IEnumerableIntegrations.Wire(0x12456789, bytes4(0));
+        wires[0] = IEnumerableIntegrations.Wire(0x12345678, bytes4(0));
 
         for (uint256 i = 0; i < hardcodedCallSelectors.length; ++i) {
             wires[1] = IEnumerableIntegrations.Wire(hardcodedCallSelectors[i], bytes4(0));
@@ -285,11 +280,15 @@ contract Beacon_Tests is Test {
 
         IEnumerableIntegrations.Config memory newConfig = IEnumerableIntegrations.Config(facet, wires);
 
+        vm.record();
+
         vm.expectEmit(address(beacon));
         emit IEnumerableIntegrations.IntegrationSet(integrationId, newConfig);
 
         vm.prank(admin);
         beacon.setIntegration(integrationId, newConfig);
+
+        _assertReentrancyGuardWrittenToTwice(address(beacon));
 
         assertEq(beacon.__getHasIntegrationId(integrationId), true);
 
@@ -396,11 +395,15 @@ contract Beacon_Tests is Test {
         assertEq(beacon.__getDispatch(wires[1].callSelector).facet,            facet);
         assertEq(beacon.__getDispatch(wires[1].callSelector).delegateSelector, wires[1].delegateSelector);
 
+        vm.record();
+
         vm.expectEmit(address(beacon));
         emit IEnumerableIntegrations.IntegrationRemoved(integrationId);
 
         vm.prank(admin);
         beacon.removeIntegration(integrationId);
+
+        _assertReentrancyGuardWrittenToTwice(address(beacon));
 
         assertEq(beacon.__getHasIntegrationId(integrationId), false);
 
@@ -469,6 +472,11 @@ contract Beacon_Tests is Test {
     function test_getConfig() external {
         bytes32 integrationId = "SOME_INTEGRATION";
 
+        IEnumerableIntegrations.Config memory config = beacon.getConfig(integrationId);
+
+        assertEq(config.facet,        address(0));
+        assertEq(config.wires.length, 0);
+
         address facet = makeAddr("facet");
 
         bytes4[] memory callSelectors = new bytes4[](3);
@@ -488,7 +496,7 @@ contract Beacon_Tests is Test {
 
         beacon.__setConfig(integrationId, IEnumerableIntegrations.Config(facet, wires));
 
-        IEnumerableIntegrations.Config memory config = beacon.getConfig(integrationId);
+        config = beacon.getConfig(integrationId);
 
         assertEq(config.facet,        facet);
         assertEq(config.wires.length, wires.length);
@@ -508,8 +516,18 @@ contract Beacon_Tests is Test {
     /**********************************************************************************************/
 
     function test_getConfigs() external {
-        bytes32 integrationId1 = "INTEGRATION_1";
-        bytes32 integrationId2 = "INTEGRATION_2";
+        bytes32[] memory integrationIds = new bytes32[](2);
+        integrationIds[0] = "INTEGRATION_1";
+        integrationIds[1] = "INTEGRATION_2";
+
+        IEnumerableIntegrations.Config[] memory configs = beacon.getConfigs(integrationIds);
+
+        assertEq(configs.length, integrationIds.length);
+
+        assertEq(configs[0].facet,        address(0));
+        assertEq(configs[0].wires.length, 0);
+        assertEq(configs[1].facet,        address(0));
+        assertEq(configs[1].wires.length, 0);
 
         address facet1 = makeAddr("facet1");
         address facet2 = makeAddr("facet2");
@@ -521,16 +539,12 @@ contract Beacon_Tests is Test {
         wires2[0] = IEnumerableIntegrations.Wire(0x89ABCDEF, 0xFECDAB98);
         wires2[1] = IEnumerableIntegrations.Wire(0x11111111, 0x33333333);
 
-        beacon.__setConfig(integrationId1, IEnumerableIntegrations.Config(facet1, wires1));
-        beacon.__setConfig(integrationId2, IEnumerableIntegrations.Config(facet2, wires2));
+        beacon.__setConfig(integrationIds[0], IEnumerableIntegrations.Config(facet1, wires1));
+        beacon.__setConfig(integrationIds[1], IEnumerableIntegrations.Config(facet2, wires2));
 
-        bytes32[] memory integrationIds = new bytes32[](2);
-        integrationIds[0] = integrationId1;
-        integrationIds[1] = integrationId2;
+        configs = beacon.getConfigs(integrationIds);
 
-        IEnumerableIntegrations.Config[] memory configs = beacon.getConfigs(integrationIds);
-
-        assertEq(configs.length, 2);
+        assertEq(configs.length, integrationIds.length);
 
         assertEq(configs[0].facet,        facet1);
         assertEq(configs[0].wires.length, wires1.length);
@@ -598,6 +612,19 @@ contract Beacon_Tests is Test {
         assertEq(dispatches[1].delegateSelector, delegateSelectors[1]);
         assertEq(dispatches[2].facet,            facets[1]);
         assertEq(dispatches[2].delegateSelector, delegateSelectors[2]);
+    }
+
+    /**********************************************************************************************/
+    /*** supportsInterface Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_supportsInterface() external view {
+        assertEq(beacon.supportsInterface(type(IBeacon).interfaceId),                  true);
+        assertEq(beacon.supportsInterface(type(IAccessControlEnumerable).interfaceId), true);
+        assertEq(beacon.supportsInterface(type(IAccessControl).interfaceId),           true);
+        assertEq(beacon.supportsInterface(type(IERC165).interfaceId),                  true);
+        assertEq(beacon.supportsInterface(0x00000000),                                 false);
+        assertEq(beacon.supportsInterface(0xffffffff),                                 false);
     }
 
 }

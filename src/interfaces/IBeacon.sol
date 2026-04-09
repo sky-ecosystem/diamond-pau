@@ -19,13 +19,10 @@ interface IBeacon is IAccessControlEnumerable, IEnumerableIntegrations {
     /// @notice Thrown when an argument array is empty.
     error EmptyArray();
 
-    /// @notice Thrown when the facet has no code.
-    error EmptyFacet();
-
     /// @notice Thrown when the admin is the zero address.
     error ZeroAdmin();
 
-    /// @notice Thrown when the dispatch is invalid.
+    /// @notice Thrown when the facet is the zero address.
     error ZeroFacet();
 
     /**********************************************************************************************/

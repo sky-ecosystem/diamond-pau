@@ -37,10 +37,10 @@ abstract contract Controller_TestBase is Test {
     /**********************************************************************************************/
 
     function _deploy() internal returns (address controller) {
-        beacon = new Beacon(beaconAdmin);
+        beacon  = new Beacon(beaconAdmin);
         factory = new PAUFactory(address(beacon));
 
-        controller = address(factory.deploy(admin));
+        controller = factory.deploy(admin);
 
         IAccessControls accessControls = IAccessControls(IController(payable(controller)).accessControls());
 

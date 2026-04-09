@@ -49,10 +49,10 @@ abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
 
         vm.prank(beaconAdmin);
-        beacon.setIntegration("CENTIFUGE_FACET", config);
+        beacon.setIntegration("CENTRIFUGE_FACET", config);
 
         bytes32[] memory integrationIds = new bytes32[](1);
-        integrationIds[0] = "CENTIFUGE_FACET";
+        integrationIds[0] = "CENTRIFUGE_FACET";
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);

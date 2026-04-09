@@ -8,6 +8,8 @@ import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegra
 
 import { Controller } from "../../src/Controller.sol";
 
+import { UnitTestBase } from "./UnitTestBase.t.sol";
+
 contract ControllerHarness is Controller {
 
     constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
@@ -50,7 +52,7 @@ interface IMockFacet {
 
 interface IMockController {
 
-    function facetFoo() external;
+    function facetFoo() external payable;
 
     function facetBar(
         address           arg0,
@@ -74,17 +76,12 @@ interface IMockController {
 
 }
 
-contract Controller_Tests is Test {
-
-    bytes32 internal constant _REENTRANCY_GUARD_SLOT    = bytes32(uint256(0));
-    bytes32 internal constant _REENTRANCY_GUARD_ENTERED = bytes32(uint256(2));
+contract Controller_Tests is UnitTestBase {
 
     address internal accessControls = makeAddr("accessControls");
-    address internal admin          = makeAddr("admin");
     address internal beacon         = makeAddr("beacon");
     address internal proxy          = makeAddr("proxy");
     address internal rateLimits     = makeAddr("rateLimits");
-    address internal unauthorized   = makeAddr("unauthorized");
 
     ControllerHarness internal controller;
 
@@ -269,6 +266,48 @@ contract Controller_Tests is Test {
         }
 
         assertEq(resultG, arg0);
+    }
+
+    function test_fallback_zeroSelectors() external {
+        controller.__setDispatch(
+            bytes4(0x00000000),
+            IEnumerableIntegrations.Dispatch(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, bytes4(0x00000000))
+        );
+
+        _expectAndMockCall(
+            0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD,
+            abi.encodeWithSelector(bytes4(0x00000000)),
+            abi.encode(uint256(42))
+        );
+
+        ( bool success, bytes memory returnData ) = address(controller).call(abi.encodeWithSelector(bytes4(0x00000000)));
+
+        assertEq(success,                           true);
+        assertEq(abi.decode(returnData, (uint256)), 42);
+    }
+
+    function test_fallback_withValue() external {
+        address account = makeAddr("account");
+
+        deal(account, 1 ether);
+
+        controller.__setDispatch(
+            IMockController.facetFoo.selector,
+            IEnumerableIntegrations.Dispatch(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, IMockFacet.foo.selector)
+        );
+
+        assertEq(account.balance,             1 ether);
+        assertEq(address(controller).balance, 0);
+
+        // NOTE: There seems to be a bug in `expectCall` for delegate calls where the value cannot be checked.
+        vm.expectCall(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, abi.encodeWithSelector(IMockFacet.foo.selector));
+        vm.mockCall(0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD, 1 ether, abi.encodeWithSelector(IMockFacet.foo.selector), '');
+
+        vm.prank(account);
+        IMockController(address(controller)).facetFoo{value: 1 ether}();
+
+        assertEq(account.balance,             0);
+        assertEq(address(controller).balance, 1 ether);
     }
 
     /**********************************************************************************************/
