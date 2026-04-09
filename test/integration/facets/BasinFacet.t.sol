@@ -49,7 +49,6 @@ abstract contract BasinFacet_TestBase is Controller_TestBase {
 
         vm.prank(admin);
         controller.addWires(facet, wires);
-
     }
 
 }

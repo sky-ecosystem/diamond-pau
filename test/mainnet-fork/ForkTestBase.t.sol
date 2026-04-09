@@ -85,8 +85,6 @@ import { Controller }     from "../../src/Controller.sol";
 import { PAUFactory }     from "../../src/PAUFactory.sol";
 import { RateLimits }     from "../../src/RateLimits.sol";
 
-import { MockBasin } from "../mocks/MockBasin.sol";
-
 import { IMainnetControllerFull } from "../interfaces/IMainnetControllerFull.sol";
 
 interface IChainlogLike {
@@ -202,7 +200,6 @@ abstract contract ForkTestBase is DssTest {
     AccessControls         accessControls;
     ALMProxy               almProxy;
     IMainnetControllerFull mainnetController;
-    MockBasin              mockBasin;
     RateLimits             rateLimits;
     PAUFactory             factory;
 
@@ -300,10 +297,6 @@ abstract contract ForkTestBase is DssTest {
         almProxy.grantRole(almProxy.CONTROLLER(), address(mainnetController));
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(mainnetController));
-
-        // Deploy mock for Basin (not yet deployed to mainnet)
-        mockBasin = new MockBasin();
-        vm.label(address(mockBasin), "MockBasin");
 
         // Facet wiring
         _wireAaveFacet();
