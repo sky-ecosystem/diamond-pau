@@ -38,7 +38,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
-    // NOTE: !!! This function was deployed without integration testing !!!
+    // NOTE: !!! This function was merged without integration testing !!!
     //       KEEP RATE LIMIT AT ZERO until Basin is live and
     //       all functionality has been thoroughly integration tested.
     function deposit(address basin, address asset, uint256 amount)
@@ -67,7 +67,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
         emit BasinDeposit(basin, asset, amount, shares);
     }
 
-    // NOTE: !!! This function was deployed without integration testing !!!
+    // NOTE: !!! This function was merged without integration testing !!!
     //       KEEP RATE LIMIT AT ZERO until Basin is live and
     //       all functionality has been thoroughly integration tested.
     function withdraw(address basin, address asset, uint256 maxAmount)
