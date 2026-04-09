@@ -763,14 +763,14 @@ contract Controller_IntegrationTests is Controller_TestBase {
         assertEq(beacon.integrations().length,     1);
         assertEq(controller.integrations().length, 2); // Unchanged as controller not yet updated.
 
-        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.IntegrationNotFound.selector, "INTEGRATION_1"));
+        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.IntegrationNotFound.selector, bytes32("INTEGRATION_1")));
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
         integrationIds = new bytes32[](1);
         integrationIds[0] = "INTEGRATION_2";
 
-        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.CallSelectorAlreadyWired.selector, IMockController.divide.selector));
+        vm.expectRevert(abi.encodeWithSelector(IEnumerableIntegrations.CallSelectorAlreadyWired.selector, IMockController.multiply.selector));
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 

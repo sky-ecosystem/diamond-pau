@@ -24,6 +24,7 @@ import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwa
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
+import { IBasinFacet }         from "../../src/facets/basin/IBasinFacet.sol";
 import { ICCTPFacet }          from "../../src/facets/cctp/ICCTPFacet.sol";
 import { ICentrifugeFacet }    from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
 import { ICurveFacet }         from "../../src/facets/curve/ICurveFacet.sol";
@@ -49,6 +50,7 @@ import { IWrapProxyETHFacet }  from "../../src/facets/wrap-proxy-eth/IWrapProxyE
 import { IWSTETHFacet }        from "../../src/facets/wsteth/IWSTETHFacet.sol";
 
 import { AaveFacet }          from "../../src/facets/aave/AaveFacet.sol";
+import { BasinFacet }         from "../../src/facets/basin/BasinFacet.sol";
 import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
@@ -285,6 +287,7 @@ abstract contract ForkTestBase is DssTest {
 
         // Facet wiring
         _wireAaveFacet();
+        _wireBasinFacet();
         _wireCCTPFacet();
         _wireCentrifugeFacet();
         _wireCurveFacet();
@@ -323,31 +326,32 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(accessControls.RELAYER_ROLE(), relayer);
         accessControls.grantRole(accessControls.RELAYER_ROLE(), backstopRelayer);
 
-        bytes32[] memory integrationIds = new bytes32[](24);
-        integrationIds[0] = "AAVE_FACET";
-        integrationIds[1] = "CCTP_FACET";
-        integrationIds[2] = "CENTRIFUGE_FACET";
-        integrationIds[3] = "CURVE_FACET";
-        integrationIds[4] = "DAIUSDS_FACET";
-        integrationIds[5] = "ERC4626_FACET";
-        integrationIds[6] = "ERC7540_FACET";
-        integrationIds[7] = "FARM_FACET";
-        integrationIds[8] = "LAYER_ZERO_FACET";
-        integrationIds[9] = "MAPLE_FACET";
-        integrationIds[10] = "MERKL_FACET";
-        integrationIds[11] = "OTC_FACET";
-        integrationIds[12] = "PENDLE_FACET";
-        integrationIds[13] = "PSM_FACET";
-        integrationIds[14] = "SPARK_VAULT_FACET";
-        integrationIds[15] = "SUPERSTATE_FACET";
-        integrationIds[16] = "TRANSFER_ASSET_FACET";
-        integrationIds[17] = "UNISWAP_V3_FACET";
-        integrationIds[18] = "UNISWAP_V4_FACET";
-        integrationIds[19] = "USDE_FACET";
-        integrationIds[20] = "USDS_FACET";
-        integrationIds[21] = "WEETH_FACET";
-        integrationIds[22] = "WRAP_PROXY_ETH_FACET";
-        integrationIds[23] = "WSTETH_FACET";
+        bytes32[] memory integrationIds = new bytes32[](25);
+        integrationIds[0]  = "AAVE_FACET";
+        integrationIds[1]  = "BASIN_FACET";
+        integrationIds[2]  = "CCTP_FACET";
+        integrationIds[3]  = "CENTRIFUGE_FACET";
+        integrationIds[4]  = "CURVE_FACET";
+        integrationIds[5]  = "DAIUSDS_FACET";
+        integrationIds[6]  = "ERC4626_FACET";
+        integrationIds[7]  = "ERC7540_FACET";
+        integrationIds[8]  = "FARM_FACET";
+        integrationIds[9]  = "LAYER_ZERO_FACET";
+        integrationIds[10] = "MAPLE_FACET";
+        integrationIds[11] = "MERKL_FACET";
+        integrationIds[12] = "OTC_FACET";
+        integrationIds[13] = "PENDLE_FACET";
+        integrationIds[14] = "PSM_FACET";
+        integrationIds[15] = "SPARK_VAULT_FACET";
+        integrationIds[16] = "SUPERSTATE_FACET";
+        integrationIds[17] = "TRANSFER_ASSET_FACET";
+        integrationIds[18] = "UNISWAP_V3_FACET";
+        integrationIds[19] = "UNISWAP_V4_FACET";
+        integrationIds[20] = "USDE_FACET";
+        integrationIds[21] = "USDS_FACET";
+        integrationIds[22] = "WEETH_FACET";
+        integrationIds[23] = "WRAP_PROXY_ETH_FACET";
+        integrationIds[24] = "WSTETH_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -433,6 +437,41 @@ abstract contract ForkTestBase is DssTest {
     /**********************************************************************************************/
     /*** Facet wiring helpers                                                                   ***/
     /**********************************************************************************************/
+
+    function _wireBasinFacet() internal {
+        address basinFacet = address(new BasinFacet());
+
+        vm.label(basinFacet, "BasinFacet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.depositBasin.selector,
+            IBasinFacet.deposit.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.withdrawBasin.selector,
+            IBasinFacet.withdraw.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.LIMIT_BASIN_DEPOSIT.selector,
+            IBasinFacet.LIMIT_DEPOSIT.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.LIMIT_BASIN_WITHDRAW.selector,
+            IBasinFacet.LIMIT_WITHDRAW.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : basinFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("BASIN_FACET", config);
+    }
 
     function _wireCentrifugeFacet() internal {
         // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
@@ -1106,7 +1145,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireWEETHFacet() internal {
-        address weethFacet = address(new WEETHFacet(Ethereum.WETH, Ethereum.WEETH));
+        address weethFacet = address(new WEETHFacet(Ethereum.WEETH, Ethereum.WETH));
 
         vm.label(weethFacet, "WEETHFacet");
 
@@ -1279,7 +1318,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDSFacet() internal {
-        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+        address usdsFacet = address(new USDSFacet(address(usds), vault));
 
         vm.label(usdsFacet, "USDSFacet");
 
