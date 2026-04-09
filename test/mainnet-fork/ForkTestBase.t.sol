@@ -1070,7 +1070,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireWEETHFacet() internal {
-        address weethFacet = address(new WEETHFacet(Ethereum.WETH, Ethereum.WEETH));
+        address weethFacet = address(new WEETHFacet(Ethereum.WEETH, Ethereum.WETH));
 
         vm.label(weethFacet, "WEETHFacet");
 
@@ -1231,7 +1231,7 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDSFacet() internal {
-        address usdsFacet = address(new USDSFacet(vault, address(usds)));
+        address usdsFacet = address(new USDSFacet(address(usds), vault));
 
         vm.label(usdsFacet, "USDSFacet");
 
