@@ -23,8 +23,8 @@ import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/
 import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
-import { IBasinFacet }         from "../../src/facets/basin/IBasinFacet.sol";
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
+import { IBasinFacet }         from "../../src/facets/basin/IBasinFacet.sol";
 import { ICCTPFacet }          from "../../src/facets/cctp/ICCTPFacet.sol";
 import { ICentrifugeFacet }    from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
 import { ICurveFacet }         from "../../src/facets/curve/ICurveFacet.sol";
@@ -49,8 +49,8 @@ import { IWEETHFacet }         from "../../src/facets/weeth/IWEETHFacet.sol";
 import { IWrapProxyETHFacet }  from "../../src/facets/wrap-proxy-eth/IWrapProxyETHFacet.sol";
 import { IWSTETHFacet }        from "../../src/facets/wsteth/IWSTETHFacet.sol";
 
-import { BasinFacet }         from "../../src/facets/basin/BasinFacet.sol";
 import { AaveFacet }          from "../../src/facets/aave/AaveFacet.sol";
+import { BasinFacet }         from "../../src/facets/basin/BasinFacet.sol";
 import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
