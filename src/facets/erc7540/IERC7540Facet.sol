@@ -5,9 +5,8 @@ import { IFacetBase } from "../IFacetBase.sol";
 
 /**
  * @title  IERC7540Facet
- * @notice DiamondPAU facet for interacting with ERC-7540 asynchronous vaults.
- *         Supports the async request/claim lifecycle for both deposits and
- *         redemptions.
+ * @notice PAU facet for interacting with ERC-7540 asynchronous vaults. Supports the async
+ *         request/claim lifecycle for both deposits and redemptions.
  */
 interface IERC7540Facet is IFacetBase {
 
@@ -16,30 +15,30 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Emitted when a fulfilled deposit request is claimed.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param shares Amount of vault shares claimed.
+     * @notice Emitted when a fulfilled deposit request is claimed.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  shares Amount of vault shares claimed.
      */
     event ERC7540ClaimDeposit(address indexed token, uint256 shares);
 
     /**
-     * @dev   Emitted when a fulfilled redeem request is claimed.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param assets Amount of underlying assets claimed.
+     * @notice Emitted when a fulfilled redeem request is claimed.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  assets Amount of underlying assets claimed.
      */
     event ERC7540ClaimRedeem(address indexed token, uint256 assets);
 
     /**
-     * @dev   Emitted when a deposit request is submitted.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param assets Amount of underlying assets submitted for deposit.
+     * @notice Emitted when a deposit request is submitted.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  assets Amount of underlying assets submitted for deposit.
      */
     event ERC7540RequestDeposit(address indexed token, uint256 assets);
 
     /**
-     * @dev   Emitted when a redeem request is submitted.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param shares Amount of vault shares submitted for redemption.
+     * @notice Emitted when a redeem request is submitted.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  shares Amount of vault shares submitted for redemption.
      */
     event ERC7540RequestRedeem(address indexed token, uint256 shares);
 
@@ -48,30 +47,30 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Claims shares from a fulfilled deposit request by minting the
-     *        maximum claimable amount.
-     * @param token Address of the ERC-7540 vault token.
+     * @notice Claims shares from a fulfilled deposit request by minting the maximum claimable
+     *         amount.
+     * @param  token Address of the ERC-7540 vault token.
      */
     function claimDeposit(address token) external;
 
     /**
-     * @dev   Claims assets from a fulfilled redeem request by withdrawing the
-     *        maximum claimable amount.
-     * @param token Address of the ERC-7540 vault token.
+     * @notice Claims assets from a fulfilled redeem request by withdrawing the maximum claimable
+     *         amount.
+     * @param  token Address of the ERC-7540 vault token.
      */
     function claimRedeem(address token) external;
 
     /**
-     * @dev   Submits an async deposit request to the ERC-7540 vault.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param amount Amount of underlying assets to request for deposit.
+     * @notice Submits an async deposit request to the ERC-7540 vault.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  amount Amount of underlying assets to request for deposit.
      */
     function requestDeposit(address token, uint256 amount) external;
 
     /**
-     * @dev   Submits an async redeem request to the ERC-7540 vault.
-     * @param token  Address of the ERC-7540 vault token.
-     * @param shares Amount of vault shares to request for redemption.
+     * @notice Submits an async redeem request to the ERC-7540 vault.
+     * @param  token  Address of the ERC-7540 vault token.
+     * @param  shares Amount of vault shares to request for redemption.
      */
     function requestRedeem(address token, uint256 shares) external;
 
@@ -80,16 +79,14 @@ interface IERC7540Facet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Rate limit key for deposit operations, combined with the vault
-     *         token address to form per-vault keys.
-     * @return bytes32 The rate limit key identifier.
+     * @notice Rate limit key for deposit operations, combined with the vault token address to form
+     *         the per-vault keys.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
     /**
-     * @dev    Rate limit key for redeem operations, combined with the vault
-     *         token address to form per-vault keys.
-     * @return bytes32 The rate limit key identifier.
+     * @notice Rate limit key for redeem operations, combined with the vault token address to form
+     *         the per-vault keys.
      */
     function LIMIT_REDEEM() external pure returns (bytes32);
 

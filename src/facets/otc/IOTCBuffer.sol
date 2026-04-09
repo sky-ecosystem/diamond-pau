@@ -12,16 +12,16 @@ interface IOTCBuffer is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev   Approves `allowance` of `asset`.
-     * @param asset     Asset address.
-     * @param allowance Amount of allowance.
+     * @notice Approves `allowance` of `asset`.
+     * @param  asset     Asset address.
+     * @param  allowance Amount of allowance.
      */
     function approve(address asset, uint256 allowance) external;
 
     /**
-     * @dev   Initializes the OTC buffer.
-     * @param admin    Admin address.
-     * @param almProxy ALM proxy address.
+     * @notice Initializes the OTC buffer.
+     * @param  admin    Admin address.
+     * @param  almProxy ALM proxy address.
      */
     function initialize(address admin, address almProxy) external;
 
@@ -30,8 +30,7 @@ interface IOTCBuffer is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev    ALM proxy address.
-     * @return address ALM proxy address.
+     * @notice ALM proxy address.
      */
     function almProxy() external view returns (address);
 
@@ -40,10 +39,10 @@ interface IOTCBuffer is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev    Supports the interface.
+     * @notice Returns whether the interface is supported.
      * @param  interfaceId Interface ID.
-     * @return bool        True if the interface is supported.
+     * @return isSupported True if the interface is supported.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    function supportsInterface(bytes4 interfaceId) external view returns (bool isSupported);
 
 }

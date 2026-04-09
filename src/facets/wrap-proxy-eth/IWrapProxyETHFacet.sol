@@ -5,9 +5,8 @@ import { IFacetBase } from "../IFacetBase.sol";
 
 /**
  * @title  IWrapProxyETHFacet
- * @notice DiamondPAU facet for wrapping all native ETH held by the proxy into WETH.
- *         Useful after operations that leave ETH on the proxy
- *         (e.g., withdrawal claims that return ETH).
+ * @notice PAU facet for wrapping all native ETH held by the proxy into WETH. Useful after
+ *         operations that leave ETH on the proxy (e.g., withdrawal claims that return ETH).
  */
 interface IWrapProxyETHFacet is IFacetBase {
 
@@ -16,8 +15,8 @@ interface IWrapProxyETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Emitted when the proxy's native ETH balance is wrapped to WETH.
-     * @param ethAmount Amount of ETH wrapped.
+     * @notice Emitted when the proxy's native ETH balance is wrapped to WETH.
+     * @param  ethAmount Amount of ETH wrapped.
      */
     event WrapProxyETHWrap(uint256 ethAmount);
 
@@ -26,7 +25,7 @@ interface IWrapProxyETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev Wraps the proxy's entire native ETH balance into WETH. No-op if the proxy has no ETH.
+     * @notice Wraps the proxy's entire native ETH balance into WETH. No-op if the proxy has no ETH.
      */
     function wrapAll() external;
 
@@ -35,8 +34,7 @@ interface IWrapProxyETHFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Address of the WETH token contract (immutable).
-     * @return address The WETH contract address.
+     * @notice Address of the WETH token contract (immutable).
      */
     function weth() external view returns (address);
 

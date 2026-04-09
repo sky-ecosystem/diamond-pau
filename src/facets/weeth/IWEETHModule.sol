@@ -12,16 +12,16 @@ interface IWEETHModule is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev    Claims a withdrawal.
+     * @notice Claims a withdrawal.
      * @param  requestId   Request ID.
      * @return ethReceived Amount of ETH received.
      */
     function claimWithdrawal(uint256 requestId) external returns (uint256 ethReceived);
 
     /**
-     * @dev   Initializes the WEETH module.
-     * @param admin_    Admin address.
-     * @param almProxy_ ALM proxy address.
+     * @notice Initializes the WEETH module.
+     * @param  admin_    Admin address.
+     * @param  almProxy_ ALM proxy address.
      */
     function initialize(address admin_, address almProxy_) external;
 
@@ -30,8 +30,7 @@ interface IWEETHModule is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev    ALM proxy address.
-     * @return address ALM proxy address.
+     * @notice ALM proxy address.
      */
     function almProxy() external view returns (address);
 
@@ -40,23 +39,23 @@ interface IWEETHModule is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @dev    Receives an ERC721 token.
+     * @notice Receives an ERC721 token.
      * @param  operator Operator address.
      * @param  from     From address.
      * @param  tokenId  Token ID.
      * @param  data     Data.
-     * @return bytes4   Selector.
+     * @return selector Selector response.
      */
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
         external
         pure
-        returns (bytes4);
+        returns (bytes4 selector);
 
     /**
-     * @dev    Supports an interface.
+     * @notice Supports an interface.
      * @param  interfaceId Interface ID.
-     * @return bool        True if the interface is supported.
+     * @return isSupported True if the interface is supported.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    function supportsInterface(bytes4 interfaceId) external view returns (bool isSupported);
 
 }

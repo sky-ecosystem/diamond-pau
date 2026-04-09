@@ -5,8 +5,7 @@ import { IFacetBase } from "../IFacetBase.sol";
 
 /**
  * @title  IDAIUSDSFacet
- * @notice DiamondPAU facet for 1:1 swaps between DAI and USDS using the
- *         SKY DaiUsds migrator contract.
+ * @notice PAU facet for 1:1 swaps between DAI and USDS using the SKY DAI-USDS migrator contract.
  */
 interface IDAIUSDSFacet is IFacetBase {
 
@@ -15,14 +14,14 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Emitted when DAI is converted to USDS.
-     * @param daiAmount Amount of DAI swapped (18-decimal precision).
+     * @notice Emitted when DAI is converted to USDS.
+     * @param  daiAmount Amount of DAI swapped (18-decimal precision).
      */
     event DAIUSDSSwapDAIToUSDS(uint256 daiAmount);
 
     /**
-     * @dev   Emitted when USDS is converted to DAI.
-     * @param usdsAmount Amount of USDS swapped (18-decimal precision).
+     * @notice Emitted when USDS is converted to DAI.
+     * @param  usdsAmount Amount of USDS swapped (18-decimal precision).
      */
     event DAIUSDSSwapUSDSToDAI(uint256 usdsAmount);
 
@@ -31,14 +30,14 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev   Converts DAI to USDS 1:1 via the DaiUsds migrator.
-     * @param daiAmount Amount of DAI to swap (18-decimal precision).
+     * @notice Converts DAI to USDS 1:1 via the DAI-USDS migrator.
+     * @param  daiAmount Amount of DAI to swap (18-decimal precision).
      */
     function swapDAIToUSDS(uint256 daiAmount) external;
 
     /**
-     * @dev   Converts USDS to DAI 1:1 via the DaiUsds migrator.
-     * @param usdsAmount Amount of USDS to swap (18-decimal precision).
+     * @notice Converts USDS to DAI 1:1 via the DAI-USDS migrator.
+     * @param  usdsAmount Amount of USDS to swap (18-decimal precision).
      */
     function swapUSDSToDAI(uint256 usdsAmount) external;
 
@@ -47,20 +46,17 @@ interface IDAIUSDSFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @dev    Address of the DAI token contract (immutable).
-     * @return address The DAI contract address.
+     * @notice Address of the DAI token contract (immutable).
      */
     function dai() external view returns (address);
 
     /**
-     * @dev    Address of the DaiUsds migrator contract (immutable).
-     * @return address The DaiUsds contract address.
+     * @notice Address of the DAI-USDS migrator contract (immutable).
      */
     function daiUSDS() external view returns (address);
 
     /**
-     * @dev    Address of the USDS token contract (immutable).
-     * @return address The USDS contract address.
+     * @notice Address of the USDS token contract (immutable).
      */
     function usds() external view returns (address);
 
