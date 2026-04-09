@@ -46,8 +46,8 @@ interface IWEETHFacet is IFacetBase {
 
     function LIMIT_REQUEST_WITHDRAW() external pure returns (bytes32);
 
-    function weth() external view returns (address);
-
     function weeth() external view returns (address);
+
+    function weth() external view returns (address);
 
 }
