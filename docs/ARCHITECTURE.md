@@ -34,17 +34,17 @@ The unified controller contract that serves as the entry point for all relayer o
 
 ### Beacon
 
-The single source of truth for all integration configurations. The Beacon manages the lifecycle of integrations (facet address + wire mappings) and stores the canonical dispatch lookup. Multiple Controllers can reference the same Beacon, each syncing its local config copy via `updateIntegrations`. The Beacon admin (`DEFAULT_ADMIN_ROLE`) configures integrations, and the Beacon validates facet addresses, prevents duplicate selector wiring, and protects hardcoded Controller selectors.
+The Beacon manages all data related to integrations (facet address + wire mappings) and stores the canonical dispatch lookup. Multiple Controllers can reference the same Beacon, each syncing its local config copy via `updateIntegrations`. The Beacon admin (`DEFAULT_ADMIN_ROLE`) configures integrations, and the Beacon validates facet addresses, prevents duplicate selector wiring, and protects hardcoded Controller selectors. Controllers use this syncing pattern to opt in to upgrades from the Beacon.
 
 See [BEACON.md](./BEACON.md) for data structures, integration lifecycle, hardcoded selector protection, and versioning details.
 
 ### PAUFactory
 
-Factory contract for deploying complete PAU systems. Takes a Beacon address at construction. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller` (pointing to the shared Beacon), wires their roles, and transfers admin ownership to the caller-specified admin.
+Factory contract for deploying complete PAU systems. Takes a Beacon address at construction. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller` (pointing to the shared Beacon), wires their roles, and transfers admin ownership to the caller-specified admin. Existing PAU systems that will upgrade to use the new controller do not have to deploy from the factory. This factory is to make PAU deployments more convenient for new systems.
 
 ### AccessControls
 
-Wraps OpenZeppelin `AccessControlEnumerable` to define the PAU-specific roles used by facets at runtime. Declares `FREEZER_ROLE` and `RELAYER_ROLE` as constants. Provides a `removeRelayer` function gated by `FREEZER_ROLE` for emergency revocation of a compromised relayer without requiring a slower governance process.
+Wraps OpenZeppelin `AccessControlEnumerable` to define the PAU-specific roles used by facets at runtime. Declares `FREEZER_ROLE` and `RELAYER_ROLE` as constants. Provides a `removeRelayer` function gated by `FREEZER_ROLE` for emergency revocation of a compromised relayer without requiring a slower governance process. A separate contract was used here to make facet development easier (external call to a module vs. maintaining ACL storage across all facets).
 
 ### RateLimits
 

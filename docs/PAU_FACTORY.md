@@ -6,6 +6,8 @@ This document describes the `PAUFactory` contract, the deployment contract for c
 
 PAUFactory serves one role: **atomic deployment** of complete PAU systems (ALMProxy, RateLimits, AccessControls, Controller) via a single `deploy()` call. The factory takes a Beacon address at construction and passes it to every Controller it deploys, so all Controllers share the same integration configuration source.
 
+> **Note:** Controllers deployed as upgrades to live systems are not required to use the factory. The factory exists purely for convenience when spinning up entirely new PAU deployments.
+
 ## Relationship to Beacon
 
 The factory does not manage integration configs or facet validation. That responsibility belongs entirely to the Beacon. The factory simply wires each new Controller to the shared Beacon so that the admin can later call `controller.updateIntegrations()` to sync configs from it.
