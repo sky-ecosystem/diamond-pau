@@ -104,45 +104,14 @@ For example, after minting USDS:
 - Pool dynamics are slower-moving compared to DEX liquidity
 - Lower risk of rapid value extraction
 
----
+## Gate-Check Pattern
 
-## Rate Limit Uses
+Some operations verify a rate limit is configured (`maxAmount > 0`) without decreasing it. This serves as an implicit whitelist: if the rate limit key was never set by governance, the operation reverts. Examples:
 
-The current uses of rate limits can be seen in [`./printers/rate_limits.py`](../printers/rate_limits.py). The file is also an executable [Wake](https://github.com/Ackee-Blockchain/wake) printer, which can verify that the information in the file is correct at any time.
-
-### Running the Rate Limits Printer
-
-Install Wake using one of:
-
-```bash
-uv tool install eth-wake
-pipx install eth-wake
-pip install eth-wake
-```
-
-Execute the printer:
-
-```bash
-❯ wake --config printers/wake.toml print rate-limits
-[14:16:59] Found 16 *.sol files in 0.51 s                                                 print.py:466
-           Loaded previous build in 0.47 s                                             compiler.py:862
-           Compiled 0 files using 0 solc runs in 0.00 s                               compiler.py:1242
-           Processed compilation results in 0.01 s                                    compiler.py:1495
-📦 Checking Controller...
-✅ Successfully checked Controller...
-```
-
-A zero exit-code indicates the spec is satisfied.
-
-### Regenerating Wake Config
-
-If `printers/wake.toml` goes out of sync, regenerate it:
-
-```bash
-wake up config
-```
-
-This reads Foundry remappings and creates a new `wake.toml` file (which can then be moved to `/printers`).
+- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_REQUEST_WITHDRAW.maxAmount > 0`
+- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule).maxAmount > 0`
+- `ERC4626Facet.withdraw`/`redeem`: calls `triggerRateLimitIncrease` on the deposit key, which requires `maxAmount > 0` for the same vault
+- `AaveFacet.withdraw`: calls `triggerRateLimitIncrease` on the deposit key, which requires `maxAmount > 0` for the same aToken
 
 ---
 
