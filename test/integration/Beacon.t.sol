@@ -38,6 +38,10 @@ contract MockFacet2 {
 
 contract Beacon_IntegrationTests is Integration_TestBase {
 
+    function setUp() external {
+        _deploy();
+    }
+
     /**********************************************************************************************/
     /*** setIntegration Tests                                                                   ***/
     /**********************************************************************************************/

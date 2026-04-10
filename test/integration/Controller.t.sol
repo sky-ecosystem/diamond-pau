@@ -275,7 +275,7 @@ contract Controller_IntegrationTests is Integration_TestBase {
         beacon.setIntegration(originalIntegration.id, newConfig);
 
         vm.expectEmit(address(controller));
-        emit IEnumerableIntegrations.IntegrationSet(originalIntegration.id, originalIntegration.config);
+        emit IEnumerableIntegrations.IntegrationSet(originalIntegration.id, newConfig);
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
