@@ -43,14 +43,10 @@ interface IAccessControls is IAccessControlEnumerable {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Role identifier for freezer accounts that can remove relayers.
-     */
+    /// @notice Role identifier for freezer accounts that can remove relayers.
     function FREEZER_ROLE() external view returns (bytes32);
 
-    /**
-     * @notice Role identifier for relayer accounts authorized to execute controller functions.
-     */
+    /// @notice Role identifier for relayer accounts authorized to execute controller functions.
     function RELAYER_ROLE() external view returns (bytes32);
 
     /**********************************************************************************************/

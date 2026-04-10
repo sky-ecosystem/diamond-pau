@@ -19,19 +19,13 @@ interface IFacetBase {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Role identifier for the default admin (bytes32(0)).
-     */
+    /// @notice Role identifier for the default admin (bytes32(0)).
     function DEFAULT_ADMIN_ROLE() external pure returns (bytes32);
 
-    /**
-     * @notice Role identifier for relayer accounts authorized to execute facet operations.
-     */
+    /// @notice Role identifier for relayer accounts authorized to execute facet operations.
     function RELAYER_ROLE() external pure returns (bytes32);
 
-    /**
-     * @notice Semantic version string of the facet.
-     */
+    /// @notice Semantic version string of the facet.
     function VERSION() external pure returns (string memory);
 
 }

@@ -65,14 +65,10 @@ interface IALMProxyFreezable is IAccessControl {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Role identifier for freezer accounts that can remove relayers.
-     */
+    /// @notice Role identifier for freezer accounts that can remove relayers.
     function FREEZER() external view returns (bytes32);
 
-    /**
-     * @notice Role identifier for relayer accounts authorized to execute proxy calls.
-     */
+    /// @notice Role identifier for relayer accounts authorized to execute proxy calls.
     function RELAYER() external view returns (bytes32);
 
 }

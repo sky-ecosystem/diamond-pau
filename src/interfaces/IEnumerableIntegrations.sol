@@ -88,9 +88,7 @@ interface IEnumerableIntegrations {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Returns all registered integrations with their configs.
-     */
+    /// @notice Returns all registered integrations with their configs.
     function integrations() external view returns (Integration[] memory);
 
     /**********************************************************************************************/
