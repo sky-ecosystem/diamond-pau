@@ -9,7 +9,7 @@ import { IUniswapV3Facet }         from "../../../src/facets/uniswap-v3/IUniswap
 
 import { UniswapV3Facet } from "../../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -35,7 +35,7 @@ interface IControllerLike {
 
 }
 
-contract Controller_UniswapV3Facet_Tests is Controller_TestBase {
+contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
     uint24 internal constant _MAX_TICK_DELTA = 887_272;
 

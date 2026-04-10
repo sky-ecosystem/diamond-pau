@@ -9,7 +9,7 @@ import { IERC4626Facet }           from "../../../src/facets/erc4626/IERC4626Fac
 
 import { ERC4626Facet } from "../../../src/facets/erc4626/ERC4626Facet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -21,7 +21,7 @@ interface IControllerLike {
 
 }
 
-contract ERC4626Facet_TestBase is Controller_TestBase {
+contract ERC4626Facet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

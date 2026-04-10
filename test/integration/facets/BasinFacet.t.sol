@@ -6,7 +6,7 @@ import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableInte
 
 import { BasinFacet } from "../../../src/facets/basin/BasinFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -18,7 +18,7 @@ interface IControllerLike {
 
 }
 
-abstract contract BasinFacet_TestBase is Controller_TestBase {
+abstract contract BasinFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

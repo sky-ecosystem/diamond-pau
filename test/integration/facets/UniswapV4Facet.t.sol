@@ -9,7 +9,7 @@ import { IUniswapV4Facet }         from "../../../src/facets/uniswap-v4/IUniswap
 
 import { UniswapV4Facet } from "../../../src/facets/uniswap-v4/UniswapV4Facet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -33,7 +33,7 @@ interface IControllerLike {
 
 }
 
-contract Controller_UniswapV4Facet_Tests is Controller_TestBase {
+contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
 
     bytes32 internal constant _POOL_ID = 0x8aa4e11cbdf30eedc92100f4c8a31ff748e201d44712cc8c90d189edaa8e4e47;
 

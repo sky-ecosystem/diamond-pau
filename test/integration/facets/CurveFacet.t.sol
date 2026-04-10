@@ -8,7 +8,7 @@ import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableInte
 
 import { CurveFacet } from "../../../src/facets/curve/CurveFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -20,7 +20,7 @@ interface IControllerLike {
 
 }
 
-abstract contract CurveFacet_TestBase is Controller_TestBase {
+abstract contract CurveFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

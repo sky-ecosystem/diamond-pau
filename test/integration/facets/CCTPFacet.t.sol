@@ -8,7 +8,7 @@ import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableInte
 
 import { CCTPFacet } from "../../../src/facets/cctp/CCTPFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -24,7 +24,7 @@ interface IControllerLike {
 
 }
 
-contract Controller_CCTPFacet_Tests is Controller_TestBase {
+contract Controller_CCTPFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 

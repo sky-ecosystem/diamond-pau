@@ -9,7 +9,7 @@ import { IOTCFacet }               from "../../../src/facets/otc/IOTCFacet.sol";
 
 import { OTCFacet } from "../../../src/facets/otc/OTCFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -33,7 +33,7 @@ interface IControllerLike {
 
 }
 
-abstract contract OTCFacet_TestBase is Controller_TestBase {
+abstract contract OTCFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

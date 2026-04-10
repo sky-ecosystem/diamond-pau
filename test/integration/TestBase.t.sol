@@ -11,7 +11,7 @@ import { IPAUFactory }     from "../../src/interfaces/IPAUFactory.sol";
 import { Beacon }     from "../../src/Beacon.sol";
 import { PAUFactory } from "../../src/PAUFactory.sol";
 
-abstract contract Controller_TestBase is Test {
+abstract contract Integration_TestBase is Test {
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/

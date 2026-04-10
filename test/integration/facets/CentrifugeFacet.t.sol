@@ -8,7 +8,7 @@ import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableInte
 
 import { CentrifugeFacet } from "../../../src/facets/centrifuge/CentrifugeFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -20,7 +20,7 @@ interface IControllerLike {
 
 }
 
-abstract contract CentrifugeFacet_TestBase is Controller_TestBase {
+abstract contract CentrifugeFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

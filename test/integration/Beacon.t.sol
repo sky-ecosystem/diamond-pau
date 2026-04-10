@@ -10,6 +10,8 @@ import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegra
 
 import { Beacon } from "../../src/Beacon.sol";
 
+import { Integration_TestBase } from "./TestBase.t.sol";
+
 contract MockFacet1 {
 
     function divideBy2(uint256 arg) external pure returns (uint256) {
@@ -34,24 +36,18 @@ contract MockFacet2 {
 
 }
 
-contract Beacon_IntegrationTests is Test {
-
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
-
-    IBeacon internal beacon;
-
-    address internal admin        = makeAddr("admin");
-    address internal unauthorized = makeAddr("unauthorized");
-
-    function setUp() external {
-        beacon = new Beacon(admin);
-    }
+contract Beacon_IntegrationTests is Integration_TestBase {
 
     /**********************************************************************************************/
     /*** setIntegration Tests                                                                   ***/
     /**********************************************************************************************/
 
     function test_setIntegration_notAdmin() external {
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : address(0),
+            wires : new IEnumerableIntegrations.Wire[](0)
+        });
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -61,11 +57,6 @@ contract Beacon_IntegrationTests is Test {
         );
 
         vm.prank(unauthorized);
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : address(0),
-            wires : new IEnumerableIntegrations.Wire[](0)
-        });
-
         beacon.setIntegration(bytes32(0), config);
     }
 
@@ -115,7 +106,7 @@ contract Beacon_IntegrationTests is Test {
         vm.expectEmit(address(beacon));
         emit IEnumerableIntegrations.IntegrationSet(integrationId, config);
 
-        vm.prank(admin);
+        vm.prank(beaconAdmin);
         beacon.setIntegration(integrationId, config);
 
         IEnumerableIntegrations.Config memory returnedConfig = beacon.getConfig(integrationId);
@@ -132,7 +123,10 @@ contract Beacon_IntegrationTests is Test {
         assertEq(returnedConfig.wires[2].callSelector,     wires[2].callSelector);
         assertEq(returnedConfig.wires[2].delegateSelector, wires[2].delegateSelector);
 
-        vm.prank(admin);
+        vm.expectEmit(address(beacon));
+        emit IEnumerableIntegrations.IntegrationRemoved(integrationId);
+
+        vm.prank(beaconAdmin);
         beacon.removeIntegration(integrationId);
 
         returnedConfig = beacon.getConfig(integrationId);

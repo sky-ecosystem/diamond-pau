@@ -123,9 +123,9 @@ contract ForkTestBase is Test {
         factory = new PAUFactory(address(beacon));
 
         foreignController = IForeignControllerFull(payable(factory.deploy(GROVE_EXECUTOR)));
+        accessControls    = IAccessControls(foreignController.accessControls());
         almProxy          = IALMProxy(payable(foreignController.proxy()));
         rateLimits        = IRateLimits(foreignController.rateLimits());
-        accessControls    = IAccessControls(foreignController.accessControls());
 
         vm.startPrank(skyAdmin);
 

@@ -8,7 +8,7 @@ import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableInte
 
 import { AaveFacet } from "../../../src/facets/aave/AaveFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -20,7 +20,7 @@ interface IControllerLike {
 
 }
 
-abstract contract AaveFacet_TestBase is Controller_TestBase {
+abstract contract AaveFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

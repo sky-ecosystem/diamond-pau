@@ -9,7 +9,7 @@ import { ILayerZeroFacet }         from "../../../src/facets/layer-zero/ILayerZe
 
 import { LayerZeroFacet } from "../../../src/facets/layer-zero/LayerZeroFacet.sol";
 
-import { Controller_TestBase } from "../TestBase.t.sol";
+import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
@@ -21,7 +21,7 @@ interface IControllerLike {
 
 }
 
-abstract contract LayerZeroFacet_TestBase is Controller_TestBase {
+abstract contract LayerZeroFacet_TestBase is Integration_TestBase {
 
     IControllerLike internal controller;
 

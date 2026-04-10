@@ -7,7 +7,7 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 import { IController }             from "../../src/interfaces/IController.sol";
 import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
 
-import { Controller_TestBase } from "./TestBase.t.sol";
+import { Integration_TestBase } from "./TestBase.t.sol";
 
 contract MockFacet1 {
 
@@ -49,7 +49,7 @@ interface IMockController is IController {
 
 }
 
-contract Controller_IntegrationTests is Controller_TestBase {
+contract Controller_IntegrationTests is Integration_TestBase {
 
     IMockController internal controller;
 
@@ -63,7 +63,6 @@ contract Controller_IntegrationTests is Controller_TestBase {
 
     function test_updateIntegrations_reentrancy() external {
         vm.store(address(controller), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         controller.updateIntegrations(new bytes32[](0));
     }
@@ -173,6 +172,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
                 bytes4(0x44444444)
             )
         );
+
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
@@ -185,6 +185,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
                 bytes4(0x22222222)
             )
         );
+
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
@@ -271,7 +272,10 @@ contract Controller_IntegrationTests is Controller_TestBase {
         IEnumerableIntegrations.Config memory newConfig = IEnumerableIntegrations.Config({ facet: newFacet, wires: newWires });
 
         vm.prank(beaconAdmin);
-        beacon.setIntegration("TWO_FACTOR_INTEGRATION", newConfig);
+        beacon.setIntegration(originalIntegration.id, newConfig);
+
+        vm.expectEmit(address(controller));
+        emit IEnumerableIntegrations.IntegrationSet(originalIntegration.id, originalIntegration.config);
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
@@ -331,7 +335,7 @@ contract Controller_IntegrationTests is Controller_TestBase {
     }
 
     function test_removeIntegrations_integrationNotFound_duplicateIds() external {
-        IEnumerableIntegrations.Integration memory twoFactorIntegration  = _registerTwoFactorIntegration();
+        IEnumerableIntegrations.Integration memory twoFactorIntegration = _registerTwoFactorIntegration();
 
         vm.prank(beaconAdmin);
         beacon.setIntegration(twoFactorIntegration.id, twoFactorIntegration.config);
