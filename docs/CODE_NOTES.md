@@ -77,15 +77,17 @@ Additionally, some core contracts use Solidity custom errors (not string-prefix 
 
 | Custom Error | Source |
 |-------------|--------|
-| `InvalidFacet(address)` | IController |
-| `CallSelectorAlreadyWired(bytes4)` | IController |
-| `CallSelectorHardcoded(bytes4)` | IController |
+| `CallSelectorAlreadyWired(bytes4)` | IEnumerableIntegrations |
+| `CallSelectorHardcoded(bytes4)` | IBeacon |
 | `CallSelectorNotWired(bytes4)` | IController |
-| `EmptyArray()` | IController |
+| `EmptyArray()` | IBeacon, IController |
+| `EmptyFacet()` | IEnumerableIntegrations |
+| `IntegrationNotFound(bytes32)` | IEnumerableIntegrations |
+| `InvalidCallDataLength(uint256)` | IController |
 | `NotAdmin(address)` | IController |
-| `ZeroFacet()` | IController, IPAUFactory |
-| `EmptyFacet()` | IPAUFactory |
-| `ZeroAdmin()` | IAccessControls |
+| `ZeroAdmin()` | IAccessControls, IBeacon |
+| `ZeroBeacon()` | IController, IPAUFactory |
+| `ZeroFacet()` | IBeacon |
 
 ### Facet Prefixes
 
@@ -172,7 +174,7 @@ This ensures the corresponding request-withdraw rate limit key was configured by
 
 ## No Shared Facet Storage
 
-Facets cannot access each other's ERC-7201 storage domains. Each facet's namespaced storage is private to that facet. Cross-facet communication happens exclusively through `ControllerSharedStorage`, which holds references shared by all facets (e.g., `proxy`, `rateLimits`, `circuits`).
+Facets cannot access each other's ERC-7201 storage domains. Each facet's namespaced storage is private to that facet. Cross-facet communication happens exclusively through `ControllerSharedStorage`, which holds references shared by all facets (e.g., `proxy`, `rateLimits`, `accessControls`).
 
 ---
 
@@ -190,4 +192,12 @@ When a storage field such as `$.proxy` or `$.rateLimits` is accessed two or more
 
 ## Hardcoded Selector Protection
 
-The Controller protects its own core function selectors from being overwritten by `addWire`. The internal function `_revertIfCallSelectorIsHardcoded` checks against a fixed list of selectors (`addWire`, `addWires`, `removeWire`, `removeWires`, `removeAllWiresFor`, `accessControls`, `factory`, `proxy`, `rateLimits`, `circuits`, `getDispatch`, `getDispatches`, `getWiring`, `getWirings`) and reverts with `CallSelectorHardcoded(bytes4)` if a match is found. This prevents accidental or malicious replacement of the Controller's own routing and admin functions.
+The Beacon protects core function selectors from being overwritten by integration wiring. The internal function `_revertIfCallSelectorIsHardcoded` in `Beacon.sol` checks against a fixed list of selectors and reverts with `CallSelectorHardcoded(bytes4)` if a match is found. The protected selectors cover both Controller functions (`updateIntegrations`, `removeIntegrations`, `accessControls`, `beacon`, `proxy`, `rateLimits`) and shared enumeration functions (`integrations`, `getConfig`, `getConfigs`, `getDispatch`, `getDispatches`). This prevents accidental or malicious replacement of the Controller's own routing and admin functions at the Beacon level, before configs ever reach a Controller.
+
+See [BEACON.md](./BEACON.md) for the full details on hardcoded selector protection.
+
+---
+
+## Beacon and Controller Versioning
+
+The Beacon and Controller are tightly coupled through the hardcoded selector list. If a new explicit function is added to the Controller, its selector must also be added to the Beacon's `_revertIfCallSelectorIsHardcoded` check. Without this, a Beacon admin could wire an integration whose call selector collides with the new Controller function, making that function unreachable. This means Beacon and Controller contract upgrades must be coordinated: any change to the Controller's function signatures requires a matching Beacon update.

@@ -38,6 +38,7 @@ diamond-pau/
 │   ├── ALMProxy.sol
 │   ├── ALMProxyFreezable.sol
 │   ├── AccessControls.sol
+│   ├── Beacon.sol
 │   ├── Controller.sol
 │   ├── ControllerSharedStorage.sol
 │   ├── PAUFactory.sol
@@ -90,7 +91,7 @@ In the diamond dispatch pattern, only the 4-byte function selector is swapped. T
 
 #### Config After Wiring
 
-Configuration calls (e.g., `setMaxSlippage`) are dispatched through the Controller like any other facet call. They must come after `addWires()` since the dispatch route does not exist until the wire is added.
+Configuration calls (e.g., `setMaxSlippage`) are dispatched through the Controller like any other facet call. They must come after `beacon.setIntegration()` and `controller.updateIntegrations()` since the dispatch route does not exist until the integration is synced.
 
 #### Cleanup Over Wiring
 
@@ -111,15 +112,6 @@ Each facet uses generic internal names for its storage: `FacetStorage` (struct),
 #### Reentrancy Guard and Event Ordering
 
 All external facet functions must use the `nonReentrant` modifier as a standard practice. Events should be emitted at the end of the function, after all state changes and external calls are complete.
-
-#### Named Event Parameters in Tests
-
-Use named parameters when emitting expected events in tests for readability and to prevent argument ordering mistakes:
-
-```solidity
-vm.expectEmit(address(controller));
-emit AaveMaxSlippageSet({ aToken: ATOKEN, maxSlippage: 0.01e18 });
-```
 
 #### UUPS for Auxiliary Contracts
 

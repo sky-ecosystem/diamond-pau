@@ -18,12 +18,11 @@ The proxy contract that holds custody of all funds. This contract routes calls t
 The unified controller contract that serves as the entry point for all relayer operations. Inspired by the [EIP-2535 Diamond Proxy](https://eips.ethereum.org/EIPS/eip-2535) pattern, the Controller uses dispatch-based routing to delegate calls to specialized facets. Rather than maintaining separate controllers per domain (e.g., mainnet vs L2), a single Controller is deployed on each chain and configured with only the facets relevant to that deployment.
 
 **Key characteristics:**
-- Dispatch-based call routing: admin maps call selectors to (facet address, delegate selector) pairs via `addWire`
+- Dispatch-based call routing: admin syncs integration configs from the Beacon via `updateIntegrations`, which maps call selectors to (facet address, delegate selector) pairs locally
 - Each facet uses its own ERC-7201 namespaced storage domain, preventing storage collisions
 - Shared state (access controls, proxy, rate limits) is accessible to all facets via `ControllerSharedStorage`
 - Reentrancy protection across all facet calls
-- Wiring uses `Wire` structs (`callSelector` + `delegateSelector` pairs) for configuration; `circuits()` returns `Circuit` structs (a facet address together with all its wires)
-- Enumerable introspection via `circuits()`, `getDispatch()`, `getDispatches()`, `getWiring()`, and `getWirings()`
+- Enumerable introspection via `integrations()`, `getConfig()`, `getConfigs()`, `getDispatch()`, and `getDispatches()`
 
 **Capabilities (determined by which facets are wired):**
 - Interact with the Sky allocation system to mint and burn USDS
@@ -33,9 +32,15 @@ The unified controller contract that serves as the entry point for all relayer o
 - Bridge USDC via CCTP and OFTs with LayerZero
 - Transfer shares via Centrifuge cross-chain
 
+### Beacon
+
+The single source of truth for all integration configurations. The Beacon manages the lifecycle of integrations (facet address + wire mappings) and stores the canonical dispatch lookup. Multiple Controllers can reference the same Beacon, each syncing its local config copy via `updateIntegrations`. The Beacon admin (`DEFAULT_ADMIN_ROLE`) configures integrations, and the Beacon validates facet addresses, prevents duplicate selector wiring, and protects hardcoded Controller selectors.
+
+See [BEACON.md](./BEACON.md) for data structures, integration lifecycle, hardcoded selector protection, and versioning details.
+
 ### PAUFactory
 
-Factory contract for deploying PAU systems and managing facet validation. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller`, wires their roles, and transfers admin ownership to the caller-specified admin. The factory also maintains a `ValidFacet` registry (controlled by `FACET_VALIDATOR_ROLE`) that the Controller checks when wiring new facets.
+Factory contract for deploying complete PAU systems. Takes a Beacon address at construction. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller` (pointing to the shared Beacon), wires their roles, and transfers admin ownership to the caller-specified admin.
 
 ### AccessControls
 
@@ -96,31 +101,10 @@ All contracts in this repo inherit and implement the `AccessControl` contract fr
 | `RELAYER` | Used for the offchain relayer system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`. |
 | `FREEZER` | Allows removal of a compromised `RELAYER`. Intended for use with a backup relayer that the system can fall back to. |
 | `CONTROLLER` | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits. |
-| `FACET_VALIDATOR` | Used in `PAUFactory` to control which facets can be wired to Controllers. Only validated facets can be added via `addWire`. |
 
 ## Contract Interactions
 
-```
-┌─────────────────┐
-│   PAUFactory    │─── deploys ──┬──────────────────────┬─────────────────────┬─────────────────────┐
-│ (Facet Registry)│              │                      │                     │                     │
-└─────────────────┘              ▼                      ▼                     ▼                     ▼
-                        ┌──────────────────┐    ┌─────────────────┐  ┌──────────────────┐ ┌────────────────┐
-┌─────────────────┐     │   Controller     │    │    ALMProxy     │  │   RateLimits     │ │ AccessControls │
-│     Relayer     │────▶│  (Dispatches to  │───▶│ (Funds Custody) │  │   (State Store)  │ │  (Role Store)  │
-│   (External)    │     │    Facets)       │    └─────────────────┘  └──────────────────┘ └────────────────┘
-└─────────────────┘     └──────────────────┘           │                       ▲                    ▲
-                                   │                   │                       │                    │
-                                   │                   ▼                       │                    │
-                                   │          ┌────────────────────┐           │                    │
-                                   │          │ External Protocols │           │                    │
-                                   │          │  (Sky, PSM, etc.)  │           │                    │
-                                   │          └────────────────────┘           │                    │
-                                   │                                           │                    │
-                                   └───────── reads/updates ───────────────────┘                    │
-                                   │                                                                │
-                                   └───────── checks roles ─────────────────────────────────────────┘
-```
+![PAU Architecture](./contract_interaction.png)
 
 ## Facets
 
@@ -129,6 +113,7 @@ The system uses a facet-based architecture where each protocol integration is en
 | Facet | Purpose |
 |-------|---------|
 | `AaveFacet` | Aave protocol deposit/withdraw |
+| `BasinFacet` | Grove Basin protocol deposit/withdraw |
 | `CCTPFacet` | Circle CCTP v2 USDC bridging |
 | `CentrifugeFacet` | Centrifuge async vault (ERC-7887) interactions |
 | `CurveFacet` | Curve StableSwap pool operations |

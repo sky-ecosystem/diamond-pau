@@ -9,7 +9,6 @@ This document outlines the threat model for PAU, including attack vectors, trust
 | **Governance** (`DEFAULT_ADMIN_ROLE`) | Fully trusted | Controls all admin functions, can upgrade controllers, set rate limits |
 | **Relayer** (`RELAYER`) | **Untrusted** | Assumed to be potentially compromised at any time |
 | **Freezer** (`FREEZER`) | Trusted | Emergency response role, can remove compromised relayers |
-| **Facet Validator** (`FACET_VALIDATOR_ROLE`) | Trusted | Controls which facets can be wired to Controllers via PAUFactory. A compromised validator could approve malicious facets. |
 | **External Protocols** | Varies | Trust depends on specific integration (see Protocol Trust section) |
 
 ---

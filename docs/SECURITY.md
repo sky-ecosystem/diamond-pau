@@ -11,7 +11,6 @@ This document describes protocol-specific security considerations for PAU.
 | `DEFAULT_ADMIN_ROLE` | **Fully trusted**         | Run by governance                                                                                                 |
 | `RELAYER`            | **Assumed compromisable** | Logic must prevent unauthorized value movement. This should be a major consideration during auditing engagements. |
 | `FREEZER`            | Trusted                   | Can stop compromised relayers via `removeRelayer`                                                                 |
-| `FACET_VALIDATOR_ROLE` | Trusted                 | Controls which facets can be wired to Controllers via PAUFactory. Compromise could allow wiring malicious facets. |
 
 ### Relayer Compromise Mitigations
 
@@ -113,9 +112,9 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 For detailed operational requirements including seeding, configuration, and onboarding checklists, see [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md).
 
-### PAUFactory Governance Surface
+### Beacon Governance Surface
 
-The PAUFactory manages a ValidFacet registry that controls which facets are eligible to be wired into Controllers. Only addresses holding the `FACET_VALIDATOR_ROLE` can approve or revoke facets in this registry. This serves as a critical security boundary: if a malicious facet were approved and subsequently wired, it could gain arbitrary access to Controller storage and ALMProxy funds. Auditors should verify that the ValidFacet registry is properly gated and that no path exists to bypass facet validation during wiring.
+The Beacon manages all integration configurations (facet addresses and selector wiring) for every Controller that references it. Only the `DEFAULT_ADMIN_ROLE` on the Beacon can call `setIntegration` or `removeIntegration`. This is a critical security boundary: if a malicious integration were configured, the facet would gain arbitrary access to Controller storage and ALMProxy funds via `delegatecall`. The Beacon validates that facet addresses are non-zero and have deployed code, and protects hardcoded selectors from being overwritten. Auditors should verify that no path exists to bypass these validations, and that the admin-only gate on integration management cannot be circumvented.
 
 ---
 
