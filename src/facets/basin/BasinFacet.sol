@@ -21,6 +21,8 @@ interface IBasinLike {
         external
         returns (uint256 assetsWithdrawn);
 
+    function shares(address user) external view returns (uint256);
+
 }
 
 contract BasinFacet is IBasinFacet, FacetBase {
@@ -73,6 +75,8 @@ contract BasinFacet is IBasinFacet, FacetBase {
     {
         address proxy = _getSharedControllerStorage().proxy;
 
+        uint256 sharesBefore = IBasinLike(basin).shares(proxy);
+
         // Withdraw up to `maxAmount` of `asset` in the Basin, decode the result to get
         // `assetsWithdrawn` (assumes the proxy has enough Basin shares).
         // NOTE: Rate limited at end of function, so cannot return here.
@@ -86,7 +90,12 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
 
-        emit BasinWithdraw(basin, asset, assetsWithdrawn);
+        emit BasinWithdraw(
+            basin,
+            asset,
+            assetsWithdrawn,
+            sharesBefore - IBasinLike(basin).shares(proxy)
+        );
     }
 
     /**********************************************************************************************/

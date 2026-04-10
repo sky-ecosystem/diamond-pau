@@ -137,10 +137,12 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         uint256 expectedShares = groveBasin.previewDeposit(Ethereum.USDS, depositAmount);
 
+        assertEq(expectedShares, depositAmount);
+
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IBasinFacet.BasinDeposit(address(groveBasin), Ethereum.USDS, depositAmount, depositAmount);
+        emit IBasinFacet.BasinDeposit(address(groveBasin), Ethereum.USDS, depositAmount, expectedShares);
 
         vm.prank(relayer);
         uint256 shares = mainnetController.depositBasin(
@@ -268,10 +270,14 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         assertEq(proxyBalBefore, 0);
         assertGe(basinBalBefore, withdrawAmount);
 
+        ( uint256 expectedShares, ) = groveBasin.previewWithdraw(Ethereum.USDS, withdrawAmount);
+
+        assertEq(expectedShares, withdrawAmount);
+
         vm.record();
 
         vm.expectEmit(address(mainnetController));
-        emit IBasinFacet.BasinWithdraw(address(groveBasin), Ethereum.USDS, withdrawAmount);
+        emit IBasinFacet.BasinWithdraw(address(groveBasin), Ethereum.USDS, withdrawAmount, expectedShares);
 
         vm.prank(relayer);
         uint256 assetsWithdrawn = mainnetController.withdrawBasin(
