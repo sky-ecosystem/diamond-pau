@@ -269,7 +269,7 @@ contract Controller_IntegrationTests is Integration_TestBase {
 
         address newFacet = address(new MockFacet1());
 
-        IEnumerableIntegrations.Config memory newConfig = IEnumerableIntegrations.Config({ facet: newFacet, wires: newWires });
+        IEnumerableIntegrations.Config memory newConfig = IEnumerableIntegrations.Config(newFacet, newWires);
 
         vm.prank(beaconAdmin);
         beacon.setIntegration(originalIntegration.id, newConfig);
@@ -866,12 +866,12 @@ contract Controller_IntegrationTests is Integration_TestBase {
         wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy2.selector,   MockFacet1.div.selector);
         wires[1] = IEnumerableIntegrations.Wire(IMockController.multiplyBy2.selector, MockFacet1.mul.selector);
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({ facet: address(new MockFacet1()), wires: wires });
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(address(new MockFacet1()), wires);
 
         vm.prank(beaconAdmin);
         beacon.setIntegration("TWO_FACTOR_INTEGRATION", config);
 
-        return IEnumerableIntegrations.Integration({ id: "TWO_FACTOR_INTEGRATION", config: config });
+        return IEnumerableIntegrations.Integration("TWO_FACTOR_INTEGRATION", config);
     }
 
     function _registerFourFactorIntegration() internal returns (IEnumerableIntegrations.Integration memory integration) {
@@ -879,12 +879,12 @@ contract Controller_IntegrationTests is Integration_TestBase {
         wires[0] = IEnumerableIntegrations.Wire(IMockController.divideBy4.selector,   MockFacet2.div.selector);
         wires[1] = IEnumerableIntegrations.Wire(IMockController.multiplyBy4.selector, MockFacet2.mul.selector);
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({ facet: address(new MockFacet2()), wires: wires });
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(address(new MockFacet2()), wires);
 
         vm.prank(beaconAdmin);
         beacon.setIntegration("FOUR_FACTOR_INTEGRATION", config);
 
-        return IEnumerableIntegrations.Integration({ id: "FOUR_FACTOR_INTEGRATION", config: config });
+        return IEnumerableIntegrations.Integration("FOUR_FACTOR_INTEGRATION", config);
     }
 
 }
