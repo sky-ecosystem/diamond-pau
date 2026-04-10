@@ -270,6 +270,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         assertEq(proxyBalBefore, 0);
         assertGe(basinBalBefore, withdrawAmount);
 
+        vm.prank(address(almProxy));
         ( uint256 expectedShares, ) = groveBasin.previewWithdraw(Ethereum.USDS, withdrawAmount);
 
         assertEq(expectedShares, withdrawAmount);
