@@ -27,6 +27,32 @@ interface IERC20Like {
 
 interface IPoolLike {
 
+    function borrow(
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        uint16  referralCode,
+        address onBehalfOf
+    ) external;
+
+    function getUserAccountData(address user) external view returns (
+        uint256 totalCollateralBase,
+        uint256 totalDebtBase,
+        uint256 availableBorrowsBase,
+        uint256 currentLiquidationThreshold,
+        uint256 ltv,
+        uint256 healthFactor
+    );
+
+    function repay(
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        address onBehalfOf
+    ) external returns (uint256);
+
+    function setUserUseReserveAsCollateral(address asset, bool useAsCollateral) external;
+
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)
         external;
 
@@ -59,14 +85,37 @@ contract AaveFacet is IAaveFacet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 public constant override LIMIT_BORROW   = keccak256("LIMIT_AAVE_BORROW");
     bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_AAVE_DEPOSIT");
+    bytes32 public constant override LIMIT_REPAY    = keccak256("LIMIT_AAVE_REPAY");
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_AAVE_WITHDRAW");
 
-    string public constant override VERSION = "1.0.0";
+    uint256 internal constant VARIABLE_RATE_MODE = 2;
+
+    string public constant override VERSION = "1.1.0";
 
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
+
+    function setCollateral(address aToken, bool useAsCollateral)
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(aToken != address(0), "AaveFacet/aToken-zero-address");
+
+        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+            IATokenWithPoolLike(aToken).POOL(),
+            abi.encodeCall(
+                IPoolLike.setUserUseReserveAsCollateral,
+                (IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS(), useAsCollateral)
+            )
+        );
+
+        emit AaveCollateralSet(aToken, useAsCollateral);
+    }
 
     function setMaxSlippage(address aToken, uint256 maxSlippage)
         external
@@ -82,6 +131,39 @@ contract AaveFacet is IAaveFacet, FacetBase {
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
+
+    function borrow(address aToken, uint256 amount, uint256 minHealthFactor)
+        external
+        override
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+    {
+        require(minHealthFactor >= 1e18, "AaveFacet/invalid-min-health-factor");
+
+        address proxy      = _getSharedControllerStorage().proxy;
+        address pool       = IATokenWithPoolLike(aToken).POOL();
+        address underlying = IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS();
+
+        _decreaseRateLimit(LIMIT_BORROW, aToken, amount);
+
+        uint256 balanceBefore = IERC20Like(underlying).balanceOf(proxy);
+
+        // Borrow underlying from Aave pool on behalf of the proxy.
+        IALMProxy(proxy).doCall(
+            pool,
+            abi.encodeCall(IPoolLike.borrow,(underlying, amount, VARIABLE_RATE_MODE, 0, proxy))
+        );
+
+        uint256 received = IERC20Like(underlying).balanceOf(proxy) - balanceBefore;
+
+        require(received >= amount, "AaveFacet/borrow-amount-too-low");
+
+        ( , , , , , uint256 healthFactor ) = IPoolLike(pool).getUserAccountData(proxy);
+
+        require(healthFactor >= minHealthFactor, "AaveFacet/health-factor-too-low");
+
+        emit AaveBorrow(aToken, amount, healthFactor);
+    }
 
     function deposit(address aToken, uint256 amount)
         external
@@ -116,6 +198,39 @@ contract AaveFacet is IAaveFacet, FacetBase {
         require(newATokens >= amount * maxSlippage / 1e18, "AaveFacet/slippage-too-high");
 
         emit AaveDeposit(aToken, amount);
+    }
+
+    function repay(address aToken, uint256 amount)
+        external
+        override
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+        returns (uint256 amountRepaid)
+    {
+        address proxy      = _getSharedControllerStorage().proxy;
+        address underlying = IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS();
+        address pool       = IATokenWithPoolLike(aToken).POOL();
+
+        // Approve underlying to Aave pool from the proxy.
+        // NOTE: If `amount` is `type(uint256).max` for full repayment,
+        //       this will approve unlimited `underlying` tokens.
+        ApproveLib.approve(underlying, proxy, pool, amount);
+
+        // Repay debt on behalf of the proxy, decode actual amount repaid.
+        amountRepaid = abi.decode(
+            IALMProxy(proxy).doCall(
+                pool,
+                abi.encodeCall(IPoolLike.repay, (underlying, amount, VARIABLE_RATE_MODE, proxy))
+            ),
+            (uint256)
+        );
+
+        require(amountRepaid <= amount, "AaveFacet/repay-amount-too-high");
+
+        _decreaseRateLimit(LIMIT_REPAY,  aToken, amountRepaid);
+        _increaseRateLimit(LIMIT_BORROW, aToken, amountRepaid);
+
+        emit AaveRepay(aToken, amountRepaid);
     }
 
     function withdraw(address aToken, uint256 amount)

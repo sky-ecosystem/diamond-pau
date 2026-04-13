@@ -5,13 +5,29 @@ import { IFacetBase } from "../IFacetBase.sol";
 
 /**
  * @title  IAaveFacet
- * @notice PAU facet for supplying and withdrawing assets via Aave V3 lending pools.
+ * @notice PAU facet for supplying, withdrawing, borrowing and repaying assets via Aave V3 lending
+ *         pools.
  */
 interface IAaveFacet is IFacetBase {
 
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
+
+    /**
+     * @notice Emitted when an underlying asset is borrowed from an Aave pool.
+     * @param  aToken          Address of the aToken representing the Aave market.
+     * @param  amount          Amount of underlying asset borrowed.
+     * @param  newHealthFactor New health factor after borrow (1e18 precision).
+     */
+    event AaveBorrow(address indexed aToken, uint256 amount, uint256 newHealthFactor);
+
+    /**
+     * @notice Emitted when the collateral flag for an aToken market is toggled.
+     * @param  aToken          Address of the aToken representing the Aave market.
+     * @param  useAsCollateral Whether the asset is enabled as collateral.
+     */
+    event AaveCollateralSet(address indexed aToken, bool useAsCollateral);
 
     /**
      * @notice Emitted when an underlying asset is supplied to an Aave pool.
@@ -28,6 +44,13 @@ interface IAaveFacet is IFacetBase {
     event AaveMaxSlippageSet(address indexed aToken, uint256 maxSlippage);
 
     /**
+     * @notice Emitted when borrowed debt is repaid on an Aave pool.
+     * @param  aToken       Address of the aToken representing the Aave market.
+     * @param  amountRepaid Actual amount of underlying asset repaid.
+     */
+    event AaveRepay(address indexed aToken, uint256 amountRepaid);
+
+    /**
      * @notice Emitted when underlying assets are withdrawn from an Aave pool.
      * @param  aToken          Address of the aToken representing the Aave market.
      * @param  amountWithdrawn Actual amount of underlying asset withdrawn.
@@ -39,11 +62,34 @@ interface IAaveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
+     * @notice Borrows underlying asset from Aave against the proxy's collateral.
+     * @param  aToken          Address of the aToken (determines pool and underlying).
+     * @param  amount          Amount of underlying asset to borrow.
+     * @param  minHealthFactor Minimum acceptable health factor after borrow (1e18 precision).
+     */
+    function borrow(address aToken, uint256 amount, uint256 minHealthFactor) external;
+
+    /**
      * @notice Supplies underlying asset into the Aave pool for `aToken`.
      * @param  aToken Address of the aToken (determines pool and underlying).
      * @param  amount Amount of underlying asset to supply.
      */
     function deposit(address aToken, uint256 amount) external;
+
+    /**
+     * @notice Repays borrowed debt on an Aave pool.
+     * @param  aToken       Address of the aToken (determines pool and underlying).
+     * @param  amount       Amount of underlying to repay (type(uint256).max for full repayment).
+     * @return amountRepaid Actual amount of underlying repaid.
+     */
+    function repay(address aToken, uint256 amount) external returns (uint256 amountRepaid);
+
+    /**
+     * @notice Toggles whether a supplied asset is used as collateral in Aave.
+     * @param  aToken          Address of the aToken (determines pool and underlying).
+     * @param  useAsCollateral True to enable, false to disable.
+     */
+    function setCollateral(address aToken, bool useAsCollateral) external;
 
     /**
      * @notice Sets the max slippage for deposit operations on a given aToken.
@@ -65,10 +111,22 @@ interface IAaveFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
+     * @notice Rate limit key for Aave borrow operations, combined with the aToken address to form
+     *         the per-market key.
+     */
+    function LIMIT_BORROW() external pure returns (bytes32);
+
+    /**
      * @notice Rate limit key for Aave deposit operations, combined with the aToken address to form
      *         the per-market key.
      */
     function LIMIT_DEPOSIT() external pure returns (bytes32);
+
+    /**
+     * @notice Rate limit key for Aave repay operations, combined with the aToken address to form
+     *         the per-market key.
+     */
+    function LIMIT_REPAY() external pure returns (bytes32);
 
     /**
      * @notice Rate limit key for Aave withdraw operations, combined with the aToken address to form
