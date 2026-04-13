@@ -39,6 +39,11 @@ This repository contains the onchain components of the PAU system. The system en
 | [Beacon](./docs/BEACON.md)                                     | Beacon integration configs, lifecycle, and versioning       |
 | [PAU Factory](./docs/PAU_FACTORY.md)                           | Factory deployment and Beacon relationship                  |
 | [UniV3/V4 Comparison](./docs/UNIV3_UNIV4_COMPARISON.md)        | Functional differences between UniswapV3 and V4 facets      |
+| [Facet Workflow](./docs/FACET_WORKFLOW.md)                     | End-to-end process for building a new facet with AI agents  |
+| [Facet Pre-Launch Checklist](./docs/FACET_PRELAUNCH_CHECKLIST.md) | Security checklist required before any facet goes to mainnet |
+| [Facet Standards](./docs/FACET_STANDARDS.md)                   | Code, interface, storage, and security rules for new facets |
+| [Facet Testing](./docs/FACET_TESTING.md)                       | Required test coverage patterns for every facet             |
+| [Facet Integration Template](./docs/FACET_INTEGRATION_TEMPLATE.md) | Fill-in template for specifying a new integration       |
 
 ## Quick Start
 
