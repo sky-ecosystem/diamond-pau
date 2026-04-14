@@ -17,10 +17,10 @@ interface IAaveFacet is IFacetBase {
     /**
      * @notice Emitted when an underlying asset is borrowed from an Aave pool.
      * @param  aToken          Address of the aToken representing the Aave market.
-     * @param  amount          Amount of underlying asset borrowed.
+     * @param  amountReceived  Amount of underlying asset received.
      * @param  newHealthFactor New health factor after borrow (1e18 precision).
      */
-    event AaveBorrow(address indexed aToken, uint256 amount, uint256 newHealthFactor);
+    event AaveBorrow(address indexed aToken, uint256 amountReceived, uint256 newHealthFactor);
 
     /**
      * @notice Emitted when the collateral flag for an aToken market is toggled.
@@ -66,8 +66,10 @@ interface IAaveFacet is IFacetBase {
      * @param  aToken          Address of the aToken (determines pool and underlying).
      * @param  amount          Amount of underlying asset to borrow.
      * @param  minHealthFactor Minimum acceptable health factor after borrow (1e18 precision).
+     * @return amountReceived  Actual amount of underlying asset received.
      */
-    function borrow(address aToken, uint256 amount, uint256 minHealthFactor) external;
+    function borrow(address aToken, uint256 amount, uint256 minHealthFactor)
+        external returns (uint256 amountReceived);
 
     /**
      * @notice Supplies underlying asset into the Aave pool for `aToken`.

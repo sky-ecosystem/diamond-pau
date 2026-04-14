@@ -12,7 +12,11 @@ abstract contract IForeignControllerFull is IController, Controller {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function borrowAave(address aToken, uint256 amount, uint256 minHealthFactor) external virtual;
+    function borrowAave(
+        address aToken,
+        uint256 amount,
+        uint256 minHealthFactor
+    ) external virtual returns (uint256 amountReceived);
 
     function depositAave(address aToken, uint256 amount) external virtual;
 

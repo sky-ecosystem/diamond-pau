@@ -140,6 +140,7 @@ contract AaveFacet is IAaveFacet, FacetBase {
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
+        returns (uint256 amountReceived)
     {
         require(minHealthFactor >= 1e18, "AaveFacet/invalid-min-health-factor");
 
@@ -157,15 +158,15 @@ contract AaveFacet is IAaveFacet, FacetBase {
             abi.encodeCall(IPoolLike.borrow,(underlying, amount, VARIABLE_RATE_MODE, 0, proxy))
         );
 
-        uint256 received = IERC20Like(underlying).balanceOf(proxy) - balanceBefore;
+        amountReceived = IERC20Like(underlying).balanceOf(proxy) - balanceBefore;
 
-        require(received >= amount, "AaveFacet/borrow-amount-too-low");
+        require(amountReceived >= amount, "AaveFacet/borrow-amount-too-low");
 
         ( , , , , , uint256 healthFactor ) = IPoolLike(pool).getUserAccountData(proxy);
 
         require(healthFactor >= minHealthFactor, "AaveFacet/health-factor-too-low");
 
-        emit AaveBorrow(aToken, amount, healthFactor);
+        emit AaveBorrow(aToken, amountReceived, healthFactor);
     }
 
     function deposit(address aToken, uint256 amount)

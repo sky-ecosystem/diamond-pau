@@ -422,7 +422,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         emit IAaveFacet.AaveBorrow(ATOKEN_USDS, 1_000_000e18, 21.050378656380006684e18);
 
         vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
+        assertEq(mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18), 1_000_000e18);
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -444,7 +444,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         emit IAaveFacet.AaveBorrow(ATOKEN_USDC, 1_000_000e6, 21.060770087452471141e18);
 
         vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18);
+        assertEq(mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18), 1_000_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 

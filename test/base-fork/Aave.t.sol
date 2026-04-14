@@ -257,7 +257,7 @@ contract ForeignController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         emit IAaveFacet.AaveBorrow(ATOKEN_USDC, 10_000e6, 78e18);
 
         vm.prank(relayer);
-        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+        assertEq(foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18), 10_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 
