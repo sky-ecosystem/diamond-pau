@@ -197,6 +197,74 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
         vm.stopPrank();
     }
 
+    function test_setAaveCollateral_disableCollateral_withExistingDebt_reverts() external {
+        // Borrow USDC and USDS.
+        vm.startPrank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 1e18);
+        vm.stopPrank();
+
+        // Disable USDS collateral should fail as it is backing the existing debt.
+        vm.expectRevert(abi.encode("35")); // HEALTH_FACTOR_LOWER_THAN_LIQUIDATION_THRESHOLD
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+
+        // Deal and Repay USDS debt.
+        deal(Ethereum.USDS, address(almProxy), 10_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDS, 10_000_000e18);
+
+        // Disable USDS collateral should succeed.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+    }
+
+    function test_setAaveCollateral_disableAndBorrow_singleCollateralDisabled() external {
+        // Step-1: Disable USDS collateral.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+
+        // Step-2: Borrow now fails with USDS collateral disabled.
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
+
+        // Step-3: Re-enable USDS collateral.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
+
+        // Step-4: Borrow succeeds with USDS collateral enabled.
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
+    }
+
+    function test_setAaveCollateral_disableAndBorrow_bothCollateralDisabled() external {
+        // Step-1: Disable USDS and USDC collateral.
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, false);
+
+        vm.stopPrank();
+
+        // Step-2: Borrow fails with both collateral disabled.
+        vm.expectRevert(abi.encode("34")); // COLLATERAL_BALANCE_IS_ZERO
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
+
+        // Step-3: Re-enable USDS and USDC collateral.
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, true);
+        vm.stopPrank();
+
+        // Step-4: Borrow succeeds with both collateral enabled.
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 2e18);
+    }
+
+
     function test_setAaveCollateral_usds() external {
         // Disable USDS collateral.
         vm.record();
@@ -243,50 +311,6 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
         mainnetController.setAaveCollateral(ATOKEN_USDC, true);
 
         _assertReentrancyGuardWrittenToTwice();
-    }
-
-    function test_setAaveCollateral_disableAndBorrow_singleCollateralDisabled() external {
-        // Step-1: Disable USDS collateral.
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
-
-        // Step-2: Borrow now fails with USDS collateral disabled.
-        vm.expectRevert("AaveFacet/health-factor-too-low");
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
-
-        // Step-3: Re-enable USDS collateral.
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
-
-        // Step-4: Borrow succeeds with USDS collateral enabled.
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
-    }
-
-    function test_setAaveCollateral_disableAndBorrow_bothCollateralDisabled() external {
-        // Step-1: Disable USDS and USDC collateral.
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
-        mainnetController.setAaveCollateral(ATOKEN_USDC, false);
-
-        vm.stopPrank();
-
-        // Step-2: Borrow fails with both collateral disabled.
-        vm.expectRevert(abi.encode("34")); // SpecifiedCurrencyNotBorrowedByUser
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
-
-        // Step-3: Re-enable USDS and USDC collateral.
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
-        mainnetController.setAaveCollateral(ATOKEN_USDC, true);
-        vm.stopPrank();
-
-        // Step-4: Borrow succeeds with both collateral enabled.
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 2e18);
     }
 
 }

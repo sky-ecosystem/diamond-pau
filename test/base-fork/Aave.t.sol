@@ -119,6 +119,47 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
     }
 
+    function test_setAaveCollateral_disableCollateral_withExistingDebt_reverts() external {
+        // Borrow USDC.
+        vm.startPrank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+        vm.stopPrank();
+
+        // Disable USDC collateral should fail as it is backing the existing debt.
+        vm.expectRevert(abi.encode("35")); // HEALTH_FACTOR_LOWER_THAN_LIQUIDATION_THRESHOLD
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, false);
+
+        // Deal and Repay USDC debt.
+        deal(Base.USDC, address(almProxy), 10_000e6);
+
+        vm.prank(relayer);
+        foreignController.repayAave(ATOKEN_USDC, 10_000e6);
+
+        // Disable USDC collateral should succeed.
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, false);
+    }
+
+    function test_setAaveCollateral_disableAndBorrow() external {
+        // Step-1: Disable USDC collateral.
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, false);
+
+        // Step-2: Borrow fails with USDC collateral disabled.
+        vm.expectRevert(abi.encode("34")); // COLLATERAL_BALANCE_IS_ZERO
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+
+        // Step-3: Re-enable USDC collateral.
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, true);
+
+        // Step-4: Borrow succeeds with USDC collateral enabled.
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+    }
+
     function test_setAaveCollateral_usdc() external {
         // Disable USDC collateral.
         vm.record();
@@ -141,25 +182,6 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
         foreignController.setAaveCollateral(ATOKEN_USDC, true);
 
         _assertReentrancyGuardWrittenToTwice();
-    }
-
-    function test_setAaveCollateral_disableAndBorrow() external {
-        // Step-1: Disable USDC collateral.
-        vm.prank(Base.SPARK_EXECUTOR);
-        foreignController.setAaveCollateral(ATOKEN_USDC, false);
-
-        // Step-2: Borrow fails with USDC collateral disabled.
-        vm.expectRevert(abi.encode("34")); // SpecifiedCurrencyNotBorrowedByUser
-        vm.prank(relayer);
-        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
-
-        // Step-3: Re-enable USDC collateral.
-        vm.prank(Base.SPARK_EXECUTOR);
-        foreignController.setAaveCollateral(ATOKEN_USDC, true);
-
-        // Step-4: Borrow succeeds with USDC collateral enabled.
-        vm.prank(relayer);
-        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
     }
 
 }
