@@ -91,7 +91,7 @@ contract FacetVersions_Tests is Test {
     }
 
     function test_version() external view {
-        assertEq(aaveFacet.VERSION(),          "1.0.0");
+        assertEq(aaveFacet.VERSION(),          "1.1.0");
         assertEq(basinFacet.VERSION(),         "1.0.0");
         assertEq(cctpFacet.VERSION(),          "1.0.0");
         assertEq(centrifugeFacet.VERSION(),    "1.0.0");
