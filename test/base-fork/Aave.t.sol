@@ -31,6 +31,18 @@ interface IAavePoolLike {
 
     function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory);
 
+    function getUserAccountData(address user)
+        external
+        view
+        returns (
+            uint256 totalCollateralBase,
+            uint256 totalDebtBase,
+            uint256 availableBorrowsBase,
+            uint256 currentLiquidationThreshold,
+            uint256 ltv,
+            uint256 healthFactor
+        );
+
     function repay(
         address asset,
         uint256 amount,
@@ -685,6 +697,197 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(AUSDC.balanceOf(address(almProxy)),    0);
         assertEq(usdcBase.balanceOf(address(almProxy)), aTokenBalance);
         assertEq(usdcBase.balanceOf(ATOKEN_USDC),       startingAUSDCBalance + 1_000_000e6 - aTokenBalance);
+    }
+
+}
+
+contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
+
+    function _getHealthFactor() internal view returns (uint256 healthFactor) {
+        ( , , , , , healthFactor ) = IAavePoolLike(POOL).getUserAccountData(address(almProxy));
+    }
+
+    function test_e2e_fullLifecycle_usdc() external {
+        bytes32 borrowKey   = makeAddressKey(foreignController.LIMIT_AAVE_BORROW(),   ATOKEN_USDC);
+        bytes32 depositKey  = makeAddressKey(foreignController.LIMIT_AAVE_DEPOSIT(),  ATOKEN_USDC);
+        bytes32 repayKey    = makeAddressKey(foreignController.LIMIT_AAVE_REPAY(),    ATOKEN_USDC);
+        bytes32 withdrawKey = makeAddressKey(foreignController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDC);
+
+        // Step 1: Deal 500k USDC to almProxy.
+        deal(Base.USDC, address(almProxy), 500_000e6);
+
+        // Step 2: Deposit 500k USDC.
+        assertEq(_getHealthFactor(),                         type(uint256).max);
+        assertEq(AUSDC.balanceOf(address(almProxy)),         0);
+        assertEq(usdcBase.balanceOf(address(almProxy)),      500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6);
+
+        vm.prank(relayer);
+        foreignController.depositAave(ATOKEN_USDC, 500_000e6);
+
+        assertEq(_getHealthFactor(),                         type(uint256).max);
+        assertEq(AUSDC.balanceOf(address(almProxy)),         500_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),      0);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6 - 500_000e6);
+
+        // Step 3: Borrow 10k USDC with minHealthFactor = 1.5e18.
+        assertEq(_getDebtBalance(address(usdcBase)),        0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
+
+        vm.prank(relayer);
+        uint256 borrowReceived = foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1.5e18);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        10_000e6);
+        assertLt(_getHealthFactor(),                        type(uint256).max); // Health factor is less than max
+        assertEq(AUSDC.balanceOf(address(almProxy)),        500_000e6);
+        assertEq(borrowReceived,                            10_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     10_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 10_000e6);
+
+        // Step 4: Skip 2 hours to accrue interest.
+        skip(2 hours);
+
+        // Step 5: Read debt (should be > 10k), deal extra USDC to cover interest.
+        uint256 debtAfterInterest = _getDebtBalance(address(usdcBase));
+
+        assertEq(debtAfterInterest, 10_000.468206e6); // NOTE: Intentional hardcoded value.
+
+        deal(Base.USDC, address(almProxy), debtAfterInterest);
+
+        // Step 6: Repay full debt (type(uint256).max).
+        assertEq(usdcBase.balanceOf(address(almProxy)),    debtAfterInterest);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey), 15_000e6);
+
+        vm.prank(relayer);
+        uint256 amountRepaid = foreignController.repayAave(ATOKEN_USDC, type(uint256).max);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        0);
+        assertEq(_getHealthFactor(),                        type(uint256).max);
+        assertEq(amountRepaid,                              debtAfterInterest);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     0);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  15_000e6 - debtAfterInterest);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
+
+        // Step 7: Withdraw all (type(uint256).max).
+        uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
+
+        // Accrued deposit balance is greater than deposited amount (should be >500k).
+        assertEq(aTokenBalance,                               500_019.488853e6); // NOTE: Intentional hardcoded value.
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6);
+
+        vm.prank(relayer);
+        uint256 amountWithdrawn = foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max);
+
+        assertEq(_getDebtBalance(address(usdcBase)),          0);
+        assertEq(_getHealthFactor(),                          type(uint256).max);
+        assertEq(amountWithdrawn,                             aTokenBalance);
+        assertEq(AUSDC.balanceOf(address(almProxy)),          0);
+        assertEq(usdcBase.balanceOf(address(almProxy)),       500_019.488853e6); // Got interest accrued
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6 - amountWithdrawn);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey),  1_000_000e6); // Restored after withdraw
+    }
+
+    function test_e2e_partialOperations_usdc() external {
+        bytes32 borrowKey   = makeAddressKey(foreignController.LIMIT_AAVE_BORROW(),   ATOKEN_USDC);
+        bytes32 depositKey  = makeAddressKey(foreignController.LIMIT_AAVE_DEPOSIT(),  ATOKEN_USDC);
+        bytes32 repayKey    = makeAddressKey(foreignController.LIMIT_AAVE_REPAY(),    ATOKEN_USDC);
+        bytes32 withdrawKey = makeAddressKey(foreignController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDC);
+
+        // Step 1: Deal 1M USDC, deposit all.
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
+
+        assertEq(_getHealthFactor(),                         type(uint256).max);
+        assertEq(AUSDC.balanceOf(address(almProxy)),         0);
+        assertEq(usdcBase.balanceOf(address(almProxy)),      1_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6);
+
+        vm.prank(relayer);
+        foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
+
+        assertEq(_getHealthFactor(),                         type(uint256).max);
+        assertEq(AUSDC.balanceOf(address(almProxy)),         1_000_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),      0);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 0);
+
+        // Step 2: Borrow 5k USDC.
+        assertEq(_getDebtBalance(address(usdcBase)),        0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
+
+        vm.prank(relayer);
+        uint256 borrow1 = foreignController.borrowAave(ATOKEN_USDC, 5_000e6, 1.5e18);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        5_000e6);
+        assertLt(_getHealthFactor(),                        type(uint256).max);
+        assertEq(borrow1,                                   5_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     5_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 5_000e6);
+
+        // Step 3: Borrow 3k USDC (cumulative debt = 8k).
+        vm.prank(relayer);
+        uint256 borrow2 = foreignController.borrowAave(ATOKEN_USDC, 3_000e6, 1.5e18);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        8_000e6);
+        assertLt(_getHealthFactor(),                        type(uint256).max);
+        assertEq(borrow2,                                   3_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     8_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 8_000e6);
+
+        // Step 4: Repay 2k USDC (remaining debt = 6k).
+        assertEq(rateLimits.getCurrentRateLimit(repayKey), 15_000e6);
+
+        vm.prank(relayer);
+        uint256 repaid1 = foreignController.repayAave(ATOKEN_USDC, 2_000e6);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        6_000e6);
+        assertLt(_getHealthFactor(),                        type(uint256).max);
+        assertEq(repaid1,                                   2_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     6_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  15_000e6 - 2_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 6_000e6); // Partially restored
+
+        // Step 5: Withdraw 500k USDC.
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6);
+
+        vm.prank(relayer);
+        uint256 withdrawn1 = foreignController.withdrawAave(ATOKEN_USDC, 500_000e6);
+
+        assertEq(withdrawn1,                                  500_000e6);
+        assertEq(AUSDC.balanceOf(address(almProxy)),          1_000_000e6 - 500_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),       6_000e6 + 500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6 - 500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey),  500_000e6); // Partially restored
+
+        // Step 6: Repay remaining debt (type(uint256).max).
+        assertEq(_getDebtBalance(address(usdcBase)), 6_000e6);
+
+        vm.prank(relayer);
+        uint256 repaid2 = foreignController.repayAave(ATOKEN_USDC, type(uint256).max);
+
+        assertEq(_getDebtBalance(address(usdcBase)),        0);
+        assertEq(_getHealthFactor(),                        type(uint256).max);
+        assertEq(repaid2,                                   6_000e6);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  15_000e6 - 8_000e6); // 2k + 6k repaid
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6); // Fully restored
+
+        // Step 7: Withdraw remaining (type(uint256).max).
+        uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
+
+        assertEq(aTokenBalance, 500_000e6);
+
+        vm.prank(relayer);
+        uint256 withdrawn2 = foreignController.withdrawAave(ATOKEN_USDC, type(uint256).max);
+
+        assertEq(_getDebtBalance(address(usdcBase)),          0);
+        assertEq(_getHealthFactor(),                          type(uint256).max);
+        assertEq(withdrawn2,                                  aTokenBalance);
+        assertEq(AUSDC.balanceOf(address(almProxy)),          0);
+        assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6 - 500_000e6 - aTokenBalance);
+        assertEq(rateLimits.getCurrentRateLimit(depositKey),  1_000_000e6); // Fully restored
+
+        // Step 8: Assert final USDC balance accounts for all operations.
+        // Deposited 1M, borrowed 8k, repaid 8k, withdrew 1M = net 1M returned.
+        assertEq(usdcBase.balanceOf(address(almProxy)), 1_000_000e6);
     }
 
 }
