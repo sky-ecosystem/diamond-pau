@@ -16,6 +16,14 @@ import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IAavePoolLike {
 
+    function borrow(
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        uint16  referralCode,
+        address onBehalfOf
+    ) external;
+
     function flashLoan(
         address            receiverAddress,
         address[] calldata assets,
@@ -26,11 +34,32 @@ interface IAavePoolLike {
         uint16             referralCode
     ) external;
 
+    function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory);
+
+    function getUserAccountData(address user)
+        external
+        view
+        returns (
+            uint256 totalCollateralBase,
+            uint256 totalDebtBase,
+            uint256 availableBorrowsBase,
+            uint256 currentLiquidationThreshold,
+            uint256 ltv,
+            uint256 healthFactor
+        );
+
+    function repay(
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        address onBehalfOf
+    ) external returns (uint256);
+
+    function setUserUseReserveAsCollateral(address asset, bool useAsCollateral) external;
+
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
 
     function withdraw(address asset, uint256 amount, address to) external;
-
-    function getReserveData(address asset) external view returns (DataTypes.ReserveDataLegacy memory);
 
 }
 
@@ -64,10 +93,26 @@ abstract contract AaveV3_TestBase is ForkTestBase {
     uint256 internal startingAUSDSBalance;
     uint256 internal startingAUSDCBalance;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+
+        // Borrow rate limits
+
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDS),
+            10_000_000e18,
+            uint256(5_000_000e18) / 1 days
+        );
+
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDC),
+            10_000_000e6,
+            uint256(5_000_000e6) / 1 days
+        );
+
+        // Deposit rate limits
 
         rateLimits.setRateLimitData(
             makeAddressKey(mainnetController.LIMIT_AAVE_DEPOSIT(), ATOKEN_USDS),
@@ -81,6 +126,22 @@ abstract contract AaveV3_TestBase is ForkTestBase {
             uint256(5_000_000e6) / 1 days
         );
 
+        // Repay rate limits
+
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(), ATOKEN_USDS),
+            10_000_000e18,
+            uint256(5_000_000e18) / 1 days
+        );
+
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
+            10_000_000e6,
+            uint256(5_000_000e6) / 1 days
+        );
+
+        // Withdraw rate limits
+
         rateLimits.setRateLimitData(
             makeAddressKey(mainnetController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDS),
             10_000_000e18,
@@ -93,6 +154,8 @@ abstract contract AaveV3_TestBase is ForkTestBase {
             uint256(5_000_000e6) / 1 days
         );
 
+        // Max slippage
+
         mainnetController.setAaveMaxSlippage(ATOKEN_USDS, 1e18 - 1e4);  // Rounding slippage
         mainnetController.setAaveMaxSlippage(ATOKEN_USDC, 1e18 - 1e4);  // Rounding slippage
 
@@ -104,6 +167,177 @@ abstract contract AaveV3_TestBase is ForkTestBase {
 
     function _getBlock() internal pure override returns (uint256) {
         return 21417200;  // Dec 16, 2024
+    }
+
+    function _getDebtBalance(address underlying) internal view returns (uint256) {
+        DataTypes.ReserveDataLegacy memory reserveData
+            = IAavePoolLike(POOL).getReserveData(underlying);
+
+        return IERC20Like(reserveData.variableDebtTokenAddress).balanceOf(address(almProxy));
+    }
+
+}
+
+contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        // Deposit USDC and USDS to be able to borrow.
+
+        deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
+
+        vm.startPrank(relayer);
+        mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
+        mainnetController.depositAave(ATOKEN_USDS, 2_000_000e18);
+        vm.stopPrank();
+    }
+
+    function test_borrowAave_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1.5e18);
+    }
+
+    function test_borrowAave_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER_ROLE
+        ));
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1.5e18);
+    }
+
+    function test_borrowAave_invalidMinHealthFactorBoundary() external {
+        vm.expectRevert("AaveFacet/invalid-min-health-factor");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18 - 1);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
+    }
+
+    function test_borrowAave_zeroMaxAmount() external {
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.borrowAave(makeAddr("fake-token"), 1e18, 1e18);
+    }
+
+    function test_borrowAave_usdsRateLimitedBoundary() external {
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18 + 1, 1e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 1e18);
+    }
+
+    function test_borrowAave_usdcRateLimitedBoundary() external {
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6 + 1, 1e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
+    }
+
+    function test_borrowAave_usdsHealthFactorTooLowBoundary() external {
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18 - 1);
+    }
+
+    function test_borrowAave_usdcHealthFactorTooLowBoundary() external {
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18 - 1);
+    }
+
+    function test_borrowAave_usds_amountTooLowBoundary() external {
+        // Mocking the borrow amount to be less than the amount requested.
+        vm.mockCall(
+            address(usds),
+            abi.encodeCall(IERC20Like.balanceOf, address(almProxy)),
+            abi.encode(1_000_000e18 - 1) // Return less than amount
+        );
+
+        vm.expectRevert("AaveFacet/borrow-amount-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
+
+        vm.clearMockedCalls();
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
+    }
+
+    function test_borrowAave_usdc_amountTooLow() external {
+        // Mocking the borrow amount to be less than the amount requested.
+        vm.mockCall(
+            address(usdc),
+            abi.encodeCall(IERC20Like.balanceOf, address(almProxy)),
+            abi.encode(1_000_000e6 - 1) // Return less than amount
+        );
+
+        vm.expectRevert("AaveFacet/borrow-amount-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18);
+
+        vm.clearMockedCalls();
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18);
+    }
+
+    function test_borrowAave_usds() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDS);
+
+        assertEq(_getDebtBalance(address(usds)),            0);  // Current debt
+        assertEq(usds.balanceOf(address(almProxy)),         0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveBorrow(ATOKEN_USDS, 1_000_000e18, 21.050378656380006684e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usds)),            1_000_000e18); // New debt
+        assertEq(usds.balanceOf(address(almProxy)),         1_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18 - 1_000_000e18);
+    }
+
+    function test_borrowAave_usdc() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDC);
+
+        assertEq(_getDebtBalance(address(usdc)),            0); // Current debt
+        assertEq(usdc.balanceOf(address(almProxy)),         0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e6);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveBorrow(ATOKEN_USDC, 1_000_000e6, 21.060770087452471141e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usdc)),            1_000_000e6); // New debt
+        assertEq(usdc.balanceOf(address(almProxy)),         1_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e6 - 1_000_000e6);
     }
 
 }
@@ -252,6 +486,228 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         assertEq(AUSDC.balanceOf(address(almProxy)), 1_000_000e6);
         assertEq(usdc.balanceOf(address(almProxy)),  0);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6);
+    }
+
+}
+
+contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        // Deposit and borrow USDC and USDS to be able to repay.
+
+        deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
+        deal(Ethereum.USDS, address(almProxy), 25_000_000e18);
+
+        vm.startPrank(relayer);
+
+        mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
+        mainnetController.depositAave(ATOKEN_USDS, 25_000_000e18);
+
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6,  1e18);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 1e18);
+
+        vm.stopPrank();
+    }
+
+    function test_repayAave_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_repayAave_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER_ROLE
+        ));
+        mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_repayAave_zeroMaxAmount() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_repayAave_usds_amountTooHighBoundary() external {
+        vm.mockCall(
+            POOL,
+            abi.encodeCall(IAavePoolLike.repay,(address(usds), 1_000_000e18, 2, address(almProxy))),
+            abi.encode(1_000_000e18 + 1) // Return more than amount, causing revert
+        );
+
+        vm.expectRevert("AaveFacet/repay-amount-too-high");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
+
+        vm.clearMockedCalls();
+
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_repayAave_usdc_amountTooHighBoundary() external {
+        vm.mockCall(
+            POOL,
+            abi.encodeCall(IAavePoolLike.repay,(address(usdc), 1_000_000e6, 2, address(almProxy))),
+            abi.encode(1_000_000e6 + 1) // Return more than amount, causing revert
+        );
+
+        vm.expectRevert("AaveFacet/repay-amount-too-high");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
+
+        vm.clearMockedCalls();
+
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_repayAave_usdsRateLimitedBoundary() external {
+        vm.warp(block.timestamp + 1 hours); // Warp to get debt accrued.
+
+        // Deal extra USDS for repay.
+        deal(Ethereum.USDS, address(almProxy), 10_000_000e18 + 1);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDS, 10_000_000e18 + 1);
+
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDS, 10_000_000e18);
+    }
+
+    function test_repayAave_usdcRateLimitedBoundary() external {
+        vm.warp(block.timestamp + 1 hours); // Warp to get debt accrued.
+
+        // Deal extra USDC for repay.
+        deal(Ethereum.USDC, address(almProxy), 10_000_000e6 + 1);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 10_000_000e6 + 1);
+
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 10_000_000e6);
+    }
+
+    function test_repayAave_usds_partialRepay() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDS);
+        bytes32 repayKey  = makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(),  ATOKEN_USDS);
+
+        assertEq(_getDebtBalance(address(usds)),            10_000_000e18); // Current debt
+        assertEq(usds.balanceOf(address(almProxy)),         10_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 0);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e18);
+
+        vm.record();
+
+        // Partial repay.
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveRepay(ATOKEN_USDS, 500_000e18);
+
+        vm.prank(relayer);
+        assertEq(mainnetController.repayAave(ATOKEN_USDS, 500_000e18), 500_000e18);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usds)),            10_000_000e18 - 500_000e18); // New debt
+        assertEq(usds.balanceOf(address(almProxy)),         10_000_000e18 - 500_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 500_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e18 - 500_000e18);
+    }
+
+    function test_repayAave_usdc_partialRepay() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDC);
+        bytes32 repayKey  = makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(),  ATOKEN_USDC);
+
+        assertEq(_getDebtBalance(address(usdc)),            10_000_000e6); // Current debt
+        assertEq(usdc.balanceOf(address(almProxy)),         10_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 0);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e6);
+
+        vm.record();
+
+        // Partial repay.
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveRepay(ATOKEN_USDC, 500_000e6);
+
+        vm.prank(relayer);
+        assertEq(mainnetController.repayAave(ATOKEN_USDC, 500_000e6), 500_000e6);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usdc)),            10_000_000e6 - 500_000e6); // New debt
+        assertEq(usdc.balanceOf(address(almProxy)),         10_000_000e6 - 500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 500_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e6 - 500_000e6);
+    }
+
+    function test_repayAave_usds_fullRepay() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDS);
+        bytes32 repayKey  = makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(),  ATOKEN_USDS);
+
+        assertEq(_getDebtBalance(address(usds)),            10_000_000e18); // Current debt
+        assertEq(usds.balanceOf(address(almProxy)),         10_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 0);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e18);
+        assertEq(usds.allowance(address(almProxy), POOL),   0);
+
+        vm.record();
+
+        // Full repay.
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveRepay(ATOKEN_USDS, 10_000_000e18);
+
+        vm.prank(relayer);
+        assertEq(mainnetController.repayAave(ATOKEN_USDS, type(uint256).max), 10_000_000e18); // Max amount
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usds)),            0); // New debt
+        assertEq(usds.balanceOf(address(almProxy)),         0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  0);
+        assertEq(usds.allowance(address(almProxy), POOL),   type(uint256).max); // Dangling allowance
+    }
+
+    function test_repayAave_usdc_fullRepay() external {
+        bytes32 borrowKey = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDC);
+        bytes32 repayKey  = makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(),  ATOKEN_USDC);
+
+        assertEq(_getDebtBalance(address(usdc)),            10_000_000e6); // Current debt
+        assertEq(usdc.balanceOf(address(almProxy)),         10_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 0);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  10_000_000e6);
+        assertEq(usdc.allowance(address(almProxy), POOL),   0);
+
+        vm.record();
+
+        // Full repay.
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveRepay(ATOKEN_USDC, 10_000_000e6);
+
+        vm.prank(relayer);
+        assertEq(mainnetController.repayAave(ATOKEN_USDC, type(uint256).max), 10_000_000e6); // Max amount
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(_getDebtBalance(address(usdc)),            0); // New debt
+        assertEq(usdc.balanceOf(address(almProxy)),         0);
+        assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(repayKey),  0);
+        assertEq(usdc.allowance(address(almProxy), POOL),   type(uint256).max - 10_000_000e6); // Dangling allowance
     }
 
 }

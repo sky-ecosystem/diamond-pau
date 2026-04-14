@@ -35,14 +35,17 @@ interface IPoolLike {
         address onBehalfOf
     ) external;
 
-    function getUserAccountData(address user) external view returns (
-        uint256 totalCollateralBase,
-        uint256 totalDebtBase,
-        uint256 availableBorrowsBase,
-        uint256 currentLiquidationThreshold,
-        uint256 ltv,
-        uint256 healthFactor
-    );
+    function getUserAccountData(address user)
+        external
+        view
+        returns (
+            uint256 totalCollateralBase,
+            uint256 totalDebtBase,
+            uint256 availableBorrowsBase,
+            uint256 currentLiquidationThreshold,
+            uint256 ltv,
+            uint256 healthFactor
+        );
 
     function repay(
         address asset,
@@ -140,11 +143,11 @@ contract AaveFacet is IAaveFacet, FacetBase {
     {
         require(minHealthFactor >= 1e18, "AaveFacet/invalid-min-health-factor");
 
+        _decreaseRateLimit(LIMIT_BORROW, aToken, amount);
+
         address proxy      = _getSharedControllerStorage().proxy;
         address pool       = IATokenWithPoolLike(aToken).POOL();
         address underlying = IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS();
-
-        _decreaseRateLimit(LIMIT_BORROW, aToken, amount);
 
         uint256 balanceBefore = IERC20Like(underlying).balanceOf(proxy);
 

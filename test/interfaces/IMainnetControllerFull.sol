@@ -12,13 +12,24 @@ abstract contract IMainnetControllerFull is IController, Controller {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function getAaveMaxSlippage(address aToken) external view virtual returns (uint256);
+    function borrowAave(address aToken, uint256 amount, uint256 minHealthFactor) external virtual;
 
     function depositAave(address aToken, uint256 amount) external virtual;
 
+    function getAaveMaxSlippage(address aToken) external view virtual returns (uint256);
+
+    function LIMIT_AAVE_BORROW() external pure virtual returns (bytes32);
+
     function LIMIT_AAVE_DEPOSIT() external pure virtual returns (bytes32);
 
+    function LIMIT_AAVE_REPAY() external pure virtual returns (bytes32);
+
     function LIMIT_AAVE_WITHDRAW() external pure virtual returns (bytes32);
+
+    function repayAave(address aToken, uint256 amount)
+        external virtual returns (uint256 amountRepaid);
+
+    function setAaveCollateral(address aToken, bool useAsCollateral) external virtual;
 
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external virtual;
 

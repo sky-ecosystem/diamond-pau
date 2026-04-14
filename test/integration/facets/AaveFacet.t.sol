@@ -12,6 +12,8 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
+    function setAaveCollateral(address aToken, bool useAsCollateral) external;
+
     function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
     function getAaveMaxSlippage(address aToken) external view returns (uint256);
@@ -43,6 +45,11 @@ abstract contract AaveFacet_TestBase is Integration_TestBase {
             IAaveFacet.getMaxSlippage.selector
         );
 
+        wires[2] = IEnumerableIntegrations.Wire(
+            IControllerLike.setAaveCollateral.selector,
+            IAaveFacet.setCollateral.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
 
         vm.prank(beaconAdmin);
@@ -58,6 +65,10 @@ abstract contract AaveFacet_TestBase is Integration_TestBase {
 }
 
 contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
+
+    /**********************************************************************************************/
+    /*** setAaveMaxSlippage Tests                                                               ***/
+    /**********************************************************************************************/
 
     function test_setMaxSlippage_reentrancy() external {
         _setEntered(address(controller));
@@ -102,6 +113,31 @@ contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
         assertEq(controller.getAaveMaxSlippage(aToken), 0.99e18);
 
         _assertReentrancyGuardWrittenToTwice(address(controller));
+    }
+
+    /**********************************************************************************************/
+    /*** setAaveCollateral Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_setAaveCollateral_reentrancy() external {
+        _setEntered(address(controller));
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        controller.setAaveCollateral(makeAddr("aToken"), true);
+    }
+
+    function test_setAaveCollateral_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        controller.setAaveCollateral(makeAddr("aToken"), true);
+    }
+
+    function test_setAaveCollateral_aTokenZeroAddress() external {
+        vm.prank(admin);
+        vm.expectRevert("AaveFacet/aToken-zero-address");
+        controller.setAaveCollateral(address(0), true);
     }
 
 }

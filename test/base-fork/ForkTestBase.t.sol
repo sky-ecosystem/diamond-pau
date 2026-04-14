@@ -334,26 +334,26 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](11);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.setAaveMaxSlippage.selector,
-            IAaveFacet.setMaxSlippage.selector
+            IForeignControllerFull.borrowAave.selector,
+            IAaveFacet.borrow.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getAaveMaxSlippage.selector,
-            IAaveFacet.getMaxSlippage.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.depositAave.selector,
             IAaveFacet.deposit.selector
         );
 
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getAaveMaxSlippage.selector,
+            IAaveFacet.getMaxSlippage.selector
+        );
+
         wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.withdrawAave.selector,
-            IAaveFacet.withdraw.selector
+            IForeignControllerFull.LIMIT_AAVE_BORROW.selector,
+            IAaveFacet.LIMIT_BORROW.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
@@ -362,8 +362,33 @@ abstract contract ForkTestBase is Test {
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.LIMIT_AAVE_REPAY.selector,
+            IAaveFacet.LIMIT_REPAY.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.LIMIT_AAVE_WITHDRAW.selector,
             IAaveFacet.LIMIT_WITHDRAW.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.repayAave.selector,
+            IAaveFacet.repay.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.setAaveCollateral.selector,
+            IAaveFacet.setCollateral.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.setAaveMaxSlippage.selector,
+            IAaveFacet.setMaxSlippage.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.withdrawAave.selector,
+            IAaveFacet.withdraw.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
