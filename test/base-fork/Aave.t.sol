@@ -106,6 +106,64 @@ abstract contract AaveV3_TestBase is ForkTestBase {
 
 }
 
+contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        // Deposit USDC to be able to test setting collateral.
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
+
+        // Initial deposit enables USDC as collateral.
+        vm.prank(relayer);
+        foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_setAaveCollateral_usdc() external {
+        // Disable USDC collateral.
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, false);
+
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, false);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        // Re-enable USDC collateral.
+        vm.record();
+
+        vm.expectEmit(address(foreignController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, true);
+
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, true);
+
+        _assertReentrancyGuardWrittenToTwice();
+    }
+
+    function test_setAaveCollateral_disableAndBorrow() external {
+        // Step-1: Disable USDC collateral.
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, false);
+
+        // Step-2: Borrow fails with USDC collateral disabled.
+        vm.expectRevert(abi.encode("34")); // SpecifiedCurrencyNotBorrowedByUser
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+
+        // Step-3: Re-enable USDC collateral.
+        vm.prank(Base.SPARK_EXECUTOR);
+        foreignController.setAaveCollateral(ATOKEN_USDC, true);
+
+        // Step-4: Borrow succeeds with USDC collateral enabled.
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+    }
+
+}
+
 contract ForeignController_AaveV3_Borrow_Tests is AaveV3_TestBase {
 
     function setUp() public override {

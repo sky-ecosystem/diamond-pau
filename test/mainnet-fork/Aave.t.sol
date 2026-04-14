@@ -178,6 +178,119 @@ abstract contract AaveV3_TestBase is ForkTestBase {
 
 }
 
+contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
+
+    function setUp() public override {
+        super.setUp();
+
+        // Deposit USDC and USDS to be able to test setting collateral.
+
+        deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
+        deal(Ethereum.USDS, address(almProxy), 25_000_000e18);
+
+        vm.startPrank(relayer);
+
+        // Initial deposit enables both assets as collateral.
+        mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
+        mainnetController.depositAave(ATOKEN_USDS, 25_000_000e18);
+
+        vm.stopPrank();
+    }
+
+    function test_setAaveCollateral_usds() external {
+        // Disable USDS collateral.
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDS, false);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        // Re-enable USDS collateral.
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDS, true);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
+
+        _assertReentrancyGuardWrittenToTwice();
+    }
+
+    function test_setAaveCollateral_usdc() external {
+        // Disable USDC collateral.
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, false);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, false);
+
+        _assertReentrancyGuardWrittenToTwice();
+
+        // Re-enable USDC collateral.
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, true);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, true);
+
+        _assertReentrancyGuardWrittenToTwice();
+    }
+
+    function test_setAaveCollateral_disableAndBorrow_singleCollateralDisabled() external {
+        // Step-1: Disable USDS collateral.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+
+        // Step-2: Borrow now fails with USDS collateral disabled.
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
+
+        // Step-3: Re-enable USDS collateral.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
+
+        // Step-4: Borrow succeeds with USDS collateral enabled.
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
+    }
+
+    function test_setAaveCollateral_disableAndBorrow_bothCollateralDisabled() external {
+        // Step-1: Disable USDS and USDC collateral.
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        mainnetController.setAaveCollateral(ATOKEN_USDS, false);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, false);
+
+        vm.stopPrank();
+
+        // Step-2: Borrow fails with both collateral disabled.
+        vm.expectRevert(abi.encode("34")); // SpecifiedCurrencyNotBorrowedByUser
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
+
+        // Step-3: Re-enable USDS and USDC collateral.
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        mainnetController.setAaveCollateral(ATOKEN_USDS, true);
+        mainnetController.setAaveCollateral(ATOKEN_USDC, true);
+        vm.stopPrank();
+
+        // Step-4: Borrow succeeds with both collateral enabled.
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 2e18);
+    }
+
+}
+
 contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
 
     function setUp() public override {

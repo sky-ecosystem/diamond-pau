@@ -33,21 +33,21 @@ abstract contract AaveFacet_TestBase is Integration_TestBase {
 
         vm.label(facet, "AaveFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.setAaveMaxSlippage.selector,
-            IAaveFacet.setMaxSlippage.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
             IControllerLike.getAaveMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
-        wires[2] = IEnumerableIntegrations.Wire(
+        wires[1] = IEnumerableIntegrations.Wire(
             IControllerLike.setAaveCollateral.selector,
             IAaveFacet.setCollateral.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IControllerLike.setAaveMaxSlippage.selector,
+            IAaveFacet.setMaxSlippage.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
