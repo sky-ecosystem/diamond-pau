@@ -174,8 +174,9 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     }
 
     function test_setAaveCollateral_usdc() external {
-        // Disable USDC collateral.
         vm.record();
+
+        // Disable USDC collateral.
 
         vm.expectEmit(address(foreignController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, false);
@@ -185,8 +186,9 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        // Re-enable USDC collateral.
         vm.record();
+
+        // Re-enable USDC collateral.
 
         vm.expectEmit(address(foreignController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, true);
@@ -308,9 +310,9 @@ contract ForeignController_AaveV3_Repay_Tests is AaveV3_TestBase {
     function setUp() public override {
         super.setUp();
 
-        // Deposit and borrow USDC to be able to repay.
-
         deal(Base.USDC, address(almProxy), 1_000_000e6);
+
+        // Deposit and borrow USDC to be able to repay.
 
         vm.startPrank(relayer);
 
