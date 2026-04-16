@@ -88,12 +88,12 @@ contract AaveFacet is IAaveFacet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    uint256 internal constant _VARIABLE_RATE_MODE = 2;
+
     bytes32 public constant override LIMIT_BORROW   = keccak256("LIMIT_AAVE_BORROW");
     bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_AAVE_DEPOSIT");
     bytes32 public constant override LIMIT_REPAY    = keccak256("LIMIT_AAVE_REPAY");
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_AAVE_WITHDRAW");
-
-    uint256 internal constant VARIABLE_RATE_MODE = 2;
 
     string public constant override VERSION = "1.1.0";
 
@@ -155,7 +155,7 @@ contract AaveFacet is IAaveFacet, FacetBase {
         // Borrow underlying from Aave pool on behalf of the proxy.
         IALMProxy(proxy).doCall(
             pool,
-            abi.encodeCall(IPoolLike.borrow,(underlying, amount, VARIABLE_RATE_MODE, 0, proxy))
+            abi.encodeCall(IPoolLike.borrow,(underlying, amount, _VARIABLE_RATE_MODE, 0, proxy))
         );
 
         amountReceived = IERC20Like(underlying).balanceOf(proxy) - balanceBefore;
@@ -224,7 +224,7 @@ contract AaveFacet is IAaveFacet, FacetBase {
         amountRepaid = abi.decode(
             IALMProxy(proxy).doCall(
                 pool,
-                abi.encodeCall(IPoolLike.repay, (underlying, amount, VARIABLE_RATE_MODE, proxy))
+                abi.encodeCall(IPoolLike.repay, (underlying, amount, _VARIABLE_RATE_MODE, proxy))
             ),
             (uint256)
         );

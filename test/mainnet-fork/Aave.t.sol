@@ -93,6 +93,8 @@ abstract contract AaveV3_TestBase is ForkTestBase {
     uint256 internal startingAUSDSBalance;
     uint256 internal startingAUSDCBalance;
 
+    address internal unauthorized = makeAddr("unauthorized");
+
     function setUp() public virtual override {
         super.setUp();
 
@@ -200,8 +202,10 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     function test_setAaveCollateral_disableCollateral_withExistingDebt_reverts() external {
         // Borrow USDC and USDS.
         vm.startPrank(relayer);
+
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
         mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 1e18);
+
         vm.stopPrank();
 
         // Disable USDS collateral should fail as it is backing the existing debt.
@@ -255,8 +259,10 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         // Step-3: Re-enable USDS and USDC collateral.
         vm.startPrank(Ethereum.SPARK_PROXY);
+
         mainnetController.setAaveCollateral(ATOKEN_USDS, true);
         mainnetController.setAaveCollateral(ATOKEN_USDC, true);
+
         vm.stopPrank();
 
         // Step-4: Borrow succeeds with both collateral enabled.
@@ -266,8 +272,9 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
 
     function test_setAaveCollateral_usds() external {
-        // Disable USDS collateral.
         vm.record();
+
+        // Disable USDS collateral.
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDS, false);
@@ -277,8 +284,9 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        // Re-enable USDS collateral.
         vm.record();
+
+        // Re-enable USDS collateral.
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDS, true);
@@ -290,8 +298,9 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     }
 
     function test_setAaveCollateral_usdc() external {
-        // Disable USDC collateral.
         vm.record();
+
+        // Disable USDC collateral.
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, false);
@@ -301,8 +310,9 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        // Re-enable USDC collateral.
         vm.record();
+
+        // Re-enable USDC collateral.
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveCollateralSet(ATOKEN_USDC, true);
@@ -320,14 +330,16 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
     function setUp() public override {
         super.setUp();
 
-        // Deposit USDC and USDS to be able to borrow.
-
         deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
         deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
+        // Deposit USDC and USDS to be able to borrow.
+
         vm.startPrank(relayer);
+
         mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
         mainnetController.depositAave(ATOKEN_USDS, 2_000_000e18);
+
         vm.stopPrank();
     }
 
@@ -340,9 +352,11 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
     function test_borrowAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1.5e18);
     }
 
@@ -361,7 +375,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(makeAddr("fake-token"), 1e18, 1e18);
     }
 
-    function test_borrowAave_usdsRateLimitedBoundary() external {
+    function test_borrowAave_usds_rateLimitedBoundary() external {
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18 + 1, 1e18);
@@ -370,7 +384,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 1e18);
     }
 
-    function test_borrowAave_usdcRateLimitedBoundary() external {
+    function test_borrowAave_usdc_rateLimitedBoundary() external {
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6 + 1, 1e18);
@@ -379,7 +393,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
     }
 
-    function test_borrowAave_usdsHealthFactorTooLowBoundary() external {
+    function test_borrowAave_usds_healthFactorTooLowBoundary() external {
         vm.expectRevert("AaveFacet/health-factor-too-low");
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18);
@@ -388,7 +402,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18 - 1);
     }
 
-    function test_borrowAave_usdcHealthFactorTooLowBoundary() external {
+    function test_borrowAave_usdc_healthFactorTooLowBoundary() external {
         vm.expectRevert("AaveFacet/health-factor-too-low");
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18);
@@ -492,9 +506,11 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
     function test_depositAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
     }
 
@@ -513,7 +529,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         mainnetController.depositAave(ATOKEN_USDS, 1e18);
     }
 
-    function test_depositAave_usdsRateLimitedBoundary() external {
+    function test_depositAave_usds_rateLimitedBoundary() external {
         deal(Ethereum.USDS, address(almProxy), 25_000_000e18 + 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -524,7 +540,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         mainnetController.depositAave(ATOKEN_USDS, 25_000_000e18);
     }
 
-    function test_depositAave_usdcRateLimitedBoundary() external {
+    function test_depositAave_usdc_rateLimitedBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 25_000_000e6 + 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -535,7 +551,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
     }
 
-    function test_depositAave_usdsSlippageBoundary() external {
+    function test_depositAave_usds_slippageBoundary() external {
         deal(Ethereum.USDS, address(almProxy), 5_000_000e18);
 
         // Positive slippage because of no rounding error
@@ -553,7 +569,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         mainnetController.depositAave(ATOKEN_USDS, 5_000_000e18);
     }
 
-    function test_depositAave_usdcSlippageBoundary() external {
+    function test_depositAave_usdc_slippageBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 5_000_000e6);
 
         // Positive slippage because of no rounding error
@@ -657,9 +673,11 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
     function test_repayAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
     }
 
@@ -711,7 +729,7 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
         mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
     }
 
-    function test_repayAave_usdsRateLimitedBoundary() external {
+    function test_repayAave_usds_rateLimitedBoundary() external {
         vm.warp(block.timestamp + 1 hours); // Warp to get debt accrued.
 
         // Deal extra USDS for repay.
@@ -725,7 +743,7 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
         mainnetController.repayAave(ATOKEN_USDS, 10_000_000e18);
     }
 
-    function test_repayAave_usdcRateLimitedBoundary() external {
+    function test_repayAave_usdc_rateLimitedBoundary() external {
         vm.warp(block.timestamp + 1 hours); // Warp to get debt accrued.
 
         // Deal extra USDC for repay.
@@ -860,9 +878,11 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
     function test_withdrawAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         mainnetController.withdrawAave(ATOKEN_USDS, 1_000_000e18);
     }
 
@@ -886,7 +906,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         mainnetController.withdrawAave(ATOKEN_USDC, 1_000_000e6);
     }
 
-    function test_withdrawAave_usdsRateLimitedBoundary() external {
+    function test_withdrawAave_usds_rateLimitedBoundary() external {
         deal(Ethereum.USDS, address(almProxy), 15_000_000e18);
 
         vm.startPrank(relayer);
@@ -901,7 +921,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.stopPrank();
     }
 
-    function test_withdrawAave_usdcRateLimitedBoundary() external {
+    function test_withdrawAave_usdc_rateLimitedBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 15_000_000e6);
 
         vm.startPrank(relayer);
@@ -1494,7 +1514,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  25_000_000e6); // Restored after withdraw
     }
 
-    function test_e2e_fullLifecycle_depositUsds_borrowUsdc() external {
+    function test_e2e_fullLifecycle_depositUSDS_borrowUSDC() external {
         bytes32 usdsDepositKey  = makeAddressKey(mainnetController.LIMIT_AAVE_DEPOSIT(),  ATOKEN_USDS);
         bytes32 usdsWithdrawKey = makeAddressKey(mainnetController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDS);
         bytes32 usdcBorrowKey   = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(),   ATOKEN_USDC);
@@ -1574,7 +1594,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdsDepositKey),  25_000_000e18); // Restored after withdraw
     }
 
-    function test_e2e_fullLifecycle_depositUsdc_borrowUsds() external {
+    function test_e2e_fullLifecycle_depositUSDC_borrowUSDS() external {
         bytes32 usdcDepositKey  = makeAddressKey(mainnetController.LIMIT_AAVE_DEPOSIT(),  ATOKEN_USDC);
         bytes32 usdcWithdrawKey = makeAddressKey(mainnetController.LIMIT_AAVE_WITHDRAW(), ATOKEN_USDC);
         bytes32 usdsBorrowKey   = makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(),   ATOKEN_USDS);
@@ -1654,7 +1674,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdcDepositKey),  25_000_000e6); // Restored after withdraw
     }
 
-    function test_e2e_fullLifecycle_borrowUsdt() external {
+    function test_e2e_fullLifecycle_borrowUSDT() external {
         address ATOKEN_USDT = Ethereum.ATOKEN_CORE_USDT;
 
         bytes32 usdsDepositKey  = makeAddressKey(mainnetController.LIMIT_AAVE_DEPOSIT(),  ATOKEN_USDS);

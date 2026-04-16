@@ -69,7 +69,8 @@ interface IAaveFacet is IFacetBase {
      * @return amountReceived  Actual amount of underlying asset received.
      */
     function borrow(address aToken, uint256 amount, uint256 minHealthFactor)
-        external returns (uint256 amountReceived);
+        external
+        returns (uint256 amountReceived);
 
     /**
      * @notice Supplies underlying asset into the Aave pool for `aToken`.

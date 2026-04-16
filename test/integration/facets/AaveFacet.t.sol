@@ -12,11 +12,11 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setAaveCollateral(address aToken, bool useAsCollateral) external;
+    function setCollateral(address aToken, bool useAsCollateral) external;
 
-    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
+    function setMaxSlippage(address aToken, uint256 maxSlippage) external;
 
-    function getAaveMaxSlippage(address aToken) external view returns (uint256);
+    function getMaxSlippage(address aToken) external view returns (uint256);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
@@ -36,17 +36,17 @@ abstract contract AaveFacet_TestBase is Integration_TestBase {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.getAaveMaxSlippage.selector,
+            IControllerLike.getMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IControllerLike.setAaveCollateral.selector,
+            IControllerLike.setCollateral.selector,
             IAaveFacet.setCollateral.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IControllerLike.setAaveMaxSlippage.selector,
+            IControllerLike.setMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
@@ -67,77 +67,83 @@ abstract contract AaveFacet_TestBase is Integration_TestBase {
 contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
 
     /**********************************************************************************************/
-    /*** setAaveMaxSlippage Tests                                                               ***/
+    /*** setMaxSlippage Tests                                                                   ***/
     /**********************************************************************************************/
 
     function test_setMaxSlippage_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
+        controller.setMaxSlippage(makeAddr("aToken"), 0.98e18);
     }
 
     function test_setMaxSlippage_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
-        controller.setAaveMaxSlippage(makeAddr("aToken"), 0.98e18);
+
+        vm.prank(unauthorized);
+        controller.setMaxSlippage(makeAddr("aToken"), 0.98e18);
     }
 
     function test_setMaxSlippage_aTokenZeroAddress() external {
-        vm.prank(admin);
         vm.expectRevert("AaveFacet/aToken-zero-address");
-        controller.setAaveMaxSlippage(address(0), 0.98e18);
+        vm.prank(admin);
+        controller.setMaxSlippage(address(0), 0.98e18);
     }
 
     function test_setMaxSlippage() external {
         address aToken = makeAddr("aToken");
 
-        assertEq(controller.getAaveMaxSlippage(aToken), 0);
+        assertEq(controller.getMaxSlippage(aToken), 0);
 
-        vm.prank(admin);
         vm.expectEmit(address(controller));
         emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.98e18);
-        controller.setAaveMaxSlippage(aToken, 0.98e18);
 
-        assertEq(controller.getAaveMaxSlippage(aToken), 0.98e18);
+        vm.prank(admin);
+        controller.setMaxSlippage(aToken, 0.98e18);
+
+        assertEq(controller.getMaxSlippage(aToken), 0.98e18);
 
         vm.record();
 
-        vm.prank(admin);
         vm.expectEmit(address(controller));
         emit IAaveFacet.AaveMaxSlippageSet(aToken, 0.99e18);
-        controller.setAaveMaxSlippage(aToken, 0.99e18);
 
-        assertEq(controller.getAaveMaxSlippage(aToken), 0.99e18);
+        vm.prank(admin);
+        controller.setMaxSlippage(aToken, 0.99e18);
+
+        assertEq(controller.getMaxSlippage(aToken), 0.99e18);
 
         _assertReentrancyGuardWrittenToTwice(address(controller));
     }
 
     /**********************************************************************************************/
-    /*** setAaveCollateral Tests                                                                ***/
+    /*** setCollateral Tests                                                                    ***/
     /**********************************************************************************************/
 
     function test_setAaveCollateral_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setAaveCollateral(makeAddr("aToken"), true);
+        controller.setCollateral(makeAddr("aToken"), true);
     }
 
     function test_setAaveCollateral_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
-        controller.setAaveCollateral(makeAddr("aToken"), true);
+
+        vm.prank(unauthorized);
+        controller.setCollateral(makeAddr("aToken"), true);
     }
 
     function test_setAaveCollateral_aTokenZeroAddress() external {
-        vm.prank(admin);
         vm.expectRevert("AaveFacet/aToken-zero-address");
-        controller.setAaveCollateral(address(0), true);
+        vm.prank(admin);
+        controller.setCollateral(address(0), true);
     }
 
 }
