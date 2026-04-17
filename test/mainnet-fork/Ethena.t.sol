@@ -35,6 +35,15 @@ interface ISUSDELike {
 
 abstract contract Ethena_TestBase is ForkTestBase {
 
+    address internal constant ETHENA_MINTER = Ethereum.ETHENA_MINTER;
+
+    function setUp() public override virtual {
+        super.setUp();
+
+        vm.prank(SPARK_PROXY);
+        mainnetController.setEthenaMinter(ETHENA_MINTER);
+    }
+
     function _getBlock() internal pure override returns (uint256) {
         return 21417200;  // Dec 16, 2024
     }

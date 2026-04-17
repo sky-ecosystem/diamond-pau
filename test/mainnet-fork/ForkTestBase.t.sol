@@ -174,7 +174,6 @@ abstract contract ForkTestBase is DssTest {
 
     address constant CCTP_MESSENGER = Ethereum.CCTP_TOKEN_MESSENGER;
     address constant DAI_USDS       = Ethereum.DAI_USDS;
-    address constant ETHENA_MINTER  = Ethereum.ETHENA_MINTER;
     address constant PAUSE_PROXY    = Ethereum.PAUSE_PROXY;
     address constant SPARK_PROXY    = Ethereum.SPARK_PROXY;
 
@@ -1230,7 +1229,6 @@ abstract contract ForkTestBase is DssTest {
 
     function _wireUSDEFacet() internal {
         address usdeFacet = address(new USDEFacet(
-            ETHENA_MINTER,
             address(susde),
             address(usdc),
             address(usde)
@@ -1238,7 +1236,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(usdeFacet, "USDEFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.cooldownAssetsSUSDe.selector,
@@ -1271,23 +1269,33 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setEthenaMinter.selector,
+            IUSDEFacet.setMinter.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.unstakeSUSDe.selector,
             IUSDEFacet.unstakeSUSDE.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDE_BURN.selector,
             IUSDEFacet.LIMIT_USDE_BURN.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[9] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDE_MINT.selector,
             IUSDEFacet.LIMIT_USDE_MINT.selector
         );
 
-        wires[9] = IEnumerableIntegrations.Wire(
+        wires[10] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
             IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
+        );
+
+        wires[11] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.ethenaMinter.selector,
+            IUSDEFacet.minter.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

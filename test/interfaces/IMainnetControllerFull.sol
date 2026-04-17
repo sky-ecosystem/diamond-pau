@@ -428,9 +428,9 @@ abstract contract IMainnetControllerFull is IController, Controller {
         view
         virtual
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
-    
+
     /**********************************************************************************************/
-    /*** USDE (Ethena) actions                                                                  ***/
+    /*** USDEFacet actions                                                                      ***/
     /**********************************************************************************************/
 
     function LIMIT_USDE_BURN() external view virtual returns (bytes32);
@@ -455,7 +455,11 @@ abstract contract IMainnetControllerFull is IController, Controller {
 
     function setDelegatedSigner(address delegatedSigner) external virtual;
 
+    function setEthenaMinter(address minter) external virtual;
+
     function unstakeSUSDe() external virtual;
+
+    function ethenaMinter() external view virtual returns (address);
 
     /**********************************************************************************************/
     /*** USDS vault actions                                                                     ***/

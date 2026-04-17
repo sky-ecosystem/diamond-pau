@@ -6,7 +6,7 @@ import { IFacetBase } from "../IFacetBase.sol";
 /**
  * @title  IUSDEFacet
  * @notice PAU facet for interacting with Ethena's USDe ecosystem. Supports minting/burning USDe via
- *         the Ethena minter, staking/unstaking sUSDe, and managing the sUSDe cooldown process.
+ *         the minter, staking/unstaking sUSDe, and managing the sUSDe cooldown process.
  */
 interface IUSDEFacet is IFacetBase {
 
@@ -29,25 +29,31 @@ interface IUSDEFacet is IFacetBase {
     event USDECooldownShares(uint256 susdeAmount, uint256 assets);
 
     /**
-     * @notice Emitted when a USDe burn is prepared by approving USDe to the Ethena minter.
+     * @notice Emitted when the minter contract is set.
+     * @param  minter Address of the minter contract.
+     */
+    event USDEMinterSet(address indexed minter);
+
+    /**
+     * @notice Emitted when a USDe burn is prepared by approving USDe to the minter.
      * @param  usdeAmount Amount of USDe approved for burning.
      */
     event USDEPrepareBurn(uint256 usdeAmount);
 
     /**
-     * @notice Emitted when a USDe mint is prepared by approving USDC to the Ethena minter.
+     * @notice Emitted when a USDe mint is prepared by approving USDC to the minter.
      * @param  usdcAmount Amount of USDC approved for minting (6-decimal precision).
      */
     event USDEPrepareMint(uint256 usdcAmount);
 
     /**
-     * @notice Emitted when a delegated signer is removed from the Ethena minter.
+     * @notice Emitted when a delegated signer is removed from the minter.
      * @param  delegatedSigner Address of the removed delegated signer.
      */
     event USDERemoveDelegatedSigner(address indexed delegatedSigner);
 
     /**
-     * @notice Emitted when a delegated signer is set on the Ethena minter.
+     * @notice Emitted when a delegated signer is set on the minter.
      * @param  delegatedSigner Address of the delegated signer.
      */
     event USDESetDelegatedSigner(address indexed delegatedSigner);
@@ -77,30 +83,36 @@ interface IUSDEFacet is IFacetBase {
     function cooldownShares(uint256 susdeAmount) external returns (uint256 assets);
 
     /**
-     * @notice Prepares a USDe burn by approving USDe to the Ethena minter. The actual burn is
+     * @notice Prepares a USDe burn by approving USDe to the minter. The actual burn is
      *         executed off-chain by the delegated signer.
      * @param  usdeAmount Amount of USDe to approve for burning.
      */
     function prepareBurn(uint256 usdeAmount) external;
 
     /**
-     * @notice Prepares a USDe mint by approving USDC to the Ethena minter. The actual mint is
+     * @notice Prepares a USDe mint by approving USDC to the minter. The actual mint is
      *         executed off-chain by the delegated signer.
      * @param  usdcAmount Amount of USDC to approve for minting (6-decimal precision).
      */
     function prepareMint(uint256 usdcAmount) external;
 
     /**
-     * @notice Removes a delegated signer from the Ethena minter for the proxy.
+     * @notice Removes a delegated signer from the minter for the proxy.
      * @param  delegatedSigner Address of the delegated signer to remove.
      */
     function removeDelegatedSigner(address delegatedSigner) external;
 
     /**
-     * @notice Sets a delegated signer on the Ethena minter for the proxy.
+     * @notice Sets a delegated signer on the minter for the proxy.
      * @param  delegatedSigner Address of the delegated signer to set.
      */
     function setDelegatedSigner(address delegatedSigner) external;
+
+    /**
+     * @notice Sets the minter contract.
+     * @param  minter Address of the minter contract.
+     */
+    function setMinter(address minter) external;
 
     /// @notice Unstakes sUSDe after the cooldown period, receiving USDe.
     function unstakeSUSDE() external;
@@ -118,8 +130,8 @@ interface IUSDEFacet is IFacetBase {
     /// @notice Rate limit key for sUSDe cooldown operations.
     function LIMIT_SUSDE_COOLDOWN() external view returns (bytes32);
 
-    /// @notice Address of the Ethena minter contract (immutable).
-    function ethenaMinter() external view returns (address);
+    /// @notice Address of the minter contract.
+    function minter() external view returns (address);
 
     /// @notice Address of the sUSDe (staked USDe) token contract (immutable).
     function susde() external view returns (address);
