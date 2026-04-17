@@ -185,14 +185,14 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     function setUp() public override {
         super.setUp();
 
-        // Deposit USDC and USDS to be able to test setting collateral.
-
         deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
         deal(Ethereum.USDS, address(almProxy), 25_000_000e18);
 
+        // Deposit USDC and USDS to be able to test setting collateral.
+        // Initial deposit enables USDC and USDS as collateral.
+
         vm.startPrank(relayer);
 
-        // Initial deposit enables both assets as collateral.
         mainnetController.depositAave(ATOKEN_USDC, 25_000_000e6);
         mainnetController.depositAave(ATOKEN_USDS, 25_000_000e18);
 
@@ -225,26 +225,27 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     }
 
     function test_setAaveCollateral_disableAndBorrow_singleCollateralDisabled() external {
-        // Step-1: Disable USDS collateral.
+        // Step 1: Disable USDS collateral.
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setAaveCollateral(ATOKEN_USDS, false);
 
-        // Step-2: Borrow now fails with USDS collateral disabled.
+        // Step 2: Borrow now fails with USDS collateral disabled.
         vm.expectRevert("AaveFacet/health-factor-too-low");
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
 
-        // Step-3: Re-enable USDS collateral.
+        // Step 3: Re-enable USDS collateral.
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.setAaveCollateral(ATOKEN_USDS, true);
 
-        // Step-4: Borrow succeeds with USDS collateral enabled.
+        // Step 4: Borrow succeeds with USDS collateral enabled.
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 2e18);
     }
 
     function test_setAaveCollateral_disableAndBorrow_bothCollateralDisabled() external {
-        // Step-1: Disable USDS and USDC collateral.
+        // Step 1: Disable USDS and USDC collateral.
+
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         mainnetController.setAaveCollateral(ATOKEN_USDS, false);
@@ -252,12 +253,12 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         vm.stopPrank();
 
-        // Step-2: Borrow fails with both collateral disabled.
+        // Step 2: Borrow fails with both collateral disabled.
         vm.expectRevert(abi.encode("34")); // COLLATERAL_BALANCE_IS_ZERO
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
 
-        // Step-3: Re-enable USDS and USDC collateral.
+        // Step 3: Re-enable USDS and USDC collateral.
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         mainnetController.setAaveCollateral(ATOKEN_USDS, true);
@@ -265,11 +266,10 @@ contract MainnetController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         vm.stopPrank();
 
-        // Step-4: Borrow succeeds with both collateral enabled.
+        // Step 4: Borrow succeeds with both collateral enabled.
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDS, 10_000_000e18, 2e18);
     }
-
 
     function test_setAaveCollateral_usds() external {
         vm.record();
@@ -393,24 +393,6 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(ATOKEN_USDC, 10_000_000e6, 1e18);
     }
 
-    function test_borrowAave_usds_healthFactorTooLowBoundary() external {
-        vm.expectRevert("AaveFacet/health-factor-too-low");
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18);
-
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18 - 1);
-    }
-
-    function test_borrowAave_usdc_healthFactorTooLowBoundary() external {
-        vm.expectRevert("AaveFacet/health-factor-too-low");
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18);
-
-        vm.prank(relayer);
-        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18 - 1);
-    }
-
     function test_borrowAave_usds_amountTooLowBoundary() external {
         // Mocking the borrow amount to be less than the amount requested.
         vm.mockCall(
@@ -429,7 +411,7 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 1e18);
     }
 
-    function test_borrowAave_usdc_amountTooLow() external {
+    function test_borrowAave_usdc_amountTooLowBoundary() external {
         // Mocking the borrow amount to be less than the amount requested.
         vm.mockCall(
             address(usdc),
@@ -445,6 +427,24 @@ contract MainnetController_AaveV3_Borrow_Tests is AaveV3_TestBase {
 
         vm.prank(relayer);
         mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 1e18);
+    }
+
+    function test_borrowAave_usds_healthFactorTooLowBoundary() external {
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDS, 1_000_000e18, 21.050378656380006685e18 - 1);
+    }
+
+    function test_borrowAave_usdc_healthFactorTooLowBoundary() external {
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18);
+
+        vm.prank(relayer);
+        mainnetController.borrowAave(ATOKEN_USDC, 1_000_000e6, 21.060770087452471142e18 - 1);
     }
 
     function test_borrowAave_usds() external {
@@ -648,10 +648,10 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
     function setUp() public override {
         super.setUp();
 
-        // Deposit and borrow USDC and USDS to be able to repay.
-
         deal(Ethereum.USDC, address(almProxy), 25_000_000e6);
         deal(Ethereum.USDS, address(almProxy), 25_000_000e18);
+
+        // Deposit and borrow USDC and USDS to be able to repay.
 
         vm.startPrank(relayer);
 
@@ -679,20 +679,6 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
 
         vm.prank(unauthorized);
         mainnetController.repayAave(ATOKEN_USDS, 1_000_000e18);
-    }
-
-    function test_repayAave_zeroMaxAmount() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
-            0,
-            0
-        );
-        vm.stopPrank();
-
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
-        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
     }
 
     function test_repayAave_usds_amountTooHighBoundary() external {
@@ -725,6 +711,34 @@ contract MainnetController_AaveV3_Repay_Tests is AaveV3_TestBase {
 
         vm.clearMockedCalls();
 
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_repayAave_repayKey_zeroMaxAmount() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_repayAave_borrowKey_zeroMaxAmount() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            makeAddressKey(mainnetController.LIMIT_AAVE_BORROW(), ATOKEN_USDC),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.repayAave(ATOKEN_USDC, 1_000_000e6);
     }
@@ -1364,6 +1378,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
         // Step 2: Deposit 2M USDS.
+
         assertEq(_getHealthFactor(),                         type(uint256).max);
         assertEq(AUSDS.balanceOf(address(almProxy)),         0);
         assertEq(usds.balanceOf(address(almProxy)),          2_000_000e18);
@@ -1378,6 +1393,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 25_000_000e18 - 2_000_000e18);
 
         // Step 3: Borrow 1M USDS with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(address(usds)),            0);
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18);
 
@@ -1395,6 +1411,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read debt (should be > 1M), deal extra USDS to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(address(usds));
 
         assertEq(debtAfterInterest, 1_000_022.703428251338937342e18); // NOTE: Intentional hardcoded value.
@@ -1402,6 +1419,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDS, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full debt (type(uint256).max).
+
         assertEq(usds.balanceOf(address(almProxy)),        debtAfterInterest); // From deal above
         assertEq(rateLimits.getCurrentRateLimit(repayKey), 10_000_000e18);
 
@@ -1416,6 +1434,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18); // Restored after repay
 
         // Step 7: Withdraw all (type(uint256).max).
+
         uint256 aTokenBalance = AUSDS.balanceOf(address(almProxy));
 
         // Accrued deposit balance is greater than deposited amount (should be >2M)
@@ -1444,6 +1463,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDC, address(almProxy), 2_000_000e6);
 
         // Step 2: Deposit 2M USDC.
+
         assertEq(_getHealthFactor(),                         type(uint256).max);
         assertEq(AUSDC.balanceOf(address(almProxy)),         0);
         assertEq(usdc.balanceOf(address(almProxy)),          2_000_000e6);
@@ -1458,6 +1478,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 25_000_000e6 - 2_000_000e6);
 
         // Step 3: Borrow 1M USDC with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(address(usdc)),            0);
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e6);
 
@@ -1475,6 +1496,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read debt (should be > 1M), deal extra USDC to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(address(usdc));
 
         assertEq(debtAfterInterest, 1_000_032.807255e6); // NOTE: Intentional hardcoded value.
@@ -1482,6 +1504,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDC, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full debt (type(uint256).max).
+
         assertEq(usdc.balanceOf(address(almProxy)),        debtAfterInterest);
         assertEq(rateLimits.getCurrentRateLimit(repayKey), 10_000_000e6);
 
@@ -1496,6 +1519,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e6); // Restored after repay
 
         // Step 7: Withdraw all (type(uint256).max).
+
         uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         // Accrued deposit balance is greater than deposited amount (should be >2M).
@@ -1524,6 +1548,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
         // Step 2: Deposit 2M USDS.
+
         assertEq(_getHealthFactor(),                             type(uint256).max);
         assertEq(AUSDS.balanceOf(address(almProxy)),             0);
         assertEq(usds.balanceOf(address(almProxy)),              2_000_000e18);
@@ -1538,6 +1563,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdsDepositKey), 25_000_000e18 - 2_000_000e18);
 
         // Step 3: Borrow 1M USDC with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(address(usdc)),                0);
         assertEq(usdc.balanceOf(address(almProxy)),             0);
         assertEq(rateLimits.getCurrentRateLimit(usdcBorrowKey), 10_000_000e6);
@@ -1555,6 +1581,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read USDC debt (should be > 1M), deal extra USDC to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(address(usdc));
 
         assertEq(debtAfterInterest, 1_000_033.650664e6); // NOTE: Intentional hardcoded value.
@@ -1562,6 +1589,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDC, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full USDC debt (type(uint256).max).
+
         assertEq(usdc.balanceOf(address(almProxy)),            debtAfterInterest); // From deal above
         assertEq(rateLimits.getCurrentRateLimit(usdcRepayKey), 10_000_000e6);
 
@@ -1576,6 +1604,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdcBorrowKey), 10_000_000e6); // Restored after repay
 
         // Step 7: Withdraw all USDS (type(uint256).max).
+
         uint256 aTokenBalance = AUSDS.balanceOf(address(almProxy));
 
         // Accrued deposit balance is greater than deposited amount (should be >2M).
@@ -1604,6 +1633,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDC, address(almProxy), 2_000_000e6);
 
         // Step 2: Deposit 2M USDC.
+
         assertEq(_getHealthFactor(),                             type(uint256).max);
         assertEq(AUSDC.balanceOf(address(almProxy)),             0);
         assertEq(usdc.balanceOf(address(almProxy)),              2_000_000e6);
@@ -1618,6 +1648,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdcDepositKey), 25_000_000e6 - 2_000_000e6);
 
         // Step 3: Borrow 1M USDS with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(address(usds)),                0);
         assertEq(usds.balanceOf(address(almProxy)),             0);
         assertEq(rateLimits.getCurrentRateLimit(usdsBorrowKey), 10_000_000e18);
@@ -1635,6 +1666,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read USDS debt (should be > 1M), deal extra USDS to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(address(usds));
 
         assertEq(debtAfterInterest, 1_000_022.716228437109546268e18); // NOTE: Intentional hardcoded value.
@@ -1642,6 +1674,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDS, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full USDS debt (type(uint256).max).
+
         assertEq(usds.balanceOf(address(almProxy)),            debtAfterInterest); // From deal above
         assertEq(rateLimits.getCurrentRateLimit(usdsRepayKey), 10_000_000e18);
 
@@ -1656,6 +1689,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdsBorrowKey), 10_000_000e18); // Restored after repay
 
         // Step 7: Withdraw all USDC (type(uint256).max).
+
         uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         // Accrued deposit balance is greater than deposited amount (should be >2M).
@@ -1685,6 +1719,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         bytes32 usdtRepayKey    = makeAddressKey(mainnetController.LIMIT_AAVE_REPAY(),    ATOKEN_USDT);
 
         // Step 1: Set up USDT borrow/repay rate limits.
+
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         rateLimits.setRateLimitData(
@@ -1727,6 +1762,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdcDepositKey), 25_000_000e6 - 2_000_000e6);
 
         // Step 3: Borrow 1M USDT with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(Ethereum.USDT),                0);
         assertEq(usdt.balanceOf(address(almProxy)),             0);
         assertEq(rateLimits.getCurrentRateLimit(usdtBorrowKey), 10_000_000e6);
@@ -1744,6 +1780,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read USDT debt (should be > 1M), deal extra USDT to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(Ethereum.USDT);
 
         assertEq(debtAfterInterest, 1000028.260437e6); // NOTE: Intentional hardcoded value.
@@ -1751,6 +1788,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Ethereum.USDT, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full USDT debt (type(uint256).max).
+
         assertEq(usdt.balanceOf(address(almProxy)),            debtAfterInterest); // From deal above
         assertEq(rateLimits.getCurrentRateLimit(usdtRepayKey), 10_000_000e6);
 
@@ -1765,6 +1803,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdtBorrowKey), 10_000_000e6); // Restored after repay
 
         // Step 7: Withdraw all USDS (type(uint256).max).
+
         uint256 aUsdsBalance = AUSDS.balanceOf(address(almProxy));
 
         assertEq(aUsdsBalance,                                    2_000_034.613565993285844267e18); // NOTE: Intentional hardcoded value.
@@ -1780,6 +1819,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(usdsDepositKey),  25_000_000e18); // Restored after withdraw
 
         // Step 8: Withdraw all USDC (type(uint256).max).
+
         uint256 aUsdcBalance = AUSDC.balanceOf(address(almProxy));
 
         assertEq(aUsdcBalance,                                   2000053.795317e6); // NOTE: Intentional hardcoded value.
@@ -1820,6 +1860,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 25_000_000e18 - 2_000_000e18);
 
         // Step 2: Borrow 500k USDS.
+
         assertEq(_getDebtBalance(address(usds)),            0);
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18);
 
@@ -1833,6 +1874,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18 - 500_000e18);
 
         // Step 3: Borrow 300k USDS (cumulative debt = 800k).
+
         vm.prank(relayer);
         uint256 borrow2 = mainnetController.borrowAave(ATOKEN_USDS, 300_000e18, 1.5e18);
 
@@ -1843,6 +1885,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18 - 800_000e18);
 
         // Step 4: Repay 200k USDS (remaining debt = 600k).
+
         assertEq(rateLimits.getCurrentRateLimit(repayKey), 10_000_000e18);
 
         vm.prank(relayer);
@@ -1856,6 +1899,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18 - 600_000e18); // Partially restored
 
         // Step 5: Withdraw 500k USDS.
+
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 10_000_000e18);
 
         vm.prank(relayer);
@@ -1868,6 +1912,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  25_000_000e18 - 2_000_000e18 + 500_000e18); // Partially restored
 
         // Step 6: Repay remaining debt (type(uint256).max).
+
         assertEq(_getDebtBalance(address(usds)), 600_000e18 + 1); // Rounding
 
         vm.prank(relayer);
@@ -1881,6 +1926,7 @@ contract MainnetController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 10_000_000e18); // Fully restored
 
         // Step 7: Withdraw remaining (type(uint256).max).
+
         uint256 aTokenBalance = AUSDS.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 1_500_000e18 + 1); // Rounding

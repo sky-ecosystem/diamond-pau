@@ -123,13 +123,13 @@ contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
     /*** setCollateral Tests                                                                    ***/
     /**********************************************************************************************/
 
-    function test_setAaveCollateral_reentrancy() external {
+    function test_setCollateral_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         controller.setCollateral(makeAddr("aToken"), true);
     }
 
-    function test_setAaveCollateral_unauthorizedAccount() external {
+    function test_setCollateral_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             unauthorized,
@@ -140,7 +140,7 @@ contract Controller_AaveFacet_Admin_Tests is AaveFacet_TestBase {
         controller.setCollateral(makeAddr("aToken"), true);
     }
 
-    function test_setAaveCollateral_aTokenZeroAddress() external {
+    function test_setCollateral_aTokenZeroAddress() external {
         vm.expectRevert("AaveFacet/aToken-zero-address");
         vm.prank(admin);
         controller.setCollateral(address(0), true);

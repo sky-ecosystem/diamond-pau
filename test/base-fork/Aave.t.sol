@@ -129,6 +129,7 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
 
         // Deposit USDC to be able to test setting collateral.
         // Initial deposit enables USDC as collateral.
+
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
     }
@@ -155,20 +156,20 @@ contract ForeignController_AaveV3_SetCollateral_Tests is AaveV3_TestBase {
     }
 
     function test_setAaveCollateral_disableAndBorrow() external {
-        // Step-1: Disable USDC collateral.
+        // Step 1: Disable USDC collateral.
         vm.prank(Base.SPARK_EXECUTOR);
         foreignController.setAaveCollateral(ATOKEN_USDC, false);
 
-        // Step-2: Borrow fails with USDC collateral disabled.
+        // Step 2: Borrow fails with USDC collateral disabled.
         vm.expectRevert(abi.encode("34")); // COLLATERAL_BALANCE_IS_ZERO
         vm.prank(relayer);
         foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
 
-        // Step-3: Re-enable USDC collateral.
+        // Step 3: Re-enable USDC collateral.
         vm.prank(Base.SPARK_EXECUTOR);
         foreignController.setAaveCollateral(ATOKEN_USDC, true);
 
-        // Step-4: Borrow succeeds with USDC collateral enabled.
+        // Step 4: Borrow succeeds with USDC collateral enabled.
         vm.prank(relayer);
         foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
     }
@@ -254,16 +255,7 @@ contract ForeignController_AaveV3_Borrow_Tests is AaveV3_TestBase {
         foreignController.borrowAave(ATOKEN_USDC, 15_000e6, 1e18);
     }
 
-    function test_borrowAave_usdc_healthFactorTooLowBoundary() external {
-        vm.expectRevert("AaveFacet/health-factor-too-low");
-        vm.prank(relayer);
-        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 78.000000000000000001e18);
-
-        vm.prank(relayer);
-        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 78e18);
-    }
-
-    function test_borrowAave_usdc_amountTooLow() external {
+    function test_borrowAave_usdc_amountTooLowBoundary() external {
         // Mocking the borrow amount to be less than the amount requested.
         vm.mockCall(
             address(usdcBase),
@@ -279,6 +271,15 @@ contract ForeignController_AaveV3_Borrow_Tests is AaveV3_TestBase {
 
         vm.prank(relayer);
         foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 1e18);
+    }
+
+    function test_borrowAave_usdc_healthFactorTooLowBoundary() external {
+        vm.expectRevert("AaveFacet/health-factor-too-low");
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 78.000000000000000001e18);
+
+        vm.prank(relayer);
+        foreignController.borrowAave(ATOKEN_USDC, 10_000e6, 78e18);
     }
 
     function test_borrowAave_usdc() external {
@@ -339,20 +340,6 @@ contract ForeignController_AaveV3_Repay_Tests is AaveV3_TestBase {
         foreignController.repayAave(ATOKEN_USDC, 1_000e6);
     }
 
-    function test_repayAave_zeroMaxAmount() external {
-        vm.startPrank(Base.SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(
-            makeAddressKey(foreignController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
-            0,
-            0
-        );
-        vm.stopPrank();
-
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
-        foreignController.repayAave(ATOKEN_USDC, 1_000e6);
-    }
-
     function test_repayAave_usdc_amountTooHighBoundary() external {
         vm.mockCall(
             POOL,
@@ -368,6 +355,34 @@ contract ForeignController_AaveV3_Repay_Tests is AaveV3_TestBase {
 
         vm.prank(relayer);
         foreignController.repayAave(ATOKEN_USDC, 5_000e6);
+    }
+
+    function test_repayAave_repayKey_zeroMaxAmount() external {
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        rateLimits.setRateLimitData(
+            makeAddressKey(foreignController.LIMIT_AAVE_REPAY(), ATOKEN_USDC),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        foreignController.repayAave(ATOKEN_USDC, 1_000e6);
+    }
+
+    function test_repayAave_borrowKey_zeroMaxAmount() external {
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        rateLimits.setRateLimitData(
+            makeAddressKey(foreignController.LIMIT_AAVE_BORROW(), ATOKEN_USDC),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        foreignController.repayAave(ATOKEN_USDC, 1_000e6);
     }
 
     function test_repayAave_usdc_rateLimitedBoundary() external {
@@ -451,9 +466,11 @@ contract ForeignController_AaveV3_Deposit_Tests is AaveV3_TestBase {
     function test_depositAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e18);
     }
 
@@ -542,9 +559,11 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
     function test_withdrawAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
+            unauthorized,
             RELAYER_ROLE
         ));
+
+        vm.prank(unauthorized);
         foreignController.withdrawAave(ATOKEN_USDC, 1_000_000e18);
     }
 
@@ -571,11 +590,11 @@ contract ForeignController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
     function test_withdrawAave_usdc_rateLimitedBoundary() external {
         deal(Base.USDC, address(almProxy), 2_000_000e6);
 
-        // Warp to get past rate limit
         vm.startPrank(relayer);
 
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
+        // Warp to get past rate limit
         skip(1 days);
 
         foreignController.depositAave(ATOKEN_USDC, 100_000e6);
@@ -722,6 +741,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Base.USDC, address(almProxy), 500_000e6);
 
         // Step 2: Deposit 500k USDC.
+
         assertEq(_getHealthFactor(),                         type(uint256).max);
         assertEq(AUSDC.balanceOf(address(almProxy)),         0);
         assertEq(usdcBase.balanceOf(address(almProxy)),      500_000e6);
@@ -736,6 +756,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6 - 500_000e6);
 
         // Step 3: Borrow 10k USDC with minHealthFactor = 1.5e18.
+
         assertEq(_getDebtBalance(address(usdcBase)),        0);
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
 
@@ -753,6 +774,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         skip(2 hours);
 
         // Step 5: Read debt (should be > 10k), deal extra USDC to cover interest.
+
         uint256 debtAfterInterest = _getDebtBalance(address(usdcBase));
 
         assertEq(debtAfterInterest, 10_000.468206e6); // NOTE: Intentional hardcoded value.
@@ -760,6 +782,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         deal(Base.USDC, address(almProxy), debtAfterInterest);
 
         // Step 6: Repay full debt (type(uint256).max).
+
         assertEq(usdcBase.balanceOf(address(almProxy)),    debtAfterInterest);
         assertEq(rateLimits.getCurrentRateLimit(repayKey), 15_000e6);
 
@@ -774,6 +797,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
 
         // Step 7: Withdraw all (type(uint256).max).
+
         uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         // Accrued deposit balance is greater than deposited amount (should be >500k).
@@ -815,6 +839,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 0);
 
         // Step 2: Borrow 5k USDC.
+
         assertEq(_getDebtBalance(address(usdcBase)),        0);
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6);
 
@@ -828,6 +853,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 5_000e6);
 
         // Step 3: Borrow 3k USDC (cumulative debt = 8k).
+
         vm.prank(relayer);
         uint256 borrow2 = foreignController.borrowAave(ATOKEN_USDC, 3_000e6, 1.5e18);
 
@@ -838,6 +864,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 8_000e6);
 
         // Step 4: Repay 2k USDC (remaining debt = 6k).
+
         assertEq(rateLimits.getCurrentRateLimit(repayKey), 15_000e6);
 
         vm.prank(relayer);
@@ -851,6 +878,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6 - 6_000e6); // Partially restored
 
         // Step 5: Withdraw 500k USDC.
+
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 1_000_000e6);
 
         vm.prank(relayer);
@@ -863,6 +891,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  500_000e6); // Partially restored
 
         // Step 6: Repay remaining debt (type(uint256).max).
+
         assertEq(_getDebtBalance(address(usdcBase)), 6_000e6);
 
         vm.prank(relayer);
@@ -876,6 +905,7 @@ contract ForeignController_AaveV3_E2E_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(borrowKey), 15_000e6); // Fully restored
 
         // Step 7: Withdraw remaining (type(uint256).max).
+
         uint256 aTokenBalance = AUSDC.balanceOf(address(almProxy));
 
         assertEq(aTokenBalance, 500_000e6);
