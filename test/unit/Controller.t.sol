@@ -6,7 +6,8 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 import { IController }             from "../../src/interfaces/IController.sol";
 import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
 
-import { Controller } from "../../src/Controller.sol";
+import { Controller }              from "../../src/Controller.sol";
+import { ControllerSharedStorage } from "../../src/ControllerSharedStorage.sol";
 
 import { UnitTestBase } from "./UnitTestBase.t.sol";
 
@@ -73,6 +74,22 @@ interface IMockController {
             bool[]     memory,
             address
         );
+
+}
+
+contract FacetAlertingSharedStorage is ControllerSharedStorage {
+
+    function alterAccessControls() external {
+        _getSharedControllerStorage().accessControls = address(1);
+    }
+
+    function alterProxy() external {
+        _getSharedControllerStorage().proxy = address(1);
+    }
+
+    function alterRateLimits() external {
+        _getSharedControllerStorage().rateLimits = address(1);
+    }
 
 }
 
@@ -166,6 +183,45 @@ contract Controller_Tests is UnitTestBase {
         vm.expectRevert(revertData);
 
         IMockController(address(controller)).facetFoo();
+    }
+
+    function test_fallback_accessControlsAltered() external {
+        address facet = address(new FacetAlertingSharedStorage());
+
+        controller.__setDispatch(
+            FacetAlertingSharedStorage.alterAccessControls.selector,
+            IEnumerableIntegrations.Dispatch(facet, FacetAlertingSharedStorage.alterAccessControls.selector)
+        );
+
+        vm.expectRevert(IController.SharedStorageAltered.selector);
+
+        address(controller).call(abi.encodeWithSelector(FacetAlertingSharedStorage.alterAccessControls.selector));
+    }
+
+    function test_fallback_proxyAltered() external {
+        address facet = address(new FacetAlertingSharedStorage());
+
+        controller.__setDispatch(
+            FacetAlertingSharedStorage.alterProxy.selector,
+            IEnumerableIntegrations.Dispatch(facet, FacetAlertingSharedStorage.alterProxy.selector)
+        );
+
+        vm.expectRevert(IController.SharedStorageAltered.selector);
+
+        address(controller).call(abi.encodeWithSelector(FacetAlertingSharedStorage.alterProxy.selector));
+    }
+
+    function test_fallback_rateLimitsAltered() external {
+        address facet = address(new FacetAlertingSharedStorage());
+
+        controller.__setDispatch(
+            FacetAlertingSharedStorage.alterRateLimits.selector,
+            IEnumerableIntegrations.Dispatch(facet, FacetAlertingSharedStorage.alterRateLimits.selector)
+        );
+
+        vm.expectRevert(IController.SharedStorageAltered.selector);
+
+        address(controller).call(abi.encodeWithSelector(FacetAlertingSharedStorage.alterRateLimits.selector));
     }
 
     function test_fallback() external {
