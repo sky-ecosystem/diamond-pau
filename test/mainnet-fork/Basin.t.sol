@@ -58,8 +58,8 @@ abstract contract Basin_TestBase is ForkTestBase {
         rateLimits.setRateLimitData(
             makeAddressAddressKey(
                 mainnetController.LIMIT_BASIN_DEPOSIT(),
-                Ethereum.USDS,
-                address(groveBasin)
+                address(groveBasin),
+                Ethereum.USDS
             ),
             5_000_000e18,
             uint256(1_000_000e18) / 4 hours
@@ -68,8 +68,8 @@ abstract contract Basin_TestBase is ForkTestBase {
         rateLimits.setRateLimitData(
             makeAddressAddressKey(
                 mainnetController.LIMIT_BASIN_WITHDRAW(),
-                Ethereum.USDS,
-                address(groveBasin)
+                address(groveBasin),
+                Ethereum.USDS
             ),
             5_000_000e18,
             uint256(1_000_000e18) / 4 hours
@@ -102,8 +102,8 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
     function test_depositBasin_zeroMaxAmount() external {
         bytes32 key = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_DEPOSIT(),
-            Ethereum.USDS,
-            address(groveBasin)
+            address(groveBasin),
+            Ethereum.USDS
         );
 
         vm.prank(Ethereum.SPARK_PROXY);
@@ -165,8 +165,8 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
     function test_depositBasin_rateLimited() external {
         bytes32 key = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_DEPOSIT(),
-            Ethereum.USDS,
-            address(groveBasin)
+            address(groveBasin),
+            Ethereum.USDS
         );
 
         deal(Ethereum.USDS, address(almProxy), 5_000_000e18);
@@ -208,8 +208,8 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
 
         bytes32 depositKey = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_DEPOSIT(),
-            Ethereum.USDS,
-            address(groveBasin)
+            address(groveBasin),
+            Ethereum.USDS
         );
 
         // Step 1: Set a higher rate limit for deposits to allow for withdrawals boundaries tests.
@@ -240,8 +240,8 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
     function test_withdrawBasin_zeroMaxAmount() external {
         bytes32 withdrawKey = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_WITHDRAW(),
-            Ethereum.USDS,
-            address(groveBasin)
+            address(groveBasin),
+            Ethereum.USDS
         );
 
         vm.prank(Ethereum.SPARK_PROXY);
@@ -298,8 +298,8 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
     function test_withdrawBasin_rateLimited() external {
         bytes32 key = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_WITHDRAW(),
-            Ethereum.USDS,
-            address(groveBasin)
+            address(groveBasin),
+            Ethereum.USDS
         );
 
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18);
