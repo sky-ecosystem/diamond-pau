@@ -86,6 +86,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function initialize(address admin_, address almProxy_) external override initializer {
         require(almProxy_ != address(0), "WEETHModule/invalid-alm-proxy");
         require(admin_    != address(0), "WEETHModule/invalid-admin");
@@ -102,6 +103,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** External Interactive ALMProxy Functions                                                ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function claimWithdrawal(uint256 requestId) external override returns (uint256 ethReceived) {
         require(msg.sender == _getWEETHModuleStorage().almProxy, "WEETHModule/invalid-sender");
 
@@ -134,6 +136,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** External Variable Getters                                                              ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function almProxy() external view override returns (address) {
         return _getWEETHModuleStorage().almProxy;
     }
@@ -142,6 +145,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function onERC721Received(address, address, uint256, bytes calldata)
         external
         pure
@@ -151,6 +155,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
         return this.onERC721Received.selector;
     }
 
+    /// @inheritdoc IWEETHModule
     function supportsInterface(bytes4 interfaceId)
         public
         view

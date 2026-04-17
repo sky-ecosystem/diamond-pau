@@ -53,6 +53,7 @@ contract OTCBuffer is IOTCBuffer, AccessControlEnumerableUpgradeable, UUPSUpgrad
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IOTCBuffer
     function initialize(address admin_, address almProxy_) external override initializer {
         require(admin_    != address(0), "OTCBuffer/invalid-admin");
         require(almProxy_ != address(0), "OTCBuffer/invalid-alm-proxy");
@@ -69,6 +70,7 @@ contract OTCBuffer is IOTCBuffer, AccessControlEnumerableUpgradeable, UUPSUpgrad
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IOTCBuffer
     function approve(address asset, uint256 allowance)
         external
         override
@@ -81,6 +83,7 @@ contract OTCBuffer is IOTCBuffer, AccessControlEnumerableUpgradeable, UUPSUpgrad
     /*** External Variable Getters                                                              ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IOTCBuffer
     function almProxy() external view override returns (address) {
         return _getOTCBufferStorage().almProxy;
     }
@@ -89,6 +92,7 @@ contract OTCBuffer is IOTCBuffer, AccessControlEnumerableUpgradeable, UUPSUpgrad
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IOTCBuffer
     function supportsInterface(bytes4 interfaceId)
         public
         view

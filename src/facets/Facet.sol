@@ -7,16 +7,19 @@ import { IAccessControls } from "../interfaces/IAccessControls.sol";
 
 import { ControllerSharedStorage } from "../ControllerSharedStorage.sol";
 
-import { IFacetBase } from "./IFacetBase.sol";
+import { IFacet } from "./IFacet.sol";
 
-abstract contract FacetBase is IFacetBase, ControllerSharedStorage, ReentrancyGuard {
+abstract contract Facet is IFacet, ControllerSharedStorage, ReentrancyGuard {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IFacet
     bytes32 public constant override DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 public constant override RELAYER_ROLE       = keccak256("RELAYER");
+
+    /// @inheritdoc IFacet
+    bytes32 public constant override RELAYER_ROLE = keccak256("RELAYER");
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/

@@ -3,7 +3,9 @@ pragma solidity ^0.8.34;
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
-import { FacetBase } from "../FacetBase.sol";
+import { IFacet } from "../IFacet.sol";
+
+import { Facet } from "../Facet.sol";
 
 import { IMerklFacet } from "./IMerklFacet.sol";
 
@@ -13,18 +15,20 @@ interface IMerklDistributorLike {
 
 }
 
-contract MerklFacet is IMerklFacet, FacetBase {
+contract MerklFacet is IMerklFacet, Facet {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IMerklFacet
     address public immutable override distributor;
 
     /**********************************************************************************************/
@@ -41,6 +45,7 @@ contract MerklFacet is IMerklFacet, FacetBase {
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IMerklFacet
     function toggleOperator(address operator)
         external
         override

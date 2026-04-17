@@ -123,7 +123,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function swapDAIToUSDS(uint256 daiAmount) external virtual;
 
     /**********************************************************************************************/
-    /*** ERC4626 actions                                                                        ***/
+    /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
 
     function depositERC4626(address token, uint256 amount, uint256 minSharesOut)
@@ -185,7 +185,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function withdrawFromFarm(address farm, uint256 amount) external virtual;
 
     /**********************************************************************************************/
-    /*** LayerZero actions                                                                      ***/
+    /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
 
     function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
@@ -428,9 +428,9 @@ abstract contract IMainnetControllerFull is IController, Controller {
         view
         virtual
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
-    
+
     /**********************************************************************************************/
-    /*** USDE (Ethena) actions                                                                  ***/
+    /*** USDEFacet actions                                                                      ***/
     /**********************************************************************************************/
 
     function LIMIT_USDE_BURN() external view virtual returns (bytes32);
@@ -458,7 +458,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function unstakeSUSDe() external virtual;
 
     /**********************************************************************************************/
-    /*** USDS vault actions                                                                     ***/
+    /*** USDSFacet actions                                                                      ***/
     /**********************************************************************************************/
 
     function LIMIT_USDS_MINT() external pure virtual returns (bytes32);
@@ -495,13 +495,13 @@ abstract contract IMainnetControllerFull is IController, Controller {
         returns (uint256 requestId);
 
     /**********************************************************************************************/
-    /*** WrapProxyETH actions                                                                   ***/
+    /*** WrapProxyETHFacet actions                                                              ***/
     /**********************************************************************************************/
 
     function wrapAllProxyETH() external virtual;
 
     /**********************************************************************************************/
-    /*** WSTETH actions                                                                         ***/
+    /*** WSTETHFacet actions                                                                    ***/
     /**********************************************************************************************/
 
     function LIMIT_WSTETH_DEPOSIT() external pure virtual returns (bytes32);
