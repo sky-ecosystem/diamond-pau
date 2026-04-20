@@ -3,6 +3,8 @@ pragma solidity ^0.8.34;
 
 import { Test } from "../../lib/forge-std/src/Test.sol";
 
+import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
+
 import { AaveFacet }          from "../../src/facets/aave/AaveFacet.sol";
 import { BasinFacet }         from "../../src/facets/basin/BasinFacet.sol";
 import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
@@ -62,6 +64,8 @@ contract FacetVersions_Tests is Test {
     WSTETHFacet        internal wstethFacet;
 
     function setUp() external {
+        vm.createSelectFork(getChain("mainnet").rpcUrl, _getBlock());
+
         aaveFacet          = new AaveFacet();
         cctpFacet          = new CCTPFacet(MOCK_ADDRESS, MOCK_ADDRESS);
         basinFacet         = new BasinFacet();
@@ -85,7 +89,7 @@ contract FacetVersions_Tests is Test {
         uniswapV4Facet     = new UniswapV4Facet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         usdeFacet          = new USDEFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         usdsFacet          = new USDSFacet(MOCK_ADDRESS, MOCK_ADDRESS);
-        weethFacet         = new WEETHFacet(MOCK_ADDRESS, MOCK_ADDRESS);
+        weethFacet         = new WEETHFacet(Ethereum.WEETH, Ethereum.WETH);
         wrapProxyETHFacet  = new WrapProxyETHFacet(MOCK_ADDRESS);
         wstethFacet        = new WSTETHFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
     }
@@ -117,6 +121,10 @@ contract FacetVersions_Tests is Test {
         assertEq(weethFacet.VERSION(),         "1.0.0");
         assertEq(wrapProxyETHFacet.VERSION(),  "1.0.0");
         assertEq(wstethFacet.VERSION(),        "1.0.0");
+    }
+
+    function _getBlock() internal pure returns (uint256) {
+        return 24919737; //  April 20, 2026
     }
 
 }
