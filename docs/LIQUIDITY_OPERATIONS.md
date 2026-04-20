@@ -65,7 +65,7 @@ Uniswap V3 operations use three rate limit keys per pool per token:
 
 ### Slippage Protection
 
-All Uniswap V3 operations require `maxSlippage` to be configured per pool (cannot be zero). The TWAP price is used to compute expected amounts and validate slippage thresholds.
+Uniswap V3 operations require `maxSlippage` to be configured per pool (cannot be zero). The TWAP price is used to compute expected amounts and validate slippage thresholds.
 
 ### Requirements
 
@@ -97,7 +97,7 @@ Uniswap V4 operations use three rate limit keys per pool:
 
 ### Slippage Protection
 
-All Uniswap V4 operations require `maxSlippage` to be configured (cannot be zero).
+Uniswap V4 operations require `maxSlippage` to be configured (cannot be zero).
 
 ### Requirements
 

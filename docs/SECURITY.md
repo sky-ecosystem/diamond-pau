@@ -79,7 +79,7 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 | Method            | Access       | Description                                                  |
 | ----------------- | ------------ | ------------------------------------------------------------ |
 | `doCallWithValue` | `CONTROLLER` | Allows arbitrary calls with ETH value attached from ALMProxy |
-| `wrapAllProxyETH` | `RELAYER`    | Wraps all ETH in ALMProxy to WETH (via WrapProxyETHFacet)    |
+| `wrapAll`         | `RELAYER`    | Wraps all ETH in ALMProxy to WETH (via WrapProxyETHFacet)    |
 
 **Use Cases:**
 
