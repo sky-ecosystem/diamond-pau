@@ -24,6 +24,13 @@ interface IBasinFacet is IFacetBase {
     );
 
     /**
+     * @notice Emitted when the max slippage for a basin is updated.
+     * @param  basin       Address of the basin.
+     * @param  maxSlippage New max slippage in 1e18 precision (1e18 = no slippage).
+     */
+    event BasinMaxSlippageSet(address indexed basin, uint256 maxSlippage);
+
+    /**
      * @notice Event emitted when a withdrawal is made from a basin.
      * @param  basin           The address of the basin.
      * @param  asset           The address of the asset withdrawn.
@@ -54,6 +61,13 @@ interface IBasinFacet is IFacetBase {
         returns (uint256 shares);
 
     /**
+     * @notice Sets the max slippage for a basin.
+     * @param  basin       Address of the basin.
+     * @param  maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
+     */
+    function setMaxSlippage(address basin, uint256 maxSlippage) external;
+
+    /**
      * @notice Withdraw up to `maxAmount` of `asset` from `basin`, return `assetsWithdrawn`.
      * @param  basin           The address of the basin.
      * @param  asset           The address of the asset withdrawn.
@@ -74,5 +88,16 @@ interface IBasinFacet is IFacetBase {
 
     /// @notice Limit for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
+
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns the configured max slippage for a basin.
+     * @param  basin       Address of the basin.
+     * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
+     */
+    function getMaxSlippage(address basin) external view returns (uint256 maxSlippage);
 
 }
