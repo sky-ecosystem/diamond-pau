@@ -66,6 +66,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
+    address public immutable override eeth;
     address public immutable override weeth;
     address public immutable override weth;
 
@@ -79,6 +80,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
 
         weeth = weeth_;
         weth  = weth_;
+        eeth  = IWEETHLike(weeth_).eETH();
     }
 
     /**********************************************************************************************/
@@ -102,7 +104,6 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         IALMProxy(proxy).doCall(weth, abi.encodeCall(IWETHLike.withdraw, (amount)));
 
         // Deposit ETH to eETH.
-        address eeth          = IWEETHLike(weeth).eETH();
         address liquidityPool = IEETHLike(eeth).liquidityPool();
 
         uint256 eethShares = abi.decode(
@@ -139,7 +140,6 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         address proxy         = $.proxy;
-        address eeth          = IWEETHLike(weeth).eETH();
         address liquidityPool = IEETHLike(eeth).liquidityPool();
 
         // Withdraw from weETH (returns eETH).

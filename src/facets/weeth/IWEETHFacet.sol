@@ -103,4 +103,7 @@ interface IWEETHFacet is IFacetBase {
     /// @notice Address of the WETH token contract (immutable).
     function weth() external view returns (address);
 
+    /// @notice Address of the eETH token contract (immutable).
+    function eeth() external view returns (address);
+
 }
