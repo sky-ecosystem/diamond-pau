@@ -443,7 +443,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(basinFacet, "BasinFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.depositBasin.selector,
@@ -456,11 +456,21 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setBasinMaxSlippage.selector,
+            IBasinFacet.setMaxSlippage.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getBasinMaxSlippage.selector,
+            IBasinFacet.getMaxSlippage.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_BASIN_DEPOSIT.selector,
             IBasinFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_BASIN_WITHDRAW.selector,
             IBasinFacet.LIMIT_WITHDRAW.selector
         );

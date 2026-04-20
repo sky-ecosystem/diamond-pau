@@ -75,6 +75,8 @@ abstract contract Basin_TestBase is ForkTestBase {
             uint256(1_000_000e18) / 4 hours
         );
 
+        mainnetController.setBasinMaxSlippage(address(groveBasin), 0.99e18);
+
         vm.stopPrank();
 
         vm.label(address(groveBasin), "GroveBasin");
@@ -101,6 +103,44 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
             RELAYER_ROLE
         ));
         mainnetController.depositBasin(address(groveBasin), Ethereum.USDS, 1e18, expectedShares);
+    }
+
+    function test_depositBasin_maxSlippageNotSet() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setBasinMaxSlippage(address(groveBasin), 0);
+
+        vm.expectRevert("BasinFacet/max-slippage-not-set");
+        vm.prank(relayer);
+        mainnetController.depositBasin(address(groveBasin), Ethereum.USDS, 1e18, 0);
+    }
+
+    function test_depositBasin_minAmountNotMetBoundary() external {
+        uint256 depositAmount = 1_000_000e18;
+
+        deal(Ethereum.USDS, address(almProxy), depositAmount);
+
+        uint256 fairShares          = groveBasin.convertToShares(Ethereum.USDS, depositAmount);
+        uint256 atBoundaryShares    = fairShares * 0.99e18 / 1e18;
+        uint256 underBoundaryShares = atBoundaryShares - 1;
+
+        vm.startPrank(relayer);
+
+        vm.expectRevert("BasinFacet/min-amount-not-met");
+        mainnetController.depositBasin(
+            address(groveBasin),
+            Ethereum.USDS,
+            depositAmount,
+            underBoundaryShares
+        );
+
+        mainnetController.depositBasin(
+            address(groveBasin),
+            Ethereum.USDS,
+            depositAmount,
+            atBoundaryShares
+        );
+
+        vm.stopPrank();
     }
 
     function test_depositBasin_zeroMaxAmount() external {
@@ -310,6 +350,42 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
             RELAYER_ROLE
         ));
         mainnetController.withdrawBasin(address(groveBasin), Ethereum.USDS, 1e18, expectedShares);
+    }
+
+    function test_withdrawBasin_maxSlippageNotSet() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.setBasinMaxSlippage(address(groveBasin), 0);
+
+        vm.expectRevert("BasinFacet/max-slippage-not-set");
+        vm.prank(relayer);
+        mainnetController.withdrawBasin(address(groveBasin), Ethereum.USDS, 1e18, type(uint256).max);
+    }
+
+    function test_withdrawBasin_maxAmountNotMetBoundary() external {
+        uint256 withdrawAmount = 1_000_000e18;
+
+        uint256 fairShares         = groveBasin.convertToShares(Ethereum.USDS, withdrawAmount);
+        uint256 atBoundaryShares   = fairShares * 1e18 / 0.99e18;
+        uint256 overBoundaryShares = atBoundaryShares + 1;
+
+        vm.startPrank(relayer);
+
+        vm.expectRevert("BasinFacet/max-amount-not-met");
+        mainnetController.withdrawBasin(
+            address(groveBasin),
+            Ethereum.USDS,
+            withdrawAmount,
+            overBoundaryShares
+        );
+
+        mainnetController.withdrawBasin(
+            address(groveBasin),
+            Ethereum.USDS,
+            withdrawAmount,
+            atBoundaryShares
+        );
+
+        vm.stopPrank();
     }
 
     function test_withdrawBasin_zeroMaxAmount() external {
