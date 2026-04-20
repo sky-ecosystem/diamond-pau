@@ -40,7 +40,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
-    function deposit(address basin, address asset, uint256 amount)
+    function deposit(address basin, address asset, uint256 amount, uint256 minSharesOut)
         external
         override
         nonReentrant
@@ -63,10 +63,12 @@ contract BasinFacet is IBasinFacet, FacetBase {
             (uint256)
         );
 
+        require(shares >= minSharesOut, "BasinFacet/min-shares-out-not-met");
+
         emit BasinDeposit(basin, asset, amount, shares);
     }
 
-    function withdraw(address basin, address asset, uint256 maxAmount)
+    function withdraw(address basin, address asset, uint256 maxAmount, uint256 maxSharesIn)
         external
         override
         nonReentrant
@@ -88,13 +90,17 @@ contract BasinFacet is IBasinFacet, FacetBase {
             (uint256)
         );
 
+        uint256 sharesIn = sharesBefore - IBasinLike(basin).shares(proxy);
+
+        require(sharesIn <= maxSharesIn, "BasinFacet/shares-burned-too-high");
+
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
 
         emit BasinWithdraw(
             basin,
             asset,
             assetsWithdrawn,
-            sharesBefore - IBasinLike(basin).shares(proxy)
+            sharesIn
         );
     }
 

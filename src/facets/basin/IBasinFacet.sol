@@ -43,12 +43,13 @@ interface IBasinFacet is IFacetBase {
 
     /**
      * @notice Deposit `amount` of `asset` into `basin`, return `shares` received.
-     * @param  basin  The address of the basin.
-     * @param  asset  The address of the asset deposited.
-     * @param  amount The amount of the asset deposited.
-     * @return shares The number of shares received.
+     * @param  basin        The address of the basin.
+     * @param  asset        The address of the asset deposited.
+     * @param  amount       The amount of the asset deposited.
+     * @param  minSharesOut The minimum number of shares the caller is willing to receive.
+     * @return shares       The number of shares received.
      */
-    function deposit(address basin, address asset, uint256 amount)
+    function deposit(address basin, address asset, uint256 amount, uint256 minSharesOut)
         external
         returns (uint256 shares);
 
@@ -57,9 +58,10 @@ interface IBasinFacet is IFacetBase {
      * @param  basin           The address of the basin.
      * @param  asset           The address of the asset withdrawn.
      * @param  maxAmount       The maximum amount of the asset to withdraw.
+     * @param  maxSharesIn     The maximum number of shares the caller is willing to burn.
      * @return assetsWithdrawn The amount of the asset withdrawn.
      */
-    function withdraw(address basin, address asset, uint256 maxAmount)
+    function withdraw(address basin, address asset, uint256 maxAmount, uint256 maxSharesIn)
         external
         returns (uint256 assetsWithdrawn);
 
