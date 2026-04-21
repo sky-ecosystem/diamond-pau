@@ -89,7 +89,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
-        // Ensure `minSharesOut` is within slippage tolerance of the share amount 
+        // Ensure `minSharesOut` is within slippage tolerance of the share amount.
         // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
             minSharesOut >= amount * maxSlippage / 1e18, "BasinFacet/min-amount-not-met"
@@ -128,7 +128,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
         // Ensure `maxSharesIn` is within slippage tolerance of the fair share amount.
-        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
+        // Assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
             maxSharesIn * maxSlippage <= maxAmount * 1e18, "BasinFacet/max-amount-not-met"
         );
