@@ -61,7 +61,7 @@ interface IController is IEnumerableIntegrations {
     /// @notice Address of the AccessControls contract.
     function accessControls() external view returns (address);
 
-    /// @notice Address of the Beacon contract
+    /// @notice Address of the Beacon contract.
     function beacon() external view returns (address);
 
     /// @notice Address of the ALMProxy contract.
