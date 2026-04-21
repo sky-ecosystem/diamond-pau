@@ -89,10 +89,10 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
-        // Ensure `minSharesOut` is within slippage tolerance of the fair share amount.
+        // Ensure `minSharesOut` is within slippage tolerance of the share amount 
+        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
-            minSharesOut >= IBasinLike(basin).convertToShares(asset, amount) * maxSlippage / 1e18,
-            "BasinFacet/min-amount-not-met"
+            minSharesOut >= amount * maxSlippage / 1e18, "BasinFacet/min-amount-not-met"
         );
 
         _decreaseRateLimit(LIMIT_DEPOSIT, basin, asset, amount);
@@ -128,10 +128,9 @@ contract BasinFacet is IBasinFacet, FacetBase {
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
         // Ensure `maxSharesIn` is within slippage tolerance of the fair share amount.
+        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
-            maxSharesIn * maxSlippage
-                <= IBasinLike(basin).convertToShares(asset, maxAmount) * 1e18,
-            "BasinFacet/max-amount-not-met"
+            maxSharesIn * maxSlippage <= maxAmount * 1e18, "BasinFacet/max-amount-not-met"
         );
 
         address proxy = _getSharedControllerStorage().proxy;
