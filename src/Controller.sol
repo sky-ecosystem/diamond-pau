@@ -55,16 +55,10 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuardUpgr
     }
 
     /**********************************************************************************************/
-    /*** Initializer                                                                            ***/
+    /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    function initialize(
-        address accessControls_,
-        address beacon_,
-        address proxy_,
-        address rateLimits_
-    )
-        external
+    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
         initializer
     {
         require(accessControls_ != address(0), ZeroAccessControls());

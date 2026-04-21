@@ -12,6 +12,10 @@ import { UnitTestBase } from "./UnitTestBase.t.sol";
 
 contract ControllerHarness is Controller {
 
+    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
+        Controller(accessControls_, beacon_, proxy_, rateLimits_)
+    {}
+
     function __setDispatch(bytes4 callSelector, IEnumerableIntegrations.Dispatch memory dispatch) external {
         _getControllerStorage().dispatches[callSelector] = dispatch;
     }
@@ -86,49 +90,31 @@ contract Controller_Tests is UnitTestBase {
     ControllerHarness internal controller;
 
     function setUp() external {
-        controller = new ControllerHarness();
-
-        controller.initialize(accessControls, beacon, proxy, rateLimits);
+        controller = new ControllerHarness(accessControls, beacon, proxy, rateLimits);
     }
 
     /**********************************************************************************************/
-    /*** Initializer Tests                                                                      ***/
+    /*** Constructor Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_initialize_zeroAccessControls() external {
-        ControllerHarness controller_ = new ControllerHarness();
-
+    function test_constructor_zeroAccessControls() external {
         vm.expectRevert(IController.ZeroAccessControls.selector);
-        controller_.initialize(address(0), address(0), address(0), address(0));
+        new Controller(address(0), address(0), address(0), address(0));
     }
 
-    function test_initialize_zeroBeacon() external {
-        ControllerHarness controller_ = new ControllerHarness();
-
+    function test_constructor_zeroBeacon() external {
         vm.expectRevert(IController.ZeroBeacon.selector);
-        controller_.initialize(accessControls, address(0), address(0), address(0));
+        new Controller(accessControls, address(0), address(0), address(0));
     }
 
-    function test_initialize_zeroProxy() external {
-        ControllerHarness controller_ = new ControllerHarness();
-
+    function test_constructor_zeroProxy() external {
         vm.expectRevert(IController.ZeroProxy.selector);
-        controller_.initialize(accessControls, beacon, address(0), address(0));
+        new Controller(accessControls, beacon, address(0), address(0));
     }
 
-    function test_initialize_zeroRateLimits() external {
-        ControllerHarness controller_ = new ControllerHarness();
-
+    function test_constructor_zeroRateLimits() external {
         vm.expectRevert(IController.ZeroRateLimits.selector);
-        controller_.initialize(accessControls, beacon, proxy, address(0));
-    }
-
-    function test_initialize_cannotInitializeAgain() external {
-        ControllerHarness controller_ = new ControllerHarness();
-        controller_.initialize(accessControls, beacon, proxy, rateLimits);
-
-        vm.expectRevert("InvalidInitialization()");
-        controller_.initialize(accessControls, beacon, proxy, rateLimits);
+        new Controller(accessControls, beacon, proxy, address(0));
     }
 
     /**********************************************************************************************/
