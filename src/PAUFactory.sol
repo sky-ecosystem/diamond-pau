@@ -42,12 +42,14 @@ contract PAUFactory is IPAUFactory {
 
         address accessControls = address(new AccessControls(admin));
 
-        controller = address(new Controller({
+        controller = address(new Controller());
+        
+        Controller(payable(controller)).initialize({
             accessControls_ : accessControls,
             beacon_         : beacon,
             proxy_          : address(almProxy),
             rateLimits_     : address(rateLimits)
-        }));
+        });
 
         // Step 2: Grant CONTROLLER role on ALMProxy and RateLimits to the Controller.
 

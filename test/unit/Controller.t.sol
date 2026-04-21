@@ -12,10 +12,6 @@ import { UnitTestBase } from "./UnitTestBase.t.sol";
 
 contract ControllerHarness is Controller {
 
-    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
-        Controller(accessControls_, beacon_, proxy_, rateLimits_)
-    {}
-
     function __setDispatch(bytes4 callSelector, IEnumerableIntegrations.Dispatch memory dispatch) external {
         _getControllerStorage().dispatches[callSelector] = dispatch;
     }
@@ -86,7 +82,9 @@ contract Controller_Tests is UnitTestBase {
     ControllerHarness internal controller;
 
     function setUp() external {
-        controller = new ControllerHarness(accessControls, beacon, proxy, rateLimits);
+        controller = new ControllerHarness();
+
+        controller.initialize(accessControls, beacon, proxy, rateLimits);
     }
 
     /**********************************************************************************************/
@@ -94,23 +92,31 @@ contract Controller_Tests is UnitTestBase {
     /**********************************************************************************************/
 
     function test_constructor_zeroAccessControls() external {
+        ControllerHarness controller_ = new ControllerHarness();
+
         vm.expectRevert(IController.ZeroAccessControls.selector);
-        new Controller(address(0), address(0), address(0), address(0));
+        controller_.initialize(address(0), address(0), address(0), address(0));
     }
 
     function test_constructor_zeroBeacon() external {
+        ControllerHarness controller_ = new ControllerHarness();
+
         vm.expectRevert(IController.ZeroBeacon.selector);
-        new Controller(accessControls, address(0), address(0), address(0));
+        controller_.initialize(accessControls, address(0), address(0), address(0));
     }
 
     function test_constructor_zeroProxy() external {
+        ControllerHarness controller_ = new ControllerHarness();
+
         vm.expectRevert(IController.ZeroProxy.selector);
-        new Controller(accessControls, beacon, address(0), address(0));
+        controller_.initialize(accessControls, beacon, address(0), address(0));
     }
 
     function test_constructor_zeroRateLimits() external {
+        ControllerHarness controller_ = new ControllerHarness();
+
         vm.expectRevert(IController.ZeroRateLimits.selector);
-        new Controller(accessControls, beacon, proxy, address(0));
+        controller_.initialize(accessControls, beacon, proxy, address(0));
     }
 
     /**********************************************************************************************/
