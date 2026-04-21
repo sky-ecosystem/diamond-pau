@@ -63,6 +63,12 @@ contract ALMProxy_Freezable_RemoveRelayer_FailureTests is Freezable_RemoveRelaye
         almProxyFreezable.removeRelayer(relayer);
     }
 
+    function test_removeRelayer_revokeFailed() public {
+        vm.prank(freezer);
+        vm.expectRevert("ALMProxyFreezable/RevokeFailed");
+        almProxyFreezable.removeRelayer(address(0));
+    }
+
 }
 
 contract ALMProxy_Freezable_RemoveRelayer_SuccessTests is Freezable_RemoveRelayer_TestBase {
