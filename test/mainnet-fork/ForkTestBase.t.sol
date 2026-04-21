@@ -716,14 +716,25 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireMerklFacet() internal {
-        address merklFacet = address(new MerklFacet(GroveEthereum.MERKL_DISTRIBUTOR));
+        address merklFacet = address(new MerklFacet());
 
         vm.label(merklFacet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](1);
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](3);
+
         merklWires[0] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setMerklDistributor.selector,
+            IMerklFacet.setDistributor.selector
+        );
+
+        merklWires[1] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.toggleOperatorMerkl.selector,
             IMerklFacet.toggleOperator.selector
+        );
+
+        merklWires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.merklDistributor.selector,
+            IMerklFacet.distributor.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -1319,11 +1330,11 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDSFacet() internal {
-        address usdsFacet = address(new USDSFacet(address(usds), vault));
+        address usdsFacet = address(new USDSFacet(address(usds)));
 
         vm.label(usdsFacet, "USDSFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.mintUSDS.selector,
@@ -1338,6 +1349,16 @@ abstract contract ForkTestBase is DssTest {
         wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDS_MINT.selector,
             IUSDSFacet.LIMIT_MINT.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setUSDSVault.selector,
+            IUSDSFacet.setVault.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.usdsVault.selector,
+            IUSDSFacet.vault.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
