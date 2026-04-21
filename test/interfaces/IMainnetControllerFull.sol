@@ -462,7 +462,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function unstakeSUSDe() external virtual;
 
     /**********************************************************************************************/
-    /*** USDS vault actions                                                                     ***/
+    /*** USDSFacet actions                                                                      ***/
     /**********************************************************************************************/
 
     function LIMIT_USDS_MINT() external pure virtual returns (bytes32);
@@ -470,6 +470,10 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function mintUSDS(uint256 usdsAmount) external virtual;
 
     function burnUSDS(uint256 usdsAmount) external virtual;
+
+    function setUSDSVault(address vault) external virtual;
+
+    function usdsVault() external view virtual returns (address);
 
     /**********************************************************************************************/
     /*** WEETHFacet actions                                                                     ***/
