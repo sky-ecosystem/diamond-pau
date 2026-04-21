@@ -73,7 +73,7 @@ contract FacetVersions_Tests is Test {
         farmFacet          = new FarmFacet();
         layerZeroFacet     = new LayerZeroFacet();
         mapleFacet         = new MapleFacet();
-        merklFacet         = new MerklFacet(MOCK_ADDRESS);
+        merklFacet         = new MerklFacet();
         otcFacet           = new OTCFacet();
         pendleFacet        = new PendleFacet(MOCK_ADDRESS);
         psmFacet           = new PSMFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
@@ -84,7 +84,7 @@ contract FacetVersions_Tests is Test {
         uniswapV3Facet     = new UniswapV3Facet(MOCK_ADDRESS, MOCK_ADDRESS);
         uniswapV4Facet     = new UniswapV4Facet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         usdeFacet          = new USDEFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
-        usdsFacet          = new USDSFacet(MOCK_ADDRESS, MOCK_ADDRESS);
+        usdsFacet          = new USDSFacet(MOCK_ADDRESS);
         weethFacet         = new WEETHFacet(MOCK_ADDRESS, MOCK_ADDRESS);
         wrapProxyETHFacet  = new WrapProxyETHFacet(MOCK_ADDRESS);
         wstethFacet        = new WSTETHFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
