@@ -32,7 +32,7 @@ contract ALMProxyFreezable is IALMProxyFreezable, AccessControl {
     /**********************************************************************************************/
 
     function removeRelayer(address relayer) external override onlyRole(FREEZER) {
-        require(_revokeRole(RELAYER, relayer), "ALMProxyFreezable/RevokeFailed");
+        require(_revokeRole(RELAYER, relayer), "ALMProxyFreezable/not-live-relayer");
 
         emit RelayerRemoved(relayer);
     }
