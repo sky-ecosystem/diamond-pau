@@ -88,35 +88,43 @@ contract Controller_Tests is UnitTestBase {
     }
 
     /**********************************************************************************************/
-    /*** Constructor Tests                                                                      ***/
+    /*** Initializer Tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_constructor_zeroAccessControls() external {
+    function test_initialize_zeroAccessControls() external {
         ControllerHarness controller_ = new ControllerHarness();
 
         vm.expectRevert(IController.ZeroAccessControls.selector);
         controller_.initialize(address(0), address(0), address(0), address(0));
     }
 
-    function test_constructor_zeroBeacon() external {
+    function test_initialize_zeroBeacon() external {
         ControllerHarness controller_ = new ControllerHarness();
 
         vm.expectRevert(IController.ZeroBeacon.selector);
         controller_.initialize(accessControls, address(0), address(0), address(0));
     }
 
-    function test_constructor_zeroProxy() external {
+    function test_initialize_zeroProxy() external {
         ControllerHarness controller_ = new ControllerHarness();
 
         vm.expectRevert(IController.ZeroProxy.selector);
         controller_.initialize(accessControls, beacon, address(0), address(0));
     }
 
-    function test_constructor_zeroRateLimits() external {
+    function test_initialize_zeroRateLimits() external {
         ControllerHarness controller_ = new ControllerHarness();
 
         vm.expectRevert(IController.ZeroRateLimits.selector);
         controller_.initialize(accessControls, beacon, proxy, address(0));
+    }
+
+    function test_initialize_cannotInitializeAgain() external {
+        ControllerHarness controller_ = new ControllerHarness();
+        controller_.initialize(accessControls, beacon, proxy, rateLimits);
+
+        vm.expectRevert("InvalidInitialization()");
+        controller_.initialize(accessControls, beacon, proxy, rateLimits);
     }
 
     /**********************************************************************************************/
@@ -128,6 +136,8 @@ contract Controller_Tests is UnitTestBase {
         assertEq(controller.beacon(),         beacon);
         assertEq(controller.proxy(),          proxy);
         assertEq(controller.rateLimits(),     rateLimits);
+
+        assertEq(vm.load(address(controller), _REENTRANCY_GUARD_SLOT), _REENTRANCY_GUARD_NOT_ENTERED);
     }
 
     /**********************************************************************************************/

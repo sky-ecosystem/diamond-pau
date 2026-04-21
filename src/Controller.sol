@@ -63,7 +63,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuardUpgr
         address beacon_,
         address proxy_,
         address rateLimits_
-    ) 
+    )
         external
         initializer
     {
