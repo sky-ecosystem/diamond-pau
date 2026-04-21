@@ -119,8 +119,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
 
         deal(Ethereum.USDS, address(almProxy), depositAmount);
 
-        uint256 fairShares          = groveBasin.convertToShares(Ethereum.USDS, depositAmount);
-        uint256 atBoundaryShares    = fairShares * 0.99e18 / 1e18;
+        uint256 atBoundaryShares    = depositAmount * 0.99e18 / 1e18;
         uint256 underBoundaryShares = atBoundaryShares - 1;
 
         vm.startPrank(relayer);
@@ -364,8 +363,7 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
     function test_withdrawBasin_maxAmountNotMetBoundary() external {
         uint256 withdrawAmount = 1_000_000e18;
 
-        uint256 fairShares         = groveBasin.convertToShares(Ethereum.USDS, withdrawAmount);
-        uint256 atBoundaryShares   = fairShares * 1e18 / 0.99e18;
+        uint256 atBoundaryShares   = withdrawAmount * 1e18 / 0.99e18;
         uint256 overBoundaryShares = atBoundaryShares + 1;
 
         vm.startPrank(relayer);
