@@ -169,11 +169,11 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     /// @inheritdoc IUniswapV3Facet
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_UNISWAP_V3_WITHDRAW");
 
-    // https://github.com/sky-ecosystem/dss-allocator/blob/dev/src/funnels/uniV3/TickMath.sol#L15
+    // https://github.com/sky-ecosystem/dss-allocator/blob/a5469884/src/funnels/uniV3/TickMath.sol#L12-L15
+
     /// @inheritdoc IUniswapV3Facet
     uint24 public constant override MAX_TICK_DELTA = 887_272;
 
-    // https://github.com/uniswap/v4-core/blob/v4.0.0/src/libraries/TickMath.sol#L18-L23
     /// @inheritdoc IUniswapV3Facet
     int24 public constant override MIN_TICK = -887_272;
 
