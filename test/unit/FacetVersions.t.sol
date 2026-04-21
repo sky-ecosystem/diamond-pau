@@ -32,6 +32,14 @@ import { WEETHFacet }         from "../../src/facets/weeth/WEETHFacet.sol";
 import { WrapProxyETHFacet }  from "../../src/facets/wrap-proxy-eth/WrapProxyETHFacet.sol";
 import { WSTETHFacet }        from "../../src/facets/wsteth/WSTETHFacet.sol";
 
+contract MockWEETH {
+
+    function eETH() external view returns (address) {
+        return address(1);
+    }
+
+}
+
 contract FacetVersions_Tests is Test {
 
     address internal MOCK_ADDRESS = makeAddr("mockAddress");
@@ -64,7 +72,7 @@ contract FacetVersions_Tests is Test {
     WSTETHFacet        internal wstethFacet;
 
     function setUp() external {
-        vm.createSelectFork(getChain("mainnet").rpcUrl, _getBlock());
+        MockWEETH mockWEETH = new MockWEETH();
 
         aaveFacet          = new AaveFacet();
         cctpFacet          = new CCTPFacet(MOCK_ADDRESS, MOCK_ADDRESS);
@@ -89,7 +97,7 @@ contract FacetVersions_Tests is Test {
         uniswapV4Facet     = new UniswapV4Facet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         usdeFacet          = new USDEFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         usdsFacet          = new USDSFacet(MOCK_ADDRESS, MOCK_ADDRESS);
-        weethFacet         = new WEETHFacet(Ethereum.WEETH, Ethereum.WETH);
+        weethFacet         = new WEETHFacet(address(mockWEETH), MOCK_ADDRESS);
         wrapProxyETHFacet  = new WrapProxyETHFacet(MOCK_ADDRESS);
         wstethFacet        = new WSTETHFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
     }
@@ -121,10 +129,6 @@ contract FacetVersions_Tests is Test {
         assertEq(weethFacet.VERSION(),         "1.0.0");
         assertEq(wrapProxyETHFacet.VERSION(),  "1.0.0");
         assertEq(wstethFacet.VERSION(),        "1.0.0");
-    }
-
-    function _getBlock() internal pure returns (uint256) {
-        return 24919737; //  April 20, 2026
     }
 
 }
