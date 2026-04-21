@@ -24,11 +24,11 @@ interface IBasinFacet is IFacetBase {
     );
 
     /**
-     * @notice Emitted when the max slippage for a basin is updated.
-     * @param  basin       Address of the basin.
-     * @param  maxSlippage New max slippage in 1e18 precision (1e18 = no slippage).
+     * @notice Emitted when the minimum conversion rate for a basin is updated.
+     * @param  basin             The address of the basin.
+     * @param  minConversionRate The minimum conversion rate for the basin.
      */
-    event BasinMaxSlippageSet(address indexed basin, uint256 maxSlippage);
+    event BasinMinConversionRateSet(address indexed basin, uint256 minConversionRate);
 
     /**
      * @notice Event emitted when a withdrawal is made from a basin.
@@ -61,11 +61,11 @@ interface IBasinFacet is IFacetBase {
         returns (uint256 shares);
 
     /**
-     * @notice Sets the max slippage for a basin.
-     * @param  basin       Address of the basin.
-     * @param  maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
+     * @notice Sets the minimum conversion rate for a basin.
+     * @param  basin             The address of the basin.
+     * @param  minConversionRate The minimum conversion rate for the basin. Zero for unset.
      */
-    function setMaxSlippage(address basin, uint256 maxSlippage) external;
+    function setMinConversionRate(address basin, uint256 minConversionRate) external;
 
     /**
      * @notice Withdraw up to `maxAmount` of `asset` from `basin`, return `assetsWithdrawn`.
@@ -94,10 +94,10 @@ interface IBasinFacet is IFacetBase {
     /**********************************************************************************************/
 
     /**
-     * @notice Returns the configured max slippage for a basin.
-     * @param  basin       Address of the basin.
-     * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
+     * @notice Returns the configured minimum conversion rate for a basin.
+     * @param  basin             The address of the basin.
+     * @return minConversionRate The minimum conversion rate for the basin. Zero for unset.
      */
-    function getMaxSlippage(address basin) external view returns (uint256 maxSlippage);
+    function getMinConversionRate(address basin) external view returns (uint256 minConversionRate);
 
 }

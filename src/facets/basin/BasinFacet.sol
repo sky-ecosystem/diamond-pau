@@ -13,8 +13,6 @@ import { IBasinFacet } from "./IBasinFacet.sol";
 
 interface IBasinLike {
 
-    function convertToShares(address asset, uint256 assets) external view returns (uint256);
-
     function deposit(address asset, address receiver, uint256 assetsToDeposit)
         external
         returns (uint256 newShares);
@@ -22,6 +20,10 @@ interface IBasinLike {
     function withdraw(address asset, address receiver, uint256 maxAssetsToWithdraw)
         external
         returns (uint256 assetsWithdrawn);
+
+    function convertToShares(address asset, uint256 assets) external view returns (uint256);
+
+    function getAssetValue(address asset, uint256 amount, bool roundUp) external view returns (uint256);
 
     function shares(address user) external view returns (uint256);
 
@@ -35,7 +37,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
     /// @custom:storage-location erc7201:sky.pau.storage.BasinFacet.v1
     struct FacetStorage {
-        mapping (address basin => uint256 maxSlippage) maxSlippages;  // 1e18 precision
+        mapping (address basin => uint256 minConversionRate) minConversionRates;  // 1e18 precision
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.BasinFacet.v1")) - 1)) & ~bytes32(uint256(0xff))
@@ -61,7 +63,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    function setMaxSlippage(address basin, uint256 maxSlippage)
+    function setMinConversionRate(address basin, uint256 minConversionRate)
         external
         override
         nonReentrant
@@ -69,9 +71,9 @@ contract BasinFacet is IBasinFacet, FacetBase {
     {
         require(basin != address(0), "BasinFacet/basin-zero-address");
 
-        _getFacetStorage().maxSlippages[basin] = maxSlippage;
+        _getFacetStorage().minConversionRates[basin] = minConversionRate;
 
-        emit BasinMaxSlippageSet(basin, maxSlippage);
+        emit BasinMinConversionRateSet(basin, minConversionRate);
     }
 
     /**********************************************************************************************/
@@ -85,14 +87,17 @@ contract BasinFacet is IBasinFacet, FacetBase {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        uint256 maxSlippage = _getFacetStorage().maxSlippages[basin];
+        uint256 minAdminConversionRate = _getFacetStorage().minConversionRates[basin];
 
-        require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
+        require(minAdminConversionRate != 0, "BasinFacet/min-admin-conversion-rate-not-set");
 
-        // Ensure `minSharesOut` is within slippage tolerance of the share amount 
-        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
+        uint256 assetValue = IBasinLike(basin).getAssetValue(asset, amount, false);
+
+        // Ensure the conversion rate implied by `minSharesOut` and `amount` is greater or equal to
+        // the minimum conversion rate defined for the basin.
         require(
-            minSharesOut >= amount * maxSlippage / 1e18, "BasinFacet/min-amount-not-met"
+            minSharesOut * 1e18 >= assetValue * minAdminConversionRate,
+            "BasinFacet/min-conversion-rate-not-met"
         );
 
         _decreaseRateLimit(LIMIT_DEPOSIT, basin, asset, amount);
@@ -116,21 +121,20 @@ contract BasinFacet is IBasinFacet, FacetBase {
         emit BasinDeposit(basin, asset, amount, shares);
     }
 
-    function withdraw(address basin, address asset, uint256 maxAmount, uint256 maxSharesIn)
+    function withdraw(address basin, address asset, uint256 maxAmount, uint256 minConversionRate)
         external
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
         returns (uint256 assetsWithdrawn)
     {
-        uint256 maxSlippage = _getFacetStorage().maxSlippages[basin];
+        uint256 minAdminConversionRate = _getFacetStorage().minConversionRates[basin];
 
-        require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
+        require(minAdminConversionRate != 0, "BasinFacet/min-admin-conversion-rate-not-set");
 
-        // Ensure `maxSharesIn` is within slippage tolerance of the fair share amount.
-        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
-            maxSharesIn * maxSlippage <= maxAmount * 1e18, "BasinFacet/max-amount-not-met"
+            minConversionRate >= minAdminConversionRate,
+            "BasinFacet/min-conversion-rate-not-met"
         );
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -150,24 +154,24 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         uint256 sharesIn = sharesBefore - IBasinLike(basin).shares(proxy);
 
-        require(sharesIn <= maxSharesIn, "BasinFacet/shares-burned-too-high");
+        uint256 assetValue = IBasinLike(basin).getAssetValue(asset, assetsWithdrawn, false);
+
+        require(
+            assetValue * 1e18 >= sharesIn * minConversionRate,
+            "BasinFacet/min-conversion-rate-not-met"
+        );
 
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
 
-        emit BasinWithdraw(
-            basin,
-            asset,
-            assetsWithdrawn,
-            sharesIn
-        );
+        emit BasinWithdraw(basin, asset, assetsWithdrawn, sharesIn);
     }
 
     /**********************************************************************************************/
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function getMaxSlippage(address basin) external view override returns (uint256) {
-        return _getFacetStorage().maxSlippages[basin];
+    function getMinConversionRate(address basin) external view override returns (uint256) {
+        return _getFacetStorage().minConversionRates[basin];
     }
 
     /**********************************************************************************************/
