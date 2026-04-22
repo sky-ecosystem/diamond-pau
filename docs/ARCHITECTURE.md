@@ -23,7 +23,7 @@ The unified controller contract that serves as the entry point for all relayer o
 - Dispatch-based call routing: admin syncs integration configs from the Beacon via `updateIntegrations`, which maps call selectors to (facet address, delegate selector) pairs locally
 - Each facet uses its own ERC-7201 namespaced storage domain, preventing storage collisions
 - Shared state (access controls, proxy, rate limits) is accessible to all facets via `ControllerSharedStorage`
-- Reentrancy protection defined in individual facets.
+- Reentrancy protection defined in individual facets
 - Enumerable introspection via `integrations()`, `getConfig()`, `getConfigs()`, `getDispatch()`, and `getDispatches()`
 
 **Capabilities (determined by which facets are wired):**
@@ -116,7 +116,7 @@ contract for role checks. The following roles are defined:
 
 ## Facets
 
-The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase` that provides the `onlyRole` modifier, and the `FacetBase` which inherits `ControllerSharedStorage` provides shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
+The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase` that provides the `onlyRole` modifier, and the `FacetBase` inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` which provides reentrancy protection, shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
 | Facet                | Purpose                                        |
 | -------------------- | ---------------------------------------------- |
