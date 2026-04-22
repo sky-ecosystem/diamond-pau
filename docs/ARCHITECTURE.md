@@ -85,7 +85,7 @@ Module contract used for facilitating NFT-based WEETH withdrawals. See [WEETH_IN
 The general structure of calls is shown below. The `Controller` is the entry point for all calls. It dispatches to the appropriate facet, which checks rate limits if necessary and executes the relevant logic. Facets perform calls to the `ALMProxy` contract atomically with specified calldata.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/832db958-14e6-482f-9dbc-b10e672029f7" alt="Call Flow Architecture" height="700px" style="margin-right:100px;"/>
+  <img src="./general_call_flow.png" alt="Call Flow Architecture" height="700px" style="margin-right:100px;"/>
 </p>
 
 ### Example: Minting USDS
@@ -93,12 +93,15 @@ The general structure of calls is shown below. The `Controller` is the entry poi
 The diagram below provides an example of calling to mint USDS using the Sky allocation system. Note that funds are always held in custody by the `ALMProxy` as a result of the calls made.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/312634c3-0c3e-4f5a-b673-b44e07d3fb56" alt="USDS Minting Flow" height="700px"/>
+  <img src="./mint_usds_flow.png" alt="USDS Minting Flow" height="700px"/>
 </p>
 
 ## Permissions
 
-Contracts inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. The following roles are defined:
+All Contracts except Controller, PAUFactory, ControllerSharedStorage and the facets (via
+FacetBase) inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. Controller, PAUFactory, ControllerSharedStorage and the facets (via
+FacetBase) do not inherit AccessControl directly, they rely on an external AccessControls
+contract for role checks. The following roles are defined:
 
 | Role                 | Description                                                                                                                                                                      |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,7 +116,7 @@ Contracts inherit and implement the `AccessControl` contract from OpenZeppelin t
 
 ## Facets
 
-The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase`, which inherits `ControllerSharedStorage` and `ReentrancyGuard`, providing the `onlyRole` modifier and shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
+The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase` that provides the `onlyRole` modifier, and the `FacetBase` which inherits `ControllerSharedStorage` provides shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
 | Facet                | Purpose                                        |
 | -------------------- | ---------------------------------------------- |
