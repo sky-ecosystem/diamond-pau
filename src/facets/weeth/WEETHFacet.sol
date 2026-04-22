@@ -95,10 +95,11 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        // Deposit ETH to eETH.
         address eeth          = IWEETHLike(weeth).eETH();
         address liquidityPool = IEETHLike(eeth).liquidityPool();
 
+        // NOTE: Rate limited on eETH, so if eETH address changes this will revert and will
+        //       need to be updated to the new eETH address by corresponding spell.
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressKey(LIMIT_DEPOSIT, eeth),
             amount
@@ -109,6 +110,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
         // Unwrap WETH to ETH.
         IALMProxy(proxy).doCall(weth, abi.encodeCall(IWETHLike.withdraw, (amount)));
 
+        // Deposit ETH to eETH.
         uint256 eethShares = abi.decode(
             IALMProxy(proxy).doCallWithValue(
                 liquidityPool,
@@ -161,7 +163,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
             "WEETHFacet/slippage-too-high"
         );
 
-        // NOTE: An authorized weethModule is enforced by the rate limit key.
+        // NOTE: An authorized weethModule and eETH address is enforced by the rate limit key.
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule, eeth),
             eethAmount
@@ -192,7 +194,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
 
         address eeth = IWEETHLike(weeth).eETH();
 
-        // NOTE: An authorized weethModule is enforced by the rate limit key.
+        // NOTE: An authorized weethModule and eETH address is enforced by the rate limit key.
         require(
             IRateLimits($.rateLimits).getRateLimitData(
                 makeAddressAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule, eeth)
