@@ -88,7 +88,7 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 - Convert ETH to WETH for standard token handling
 - Emergency fund extraction
 
-**Security:** The `doCallWithValue` function is governance-controlled and does not introduce attack vectors for compromised relayers. The `wrapAllProxyETH` function is relayer-accessible but only converts ETH to WETH within the ALMProxy, keeping funds in the system.
+**Security:** The `doCallWithValue` function is governance-controlled and does not introduce attack vectors for compromised relayers. The `wrapAll` function is relayer-accessible but only converts ETH to WETH within the ALMProxy, keeping funds in the system.
 
 ---
 
