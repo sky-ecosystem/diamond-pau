@@ -80,7 +80,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
     uint256 public constant override MAX_FEE = 0;  // 0 for standard burns (no fast burn fee)
 
     /// @inheritdoc ICCTPFacet
-    uint32  public constant override MAX_FINALITY_THRESHOLD = 2_000;  // 2_000 for standard (finalized) messages
+    uint32 public constant override MAX_FINALITY_THRESHOLD = 2_000;  // 2_000 for standard (finalized) messages
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
