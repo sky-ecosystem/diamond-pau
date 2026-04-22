@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { FullMath }         from "../../../lib/dss-allocator/src/funnels/uniV3/FullMath.sol";
-import { LiquidityAmounts } from "../../../lib/dss-allocator/src/funnels/uniV3/LiquidityAmounts.sol";
-import { TickMath }         from "../../../lib/dss-allocator/src/funnels/uniV3/TickMath.sol";
+import { FullMath } from "../../../lib/dss-allocator/src/funnels/uniV3/FullMath.sol";
+import { TickMath } from "../../../lib/dss-allocator/src/funnels/uniV3/TickMath.sol";
+
+import {
+    LiquidityAmounts
+} from "../../../lib/dss-allocator/src/funnels/uniV3/LiquidityAmounts.sol";
 
 import { ApproveLib }            from "../../libraries/ApproveLib.sol";
 import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";

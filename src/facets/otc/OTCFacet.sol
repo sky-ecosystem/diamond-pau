@@ -111,6 +111,7 @@ contract OTCFacet is IOTCFacet, Facet {
         emit OTCRechargeRateSet(exchange, normalizedRate);
     }
 
+    /// @inheritdoc IOTCFacet
     function setIsWhitelisted(address exchange, address asset, bool isWhitelisted)
         external
         override

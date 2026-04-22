@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "../lib/oz-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 import {
     EnumerableSet
@@ -13,7 +15,7 @@ import { IController }     from "./interfaces/IController.sol";
 
 import { ControllerSharedStorage } from "./ControllerSharedStorage.sol";
 
-contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
+contract Controller is IController, ControllerSharedStorage, ReentrancyGuardUpgradeable {
 
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -23,7 +25,6 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
     /// @custom:storage-location erc7201:sky.pau.storage.Controller
     struct ControllerStorage {
-        address                  beacon;
         EnumerableSet.Bytes32Set integrationIds;
         mapping (bytes32 integrationId => Config config)     configs;
         mapping (bytes4  callSelector  => Dispatch dispatch) dispatches;
@@ -46,6 +47,12 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     bytes32 internal constant _DEFAULT_ADMIN_ROLE = 0x00;
 
     /**********************************************************************************************/
+    /*** Declarations                                                                           ***/
+    /**********************************************************************************************/
+
+    address public immutable override beacon;
+
+    /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
     /**********************************************************************************************/
 
@@ -58,11 +65,15 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_) {
+    constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_)
+        initializer
+    {
         require(accessControls_ != address(0), ZeroAccessControls());
         require(beacon_         != address(0), ZeroBeacon());
         require(proxy_          != address(0), ZeroProxy());
         require(rateLimits_     != address(0), ZeroRateLimits());
+
+        __ReentrancyGuard_init();
 
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
@@ -70,7 +81,7 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
         $.proxy          = proxy_;
         $.rateLimits     = rateLimits_;
 
-        _getControllerStorage().beacon = beacon_;
+        beacon = beacon_;
     }
 
     /**********************************************************************************************/
@@ -80,9 +91,9 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
     function updateIntegrations(bytes32[] calldata ids) external override nonReentrant onlyAdmin {
         require(ids.length > 0, EmptyArray());
 
-        ControllerStorage storage $ = _getControllerStorage();
+        Config[] memory configs = IBeacon(beacon).getConfigs(ids);
 
-        Config[] memory configs = IBeacon($.beacon).getConfigs(ids);
+        ControllerStorage storage $ = _getControllerStorage();
 
         // Iterate over all integrationIds and set/overwrite each integration config
         for (uint256 i = 0; i < ids.length; ++i) {
@@ -127,10 +138,6 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuard {
 
     function accessControls() external view override returns (address) {
         return _getSharedControllerStorage().accessControls;
-    }
-
-    function beacon() external view override returns (address) {
-        return _getControllerStorage().beacon;
     }
 
     function integrations() external view override returns (Integration[] memory integrations_) {

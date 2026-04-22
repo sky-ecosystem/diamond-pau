@@ -141,7 +141,8 @@ abstract contract ForkTestBase is DssTest {
     address internal constant UNISWAP_V3_ROUTER           = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address internal constant UNISWAP_V3_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
 
-    bytes32 internal constant _REENTRANCY_GUARD_SLOT        = bytes32(uint256(0));
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ReentrancyGuard")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant _REENTRANCY_GUARD_SLOT        = 0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
     bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
@@ -715,14 +716,25 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireMerklFacet() internal {
-        address merklFacet = address(new MerklFacet(GroveEthereum.MERKL_DISTRIBUTOR));
+        address merklFacet = address(new MerklFacet());
 
         vm.label(merklFacet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](1);
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](3);
+
         merklWires[0] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setMerklDistributor.selector,
+            IMerklFacet.setDistributor.selector
+        );
+
+        merklWires[1] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.toggleOperatorMerkl.selector,
             IMerklFacet.toggleOperator.selector
+        );
+
+        merklWires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.merklDistributor.selector,
+            IMerklFacet.distributor.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -1318,11 +1330,11 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireUSDSFacet() internal {
-        address usdsFacet = address(new USDSFacet(address(usds), vault));
+        address usdsFacet = address(new USDSFacet(address(usds)));
 
         vm.label(usdsFacet, "USDSFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.mintUSDS.selector,
@@ -1337,6 +1349,16 @@ abstract contract ForkTestBase is DssTest {
         wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDS_MINT.selector,
             IUSDSFacet.LIMIT_MINT.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.setUSDSVault.selector,
+            IUSDSFacet.setVault.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.usdsVault.selector,
+            IUSDSFacet.vault.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

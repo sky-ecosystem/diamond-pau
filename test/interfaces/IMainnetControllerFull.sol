@@ -216,7 +216,11 @@ abstract contract IMainnetControllerFull is IController, Controller {
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function setMerklDistributor(address distributor) external virtual;
+
     function toggleOperatorMerkl(address operator) external virtual;
+
+    function merklDistributor() external view virtual returns (address);
 
     /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
@@ -466,6 +470,10 @@ abstract contract IMainnetControllerFull is IController, Controller {
     function mintUSDS(uint256 usdsAmount) external virtual;
 
     function burnUSDS(uint256 usdsAmount) external virtual;
+
+    function setUSDSVault(address vault) external virtual;
+
+    function usdsVault() external view virtual returns (address);
 
     /**********************************************************************************************/
     /*** WEETHFacet actions                                                                     ***/
