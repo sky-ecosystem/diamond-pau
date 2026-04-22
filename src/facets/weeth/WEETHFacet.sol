@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }     from "../../libraries/ApproveLib.sol";
-import { makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }            from "../../libraries/ApproveLib.sol";
+import { makeAddressKey }        from "../../libraries/RateLimitHelpers.sol";
+import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
@@ -94,16 +95,19 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_DEPOSIT, amount);
+        // Deposit ETH to eETH.
+        address eeth          = IWEETHLike(weeth).eETH();
+        address liquidityPool = IEETHLike(eeth).liquidityPool();
+
+        IRateLimits($.rateLimits).triggerRateLimitDecrease(
+            makeAddressKey(LIMIT_DEPOSIT, eeth),
+            amount
+        );
 
         address proxy = $.proxy;
 
         // Unwrap WETH to ETH.
         IALMProxy(proxy).doCall(weth, abi.encodeCall(IWETHLike.withdraw, (amount)));
-
-        // Deposit ETH to eETH.
-        address eeth          = IWEETHLike(weeth).eETH();
-        address liquidityPool = IEETHLike(eeth).liquidityPool();
 
         uint256 eethShares = abi.decode(
             IALMProxy(proxy).doCallWithValue(
@@ -159,7 +163,7 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
 
         // NOTE: An authorized weethModule is enforced by the rate limit key.
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule),
+            makeAddressAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule, eeth),
             eethAmount
         );
 
@@ -186,10 +190,12 @@ contract WEETHFacet is IWEETHFacet, FacetBase {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
+        address eeth = IWEETHLike(weeth).eETH();
+
         // NOTE: An authorized weethModule is enforced by the rate limit key.
         require(
             IRateLimits($.rateLimits).getRateLimitData(
-                makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule)
+                makeAddressAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule, eeth)
             ).maxAmount > 0,
             "WEETHFacet/invalid-action"
         );
