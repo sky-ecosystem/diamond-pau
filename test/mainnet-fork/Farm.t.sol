@@ -133,7 +133,7 @@ contract MainnetController_Farm_ClaimReward_Tests is Farm_TestBase {
         mainnetController.claimRewardFromFarm(FARM);
     }
 
-    function test_claimRewardFromFarm_xxx() external {
+    function test_claimRewardFromFarm() external {
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
         assertEq(USDS.balanceOf(address(almProxy)),                     1_000_000e18);
@@ -157,16 +157,20 @@ contract MainnetController_Farm_ClaimReward_Tests is Farm_TestBase {
         emit IFarmFacet.FarmReward(FARM, expectedReward);
 
         vm.prank(relayer);
-        uint256 reward = mainnetController.claimRewardFromFarm(FARM);
+        assertEq(mainnetController.claimRewardFromFarm(FARM), expectedReward);
 
         _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(reward, expectedReward);
 
         assertEq(IERC20Like(Ethereum.SPK).balanceOf(address(almProxy)), expectedReward);
 
         // Staked position is untouched.
         assertEq(IERC20Like(FARM).balanceOf(address(almProxy)), 1_000_000e18);
+
+        vm.expectEmit(address(mainnetController));
+        emit IFarmFacet.FarmReward(FARM, 0);
+
+        vm.prank(relayer);
+        assertEq(mainnetController.claimRewardFromFarm(FARM), 0);
     }
 
 }
@@ -244,11 +248,9 @@ contract MainnetController_Farm_Withdraw_Tests is Farm_TestBase {
         emit IFarmFacet.FarmReward(FARM, expectedReward);
 
         vm.prank(relayer);
-        uint256 reward = mainnetController.withdrawFromFarm(FARM, 1_000_000e18);
+        assertEq(mainnetController.withdrawFromFarm(FARM, 1_000_000e18), expectedReward);
 
         _assertReentrancyGuardWrittenToTwice();
-
-        assertEq(reward, expectedReward);
 
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 9_000_000e18);
 

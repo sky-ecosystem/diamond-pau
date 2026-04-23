@@ -13,6 +13,12 @@ import { Facet } from "../Facet.sol";
 
 import { IFarmFacet } from "./IFarmFacet.sol";
 
+interface IERC20Like {
+
+    function balanceOf(address account) external view returns (uint256);
+
+}
+
 interface IFarmLike {
 
     function getReward() external;
@@ -21,7 +27,7 @@ interface IFarmLike {
 
     function withdraw(uint256 amount) external;
 
-    function earned(address account) external view returns (uint256);
+    function rewardToken() external view returns (address);
 
     function stakingToken() external view returns (address);
 
@@ -100,11 +106,14 @@ contract FarmFacet is IFarmFacet, Facet {
     /**********************************************************************************************/
 
     function _claimReward(address farm) internal returns (uint256 reward) {
-        address proxy = _getSharedControllerStorage().proxy;
+        address proxy       = _getSharedControllerStorage().proxy;
+        address rewardToken = IFarmLike(farm).rewardToken();
 
-        reward = IFarmLike(farm).earned(proxy);
+        uint256 balanceBefore = IERC20Like(rewardToken).balanceOf(proxy);
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
+
+        reward = IERC20Like(rewardToken).balanceOf(proxy) - balanceBefore;
 
         emit FarmReward(farm, reward);
     }
