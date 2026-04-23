@@ -5,7 +5,7 @@ import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/u
 
 import { IBasinFacet }             from "../../../src/facets/basin/IBasinFacet.sol";
 import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
-import { IFacetBase }              from "../../../src/facets/IFacetBase.sol";
+import { IFacet }                  from "../../../src/facets/IFacet.sol";
 
 import { BasinFacet } from "../../../src/facets/basin/BasinFacet.sol";
 
@@ -82,7 +82,7 @@ contract Controller_BasinFacet_Admin_Tests is BasinFacet_TestBase {
 
     function test_setMaxSlippage_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSelector(
-            IFacetBase.AccessControlUnauthorizedAccount.selector,
+            IFacet.AccessControlUnauthorizedAccount.selector,
             unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
