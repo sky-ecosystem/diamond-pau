@@ -157,7 +157,7 @@ contract MainnetController_Basin_Deposit_Tests is Basin_TestBase {
         deal(Ethereum.USDS, address(almProxy), 5_000_000e18 + 1);
 
         uint256 atBoundaryShares   = groveBasin.previewDeposit(Ethereum.USDS, 5_000_000e18);
-        uint256 overBoundaryShares = groveBasin.previewDeposit(Ethereum.USDS, 5_000_000e18 + 1);
+        uint256 overBoundaryShares = atBoundaryShares + 1;
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
