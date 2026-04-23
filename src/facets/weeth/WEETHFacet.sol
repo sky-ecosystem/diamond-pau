@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }     from "../../libraries/ApproveLib.sol";
-import { makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }                            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey, makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
@@ -105,7 +105,7 @@ contract WEETHFacet is IWEETHFacet, Facet {
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_DEPOSIT, amount);
+        _decreaseRateLimit(_getDepositRateLimitKey(), amount);
 
         address proxy = $.proxy;
 
@@ -170,10 +170,7 @@ contract WEETHFacet is IWEETHFacet, Facet {
         );
 
         // NOTE: An authorized weethModule is enforced by the rate limit key.
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule),
-            eethAmount
-        );
+        _decreaseRateLimit(_getRequestWithdrawRateLimitKey(weethModule), eethAmount);
 
         // Request withdrawal of ETH from eETH.
         ApproveLib.approve(eeth, proxy, liquidityPool, eethAmount);
@@ -202,7 +199,7 @@ contract WEETHFacet is IWEETHFacet, Facet {
         // NOTE: An authorized weethModule is enforced by the rate limit key.
         require(
             IRateLimits($.rateLimits).getRateLimitData(
-                makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule)
+                _getRequestWithdrawRateLimitKey(weethModule)
             ).maxAmount > 0,
             "WEETHFacet/invalid-action"
         );
@@ -216,6 +213,26 @@ contract WEETHFacet is IWEETHFacet, Facet {
         );
 
         emit WEETHClaimWithdrawal(weethModule, requestId, wethReceived);
+    }
+
+    /**********************************************************************************************/
+    /*** Internal Interactive Functions                                                         ***/
+    /**********************************************************************************************/
+
+    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getDepositRateLimitKey() internal view returns (bytes32) {
+        return makeAddressKey(LIMIT_DEPOSIT, IWEETHLike(weeth).eETH());
+    }
+
+    function _getRequestWithdrawRateLimitKey(address weethModule) internal view returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_REQUEST_WITHDRAW, IWEETHLike(weeth).eETH(), weethModule);
     }
 
 }
