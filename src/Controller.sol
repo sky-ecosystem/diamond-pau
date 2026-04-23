@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ReentrancyGuardUpgradeable } from "../lib/oz-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "../lib/oz-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 import {
     EnumerableSet
@@ -220,9 +222,20 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuardUpgr
 
         require(facet != address(0), CallSelectorNotWired(msg.sig));
 
+        SharedControllerStorage storage $ = _getSharedControllerStorage();
+
+        address accessControls_ = $.accessControls;
+        address proxy_          = $.proxy;
+        address rateLimits_     = $.rateLimits;
+
         // Replace the incoming selector with the delegate selector.
         ( bool success, bytes memory returnData ) = facet.delegatecall(
             abi.encodePacked(dispatch.delegateSelector, msg.data[4:])
+        );
+
+        require(
+            $.accessControls == accessControls_ && $.proxy == proxy_ && $.rateLimits == rateLimits_,
+            SharedStorageAltered()
         );
 
         // Forward return data as-is (not possible without assembly in a fallback).

@@ -58,13 +58,14 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** UUPS Storage                                                                           ***/
     /**********************************************************************************************/
 
+    /// @custom:storage-location erc7201:sky.pau.storage.WEETHModule.v1
     struct WEETHModuleStorage {
-        address almProxy;
+        address proxy;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("almController.storage.WEETHModule")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.WEETHModule.v1")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 internal constant _WEETH_MODULE_STORAGE_LOCATION =
-        0x72fb93b69874a05cc16cf86ff69e742007cd0f04a37e31aa1dda9b1c977e8300;
+        0x072d818e7fec5969c5ff28092831f41de97405b50d97fe9622741f7cad03bb00;
 
     function _getWEETHModuleStorage() internal pure returns (WEETHModuleStorage storage $) {
         assembly {
@@ -97,24 +98,26 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    function initialize(address admin_, address almProxy_) external override initializer {
-        require(almProxy_ != address(0), "WEETHModule/invalid-alm-proxy");
-        require(admin_    != address(0), "WEETHModule/invalid-admin");
+    /// @inheritdoc IWEETHModule
+    function initialize(address admin_, address proxy_) external override initializer {
+        require(proxy_ != address(0), "WEETHModule/invalid-proxy");
+        require(admin_ != address(0), "WEETHModule/invalid-admin");
 
         __AccessControlEnumerable_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        _getWEETHModuleStorage().almProxy = almProxy_;
+        _getWEETHModuleStorage().proxy = proxy_;
     }
 
     /**********************************************************************************************/
     /*** External Interactive ALMProxy Functions                                                ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function claimWithdrawal(uint256 requestId) external override returns (uint256 ethReceived) {
-        require(msg.sender == _getWEETHModuleStorage().almProxy, "WEETHModule/invalid-sender");
+        require(msg.sender == _getWEETHModuleStorage().proxy, "WEETHModule/invalid-sender");
 
         address eeth               = IWEETHLike(weeth).eETH();
         address liquidityPool      = IEETHLike(eeth).liquidityPool();
@@ -145,14 +148,16 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     /*** External Variable Getters                                                              ***/
     /**********************************************************************************************/
 
-    function almProxy() external view override returns (address) {
-        return _getWEETHModuleStorage().almProxy;
+    /// @inheritdoc IWEETHModule
+    function proxy() external view override returns (address) {
+        return _getWEETHModuleStorage().proxy;
     }
 
     /**********************************************************************************************/
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IWEETHModule
     function onERC721Received(address, address, uint256, bytes calldata)
         external
         pure
@@ -162,6 +167,7 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
         return this.onERC721Received.selector;
     }
 
+    /// @inheritdoc IWEETHModule
     function supportsInterface(bytes4 interfaceId)
         public
         view

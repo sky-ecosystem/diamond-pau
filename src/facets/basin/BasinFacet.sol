@@ -7,7 +7,9 @@ import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
 
-import { FacetBase } from "../FacetBase.sol";
+import { IFacet } from "../IFacet.sol";
+
+import { Facet } from "../Facet.sol";
 
 import { IBasinFacet } from "./IBasinFacet.sol";
 
@@ -27,7 +29,7 @@ interface IBasinLike {
 
 }
 
-contract BasinFacet is IBasinFacet, FacetBase {
+contract BasinFacet is IBasinFacet, Facet {
 
     /**********************************************************************************************/
     /*** Facet Storage Domain                                                                   ***/
@@ -52,9 +54,13 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 public constant override LIMIT_DEPOSIT  = keccak256("LIMIT_BASIN_DEPOSIT");
+    /// @inheritdoc IBasinFacet
+    bytes32 public constant override LIMIT_DEPOSIT = keccak256("LIMIT_BASIN_DEPOSIT");
+
+    /// @inheritdoc IBasinFacet
     bytes32 public constant override LIMIT_WITHDRAW = keccak256("LIMIT_BASIN_WITHDRAW");
 
+    /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
@@ -78,6 +84,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IBasinFacet
     function deposit(address basin, address asset, uint256 amount, uint256 minSharesOut)
         external
         override
@@ -118,6 +125,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
         emit BasinDeposit(basin, asset, amount, shares);
     }
 
+    /// @inheritdoc IBasinFacet
     function withdraw(address basin, address asset, uint256 maxAmount, uint256 minConversionRate)
         external
         override
