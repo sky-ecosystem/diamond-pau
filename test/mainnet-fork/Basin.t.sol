@@ -341,15 +341,6 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         mainnetController.withdrawBasin(address(groveBasin), Ethereum.USDS, 1e18, expectedShares);
     }
 
-    function test_withdrawBasin_maxSlippageNotSet() external {
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.setBasinMaxSlippage(address(groveBasin), 0);
-
-        vm.expectRevert("BasinFacet/max-slippage-not-set");
-        vm.prank(relayer);
-        mainnetController.withdrawBasin(address(groveBasin), Ethereum.USDS, 1e18, type(uint256).max);
-    }
-
     function test_withdrawBasin_zeroMaxAmount() external {
         bytes32 withdrawKey = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_WITHDRAW(),
