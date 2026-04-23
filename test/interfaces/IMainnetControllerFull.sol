@@ -36,7 +36,7 @@ abstract contract IMainnetControllerFull is IController, Controller {
 
     function setBasinMaxSlippage(address basin, uint256 maxSlippage) external virtual;
 
-    function withdrawBasin(address basin, address asset, uint256 maxAmount, uint256 maxSharesIn)
+    function withdrawBasin(address basin, address asset, uint256 maxAmount, uint256 minConversionRate)
         external virtual returns (uint256 assetsWithdrawn);
 
     function LIMIT_BASIN_DEPOSIT() external pure virtual returns (bytes32);

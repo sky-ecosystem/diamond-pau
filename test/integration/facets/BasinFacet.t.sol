@@ -13,9 +13,9 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function getBasinMaxSlippage(address basin) external view returns (uint256);
+    function getMaxSlippage(address basin) external view returns (uint256);
 
-    function setBasinMaxSlippage(address basin, uint256 maxSlippage) external;
+    function setMaxSlippage(address basin, uint256 maxSlippage) external;
 
     function LIMIT_BASIN_DEPOSIT() external pure returns (bytes32);
 
@@ -39,12 +39,12 @@ abstract contract BasinFacet_TestBase is Integration_TestBase {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.setBasinMaxSlippage.selector,
+            IControllerLike.setMaxSlippage.selector,
             IBasinFacet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IControllerLike.getBasinMaxSlippage.selector,
+            IControllerLike.getMaxSlippage.selector,
             IBasinFacet.getMaxSlippage.selector
         );
 
@@ -74,51 +74,53 @@ abstract contract BasinFacet_TestBase is Integration_TestBase {
 
 contract Controller_BasinFacet_Admin_Tests is BasinFacet_TestBase {
 
-    function test_setBasinMaxSlippage_reentrancy() external {
+    function test_setMaxSlippage_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setBasinMaxSlippage(makeAddr("basin"), 0.99e18);
+        controller.setMaxSlippage(makeAddr("basin"), 0.99e18);
     }
 
-    function test_setBasinMaxSlippage_unauthorizedAccount() external {
+    function test_setMaxSlippage_unauthorizedAccount() external {
         vm.expectRevert(abi.encodeWithSelector(
             IFacetBase.AccessControlUnauthorizedAccount.selector,
-            address(this),
+            unauthorized,
             DEFAULT_ADMIN_ROLE
         ));
-        controller.setBasinMaxSlippage(makeAddr("basin"), 0.99e18);
+
+        vm.prank(unauthorized);
+        controller.setMaxSlippage(makeAddr("basin"), 0.99e18);
     }
 
-    function test_setBasinMaxSlippage_basinZeroAddress() external {
+    function test_setMaxSlippage_basinZeroAddress() external {
         vm.expectRevert("BasinFacet/basin-zero-address");
         vm.prank(admin);
-        controller.setBasinMaxSlippage(address(0), 0.99e18);
+        controller.setMaxSlippage(address(0), 0.99e18);
     }
 
-    function test_setBasinMaxSlippage() external {
+    function test_setMaxSlippage() external {
         address basin = makeAddr("basin");
 
-        assertEq(controller.getBasinMaxSlippage(basin), 0);
-
-        vm.record();
+        assertEq(controller.getMaxSlippage(basin), 0);
 
         vm.expectEmit(address(controller));
         emit IBasinFacet.BasinMaxSlippageSet(basin, 0.99e18);
 
         vm.prank(admin);
-        controller.setBasinMaxSlippage(basin, 0.99e18);
+        controller.setMaxSlippage(basin, 0.99e18);
 
-        _assertReentrancyGuardWrittenToTwice(address(controller));
+        assertEq(controller.getMaxSlippage(basin), 0.99e18);
 
-        assertEq(controller.getBasinMaxSlippage(basin), 0.99e18);
+        vm.record();
 
         vm.expectEmit(address(controller));
         emit IBasinFacet.BasinMaxSlippageSet(basin, 0.98e18);
 
         vm.prank(admin);
-        controller.setBasinMaxSlippage(basin, 0.98e18);
+        controller.setMaxSlippage(basin, 0.98e18);
 
-        assertEq(controller.getBasinMaxSlippage(basin), 0.98e18);
+        assertEq(controller.getMaxSlippage(basin), 0.98e18);
+
+        _assertReentrancyGuardWrittenToTwice(address(controller));
     }
 
 }

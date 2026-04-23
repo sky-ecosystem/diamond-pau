@@ -13,8 +13,6 @@ import { IBasinFacet } from "./IBasinFacet.sol";
 
 interface IBasinLike {
 
-    function convertToShares(address asset, uint256 assets) external view returns (uint256);
-
     function deposit(address asset, address receiver, uint256 assetsToDeposit)
         external
         returns (uint256 newShares);
@@ -22,6 +20,8 @@ interface IBasinLike {
     function withdraw(address asset, address receiver, uint256 maxAssetsToWithdraw)
         external
         returns (uint256 assetsWithdrawn);
+
+    function getAssetValue(address asset, uint256 amount, bool roundUp) external view returns (uint256);
 
     function shares(address user) external view returns (uint256);
 
@@ -89,10 +89,12 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
+        uint256 assetValue = IBasinLike(basin).getAssetValue(asset, amount, false);
+
         // Ensure `minSharesOut` is within slippage tolerance of the share amount.
-        // assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
         require(
-            minSharesOut >= amount * maxSlippage / 1e18, "BasinFacet/min-amount-not-met"
+            minSharesOut * 1e18 >= assetValue * maxSlippage,
+            "BasinFacet/min-shares-out-too-low"
         );
 
         _decreaseRateLimit(LIMIT_DEPOSIT, basin, asset, amount);
@@ -116,7 +118,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
         emit BasinDeposit(basin, asset, amount, shares);
     }
 
-    function withdraw(address basin, address asset, uint256 maxAmount, uint256 maxSharesIn)
+    function withdraw(address basin, address asset, uint256 maxAmount, uint256 minConversionRate)
         external
         override
         nonReentrant
@@ -127,11 +129,7 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
 
-        // Ensure `maxSharesIn` is within slippage tolerance of the fair share amount.
-        // Assumes 1 asset = 1 share so `convertToShares` can't be manipulated.
-        require(
-            maxSharesIn * maxSlippage <= maxAmount * 1e18, "BasinFacet/max-amount-not-met"
-        );
+        require(minConversionRate >= maxSlippage, "BasinFacet/min-conversion-rate-too-low");
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -150,16 +148,13 @@ contract BasinFacet is IBasinFacet, FacetBase {
 
         uint256 sharesIn = sharesBefore - IBasinLike(basin).shares(proxy);
 
-        require(sharesIn <= maxSharesIn, "BasinFacet/shares-burned-too-high");
+        uint256 assetValue = IBasinLike(basin).getAssetValue(asset, assetsWithdrawn, false);
+
+        require(assetValue * 1e18 >= sharesIn * minConversionRate, "BasinFacet/min-conversion-rate-not-met");
 
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
 
-        emit BasinWithdraw(
-            basin,
-            asset,
-            assetsWithdrawn,
-            sharesIn
-        );
+        emit BasinWithdraw(basin, asset, assetsWithdrawn, sharesIn);
     }
 
     /**********************************************************************************************/
