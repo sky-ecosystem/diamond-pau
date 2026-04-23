@@ -67,6 +67,7 @@ contract BasinFacet is IBasinFacet, Facet {
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IBasinFacet
     function setMaxSlippage(address basin, uint256 maxSlippage)
         external
         override
@@ -169,6 +170,7 @@ contract BasinFacet is IBasinFacet, Facet {
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
+    /// @inheritdoc IBasinFacet
     function getMaxSlippage(address basin) external view override returns (uint256) {
         return _getFacetStorage().maxSlippages[basin];
     }
