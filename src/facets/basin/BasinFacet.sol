@@ -134,12 +134,6 @@ contract BasinFacet is IBasinFacet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 assetsWithdrawn)
     {
-        uint256 maxSlippage = _getFacetStorage().maxSlippages[basin];
-
-        require(maxSlippage != 0, "BasinFacet/max-slippage-not-set");
-
-        require(minConversionRate >= maxSlippage, "BasinFacet/min-conversion-rate-too-low");
-
         address proxy = _getSharedControllerStorage().proxy;
 
         uint256 sharesBefore = IBasinLike(basin).shares(proxy);
@@ -155,11 +149,13 @@ contract BasinFacet is IBasinFacet, Facet {
             (uint256)
         );
 
-        uint256 sharesIn = sharesBefore - IBasinLike(basin).shares(proxy);
-
+        uint256 sharesIn   = sharesBefore - IBasinLike(basin).shares(proxy);
         uint256 assetValue = IBasinLike(basin).getAssetValue(asset, assetsWithdrawn, false);
 
-        require(assetValue * 1e18 >= sharesIn * minConversionRate, "BasinFacet/min-conversion-rate-not-met");
+        require(
+            assetValue * 1e18 >= sharesIn * minConversionRate,
+            "BasinFacet/min-conversion-rate-not-met"
+        );
 
         _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
 

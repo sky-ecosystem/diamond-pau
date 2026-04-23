@@ -350,27 +350,6 @@ contract MainnetController_Basin_Withdraw_Tests is Basin_TestBase {
         mainnetController.withdrawBasin(address(groveBasin), Ethereum.USDS, 1e18, type(uint256).max);
     }
 
-    function test_withdrawBasin_minConversionRateTooLowBoundary() external {
-        vm.startPrank(relayer);
-
-        vm.expectRevert("BasinFacet/min-conversion-rate-too-low");
-        mainnetController.withdrawBasin(
-            address(groveBasin),
-            Ethereum.USDS,
-            1_000_000e18,
-            0.99e18 - 1
-        );
-
-        mainnetController.withdrawBasin(
-            address(groveBasin),
-            Ethereum.USDS,
-            1_000_000e18,
-            0.99e18
-        );
-
-        vm.stopPrank();
-    }
-
     function test_withdrawBasin_zeroMaxAmount() external {
         bytes32 withdrawKey = makeAddressAddressKey(
             mainnetController.LIMIT_BASIN_WITHDRAW(),
