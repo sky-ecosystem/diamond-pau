@@ -182,6 +182,8 @@ abstract contract IMainnetControllerFull is IController, Controller {
 
     function depositToFarm(address farm, uint256 amount) external virtual;
 
+    function getRewardFromFarm(address farm) external virtual;
+
     function withdrawFromFarm(address farm, uint256 amount) external virtual;
 
     /**********************************************************************************************/

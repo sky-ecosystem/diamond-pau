@@ -22,6 +22,12 @@ interface IFarmFacet is IFacet {
     event FarmDeposit(address indexed farmToken, uint256 amount);
 
     /**
+     * @notice Emitted when rewards are claimed from a farm without unstaking.
+     * @param  farmToken Address of the farm's staking token.
+     */
+    event FarmReward(address indexed farmToken);
+
+    /**
      * @notice Emitted when staking tokens are withdrawn from a farm.
      * @param  farmToken Address of the farm's staking token.
      * @param  amount    Amount of staking tokens withdrawn.
@@ -38,6 +44,12 @@ interface IFarmFacet is IFacet {
      * @param  amount Amount of staking tokens to deposit.
      */
     function deposit(address farm, uint256 amount) external;
+
+    /**
+     * @notice Claims pending rewards from a farm without unstaking.
+     * @param  farm Address of the farm contract.
+     */
+    function getReward(address farm) external;
 
     /**
      * @notice Unstakes tokens from a farm and claims pending rewards.

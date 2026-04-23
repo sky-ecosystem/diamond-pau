@@ -63,6 +63,16 @@ contract FarmFacet is IFarmFacet, Facet {
     }
 
     /// @inheritdoc IFarmFacet
+    function getReward(address farm) external override nonReentrant onlyRole(RELAYER_ROLE) {
+        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+            farm,
+            abi.encodeCall(IFarmLike.getReward, ())
+        );
+
+        emit FarmReward(farm);
+    }
+
+    /// @inheritdoc IFarmFacet
     function withdraw(address farm, uint256 amount)
         external
         override

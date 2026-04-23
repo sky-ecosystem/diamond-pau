@@ -850,7 +850,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(farmFacet, "FarmFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.depositToFarm.selector,
@@ -858,16 +858,21 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getRewardFromFarm.selector,
+            IFarmFacet.getReward.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.withdrawFromFarm.selector,
             IFarmFacet.withdraw.selector
         );
 
-        wires[2] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_FARM_DEPOSIT.selector,
             IFarmFacet.LIMIT_DEPOSIT.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_FARM_WITHDRAW.selector,
             IFarmFacet.LIMIT_WITHDRAW.selector
         );
