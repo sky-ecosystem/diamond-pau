@@ -21,6 +21,8 @@ interface IFarmLike {
 
     function withdraw(uint256 amount) external;
 
+    function earned(address account) external view returns (uint256);
+
     function stakingToken() external view returns (address);
 
 }
@@ -63,13 +65,14 @@ contract FarmFacet is IFarmFacet, Facet {
     }
 
     /// @inheritdoc IFarmFacet
-    function getReward(address farm) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        IALMProxy(_getSharedControllerStorage().proxy).doCall(
-            farm,
-            abi.encodeCall(IFarmLike.getReward, ())
-        );
-
-        emit FarmReward(farm);
+    function claimReward(address farm)
+        external
+        override
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+        returns (uint256 reward)
+    {
+        return _claimReward(farm);
     }
 
     /// @inheritdoc IFarmFacet
@@ -78,21 +81,33 @@ contract FarmFacet is IFarmFacet, Facet {
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
+        returns (uint256 reward)
     {
         _decreaseRateLimit(LIMIT_WITHDRAW, farm, amount);
 
-        address proxy = _getSharedControllerStorage().proxy;
-
-        IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.withdraw, (amount)));
-
-        IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
+        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+            farm,
+            abi.encodeCall(IFarmLike.withdraw, (amount))
+        );
 
         emit FarmWithdraw(farm, amount);
+
+        return _claimReward(farm);
     }
 
     /**********************************************************************************************/
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
+
+    function _claimReward(address farm) internal returns (uint256 reward) {
+        address proxy = _getSharedControllerStorage().proxy;
+
+        reward = IFarmLike(farm).earned(proxy);
+
+        IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
+
+        emit FarmReward(farm, reward);
+    }
 
     function _decreaseRateLimit(bytes32 key, address farm, uint256 amount) internal {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(

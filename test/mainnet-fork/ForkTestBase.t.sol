@@ -853,13 +853,13 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositToFarm.selector,
-            IFarmFacet.deposit.selector
+            IMainnetControllerFull.claimRewardFromFarm.selector,
+            IFarmFacet.claimReward.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getRewardFromFarm.selector,
-            IFarmFacet.getReward.selector
+            IMainnetControllerFull.depositToFarm.selector,
+            IFarmFacet.deposit.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
