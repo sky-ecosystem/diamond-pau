@@ -62,6 +62,7 @@ contract BasinFacet is IBasinFacet, Facet {
         ApproveLib.approve(asset, proxy, basin, amount);
 
         // Deposit `amount` of `asset` in the Basin, decode the result to get `shares`.
+        // NOTE: The basin contract is immutable, so we can trust the return value.
         shares = abi.decode(
             IALMProxy(proxy).doCall(
                 basin,
@@ -83,11 +84,10 @@ contract BasinFacet is IBasinFacet, Facet {
     {
         address proxy = _getSharedControllerStorage().proxy;
 
-        uint256 sharesBefore = IBasinLike(basin).shares(proxy);
+        uint256 startingShares = IBasinLike(basin).shares(proxy);
 
         // Withdraw up to `maxAmount` of `asset` in the Basin, decode the result to get
         // `assetsWithdrawn` (assumes the proxy has enough Basin shares).
-        // NOTE: Rate limited at end of function, so cannot return here.
         assetsWithdrawn = abi.decode(
             IALMProxy(proxy).doCall(
                 basin,
@@ -102,7 +102,7 @@ contract BasinFacet is IBasinFacet, Facet {
             basin,
             asset,
             assetsWithdrawn,
-            sharesBefore - IBasinLike(basin).shares(proxy)
+            startingShares - IBasinLike(basin).shares(proxy)
         );
     }
 
