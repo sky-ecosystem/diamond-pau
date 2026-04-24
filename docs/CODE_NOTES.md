@@ -149,7 +149,7 @@ Rate limit keys combine a function identifier with contextual data via `keccak25
 | `makeAddressKey`               | `(bytes32 limit, address)`                  | Most facets (ERC4626, Aave, Curve, etc.)                                                            |
 | `makeBytes32Key`               | `(bytes32 limit, bytes32)`                  | UniswapV4Facet (pool ID)                                                                            |
 | `makeUint32Key`                | `(bytes32 limit, uint32)`                   | CCTPFacet (destination domain)                                                                      |
-| `makeAddressAddressUint32Key`  | `(bytes32 limit, address, address, uint32)` | LayerZeroFacet (OFT + token + endpoint)                                                             |
+| `makeAddressAddressUint32Key`  | `(bytes32 limit, address, address, uint32)` | LayerZeroFacet (token + OFT + endpoint)                                                             |
 | `makeAddressUint16Key`         | `(bytes32 limit, address, uint16)`          | CentrifugeFacet (vault + region ID)                                                                 |
 | `makeAddressAddressKey`        | `(bytes32 limit, address, address)`         | TransferAssetFacet (asset + destination), UniswapV3Facet (token + pool), BasinFacet (asset + basin) |
 
