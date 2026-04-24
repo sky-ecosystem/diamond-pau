@@ -6,7 +6,7 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 import { Ethereum as SparkEthereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 
-import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
+import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { IPendleFacet } from "../../src/facets/pendle/IPendleFacet.sol";
 
@@ -52,8 +52,11 @@ abstract contract Pendle_TestBase is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        redeemKey = makeAddressKey(
-            mainnetController.LIMIT_PENDLE_PT_REDEEM(),
+        (, address pt,) = pendleMarket.readTokens();
+
+        redeemKey = makeAddressAddressKey(
+            foreignController.LIMIT_PENDLE_PT_REDEEM(),
+            pt,
             address(pendleMarket)
         );
 

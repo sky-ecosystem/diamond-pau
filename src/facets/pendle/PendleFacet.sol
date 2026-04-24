@@ -126,26 +126,6 @@ contract PendleFacet is IPendleFacet, Facet {
         require(IPendleMarketLike(market).isExpired(), "PendleFacet/market-not-expired");
         require(minAmountOut != 0,                     "PendleFacet/min-amount-out-not-set");
 
-        uint256 totalTokenOutAmount = _executePyRedeem(market, pyAmountIn);
-
-        require(totalTokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
-
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_REDEEM, market),
-            totalTokenOutAmount
-        );
-
-        emit PendleRedeem(market, pyAmountIn, totalTokenOutAmount);
-    }
-
-    /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
-    /**********************************************************************************************/
-
-    function _executePyRedeem(address market, uint256 pyAmountIn)
-        internal
-        returns (uint256 totalTokenOutAmount)
-    {
         ( address sy, address pt, address yt ) = IPendleMarketLike(market).readTokens();
 
         address tokenOut = ISYLike(sy).yieldToken();
@@ -171,7 +151,16 @@ contract PendleFacet is IPendleFacet, Facet {
             )
         );
 
-        totalTokenOutAmount = IERC20Like(tokenOut).balanceOf(proxy) - tokenOutAmountBefore;
+        uint256 totalTokenOutAmount = IERC20Like(tokenOut).balanceOf(proxy) - tokenOutAmountBefore;
+
+        require(totalTokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
+
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
+            makeAddressAddressKey(LIMIT_REDEEM, pt, market),
+            totalTokenOutAmount
+        );
+
+        emit PendleRedeem(market, pyAmountIn, totalTokenOutAmount);
     }
 
     /**********************************************************************************************/
