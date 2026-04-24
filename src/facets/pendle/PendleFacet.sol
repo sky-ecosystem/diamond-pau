@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }     from "../../libraries/ApproveLib.sol";
-import { makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
@@ -137,7 +137,7 @@ contract PendleFacet is IPendleFacet, Facet {
 
         ApproveLib.approve(pt, proxy, router, pyAmountIn);
 
-        uint256 tokenOutAmountBefore = IERC20Like(tokenOut).balanceOf(proxy);
+        uint256 startingTokenOutAmount = IERC20Like(tokenOut).balanceOf(proxy);
 
         IALMProxy(proxy).doCall(
             router,
@@ -151,16 +151,21 @@ contract PendleFacet is IPendleFacet, Facet {
             )
         );
 
-        uint256 totalTokenOutAmount = IERC20Like(tokenOut).balanceOf(proxy) - tokenOutAmountBefore;
+        uint256 tokenOutAmount = IERC20Like(tokenOut).balanceOf(proxy) - startingTokenOutAmount;
 
-        require(totalTokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
+        require(tokenOutAmount >= minAmountOut, "PendleFacet/min-amount-not-met");
 
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressKey(LIMIT_REDEEM, pt, market),
-            totalTokenOutAmount
-        );
+        _decreaseRateLimit(_getRedeemRateLimitKey(market), tokenOutAmount);
 
-        emit PendleRedeem(market, pyAmountIn, totalTokenOutAmount);
+        emit PendleRedeem(market, pyAmountIn, tokenOutAmount);
+    }
+
+    /**********************************************************************************************/
+    /*** Internal Interactive Functions                                                         ***/
+    /**********************************************************************************************/
+
+    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key,amount);
     }
 
     /**********************************************************************************************/
@@ -181,6 +186,11 @@ contract PendleFacet is IPendleFacet, Facet {
             pendleSwap    : address(0),
             swapData      : swapData
         });
+    }
+
+    function _getRedeemRateLimitKey(address market) internal view returns (bytes32) {
+        ( , address pt, ) = IPendleMarketLike(market).readTokens();
+        return makeAddressAddressKey(LIMIT_REDEEM, pt, market);
     }
 
 }

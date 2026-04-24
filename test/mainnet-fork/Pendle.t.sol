@@ -55,7 +55,7 @@ abstract contract Pendle_TestBase is ForkTestBase {
         (, address pt,) = pendleMarket.readTokens();
 
         redeemKey = makeAddressAddressKey(
-            foreignController.LIMIT_PENDLE_PT_REDEEM(),
+            mainnetController.LIMIT_PENDLE_PT_REDEEM(),
             pt,
             address(pendleMarket)
         );
@@ -223,8 +223,12 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
 
     function test_redeemPendlePT_USDe() public {
         pendleMarket = IPendleMarketLike(0x6d98a2b6CDbF44939362a3E99793339Ba2016aF4);
-        redeemKey = makeAddressKey(
+
+        (address sy, address pt, address yt) = pendleMarket.readTokens();
+
+        redeemKey = makeAddressAddressKey(
             mainnetController.LIMIT_PENDLE_PT_REDEEM(),
+            pt,
             address(pendleMarket)
         );
 
@@ -233,7 +237,6 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
 
         address ptDonor = 0x925109e0AfFe306c31B55d8181e766D53aF7A778;
 
-        (address sy, address pt, address yt) = pendleMarket.readTokens();
         IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);
@@ -276,8 +279,12 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
 
     function test_redeemPendlePT_stETH() public {
         pendleMarket = IPendleMarketLike(0xC374f7eC85F8C7DE3207a10bB1978bA104bdA3B2);
-        redeemKey = makeAddressKey(
+
+        (address sy, address pt, address yt) = pendleMarket.readTokens();
+
+        redeemKey = makeAddressAddressKey(
             mainnetController.LIMIT_PENDLE_PT_REDEEM(),
+            pt,
             address(pendleMarket)
         );
 
@@ -286,7 +293,6 @@ contract MainnetController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
 
         address ptDonor = 0x2B67d059e41a65C58b02EE1FA99DADa70c55358F;
 
-        (address sy, address pt, address yt) = pendleMarket.readTokens();
         IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);
