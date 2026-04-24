@@ -24,7 +24,7 @@ interface IPendleMarketLike {
 
     function expiry() external view returns (uint256);
 
-    function readTokens() external view returns (address sy, address pt, address yt);
+    function readTokens() external view returns ( address sy, address pt, address yt );
 
 }
 
@@ -52,7 +52,7 @@ abstract contract Pendle_TestBase is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        (, address pt,) = pendleMarket.readTokens();
+        ( , address pt, ) = pendleMarket.readTokens();
 
         redeemKey = makeAddressAddressKey(
             foreignController.LIMIT_PENDLE_PT_REDEEM(),
@@ -93,7 +93,7 @@ contract ForeignController_Pendle_Redeem_FailureTests is Pendle_TestBase {
         vm.prank(SparkBase.SPARK_EXECUTOR);
         rateLimits.setRateLimitData(redeemKey, 0, 0);
 
-        (, address pt,) = pendleMarket.readTokens();
+        ( , address pt, ) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
         IERC20Like(pt).transfer((address(almProxy)), 100_000e18);
 
@@ -105,7 +105,7 @@ contract ForeignController_Pendle_Redeem_FailureTests is Pendle_TestBase {
     }
 
     function test_redeemPendlePT_rateLimitsBoundary() public {
-        (, address pt, address yt) = pendleMarket.readTokens();
+        ( , address pt, address yt ) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
         IERC20Like(pt).transfer((address(almProxy)), 100_000e18);
 
@@ -123,7 +123,7 @@ contract ForeignController_Pendle_Redeem_FailureTests is Pendle_TestBase {
     }
 
     function test_redeemPendlePT_insufficientBalance() public {
-        (, address pt,) = pendleMarket.readTokens();
+        ( , address pt, ) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
         IERC20Like(pt).transfer((address(almProxy)), 100_000e18);
 
@@ -135,7 +135,7 @@ contract ForeignController_Pendle_Redeem_FailureTests is Pendle_TestBase {
     }
 
     function test_redeemPendlePT_amountTooSmall() public {
-        (, address pt,) = pendleMarket.readTokens();
+        ( , address pt, ) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
         IERC20Like(pt).transfer((address(almProxy)), 100_000e18);
 
@@ -155,7 +155,7 @@ contract ForeignController_Pendle_Redeem_FailureTests is Pendle_TestBase {
     }
 
     function test_redeemPendlePT_minAmountOutNotMet() public {
-        (, address pt, address yt) = pendleMarket.readTokens();
+        ( , address pt, address yt ) = pendleMarket.readTokens();
         vm.prank(PT_WHALE);
         IERC20Like(pt).transfer((address(almProxy)), 100_000e18);
 
@@ -182,7 +182,7 @@ contract ForeignController_Pendle_Redeem_SuccessTests is Pendle_TestBase {
 
         address ptDonor = PT_WHALE;
 
-        (address sy, address pt, address yt) = pendleMarket.readTokens();
+        ( address sy, address pt, address yt ) = pendleMarket.readTokens();
         IERC20Like yieldToken = IERC20Like(ISYLike(sy).yieldToken());
 
         vm.startPrank(ptDonor);

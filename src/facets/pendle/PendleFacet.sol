@@ -165,7 +165,7 @@ contract PendleFacet is IPendleFacet, Facet {
     /**********************************************************************************************/
 
     function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key,amount);
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
     }
 
     /**********************************************************************************************/
