@@ -166,7 +166,7 @@ contract AaveFacet is IAaveFacet, Facet {
     /**********************************************************************************************/
 
     function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key,amount);
+        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
     }
 
     function _increaseRateLimit(bytes32 key, uint256 amount) internal {
@@ -174,7 +174,7 @@ contract AaveFacet is IAaveFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** Internal View/Pure Functions                                                            ***/
+    /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
     function _getDepositRateLimitKey(address aToken) internal view returns (bytes32) {
