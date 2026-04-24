@@ -855,13 +855,6 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(nfatHaloFacet, "NFATHaloFacet");
 
-        // "Controller.setNFATAllowedRepayRecipient()" -> "NFATHaloFacet.setAllowedRepayRecipient()"
-        mainnetController.setDispatch(
-            IMainnetControllerFull.setNFATAllowedRepayRecipient.selector,
-            nfatHaloFacet,
-            INFATHaloFacet.setAllowedRepayRecipient.selector
-        );
-
         // "Controller.repayNFAT()" -> "NFATHaloFacet.repay()"
         mainnetController.setDispatch(
             IMainnetControllerFull.repayNFAT.selector,
@@ -874,20 +867,6 @@ abstract contract ForkTestBase is DssTest {
             IMainnetControllerFull.LIMIT_NFAT_REPAY.selector,
             nfatHaloFacet,
             INFATHaloFacet.LIMIT_REPAY.selector
-        );
-
-        // "Controller.getNFATAllowedRepayRecipients()" -> "NFATHaloFacet.getAllowedRepayRecipients()"
-        mainnetController.setDispatch(
-            IMainnetControllerFull.getNFATAllowedRepayRecipients.selector,
-            nfatHaloFacet,
-            INFATHaloFacet.getAllowedRepayRecipients.selector
-        );
-
-        // "Controller.isNFATAllowedRepayRecipient()" -> "NFATHaloFacet.isAllowedRepayRecipient()"
-        mainnetController.setDispatch(
-            IMainnetControllerFull.isNFATAllowedRepayRecipient.selector,
-            nfatHaloFacet,
-            INFATHaloFacet.isAllowedRepayRecipient.selector
         );
     }
 
