@@ -154,7 +154,7 @@ contract CurveFacet is ICurveFacet, Facet {
             minAmountOut : minAmountOut
         });
 
-        // NOTE: The curve pool contract is immutable, so we can trust the return value.
+        // NOTE: The curve pool contract is immutable, so the return value can be trusted.
         amountOut = abi.decode(
             IALMProxy(_getSharedControllerStorage().proxy).doCall(pool, callData),
             (uint256)
@@ -206,7 +206,7 @@ contract CurveFacet is ICurveFacet, Facet {
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        // NOTE: The curve pool contract is immutable, so we can trust the return value.
+        // NOTE: The curve pool contract is immutable, so the return value can be trusted.
         shares = abi.decode(
             IALMProxy(proxy).doCall(
                 pool,
@@ -260,7 +260,7 @@ contract CurveFacet is ICurveFacet, Facet {
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        // NOTE: The curve pool contract is immutable, so we can trust the return value.
+        // NOTE: The curve pool contract is immutable, so the return value can be trusted.
         withdrawnTokens = abi.decode(
             IALMProxy(proxy).doCall(
                 pool,

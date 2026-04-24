@@ -62,7 +62,7 @@ contract BasinFacet is IBasinFacet, Facet {
         ApproveLib.approve(asset, proxy, basin, amount);
 
         // Deposit `amount` of `asset` in the Basin, decode the result to get `shares`.
-        // NOTE: The basin contract is immutable, so we can trust the return value.
+        // NOTE: The basin contract is immutable, so the return value can be trusted.
         shares = abi.decode(
             IALMProxy(proxy).doCall(
                 basin,

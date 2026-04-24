@@ -79,7 +79,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
         ApproveLib.approve(asset, proxy, psm, amount);
 
         // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
-        // NOTE: The PSM3 contract is immutable, so we can trust the return value.
+        // NOTE: The PSM3 contract is immutable, so the return value can be trusted.
         shares = abi.decode(
             IALMProxy(proxy).doCall(
                 psm,
@@ -105,7 +105,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
 
         // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result to get
         // `assetsWithdrawn` (assumes the proxy has enough PSM shares).
-        // NOTE: The PSM3 contract is immutable, so we can trust the return value.
+        // NOTE: The PSM3 contract is immutable, so the return value can be trusted.
         assetsWithdrawn = abi.decode(
             IALMProxy(proxy).doCall(
                 psm,

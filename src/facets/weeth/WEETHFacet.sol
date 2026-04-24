@@ -216,7 +216,7 @@ contract WEETHFacet is IWEETHFacet, Facet {
             "WEETHFacet/invalid-action"
         );
 
-        // NOTE: The weethModule contract is first party, so we can trust the return value.
+        // NOTE: The weethModule contract is first party, so the return value can be trusted.
         wethReceived = abi.decode(
             IALMProxy($.proxy).doCall(
                 weethModule,
