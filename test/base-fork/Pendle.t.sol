@@ -24,7 +24,7 @@ interface IPendleMarketLike {
 
     function expiry() external view returns (uint256);
 
-    function readTokens() external view returns ( address sy, address pt, address yt );
+    function readTokens() external view returns (address sy, address pt, address yt);
 
 }
 
