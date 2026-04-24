@@ -86,7 +86,7 @@ contract BasinFacet is IBasinFacet, Facet {
     {
         address proxy = _getSharedControllerStorage().proxy;
 
-        uint256 sharesBefore = IBasinLike(basin).shares(proxy);
+        uint256 startingShares = IBasinLike(basin).shares(proxy);
 
         // Withdraw up to `maxAmount` of `asset` in the Basin, decode the result to get
         // `assetsWithdrawn` (assumes the proxy has enough Basin shares).
@@ -98,7 +98,7 @@ contract BasinFacet is IBasinFacet, Facet {
             (uint256)
         );
 
-        uint256 sharesBurned = sharesBefore - IBasinLike(basin).shares(proxy);
+        uint256 sharesBurned = startingShares - IBasinLike(basin).shares(proxy);
 
         require(
             assetsWithdrawn * 1e18 >= sharesBurned * minConversionRate,
