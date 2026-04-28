@@ -16,25 +16,25 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Emitted when capital is subscribed into an NFAT facility.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  amount       Amount of the facility's gem token subscribed (native token decimals).
+     * @param  facility Address of the NFAT facility.
+     * @param  amount   Amount of the facility's gem token subscribed (native token decimals).
      */
-    event NFATSubscribe(address indexed nfatFacility, uint256 amount);
+    event NFATSubscribe(address indexed facility, uint256 amount);
 
     /**
      * @notice Emitted when queued (unissued) subscribed capital is withdrawn from a facility.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  amount       Amount of the facility's gem token withdrawn (native token decimals).
+     * @param  facility Address of the NFAT facility.
+     * @param  amount   Amount of the facility's gem token withdrawn (native token decimals).
      */
-    event NFATWithdraw(address indexed nfatFacility, uint256 amount);
+    event NFATWithdraw(address indexed facility, uint256 amount);
 
     /**
      * @notice Emitted when repaid capital is collected from an issued NFAT position.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  tokenId      Identifier of the NFAT token the collection is made against.
-     * @param  amount       Amount of the facility's gem token collected (native token decimals).
+     * @param  facility Address of the NFAT facility.
+     * @param  tokenId  Identifier of the NFAT token the collection is made against.
+     * @param  amount   Amount of the facility's gem token collected (native token decimals).
      */
-    event NFATCollect(address indexed nfatFacility, uint256 indexed tokenId, uint256 amount);
+    event NFATCollect(address indexed facility, uint256 indexed tokenId, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -42,28 +42,28 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Subscribes capital into an NFAT facility.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  amount       Amount of the facility's gem token to subscribe.
-     * @param  data         Arbitrary subscribe payload forwarded to the facility.
+     * @param  facility Address of the NFAT facility.
+     * @param  amount   Amount of the facility's gem token to subscribe.
+     * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
-    function subscribe(address nfatFacility, uint256 amount, bytes calldata data) external;
+    function subscribe(address facility, uint256 amount, bytes calldata data) external;
 
     /**
      * @notice Cancels queued (unissued) subscribed capital from an NFAT facility and refills
      *         LIMIT_SUBSCRIBE by the returned amount.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  amount       Amount of the facility's gem token to withdraw.
+     * @param  facility Address of the NFAT facility.
+     * @param  amount   Amount of the facility's gem token to withdraw.
      */
-    function withdraw(address nfatFacility, uint256 amount) external;
+    function withdraw(address facility, uint256 amount) external;
 
     /**
      * @notice Collects repaid capital from an issued NFAT position, consuming LIMIT_COLLECT and
      *         refilling LIMIT_SUBSCRIBE by the collected amount.
-     * @param  nfatFacility Address of the NFAT facility.
-     * @param  tokenId      Identifier of the NFAT token to collect against.
-     * @param  amount       Amount of the facility's gem token to collect.
+     * @param  facility Address of the NFAT facility.
+     * @param  tokenId  Identifier of the NFAT token to collect against.
+     * @param  amount   Amount of the facility's gem token to collect.
      */
-    function collect(address nfatFacility, uint256 tokenId, uint256 amount) external;
+    function collect(address facility, uint256 tokenId, uint256 amount) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/

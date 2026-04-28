@@ -853,16 +853,36 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(nfatHaloFacet, "NFATHaloFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.repayNFAT.selector,
-            INFATHaloFacet.repay.selector
+            IMainnetControllerFull.issueNFAT.selector,
+            INFATHaloFacet.issue.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.LIMIT_NFAT_HALO_REPAY.selector,
-            INFATHaloFacet.LIMIT_REPAY.selector
+            IMainnetControllerFull.repayPrincipalNFAT.selector,
+            INFATHaloFacet.repayPrincipal.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.repayInterestNFAT.selector,
+            INFATHaloFacet.repayInterest.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.LIMIT_NFAT_HALO_REPAY_INTEREST.selector,
+            INFATHaloFacet.LIMIT_REPAY_INTEREST.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getNFATPrincipal.selector,
+            INFATHaloFacet.getPrincipal.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getNFATPrincipalRepaid.selector,
+            INFATHaloFacet.getPrincipalRepaid.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
