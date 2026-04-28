@@ -38,7 +38,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     bytes32 public constant override LIMIT_COLLECT   = keccak256("LIMIT_NFAT_COLLECT");
 
     /// @inheritdoc IFacet
-    string public constant override VERSION = "0.1.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/

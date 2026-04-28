@@ -33,7 +33,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     bytes32 public constant override LIMIT_REPAY = keccak256("LIMIT_NFAT_REPAY");
 
     /// @inheritdoc IFacet
-    string public constant override VERSION = "0.1.0";
+    string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
