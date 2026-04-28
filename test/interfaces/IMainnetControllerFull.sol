@@ -238,14 +238,6 @@ interface IMainnetControllerFull is IController {
     function erc4626_getWithdrawRateLimitKey(address token) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
-    /*** ERC721Facet actions                                                                    ***/
-    /**********************************************************************************************/
-
-    function safeTransferERC721(address nft, address destination, uint256 tokenId) external virtual;
-
-    function transferERC721(address nft, address destination, uint256 tokenId) external virtual;
-
-    /**********************************************************************************************/
     /*** ERC7540Facet actions                                                                   ***/
     /**********************************************************************************************/
 

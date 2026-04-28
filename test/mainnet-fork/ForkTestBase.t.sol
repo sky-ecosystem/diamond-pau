@@ -31,7 +31,6 @@ import { ICentrifugeFacet }    from "../../src/facets/centrifuge/ICentrifugeFace
 import { ICurveFacet }         from "../../src/facets/curve/ICurveFacet.sol";
 import { IDAIUSDSFacet }       from "../../src/facets/dai-usds/IDAIUSDSFacet.sol";
 import { IERC4626Facet }       from "../../src/facets/erc4626/IERC4626Facet.sol";
-import { IERC721Facet }        from "../../src/facets/erc721/IERC721Facet.sol";
 import { IERC7540Facet }       from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { IEthenaFacet }        from "../../src/facets/ethena/IEthenaFacet.sol";
 import { IFarmFacet }          from "../../src/facets/farm/IFarmFacet.sol";
@@ -60,7 +59,6 @@ import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
 import { DAIUSDSFacet }       from "../../src/facets/dai-usds/DAIUSDSFacet.sol";
 import { ERC4626Facet }       from "../../src/facets/erc4626/ERC4626Facet.sol";
-import { ERC721Facet }        from "../../src/facets/erc721/ERC721Facet.sol";
 import { ERC7540Facet }       from "../../src/facets/erc7540/ERC7540Facet.sol";
 import { EthenaFacet }        from "../../src/facets/ethena/EthenaFacet.sol";
 import { FarmFacet }          from "../../src/facets/farm/FarmFacet.sol";
@@ -295,7 +293,6 @@ abstract contract ForkTestBase is DssTest {
         _wireCurveFacet();
         _wireDAIUSDSFacet();
         _wireERC4626Facet();
-        _wireERC721Facet();
         _wireERC7540Facet();
         _wireEthenaFacet();
         _wireFarmFacet();
@@ -335,7 +332,7 @@ abstract contract ForkTestBase is DssTest {
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        bytes32[] memory integrationIds = new bytes32[](28);
+        bytes32[] memory integrationIds = new bytes32[](27);
         integrationIds[0]  = "AAVE_FACET";
         integrationIds[1]  = "BASIN_FACET";
         integrationIds[2]  = "CCTP_FACET";
@@ -361,9 +358,8 @@ abstract contract ForkTestBase is DssTest {
         integrationIds[22] = "WEETH_FACET";
         integrationIds[23] = "WRAP_PROXY_ETH_FACET";
         integrationIds[24] = "WSTETH_FACET";
-        integrationIds[25] = "ERC721_FACET";
-        integrationIds[26] = "NFAT_HALO_FACET";
-        integrationIds[27] = "NFAT_PRIME_FACET";
+        integrationIds[25] = "NFAT_HALO_FACET";
+        integrationIds[26] = "NFAT_PRIME_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -935,31 +931,6 @@ abstract contract ForkTestBase is DssTest {
         });
 
         beacon.setIntegration("ERC4626_FACET", config);
-    }
-
-    function _wireERC721Facet() internal {
-        address erc721Facet = address(new ERC721Facet());
-
-        vm.label(erc721Facet, "ERC721Facet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.safeTransferERC721.selector,
-            IERC721Facet.safeTransfer.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferERC721.selector,
-            IERC721Facet.transfer.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : erc721Facet,
-            wires : wires
-        });
-
-        beacon.setIntegration("ERC721_FACET", config);
     }
 
     function _wireERC7540Facet() internal {
