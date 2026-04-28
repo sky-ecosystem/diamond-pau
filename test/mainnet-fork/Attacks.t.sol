@@ -16,6 +16,15 @@ import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
 import { Farm_TestBase }                     from "./Farm.t.sol";
 import { LayerZero_TestBase }                from "./LayerZero.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
+import { Pendle_TestBase }                   from "./Pendle.t.sol";
+
+interface IERC20Like {
+
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256 balance);
+
+}
 
 interface ILayerZeroOFTLike {
 
@@ -360,6 +369,42 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.transferTokenLayerZero{value: fee.nativeFee}(USDT_OFT, 1, DESTINATION_ENDPOINT_ID);
+    }
+
+}
+
+contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
+
+    function test_attack_readTokensChanged_redeemPendlePT() external {
+        (address sy, address pt, address yt) = pendleMarket.readTokens();
+
+        // Redeem succeeds with the original market token.
+        vm.prank(PT_WHALE);
+        IERC20Like(pt).transfer(address(almProxy), 1_000_000e18);
+
+        vm.warp(pendleMarket.expiry());
+
+        uint256 beforeLimit = rateLimits.getCurrentRateLimit(redeemKey);
+
+        vm.prank(relayer);
+        mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
+
+        assertLt(rateLimits.getCurrentRateLimit(redeemKey), beforeLimit);
+
+        // Attack: market implementation changes readTokens() to return a different PT.
+        vm.mockCall(
+            address(pendleMarket),
+            abi.encodeWithSignature("readTokens()"),
+            abi.encode(sy, Ethereum.DAI, yt)
+        );
+
+        vm.prank(PT_WHALE);
+        IERC20Like(pt).transfer(address(almProxy), 500_000e18);
+
+        // Cannot redeem with the changed market token.
+        vm.expectRevert();
+        vm.prank(relayer);
+        mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
     }
 
 }
