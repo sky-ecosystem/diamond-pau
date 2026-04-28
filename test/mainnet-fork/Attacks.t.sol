@@ -6,6 +6,7 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
+import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
 import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
 import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
@@ -116,7 +117,7 @@ contract MainnetController_ERC4626_Attack_Tests is ERC4626_SUSDS_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 4_000_000e18);
 
         // Attack: mock asset() to return a different address
-        address changedAsset = makeAddr("changed-asset");
+        address changedAsset = Ethereum.DAI;
         vm.mockCall(
             address(susds),
             abi.encodeWithSignature("asset()"),
@@ -167,6 +168,75 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+}
+
+contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
+
+    bytes32 depositKey;
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(ROOT);
+        restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
+
+        depositKey = makeAddressAddressKey(
+            mainnetController.LIMIT_7540_DEPOSIT(),
+            Ethereum.USDC,
+            address(jTreasuryVault)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(depositKey, 2_000_000e6, uint256(2_000_000e6) / 1 days);
+    }
+
+    function test_attack_assetChanged_requestDepositERC7540() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 2_000_000e6);
+
+        // Request succeeds with original underlying (USDC).
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+
+        vm.prank(relayer);
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6);
+
+        // Attack: mock asset() to return a different address.
+        address changedAsset = Ethereum.DAI;
+        vm.mockCall(
+            address(jTreasuryVault),
+            abi.encodeWithSignature("asset()"),
+            abi.encode(changedAsset)
+        );
+
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+
+        // Cannot request another deposit with the changed asset.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
+    }
+
+    function test_attack_assetChanged_cancelDepositBlocked() external {
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+
+        vm.prank(relayer);
+        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
+
+        // Attack: mock asset() to return a different address.
+        address changedAsset = Ethereum.DAI;
+        vm.mockCall(
+            address(jTreasuryVault),
+            abi.encodeWithSignature("asset()"),
+            abi.encode(changedAsset)
+        );
+
+        // Cancellation is blocked because key is derived from asset().
+        vm.expectRevert("CentrifugeFacet/invalid-action");
+        vm.prank(relayer);
+        mainnetController.cancelCentrifugeDepositRequest(address(jTreasuryVault));
     }
 
 }
