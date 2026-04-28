@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }                  from "../../libraries/ApproveLib.sol";
+import { ApproveLib }                   from "../../libraries/ApproveLib.sol";
 import { makeAddressAddressUint256Key } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
