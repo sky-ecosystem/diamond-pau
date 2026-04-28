@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
+
+import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
+
+import { AaveV3_TestBase }                   from "./Aave.t.sol";
+import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
 import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
 
@@ -92,6 +98,75 @@ contract MainnetController_Maple_Attack_Tests is Maple_TestBase {
         mainnetController.cancelMapleRedemption(address(SYRUP), 1);
         mainnetController.requestMapleRedemption(address(SYRUP), 500_000e6);
         vm.stopPrank();
+    }
+
+}
+
+contract MainnetController_ERC4626_Attack_Tests is ERC4626_SUSDS_TestBase {
+
+    function test_attack_assetChanged_depositERC4626() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 5_000_000e18);
+
+        // Deposit succeeds with the original underlying (USDS).
+        vm.startPrank(relayer);
+        mainnetController.mintUSDS(1_000_000e18);
+        mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
+        vm.stopPrank();
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 4_000_000e18);
+
+        // Attack: mock asset() to return a different address
+        address changedAsset = makeAddr("changed-asset");
+        vm.mockCall(
+            address(susds),
+            abi.encodeWithSignature("asset()"),
+            abi.encode(changedAsset)
+        );
+
+        vm.prank(relayer);
+        mainnetController.mintUSDS(1_000_000e18);
+
+        // Cannot deposit with the changed asset
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
+    }
+
+}
+
+contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
+
+    function test_attack_assetChanged_depositAave() external {
+        bytes32 aaveDepositKey = makeAddressAddressKey(
+            mainnetController.LIMIT_AAVE_DEPOSIT(),
+            Ethereum.USDS,
+            ATOKEN_USDS
+        );
+
+        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 25_000_000e18);
+
+        // Deposit succeeds with the original underlying (USDS).
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 24_000_000e18);
+
+        // Attack: mock UNDERLYING_ASSET_ADDRESS() to return a different address
+        address changedUnderlying = makeAddr("changed-underlying");
+        vm.mockCall(
+            ATOKEN_USDS,
+            abi.encodeWithSignature("UNDERLYING_ASSET_ADDRESS()"),
+            abi.encode(changedUnderlying)
+        );
+
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+
+        // Cannot deposit with the changed asset
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
     }
 
 }
