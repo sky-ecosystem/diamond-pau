@@ -13,7 +13,7 @@ import { Facet } from "../Facet.sol";
 
 import { INFATPrimeFacet } from "./INFATPrimeFacet.sol";
 
-interface INFATFacilityLike {
+interface IFacilityLike {
 
     function gem() external view returns (address);
 
@@ -32,10 +32,10 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATPrimeFacet
-    bytes32 public constant override LIMIT_SUBSCRIBE = keccak256("LIMIT_NFAT_SUBSCRIBE");
+    bytes32 public constant override LIMIT_SUBSCRIBE = keccak256("LIMIT_NFAT_PRIME_SUBSCRIBE");
 
     /// @inheritdoc INFATPrimeFacet
-    bytes32 public constant override LIMIT_COLLECT   = keccak256("LIMIT_NFAT_COLLECT");
+    bytes32 public constant override LIMIT_COLLECT   = keccak256("LIMIT_NFAT_PRIME_COLLECT");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -45,7 +45,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATPrimeFacet
-    function subscribe(address nfatFacility, uint256 amount, bytes calldata data)
+    function subscribe(address facility, uint256 amount, bytes calldata data)
         external
         override
         nonReentrant
@@ -54,20 +54,20 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_SUBSCRIBE, nfatFacility),
+            makeAddressKey(LIMIT_SUBSCRIBE, facility),
             amount
         );
 
         address proxy = $.proxy;
 
-        ApproveLib.approve(INFATFacilityLike(nfatFacility).gem(), proxy, nfatFacility, amount);
+        ApproveLib.approve(IFacilityLike(facility).gem(), proxy, facility, amount);
 
         IALMProxy(proxy).doCall(
-            nfatFacility,
-            abi.encodeCall(INFATFacilityLike.subscribe, (amount, data))
+            facility,
+            abi.encodeCall(IFacilityLike.subscribe, (amount, data))
         );
 
-        emit NFATSubscribe(nfatFacility, amount);
+        emit NFATSubscribe(facility, amount);
     }
 
     // NOTE: withdraw() cancels queued deposits before issuance. Since the funds have not yet been
@@ -75,7 +75,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     // facets such as ERC4626 and Aave where returned capital restores deposit capacity. No separate
     // withdraw limit is used here because this action only returns unsubscribed capital.
     /// @inheritdoc INFATPrimeFacet
-    function withdraw(address nfatFacility, uint256 amount)
+    function withdraw(address facility, uint256 amount)
         external
         override
         nonReentrant
@@ -84,16 +84,16 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
         IALMProxy($.proxy).doCall(
-            nfatFacility,
-            abi.encodeCall(INFATFacilityLike.withdraw, (amount))
+            facility,
+            abi.encodeCall(IFacilityLike.withdraw, (amount))
         );
 
         IRateLimits($.rateLimits).triggerRateLimitIncrease(
-            makeAddressKey(LIMIT_SUBSCRIBE, nfatFacility),
+            makeAddressKey(LIMIT_SUBSCRIBE, facility),
             amount
         );
 
-        emit NFATWithdraw(nfatFacility, amount);
+        emit NFATWithdraw(facility, amount);
     }
 
     // NOTE: collect() returns repaid funds from an issued NFAT position back to the proxy.
@@ -102,7 +102,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     // collected funds are back on the proxy and available for redeployment, this path also refills
     // LIMIT_SUBSCRIBE.
     /// @inheritdoc INFATPrimeFacet
-    function collect(address nfatFacility, uint256 tokenId, uint256 amount)
+    function collect(address facility, uint256 tokenId, uint256 amount)
         external
         override
         nonReentrant
@@ -113,21 +113,21 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         IRateLimits rateLimits = IRateLimits($.rateLimits);
 
         rateLimits.triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_COLLECT, nfatFacility),
+            makeAddressKey(LIMIT_COLLECT, facility),
             amount
         );
 
         IALMProxy($.proxy).doCall(
-            nfatFacility,
-            abi.encodeCall(INFATFacilityLike.collect, (tokenId, amount))
+            facility,
+            abi.encodeCall(IFacilityLike.collect, (tokenId, amount))
         );
 
         rateLimits.triggerRateLimitIncrease(
-            makeAddressKey(LIMIT_SUBSCRIBE, nfatFacility),
+            makeAddressKey(LIMIT_SUBSCRIBE, facility),
             amount
         );
 
-        emit NFATCollect(nfatFacility, tokenId, amount);
+        emit NFATCollect(facility, tokenId, amount);
     }
 
 }

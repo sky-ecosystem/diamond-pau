@@ -13,7 +13,7 @@ import { Facet } from "../Facet.sol";
 
 import { INFATHaloFacet } from "./INFATHaloFacet.sol";
 
-interface INFATFacilityLike {
+interface IFacilityLike {
 
     function gem() external view returns (address);
 
@@ -30,7 +30,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATHaloFacet
-    bytes32 public constant override LIMIT_REPAY = keccak256("LIMIT_NFAT_REPAY");
+    bytes32 public constant override LIMIT_REPAY = keccak256("LIMIT_NFAT_HALO_REPAY");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -40,7 +40,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATHaloFacet
-    function repay(address nfatFacility, uint256 tokenId, uint256 amount)
+    function repay(address facility, uint256 tokenId, uint256 amount)
         external
         override
         nonReentrant
@@ -51,22 +51,22 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         IRateLimits($.rateLimits).triggerRateLimitDecrease(
             makeAddressAddressKey(
                 LIMIT_REPAY,
-                nfatFacility,
-                INFATFacilityLike(nfatFacility).ownerOf(tokenId)
+                facility,
+                IFacilityLike(facility).ownerOf(tokenId)
             ),
             amount
         );
 
         address proxy = $.proxy;
 
-        ApproveLib.approve(INFATFacilityLike(nfatFacility).gem(), proxy, nfatFacility, amount);
+        ApproveLib.approve(IFacilityLike(facility).gem(), proxy, facility, amount);
 
         IALMProxy(proxy).doCall(
-            nfatFacility,
-            abi.encodeCall(INFATFacilityLike.repay, (tokenId, amount))
+            facility,
+            abi.encodeCall(IFacilityLike.repay, (tokenId, amount))
         );
 
-        emit NFATRepay(nfatFacility, tokenId, amount);
+        emit NFATRepay(facility, tokenId, amount);
     }
 
 }

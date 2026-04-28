@@ -34,11 +34,11 @@ abstract contract NFATHalo_TestBase is ForkTestBase {
         nfatFacility.kiss(address(this));  // Make test contract an operator (bud)
 
         subscribeKey = makeAddressKey(
-            mainnetController.LIMIT_NFAT_SUBSCRIBE(),
+            mainnetController.LIMIT_NFAT_PRIME_SUBSCRIBE(),
             address(nfatFacility)
         );
         repayKey = makeAddressAddressKey(
-            mainnetController.LIMIT_NFAT_REPAY(),
+            mainnetController.LIMIT_NFAT_HALO_REPAY(),
             address(nfatFacility),
             address(almProxy)
         );
@@ -102,7 +102,7 @@ contract MainnetController_NFATHalo_Repay_Tests is NFATHalo_TestBase {
 
         // Subscribe and issue so ownerOf(TOKEN_ID) returns almProxy
         bytes32 fakeSubscribeKey = makeAddressKey(
-            mainnetController.LIMIT_NFAT_SUBSCRIBE(),
+            mainnetController.LIMIT_NFAT_PRIME_SUBSCRIBE(),
             address(otherFacility)
         );
 

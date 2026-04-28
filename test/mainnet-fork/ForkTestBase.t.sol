@@ -831,12 +831,12 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.LIMIT_NFAT_SUBSCRIBE.selector,
+            IMainnetControllerFull.LIMIT_NFAT_PRIME_SUBSCRIBE.selector,
             INFATPrimeFacet.LIMIT_SUBSCRIBE.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.LIMIT_NFAT_COLLECT.selector,
+            IMainnetControllerFull.LIMIT_NFAT_PRIME_COLLECT.selector,
             INFATPrimeFacet.LIMIT_COLLECT.selector
         );
 
@@ -861,7 +861,7 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.LIMIT_NFAT_REPAY.selector,
+            IMainnetControllerFull.LIMIT_NFAT_HALO_REPAY.selector,
             INFATHaloFacet.LIMIT_REPAY.selector
         );
 

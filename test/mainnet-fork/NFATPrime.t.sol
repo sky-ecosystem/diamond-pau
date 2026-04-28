@@ -30,8 +30,8 @@ abstract contract NFATPrime_TestBase is ForkTestBase {
         nfatFacility.file("recipient", nfatRecipient);
         nfatFacility.kiss(address(this));  // Make test contract an operator (bud)
 
-        subscribeKey = makeAddressKey(mainnetController.LIMIT_NFAT_SUBSCRIBE(), address(nfatFacility));
-        collectKey   = makeAddressKey(mainnetController.LIMIT_NFAT_COLLECT(),   address(nfatFacility));
+        subscribeKey = makeAddressKey(mainnetController.LIMIT_NFAT_PRIME_SUBSCRIBE(), address(nfatFacility));
+        collectKey   = makeAddressKey(mainnetController.LIMIT_NFAT_PRIME_COLLECT(),   address(nfatFacility));
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);

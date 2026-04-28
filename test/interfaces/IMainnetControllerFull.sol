@@ -793,9 +793,9 @@ interface IMainnetControllerFull is IController {
 
     function collectNFAT(address nfatFacility, uint256 tokenId, uint256 amount) external virtual;
 
-    function LIMIT_NFAT_SUBSCRIBE() external pure virtual returns (bytes32);
+    function LIMIT_NFAT_PRIME_SUBSCRIBE() external pure virtual returns (bytes32);
 
-    function LIMIT_NFAT_COLLECT() external pure virtual returns (bytes32);
+    function LIMIT_NFAT_PRIME_COLLECT() external pure virtual returns (bytes32);
 
     /**********************************************************************************************/
     /*** NFATHaloFacet actions                                                                  ***/
@@ -803,6 +803,6 @@ interface IMainnetControllerFull is IController {
 
     function repayNFAT(address nfatFacility, uint256 tokenId, uint256 amount) external virtual;
 
-    function LIMIT_NFAT_REPAY() external pure virtual returns (bytes32);
+    function LIMIT_NFAT_HALO_REPAY() external pure virtual returns (bytes32);
 
 }
