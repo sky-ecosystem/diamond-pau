@@ -2,8 +2,7 @@
 pragma solidity ^0.8.34;
 
 import { IAccessControl } from "../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
-
-import { AccessControl } from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
+import { AccessControl }  from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
 
 import {
     AccessControlEnumerable

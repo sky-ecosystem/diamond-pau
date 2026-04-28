@@ -25,7 +25,7 @@ interface IAccessControls is IAccessControlEnumerable {
     error NotRoleAdminOrDefaultAdmin(address account, bytes32 role, bytes32 roleAdmin);
 
     /**
-     * @notice Thrown when the account does not have the given role.
+     * @notice Thrown when attempting to revoke a role from an account that does not have that role.
      * @param  account The account that does not have the given role.
      * @param  role    The role that the account does not have.
      */

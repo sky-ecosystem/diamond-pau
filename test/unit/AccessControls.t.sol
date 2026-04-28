@@ -148,6 +148,8 @@ contract AccessControls_Tests is UnitTestBase {
 
         vm.prank(admin);
         accessControls.revokeRole(RELAYER_ROLE, relayer);
+
+        assertEq(accessControls.hasRole(RELAYER_ROLE, relayer), false);
     }
 
     function test_revokeRole_byRoleAdmin() external {
@@ -193,7 +195,8 @@ contract AccessControls_Tests is UnitTestBase {
         vm.prank(admin);
         accessControls.setRoleRevoker(RELAYER_ROLE, FREEZER_ROLE);
 
-        assertEq(accessControls.getRoleAdmin(RELAYER_ROLE), FREEZER_ROLE);
+        assertEq(accessControls.getRoleAdmin(RELAYER_ROLE),   FREEZER_ROLE);
+        assertEq(accessControls.getRoleRevoker(RELAYER_ROLE), FREEZER_ROLE);
 
         vm.expectEmit();
         emit IAccessControl.RoleAdminChanged(RELAYER_ROLE, FREEZER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -201,7 +204,24 @@ contract AccessControls_Tests is UnitTestBase {
         vm.prank(admin);
         accessControls.setRoleRevoker(RELAYER_ROLE, DEFAULT_ADMIN_ROLE);
 
-        assertEq(accessControls.getRoleAdmin(RELAYER_ROLE), DEFAULT_ADMIN_ROLE);
+        assertEq(accessControls.getRoleAdmin(RELAYER_ROLE),   DEFAULT_ADMIN_ROLE);
+        assertEq(accessControls.getRoleRevoker(RELAYER_ROLE), DEFAULT_ADMIN_ROLE);
+    }
+
+    /**********************************************************************************************/
+    /*** getRoleRevoker Tests                                                                   ***/
+    /**********************************************************************************************/
+
+    function test_getRoleRevoker() external {
+        assertEq(accessControls.getRoleRevoker(RELAYER_ROLE), DEFAULT_ADMIN_ROLE);
+
+        accessControls.__setRoleAdmin(RELAYER_ROLE, FREEZER_ROLE);
+
+        assertEq(accessControls.getRoleRevoker(RELAYER_ROLE), FREEZER_ROLE);
+
+        accessControls.__setRoleAdmin(RELAYER_ROLE, DEFAULT_ADMIN_ROLE);
+
+        assertEq(accessControls.getRoleRevoker(RELAYER_ROLE), DEFAULT_ADMIN_ROLE);
     }
 
     /**********************************************************************************************/
