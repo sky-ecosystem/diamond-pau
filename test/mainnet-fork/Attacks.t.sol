@@ -1,16 +1,45 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import {
+    OptionsBuilder
+} from "../../lib/layerzero-v2/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol";
+
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
-import { makeAddressAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
+import { makeAddressAddressKey, makeAddressAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
 import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
 import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
 import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
 import { Farm_TestBase }                     from "./Farm.t.sol";
+import { LayerZero_TestBase }                from "./LayerZero.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
+
+interface ILayerZeroOFTLike {
+
+    struct MessagingFee {
+        uint256 nativeFee;
+        uint256 lzTokenFee;
+    }
+
+    struct SendParam {
+        uint32  dstEid;
+        bytes32 to;
+        uint256 amountLD;
+        uint256 minAmountLD;
+        bytes   extraOptions;
+        bytes   composeMsg;
+        bytes   oftCmd;
+    }
+
+    function quoteSend(SendParam calldata sendParam, bool payInLzToken)
+        external
+        view
+        returns (MessagingFee memory msgFee);
+
+}
 
 contract MainnetController_Ethena_Attack_Tests is MainnetController_Ethena_E2ETests {
 
@@ -279,6 +308,58 @@ contract MainnetController_Farm_Attack_Tests is Farm_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.depositToFarm(FARM, 1);
+    }
+
+}
+
+contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
+
+    using OptionsBuilder for bytes;
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 10_000_000e6, 0);
+        mainnetController.setLayerZeroRecipient(DESTINATION_ENDPOINT_ID, target);
+        vm.stopPrank();
+    }
+
+    function test_attack_tokenChanged_transferTokenLayerZero() external {
+        assertEq(rateLimits.getCurrentRateLimit(key), 10_000_000e6);
+
+        deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
+        deal(relayer, 1 ether);
+
+        ILayerZeroOFTLike.SendParam memory sendParams = ILayerZeroOFTLike.SendParam({
+            dstEid       : DESTINATION_ENDPOINT_ID,
+            to           : target,
+            amountLD     : 1_000_000e6,
+            minAmountLD  : 1_000_000e6,
+            extraOptions : OptionsBuilder.newOptions().addExecutorLzReceiveOption(200_000, 0),
+            composeMsg   : "",
+            oftCmd       : ""
+        });
+
+        ILayerZeroOFTLike.MessagingFee memory fee = ILayerZeroOFTLike(USDT_OFT).quoteSend(sendParams, false);
+
+        // Transfer succeeds with original token() response (USDT).
+        vm.prank(relayer);
+        mainnetController.transferTokenLayerZero{value: fee.nativeFee}(USDT_OFT, 1_000_000e6, DESTINATION_ENDPOINT_ID);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 9_000_000e6);
+
+        // Attack: mock token() to return a different asset.
+        vm.mockCall(
+            USDT_OFT,
+            abi.encodeWithSignature("token()"),
+            abi.encode(Ethereum.DAI)
+        );
+
+        // Cannot transfer with changed token key.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.transferTokenLayerZero{value: fee.nativeFee}(USDT_OFT, 1, DESTINATION_ENDPOINT_ID);
     }
 
 }
