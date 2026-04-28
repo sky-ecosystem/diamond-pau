@@ -7,7 +7,11 @@ import {
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
-import { makeAddressAddressKey, makeAddressAddressUint32Key } from "../../src/libraries/RateLimitHelpers.sol";
+import {
+    makeAddressAddressKey,
+    makeAddressAddressUint32Key,
+    makeAddressKey
+} from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
 import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
@@ -17,6 +21,7 @@ import { Farm_TestBase }                     from "./Farm.t.sol";
 import { LayerZero_TestBase }                from "./LayerZero.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
 import { Pendle_TestBase }                   from "./Pendle.t.sol";
+import { WEETH_TestBase }                    from "./WEETH.t.sol";
 
 interface IERC20Like {
 
@@ -405,6 +410,47 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
         vm.expectRevert();
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
+    }
+
+}
+
+contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
+
+    bytes32 depositKey;
+
+    function setUp() public override {
+        super.setUp();
+
+        depositKey = makeAddressKey(mainnetController.LIMIT_WEETH_DEPOSIT(), address(eeth));
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(depositKey, 1_000e18, uint256(1_000e18) / 1 days);
+        vm.stopPrank();
+    }
+
+    function test_attack_eETHChanged_depositToWeETH() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000e18);
+
+        // Deposit succeeds with the original eETH address.
+        deal(Ethereum.WETH, address(almProxy), 1_000e18);
+
+        vm.startPrank(relayer);
+        mainnetController.depositToWeETH(1_000e18, _getMinSharesOut(1_000e18));
+        vm.stopPrank();
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 0);
+
+        // Attack: mutable dependency changes eETH address.
+        vm.mockCall(
+            Ethereum.WEETH,
+            abi.encodeWithSignature("eETH()"),
+            abi.encode(Ethereum.DAI)
+        );
+
+        // Cannot deposit with the changed eETH address.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.depositToWeETH(1, 0);
     }
 
 }
