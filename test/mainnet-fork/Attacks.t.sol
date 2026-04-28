@@ -9,6 +9,7 @@ import { AaveV3_TestBase }                   from "./Aave.t.sol";
 import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
 import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
 import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
+import { Farm_TestBase }                     from "./Farm.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
 
 contract MainnetController_Ethena_Attack_Tests is MainnetController_Ethena_E2ETests {
@@ -237,6 +238,47 @@ contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
         vm.expectRevert("CentrifugeFacet/invalid-action");
         vm.prank(relayer);
         mainnetController.cancelCentrifugeDepositRequest(address(jTreasuryVault));
+    }
+
+}
+
+contract MainnetController_Farm_Attack_Tests is Farm_TestBase {
+
+    bytes32 depositKey;
+
+    function setUp() public override {
+        super.setUp();
+
+        depositKey = makeAddressAddressKey(
+            mainnetController.LIMIT_FARM_DEPOSIT(),
+            Ethereum.USDS,
+            FARM
+        );
+    }
+
+    function test_attack_stakingTokenChanged_depositToFarm() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 10_000_000e18);
+
+        // Deposit succeeds with the original staking token (USDS).
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.depositToFarm(FARM, 1_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 9_000_000e18);
+
+        // Attack: mock stakingToken() to return a different address.
+        address changedStakingToken = Ethereum.DAI;
+        vm.mockCall(
+            FARM,
+            abi.encodeWithSignature("stakingToken()"),
+            abi.encode(changedStakingToken)
+        );
+
+        // Cannot deposit with changed staking token key.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.depositToFarm(FARM, 1);
     }
 
 }
