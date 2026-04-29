@@ -64,6 +64,7 @@ contract AccessControls is IAccessControls, ReentrancyGuard, AccessControlEnumer
     /// @inheritdoc IAccessControls
     function setRoleRevoker(bytes32 role, bytes32 revokerRole)
         public
+        override
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         _setRoleAdmin(role, revokerRole);
@@ -74,7 +75,7 @@ contract AccessControls is IAccessControls, ReentrancyGuard, AccessControlEnumer
     /**********************************************************************************************/
 
     /// @inheritdoc IAccessControls
-    function getRoleRevoker(bytes32 role) external view returns (bytes32) {
+    function getRoleRevoker(bytes32 role) external view override returns (bytes32) {
         return getRoleAdmin(role);
     }
 
