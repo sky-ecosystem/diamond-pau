@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -36,6 +38,14 @@ interface IWEETHFacet is IFacet {
     event WEETHDeposit(uint256 amount, uint256 eethAmount, uint256 shares);
 
     /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key           Rate limit key.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     */
+    event WEETHDepositRateLimitSet(bytes32 indexed key, address eeth, address liquidityPool);
+
+    /**
      * @notice Emitted when an ETH withdrawal is requested from weETH.
      * @param  weethModule Address of the weETH withdrawal module.
      * @param  requestId   ID of the created withdrawal request.
@@ -47,6 +57,20 @@ interface IWEETHFacet is IFacet {
         uint256 indexed requestId,
         uint256         eethAmount,
         uint256         weethShares
+    );
+
+    /**
+     * @notice Emitted when the request withdraw rate limit is set.
+     * @param  key           Rate limit key.
+     * @param  weethModule   Address of the weETH withdrawal module.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     */
+    event WEETHRequestWithdrawRateLimitSet(
+        bytes32 indexed key,
+        address indexed weethModule,
+        address         eeth,
+        address         liquidityPool
     );
 
     /**********************************************************************************************/
@@ -84,20 +108,54 @@ interface IWEETHFacet is IFacet {
         external
         returns (uint256 requestId);
 
+    /**
+     * @notice Sets the deposit rate limit for a given eETH token.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     * @param  maxAmount     Maximum amount of the rate limit.
+     * @param  slope         Slope of the rate limit.
+     * @param  lastAmount    Last amount of the rate limit.
+     * @param  lastUpdated   Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        address eeth,
+        address liquidityPool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the request withdraw rate limit for a given eETH token and weETH module.
+     * @param  weethModule   Address of the weETH withdrawal module.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     * @param  maxAmount     Maximum amount of the rate limit.
+     * @param  slope         Slope of the rate limit.
+     * @param  lastAmount    Last amount of the rate limit.
+     * @param  lastUpdated   Timestamp of the last update of the rate limit.
+     */
+    function setRequestWithdrawRateLimit(
+        address weethModule,
+        address eeth,
+        address liquidityPool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for weETH deposit operations, combined with the eETH address to form
-     *         the key.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for weETH withdrawal request operations, combined with the eETH
-     *         address and weETH module address to form the per-module key.
-     */
+    /// @notice Rate limit key prefix for withdrawal request operations.
     function LIMIT_REQUEST_WITHDRAW() external pure returns (bytes32);
 
     /// @notice Address of the weETH token contract (immutable).
@@ -105,5 +163,32 @@ interface IWEETHFacet is IFacet {
 
     /// @notice Address of the WETH token contract (immutable).
     function weth() external view returns (address);
+
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns the deposit rate limit for a given eETH token.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     * @return data          Rate limit data.
+     */
+    function getDepositRateLimit(address eeth, address liquidityPool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the request withdraw rate limit for a given eETH token and weETH module.
+     * @param  weethModule   Address of the weETH withdrawal module.
+     * @param  eeth          Address of the eETH token.
+     * @param  liquidityPool Address of the liquidity pool.
+     * @return data          Rate limit data.
+     */
+    function getRequestWithdrawRateLimit(address weethModule, address eeth, address liquidityPool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

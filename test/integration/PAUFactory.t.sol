@@ -80,10 +80,11 @@ contract PAUFactory_IntegrationTests is Test {
         assertEq(address(almProxy),       expectedAlmProxy);
         assertEq(address(rateLimits),     expectedRateLimits);
 
-        // CONTROLLER role granted on ALMProxy and RateLimits to the Controller.
+        // CONTROLLER roles granted on ALMProxy and RateLimits to the Controller.
 
         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     address(controller)), true);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(controller)), true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE,      address(controller)), true);
 
         // DEFAULT_ADMIN_ROLE granted to admin on all three.
 

@@ -86,17 +86,32 @@ contract USDSFacet is IUSDSFacet, Facet {
         emit USDSVaultSet(_getFacetStorage().vault = vault_);
     }
 
+    /// @inheritdoc IUSDSFacet
+    function setMintRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_MINT, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit USDSMintRateLimitSet(LIMIT_MINT);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IUSDSFacet
     function mint(uint256 usdsAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
+        _decreaseRateLimit(LIMIT_MINT, usdsAmount);
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_MINT, usdsAmount);
-
-        address proxy  = $.proxy;
+        address proxy  = _getSharedControllerStorage().proxy;
         address vault_ = _getFacetStorage().vault;
 
         // Mint USDS into the buffer.
@@ -117,11 +132,9 @@ contract USDSFacet is IUSDSFacet, Facet {
 
     /// @inheritdoc IUSDSFacet
     function burn(uint256 usdsAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
+        _increaseRateLimit(LIMIT_MINT, usdsAmount);
 
-        IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_MINT, usdsAmount);
-
-        address proxy  = $.proxy;
+        address proxy  = _getSharedControllerStorage().proxy;
         address vault_ = _getFacetStorage().vault;
 
         // Transfer USDS from the proxy to the buffer.
@@ -144,6 +157,16 @@ contract USDSFacet is IUSDSFacet, Facet {
     /// @inheritdoc IUSDSFacet
     function vault() external view override returns (address) {
         return _getFacetStorage().vault;
+    }
+
+    /// @inheritdoc IUSDSFacet
+    function mintRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_MINT);
     }
 
 }

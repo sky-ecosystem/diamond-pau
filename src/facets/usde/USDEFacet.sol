@@ -43,13 +43,13 @@ contract USDEFacet is IUSDEFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IUSDEFacet
-    bytes32 public constant override LIMIT_USDE_BURN = keccak256("LIMIT_USDE_BURN");
+    bytes32 public constant override LIMIT_BURN = keccak256("LIMIT_USDE_BURN");
 
     /// @inheritdoc IUSDEFacet
-    bytes32 public constant override LIMIT_USDE_MINT = keccak256("LIMIT_USDE_MINT");
+    bytes32 public constant override LIMIT_MINT = keccak256("LIMIT_USDE_MINT");
 
     /// @inheritdoc IUSDEFacet
-    bytes32 public constant override LIMIT_SUSDE_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
+    bytes32 public constant override LIMIT_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -84,6 +84,61 @@ contract USDEFacet is IUSDEFacet, Facet {
         susde        = susde_;
         usdc         = usdc_;
         usde         = usde_;
+    }
+
+    /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IUSDEFacet
+    function setBurnRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_BURN, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit USDEBurnRateLimitSet(LIMIT_BURN);
+    }
+
+    /// @inheritdoc IUSDEFacet
+    function setMintRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_MINT, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit USDEMintRateLimitSet(LIMIT_MINT);
+    }
+
+    /// @inheritdoc IUSDEFacet
+    function setCooldownRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_COOLDOWN, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit USDECooldownRateLimitSet(LIMIT_COOLDOWN);
     }
 
     /**********************************************************************************************/
@@ -122,7 +177,7 @@ contract USDEFacet is IUSDEFacet, Facet {
 
     /// @inheritdoc IUSDEFacet
     function prepareMint(uint256 usdcAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _decreaseRateLimit(LIMIT_USDE_MINT, usdcAmount);
+        _decreaseRateLimit(LIMIT_MINT, usdcAmount);
 
         ApproveLib.approve(usdc, _getSharedControllerStorage().proxy, ethenaMinter, usdcAmount);
 
@@ -131,7 +186,7 @@ contract USDEFacet is IUSDEFacet, Facet {
 
     /// @inheritdoc IUSDEFacet
     function prepareBurn(uint256 usdeAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _decreaseRateLimit(LIMIT_USDE_BURN, usdeAmount);
+        _decreaseRateLimit(LIMIT_BURN, usdeAmount);
 
         ApproveLib.approve(usde, _getSharedControllerStorage().proxy, ethenaMinter, usdeAmount);
 
@@ -146,7 +201,7 @@ contract USDEFacet is IUSDEFacet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        _decreaseRateLimit(LIMIT_SUSDE_COOLDOWN, usdeAmount);
+        _decreaseRateLimit(LIMIT_COOLDOWN, usdeAmount);
 
         // NOTE: The SUSDE contract is immutable, so the return value can be trusted.
         shares = abi.decode(
@@ -177,28 +232,54 @@ contract USDEFacet is IUSDEFacet, Facet {
             (uint256)
         );
 
-        _decreaseRateLimit(LIMIT_SUSDE_COOLDOWN, assets);
+        _decreaseRateLimit(LIMIT_COOLDOWN, assets);
 
         emit USDECooldownShares(susdeAmount, assets);
     }
 
     /// @inheritdoc IUSDEFacet
-    function unstakeSUSDE() external override nonReentrant onlyRole(RELAYER_ROLE) {
+    function unstake() external override nonReentrant onlyRole(RELAYER_ROLE) {
         address proxy = _getSharedControllerStorage().proxy;
 
         uint256 startingUSDE = IERC20Like(usde).balanceOf(proxy);
 
         IALMProxy(proxy).doCall(susde, abi.encodeCall(ISUSDELike.unstake, (proxy)));
 
-        emit USDEUnstakeSUSDE(IERC20Like(usde).balanceOf(proxy) - startingUSDE);
+        emit USDEUnstake(IERC20Like(usde).balanceOf(proxy) - startingUSDE);
     }
 
     /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    /// @inheritdoc IUSDEFacet
+    function burnRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_BURN);
+    }
+
+    /// @inheritdoc IUSDEFacet
+    function mintRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_MINT);
+    }
+
+    /// @inheritdoc IUSDEFacet
+    function cooldownRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_COOLDOWN);
     }
 
 }

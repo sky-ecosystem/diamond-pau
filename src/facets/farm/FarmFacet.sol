@@ -49,6 +49,56 @@ contract FarmFacet is IFarmFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IFarmFacet
+    function setDepositRateLimit(
+        address farm,
+        address stakingToken,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(farm != address(0),         "FarmFacet/farm-zero-address");
+        require(stakingToken != address(0), "FarmFacet/staking-token-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(farm, stakingToken);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit FarmDepositRateLimitSet(key, farm, stakingToken);
+    }
+
+    /// @inheritdoc IFarmFacet
+    function setWithdrawRateLimit(
+        address farm,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(farm != address(0), "FarmFacet/farm-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(farm);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit FarmWithdrawRateLimitSet(key, farm);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -59,11 +109,12 @@ contract FarmFacet is IFarmFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _decreaseRateLimit(_getDepositRateLimitKey(farm), amount);
+        address proxy        = _getSharedControllerStorage().proxy;
+        address stakingToken = IFarmLike(farm).stakingToken();
 
-        address proxy = _getSharedControllerStorage().proxy;
+        _decreaseRateLimit(_getDepositRateLimitKey(farm, stakingToken), amount);
 
-        ApproveLib.approve(IFarmLike(farm).stakingToken(), proxy, farm, amount);
+        ApproveLib.approve(stakingToken, proxy, farm, amount);
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.stake, (amount)));
 
@@ -102,6 +153,30 @@ contract FarmFacet is IFarmFacet, Facet {
     }
 
     /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IFarmFacet
+    function getDepositRateLimit(address farm, address stakingToken)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(farm, stakingToken));
+    }
+
+    /// @inheritdoc IFarmFacet
+    function getWithdrawRateLimit(address farm)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(farm));
+    }
+
+    /**********************************************************************************************/
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
@@ -118,19 +193,15 @@ contract FarmFacet is IFarmFacet, Facet {
         emit FarmReward(farm, reward);
     }
 
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
-    }
-
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _getDepositRateLimitKey(address farm) internal view returns (bytes32) {
-        return makeAddressAddressKey(LIMIT_DEPOSIT, IFarmLike(farm).stakingToken(), farm);
+    function _getDepositRateLimitKey(address farm, address stakingToken) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, stakingToken, farm);
     }
 
-    function _getWithdrawRateLimitKey(address farm) internal view returns (bytes32) {
+    function _getWithdrawRateLimitKey(address farm) internal pure returns (bytes32) {
         return makeAddressKey(LIMIT_WITHDRAW, farm);
     }
 

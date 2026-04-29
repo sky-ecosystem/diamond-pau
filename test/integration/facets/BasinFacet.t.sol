@@ -10,15 +10,15 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function LIMIT_BASIN_DEPOSIT() external pure returns (bytes32);
+    function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    function LIMIT_BASIN_WITHDRAW() external pure returns (bytes32);
+    function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
 
-abstract contract BasinFacet_TestBase is Integration_TestBase {
+contract Controller_BasinFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
@@ -32,12 +32,12 @@ abstract contract BasinFacet_TestBase is Integration_TestBase {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.LIMIT_BASIN_DEPOSIT.selector,
+            IControllerLike.LIMIT_DEPOSIT.selector,
             IBasinFacet.LIMIT_DEPOSIT.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IControllerLike.LIMIT_BASIN_WITHDRAW.selector,
+            IControllerLike.LIMIT_WITHDRAW.selector,
             IBasinFacet.LIMIT_WITHDRAW.selector
         );
 
@@ -53,16 +53,32 @@ abstract contract BasinFacet_TestBase is Integration_TestBase {
         controller.updateIntegrations(integrationIds);
     }
 
-}
+    /**********************************************************************************************/
+    /*** LIMIT_DEPOSIT Tests                                                                    ***/
+    /**********************************************************************************************/
 
-contract Controller_BasinFacet_View_Tests is BasinFacet_TestBase {
-
-    function test_LIMIT_BASIN_DEPOSIT() external view {
-        assertEq(controller.LIMIT_BASIN_DEPOSIT(), keccak256("LIMIT_BASIN_DEPOSIT"));
+    function test_LIMIT_DEPOSIT() external view {
+        assertEq(controller.LIMIT_DEPOSIT(), keccak256("LIMIT_BASIN_DEPOSIT"));
     }
 
-    function test_LIMIT_BASIN_WITHDRAW() external view {
-        assertEq(controller.LIMIT_BASIN_WITHDRAW(), keccak256("LIMIT_BASIN_WITHDRAW"));
+    /**********************************************************************************************/
+    /*** LIMIT_WITHDRAW Tests                                                                   ***/
+    /**********************************************************************************************/
+
+    function test_LIMIT_WITHDRAW() external view {
+        assertEq(controller.LIMIT_WITHDRAW(), keccak256("LIMIT_BASIN_WITHDRAW"));
     }
+
+    /**********************************************************************************************/
+    /*** setDepositRateLimit Tests                                                              ***/
+    /**********************************************************************************************/
+
+    // TODO
+
+    /**********************************************************************************************/
+    /*** setWithdrawRateLimit Tests                                                             ***/
+    /**********************************************************************************************/
+
+    // TODO
 
 }

@@ -21,7 +21,7 @@ interface IControllerLike {
 
 }
 
-contract ERC4626Facet_TestBase is Integration_TestBase {
+contract Controller_ERC4626Facet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
@@ -55,10 +55,6 @@ contract ERC4626Facet_TestBase is Integration_TestBase {
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
     }
-
-}
-
-contract Controller_ERC4626Facet_Admin_Tests is ERC4626Facet_TestBase {
 
     /**********************************************************************************************/
     /*** setMaxExchangeRate Tests                                                               ***/
@@ -129,5 +125,17 @@ contract Controller_ERC4626Facet_Admin_Tests is ERC4626Facet_TestBase {
 
         assertEq(controller.getMaxExchangeRate(token), 1e48);
     }
+
+    /**********************************************************************************************/
+    /*** setDepositRateLimit Tests                                                              ***/
+    /**********************************************************************************************/
+
+    // TODO
+
+    /**********************************************************************************************/
+    /*** setWithdrawRateLimit Tests                                                             ***/
+    /**********************************************************************************************/
+
+    // TODO
 
 }

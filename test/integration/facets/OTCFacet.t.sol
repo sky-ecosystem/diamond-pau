@@ -33,7 +33,7 @@ interface IControllerLike {
 
 }
 
-abstract contract OTCFacet_TestBase is Integration_TestBase {
+contract Controller_OTCFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
@@ -97,10 +97,6 @@ abstract contract OTCFacet_TestBase is Integration_TestBase {
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
     }
-
-}
-
-contract Controller_OTCFacet_Admin_Tests is OTCFacet_TestBase {
 
     /**********************************************************************************************/
     /*** setBuffer Tests                                                                        ***/
@@ -379,5 +375,11 @@ contract Controller_OTCFacet_Admin_Tests is OTCFacet_TestBase {
 
         assertEq(controller.getIsWhitelisted(exchange, asset), false);
     }
+
+    /**********************************************************************************************/
+    /*** setSwapRateLimit Tests                                                                 ***/
+    /**********************************************************************************************/
+
+    // TODO
 
 }

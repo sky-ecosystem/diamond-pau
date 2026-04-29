@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -44,6 +46,20 @@ interface ICentrifugeFacet is IFacet {
      * @param  recipient    Bytes32-encoded recipient address on the destination chain.
      */
     event CentrifugeRecipientSet(uint16 indexed centrifugeId, bytes32 indexed recipient);
+
+    /**
+     * @notice Emitted when the transfer rate limit is set.
+     * @param  key          Rate limit key.
+     * @param  token        Address of the Centrifuge vault token.
+     * @param  centrifugeId Centrifuge chain identifier for the destination.
+     * @param  spoke        Address of the spoke contract.
+     */
+    event CentrifugeTransferRateLimitSet(
+        bytes32 indexed key,
+        address indexed token,
+        uint16  indexed centrifugeId,
+        address         spoke
+    );
 
     /**
      * @notice Emitted when vault shares are transferred cross-chain.
@@ -93,6 +109,27 @@ interface ICentrifugeFacet is IFacet {
     function setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     /**
+     * @notice Sets the transfer rate limit for a given token, centrifuge ID, and spoke.
+     * @param  token        Address of the Centrifuge vault token.
+     * @param  centrifugeId Centrifuge chain identifier for the destination.
+     * @param  spoke        Address of the spoke contract.
+     * @param  maxAmount    Maximum amount of the rate limit.
+     * @param  slope        Slope of the rate limit.
+     * @param  lastAmount   Last amount of the rate limit.
+     * @param  lastUpdated  Timestamp of the last update of the rate limit.
+     */
+    function setTransferRateLimit(
+        address token,
+        uint16  centrifugeId,
+        address spoke,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Transfers vault shares cross-chain via the Centrifuge spoke.
      * @notice Requires ETH for cross-chain messaging fees (payable).
      * @param  token        Address of the Centrifuge vault token.
@@ -105,28 +142,16 @@ interface ICentrifugeFacet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for deposit operations, combined with the asset address and vault
-     *         token address to form the per-market key.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for redeem operations, combined with the vault token address to form
-     *         the per-vault keys.
-     */
+    /// @notice Rate limit key prefix for redeem operations.
     function LIMIT_REDEEM() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for cross-chain share transfers, combined with the vault token and
-     *         centrifuge ID to form the per-route keys.
-     */
+    /// @notice Rate limit key prefix for cross-chain share transfers.
     function LIMIT_TRANSFER() external pure returns (bytes32);
 
-    /**
-     * @notice Always zero. Centrifuge V3 vault requests are non-fungible and use a fixed request ID
-     *         of 0.
-     */
+    /// @notice Centrifuge V3 vault requests are non-fungible and use a fixed request ID of 0.
     function REQUEST_ID() external pure returns (uint256);
 
     /**********************************************************************************************/
@@ -139,5 +164,17 @@ interface ICentrifugeFacet is IFacet {
      * @return recipient    Bytes32-encoded recipient. Zero if not set.
      */
     function getRecipient(uint16 centrifugeId) external view returns (bytes32 recipient);
+
+    /**
+     * @notice Returns the transfer rate limit for a given token and centrifuge ID.
+     * @param  token        Address of the Centrifuge vault token.
+     * @param  centrifugeId Centrifuge chain identifier for the destination.
+     * @param  spoke        Address of the spoke contract.
+     * @return data         Rate limit data.
+     */
+    function getTransferRateLimit(address token, uint16 centrifugeId, address spoke)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

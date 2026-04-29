@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -20,15 +22,42 @@ interface ITransferAssetFacet is IFacet {
      * @param  destination Address that received the asset.
      * @param  amount      Amount of asset transferred (native token decimals).
      */
-    event TransferAssetFacetTransfer(
+    event TransferAssetTransfer(address indexed asset, address indexed destination, uint256 amount);
+
+    /**
+     * @notice Emitted when the transfer rate limit is updated.
+     * @param  key         Derived key of the rate limit.
+     * @param  asset       Address of the asset token.
+     * @param  destination Address of the destination.
+     */
+    event TransferAssetRateLimitSet(
+        bytes32 indexed key,
         address indexed asset,
-        address indexed destination,
-        uint256         amount
+        address indexed destination
     );
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
+
+    /**
+     * @notice Sets the transfer rate limit for an asset and destination.
+     * @param  asset       Address of the asset token.
+     * @param  destination Address of the destination.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setTransferRateLimit(
+        address asset,
+        address destination,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     /**
      * @notice Transfers an ERC-20 asset from the proxy to a destination.
@@ -42,10 +71,22 @@ interface ITransferAssetFacet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for asset transfer operations, combined with the asset and destination
-     *         addresses to form the per-route keys.
-     */
+    /// @notice Rate limit key prefix for transfer operations.
     function LIMIT_TRANSFER() external pure returns (bytes32);
+
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns the configured transfer rate limit for an asset and destination.
+     * @param  asset       Address of the asset token.
+     * @param  destination Address of the destination.
+     * @return data        Rate limit data.
+     */
+    function getTransferRateLimit(address asset, address destination)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

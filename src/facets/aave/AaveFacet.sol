@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }                            from "../../libraries/ApproveLib.sol";
-import { makeAddressAddressKey, makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib } from "../../libraries/ApproveLib.sol";
+
+import {
+    makeAddressAddressAddressKey,
+    makeAddressAddressKey,
+    makeAddressKey
+} from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
 import { IRateLimits } from "../../interfaces/IRateLimits.sol";
@@ -86,6 +91,56 @@ contract AaveFacet is IAaveFacet, Facet {
         emit AaveMaxSlippageSet(aToken, _getFacetStorage().maxSlippages[aToken] = maxSlippage);
     }
 
+    /// @inheritdoc IAaveFacet
+    function setDepositRateLimit(
+        address aToken,
+        address pool,
+        address underlyingAsset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(aToken          != address(0), "AaveFacet/aToken-zero-address");
+        require(pool            != address(0), "AaveFacet/pool-zero-address");
+        require(underlyingAsset != address(0), "AaveFacet/underlyingAsset-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(aToken, pool, underlyingAsset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit AaveDepositRateLimitSet(key, aToken, pool, underlyingAsset);
+    }
+
+    /// @inheritdoc IAaveFacet
+    function setWithdrawRateLimit(
+        address aToken,
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(aToken != address(0), "AaveFacet/aToken-zero-address");
+        require(pool != address(0),   "AaveFacet/pool-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(aToken, pool);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit AaveWithdrawRateLimitSet(key, aToken, pool);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -101,16 +156,16 @@ contract AaveFacet is IAaveFacet, Facet {
 
         require(maxSlippage != 0, "AaveFacet/max-slippage-not-set");
 
-        _decreaseRateLimit(_getDepositRateLimitKey(aToken), amount);
-
         address proxy      = _getSharedControllerStorage().proxy;
         address pool       = IATokenWithPoolLike(aToken).POOL();
         address underlying = IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS();
 
+        _decreaseRateLimit(_getDepositRateLimitKey(aToken, pool, underlying), amount);
+
         // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
         ApproveLib.approve(underlying, proxy, pool, amount);
 
-        uint256 aTokenBalance = IERC20Like(aToken).balanceOf(proxy);
+        uint256 startingBalance = IERC20Like(aToken).balanceOf(proxy);
 
         // Deposit underlying into Aave pool, proxy receives aTokens.
         IALMProxy(proxy).doCall(
@@ -118,9 +173,9 @@ contract AaveFacet is IAaveFacet, Facet {
             abi.encodeCall(IPoolLike.supply, (underlying, amount, proxy, 0))
         );
 
-        uint256 newATokens = IERC20Like(aToken).balanceOf(proxy) - aTokenBalance;
+        uint256 amountReceived = IERC20Like(aToken).balanceOf(proxy) - startingBalance;
 
-        require(newATokens >= amount * maxSlippage / 1e18, "AaveFacet/slippage-too-high");
+        require(amountReceived >= amount * maxSlippage / 1e18, "AaveFacet/slippage-too-high");
 
         emit AaveDeposit(aToken, amount);
     }
@@ -134,20 +189,21 @@ contract AaveFacet is IAaveFacet, Facet {
         returns (uint256 amountWithdrawn)
     {
         address proxy      = _getSharedControllerStorage().proxy;
+        address pool       = IATokenWithPoolLike(aToken).POOL();
         address underlying = IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS();
 
         uint256 startingBalance = IERC20Like(underlying).balanceOf(proxy);
 
         // Withdraw underlying from Aave pool, assuming the proxy has adequate aTokens.
         IALMProxy(proxy).doCall(
-            IATokenWithPoolLike(aToken).POOL(),
+            pool,
             abi.encodeCall(IPoolLike.withdraw, (underlying, amount, proxy))
         );
 
         amountWithdrawn = IERC20Like(underlying).balanceOf(proxy) - startingBalance;
 
-        _decreaseRateLimit(_getWithdrawRateLimitKey(aToken), amountWithdrawn);
-        _increaseRateLimit(_getDepositRateLimitKey(aToken),  amountWithdrawn);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(aToken, pool), amountWithdrawn);
+        _increaseRateLimit(_getDepositRateLimitKey(aToken, pool, underlying), amountWithdrawn);
 
         emit AaveWithdraw(aToken, amountWithdrawn);
     }
@@ -161,32 +217,39 @@ contract AaveFacet is IAaveFacet, Facet {
         return _getFacetStorage().maxSlippages[aToken];
     }
 
-    /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
-    /**********************************************************************************************/
-
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    /// @inheritdoc IAaveFacet
+    function getDepositRateLimit(address aToken, address pool, address underlyingAsset)
+        external
+        view
+        override
+    returns (IRateLimits.RateLimitData memory data) {
+        return _getRateLimit(_getDepositRateLimitKey(aToken, pool, underlyingAsset));
     }
 
-    function _increaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitIncrease(key, amount);
+    /// @inheritdoc IAaveFacet
+    function getWithdrawRateLimit(address aToken, address pool)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(aToken, pool));
     }
 
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _getDepositRateLimitKey(address aToken) internal view returns (bytes32) {
-        return makeAddressAddressKey(
-            LIMIT_DEPOSIT,
-            IATokenWithPoolLike(aToken).UNDERLYING_ASSET_ADDRESS(),
-            aToken
-        );
+    function _getDepositRateLimitKey(address aToken, address pool, address underlyingAsset)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return makeAddressAddressAddressKey(LIMIT_DEPOSIT, underlyingAsset, pool, aToken);
     }
 
-    function _getWithdrawRateLimitKey(address aToken) internal view returns (bytes32) {
-        return makeAddressKey(LIMIT_WITHDRAW, aToken);
+    function _getWithdrawRateLimitKey(address aToken, address pool) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_WITHDRAW, pool, aToken);
     }
 
 }

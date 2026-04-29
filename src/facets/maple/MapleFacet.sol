@@ -35,6 +35,32 @@ contract MapleFacet is IMapleFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IMapleFacet
+    function setRedeemRateLimit(
+        address mapleToken,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(mapleToken != address(0), "MapleFacet/maple-token-zero-address");
+
+        bytes32 key = _getRedeemRateLimitKey(mapleToken);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit MapleRedeemRateLimitSet(key, mapleToken);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -45,14 +71,12 @@ contract MapleFacet is IMapleFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(LIMIT_REDEEM, mapleToken),
+        _decreaseRateLimit(
+            _getRedeemRateLimitKey(mapleToken),
             IMapleTokenLike(mapleToken).convertToAssets(shares)
         );
 
-        address proxy = $.proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(
             mapleToken,
@@ -69,16 +93,12 @@ contract MapleFacet is IMapleFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
         require(
-            IRateLimits($.rateLimits).getRateLimitData(
-                makeAddressKey(LIMIT_REDEEM, mapleToken)
-            ).maxAmount > 0,
+            _rateLimitExists(_getRedeemRateLimitKey(mapleToken)),
             "MapleFacet/invalid-action"
         );
 
-        address proxy = $.proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         IALMProxy(proxy).doCall(
             mapleToken,
@@ -86,6 +106,28 @@ contract MapleFacet is IMapleFacet, Facet {
         );
 
         emit MapleCancelRedemption(mapleToken, shares);
+    }
+
+    /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IMapleFacet
+    function getRedeemRateLimit(address mapleToken)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getRedeemRateLimitKey(mapleToken));
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getRedeemRateLimitKey(address mapleToken) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_REDEEM, mapleToken);
     }
 
 }

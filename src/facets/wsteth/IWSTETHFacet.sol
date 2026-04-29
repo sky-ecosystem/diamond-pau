@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -24,10 +26,16 @@ interface IWSTETHFacet is IFacet {
 
     /**
      * @notice Emitted when WETH is deposited to receive wstETH. Unwraps WETH to ETH and sends
-     *        to the wstETH contract.
+     *         to the wstETH contract.
      * @param  amount Amount of WETH deposited.
      */
     event WSTETHDeposit(uint256 amount);
+
+    /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key Rate limit key.
+     */
+    event WSTETHDepositRateLimitSet(bytes32 indexed key);
 
     /**
      * @notice Emitted when a withdrawal is requested from the Lido queue.
@@ -36,6 +44,12 @@ interface IWSTETHFacet is IFacet {
      * @param  requestIds     IDs of the created withdrawal requests.
      */
     event WSTETHRequestWithdraw(uint256 amountToRedeem, uint256 stethAmount, uint256[] requestIds);
+
+    /**
+     * @notice Emitted when the request withdraw rate limit is set.
+     * @param  key Rate limit key.
+     */
+    event WSTETHRequestWithdrawRateLimitSet(bytes32 indexed key);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -63,15 +77,60 @@ interface IWSTETHFacet is IFacet {
      */
     function requestWithdraw(uint256 amountToRedeem) external returns (uint256[] memory requestIds);
 
+    /**
+     * @notice Sets the deposit rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the request withdraw rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setRequestWithdrawRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /// @notice Rate limit key for wstETH deposit operations.
+    /// @notice Rate limit key for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /// @notice Rate limit key for wstETH withdrawal request operations.
+    /// @notice Rate limit key for withdrawal request operations.
     function LIMIT_REQUEST_WITHDRAW() external pure returns (bytes32);
+
+    /**
+     * @notice Returns the deposit rate limit.
+     * @return data Rate limit data.
+     */
+    function depositRateLimit() external view returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the request withdraw rate limit.
+     * @return data Rate limit data.
+     */
+    function requestWithdrawRateLimit()
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
     /// @notice Address of the WETH token contract (immutable).
     function weth() external view returns (address);

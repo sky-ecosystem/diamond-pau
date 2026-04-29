@@ -21,7 +21,7 @@ interface IControllerLike {
 
 }
 
-abstract contract LayerZeroFacet_TestBase is Integration_TestBase {
+contract Controller_LayerZeroFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
@@ -55,10 +55,6 @@ abstract contract LayerZeroFacet_TestBase is Integration_TestBase {
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
     }
-
-}
-
-contract Controller_LayerZeroFacet_Admin_Tests is LayerZeroFacet_TestBase {
 
     /**********************************************************************************************/
     /*** setRecipient Tests                                                                     ***/
@@ -105,5 +101,11 @@ contract Controller_LayerZeroFacet_Admin_Tests is LayerZeroFacet_TestBase {
 
         assertEq(controller.getRecipient(1), recipient);
     }
+
+    /**********************************************************************************************/
+    /*** setTransferRateLimit Tests                                                             ***/
+    /**********************************************************************************************/
+
+    // TODO
 
 }

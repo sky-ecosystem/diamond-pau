@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -55,6 +57,25 @@ interface IUniswapV3Facet is IFacet {
     );
 
     /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  pool  Address of the Uniswap V3 pool.
+     * @param  token Address of the token being deposited.
+     */
+    event UniswapV3DepositRateLimitSet(
+        bytes32 indexed key,
+        address indexed pool,
+        address indexed token
+    );
+
+    /**
+     * @notice Emitted when the lower tick bound for a pool is updated.
+     * @param  pool      Address of the Uniswap V3 pool.
+     * @param  lowerTick New lower tick bound for liquidity positions.
+     */
+    event UniswapV3LowerTickUpdated(address indexed pool, int24 lowerTick);
+
+    /**
      * @notice Emitted when the max slippage for a pool is updated.
      * @param  pool        Address of the Uniswap V3 pool.
      * @param  maxSlippage New max slippage in 1e18 precision (1e18 = no slippage).
@@ -99,11 +120,16 @@ interface IUniswapV3Facet is IFacet {
     );
 
     /**
-     * @notice Emitted when the lower tick bound for a pool is updated.
-     * @param  pool      Address of the Uniswap V3 pool.
-     * @param  lowerTick New lower tick bound for liquidity positions.
+     * @notice Emitted when the swap rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  pool  Address of the Uniswap V3 pool.
+     * @param  token Address of the token being swapped.
      */
-    event UniswapV3LowerTickUpdated(address indexed pool, int24 lowerTick);
+    event UniswapV3SwapRateLimitSet(
+        bytes32 indexed key,
+        address indexed pool,
+        address indexed token
+    );
 
     /**
      * @notice Emitted when the TWAP lookback period for a pool is updated.
@@ -118,6 +144,19 @@ interface IUniswapV3Facet is IFacet {
      * @param  upperTick New upper tick bound for liquidity positions.
      */
     event UniswapV3UpperTickUpdated(address indexed pool, int24 upperTick);
+
+
+    /**
+     * @notice Emitted when the withdraw rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  pool  Address of the Uniswap V3 pool.
+     * @param  token Address of the token being withdrawn.
+     */
+    event UniswapV3WithdrawRateLimitSet(
+        bytes32 indexed key,
+        address indexed pool,
+        address indexed token
+    );
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -163,6 +202,25 @@ interface IUniswapV3Facet is IFacet {
         returns (TokenAmounts memory amounts);
 
     /**
+     * @notice Sets the deposit rate limit for a given pool and token.
+     * @param  pool        Address of the Uniswap V3 pool.
+     * @param  token       Address of the token being deposited.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets the max slippage for a Uniswap V3 pool.
      * @param  pool        Address of the Uniswap V3 pool.
      * @param  maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
@@ -192,12 +250,50 @@ interface IUniswapV3Facet is IFacet {
     function setLiquidityUpperTickBound(address pool, int24 upperTickBound) external;
 
     /**
+     * @notice Sets the swap rate limit for a given pool and token.
+     * @param  pool        Address of the Uniswap V3 pool.
+     * @param  token       Address of the token being swapped.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setSwapRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets the TWAP lookback period for a pool. Used to compute the time-weighted average
      *        tick for swap validation.
      * @param  pool           Address of the Uniswap V3 pool.
      * @param  twapSecondsAgo TWAP lookback duration in seconds.
      */
     function setTWAPSecondsAgo(address pool, uint32 twapSecondsAgo) external;
+
+    /**
+     * @notice Sets the withdraw rate limit for a given pool and token.
+     * @param  pool        Address of the Uniswap V3 pool.
+     * @param  token       Address of the token being withdrawn.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setWithdrawRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     /**
      * @notice Swaps tokens via the Uniswap V3 SwapRouter (exact input single).
@@ -222,22 +318,13 @@ interface IUniswapV3Facet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for Uniswap V3 deposit (add liquidity) operations, combined with the
-     *         pool's token pair for the per-pair keys.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Uniswap V3 swap operations, combined with the pool's token pair
-     *         for the per-pair keys.
-     */
+    /// @notice Rate limit key prefix for swap operations.
     function LIMIT_SWAP() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Uniswap V3 withdraw (remove liquidity) operations, combined with
-     *         the pool's token pair for the per-pair keys.
-     */
+    /// @notice Rate limit key prefix for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     /// @notice Upper bound for the max tick delta admin parameter.
@@ -260,6 +347,25 @@ interface IUniswapV3Facet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Returns the deposit rate limit for a given pool and token.
+     * @param  pool  Address of the pool.
+     * @param  token Address of the token being deposited.
+     * @return data  Rate limit data.
+     */
+    function getDepositRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the configured tick bounds for liquidity positions.
+     * @param  pool  Address of the pool.
+     * @return lower Minimum lower tick bound.
+     * @return upper Maximum upper tick bound.
+     */
+    function getLiquidityTickBounds(address pool) external view returns (int24 lower, int24 upper);
+
+    /**
      * @notice Returns the configured max slippage for a Uniswap V3 pool.
      * @param  pool        Address of the pool.
      * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
@@ -274,12 +380,15 @@ interface IUniswapV3Facet is IFacet {
     function getMaxTickDelta(address pool) external view returns (uint24 maxTickDelta);
 
     /**
-     * @notice Returns the configured tick bounds for liquidity positions.
+     * @notice Returns the swap rate limit for a given pool and token.
      * @param  pool  Address of the pool.
-     * @return lower Minimum lower tick bound.
-     * @return upper Maximum upper tick bound.
+     * @param  token Address of the token being swapped.
+     * @return data  Rate limit data.
      */
-    function getLiquidityTickBounds(address pool) external view returns (int24 lower, int24 upper);
+    function getSwapRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
     /**
      * @notice Returns the configured TWAP lookback period for a pool.
@@ -287,5 +396,16 @@ interface IUniswapV3Facet is IFacet {
      * @return twapSecondsAgo TWAP lookback duration in seconds. Zero means not set.
      */
     function getTWAPSecondsAgo(address pool) external view returns (uint32 twapSecondsAgo);
+
+    /**
+     * @notice Returns the withdraw rate limit for a given pool and token.
+     * @param  pool  Address of the pool.
+     * @param  token Address of the token being withdrawn.
+     * @return data  Rate limit data.
+     */
+    function getWithdrawRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

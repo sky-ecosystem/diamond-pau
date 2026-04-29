@@ -59,6 +59,56 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IERC7540Facet
+    function setDepositRateLimit(
+        address token,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(token != address(0), "ERC7540Facet/token-zero-address");
+        require(asset != address(0), "ERC7540Facet/asset-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(token, asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit ERC7540DepositRateLimitSet(key, token, asset);
+    }
+
+    /// @inheritdoc IERC7540Facet
+    function setRedeemRateLimit(
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(token != address(0), "ERC7540Facet/token-zero-address");
+
+        bytes32 key = _getRedeemRateLimitKey(token);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit ERC7540RedeemRateLimitSet(key, token);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -70,11 +120,11 @@ contract ERC7540Facet is IERC7540Facet, Facet {
         onlyRole(RELAYER_ROLE)
     {
         address proxy = _getSharedControllerStorage().proxy;
+        address asset = IERC4626Like(token).asset();
 
-        // Approve asset to vault from the proxy (assumes the proxy has enough of the asset).
-        ApproveLib.approve(IERC4626Like(token).asset(), proxy, token, amount);
+        ApproveLib.approve(asset, proxy, token, amount);
 
-        _decreaseRateLimit(_getDepositRateLimitKey(token), amount);
+        _decreaseRateLimit(_getDepositRateLimitKey(token, asset), amount);
 
         // Submit deposit request by transferring assets
         IALMProxy(proxy).doCall(
@@ -87,7 +137,7 @@ contract ERC7540Facet is IERC7540Facet, Facet {
 
     /// @inheritdoc IERC7540Facet
     function claimDeposit(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _rateLimitExists(_getDepositRateLimitKey(token));
+        _requireRateLimitExists(_getDepositRateLimitKey(token, IERC4626Like(token).asset()));
 
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 shares = IERC4626Like(token).maxMint(proxy);
@@ -122,7 +172,7 @@ contract ERC7540Facet is IERC7540Facet, Facet {
 
     /// @inheritdoc IERC7540Facet
     function claimRedeem(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _rateLimitExists(_getRedeemRateLimitKey(token));
+        _requireRateLimitExists(_getRedeemRateLimitKey(token));
 
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 assets = IERC4626Like(token).maxWithdraw(proxy);
@@ -137,35 +187,43 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            key,
-            amount
-        );
+    /// @inheritdoc IERC7540Facet
+    function getDepositRateLimit(address token, address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(token, asset));
+    }
+
+    /// @inheritdoc IERC7540Facet
+    function getRedeemRateLimit(address token)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getRedeemRateLimitKey(token));
     }
 
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _getDepositRateLimitKey(address token) internal view returns (bytes32) {
-        return makeAddressAddressKey(LIMIT_DEPOSIT, IERC4626Like(token).asset(), token);
+    function _getDepositRateLimitKey(address token, address asset) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, asset, token);
     }
 
-    function _getRedeemRateLimitKey(address token) internal view returns (bytes32) {
+    function _getRedeemRateLimitKey(address token) internal pure returns (bytes32) {
         return makeAddressKey(LIMIT_REDEEM, token);
     }
 
-    function _rateLimitExists(bytes32 key) internal view {
-        require(
-            IRateLimits(
-                _getSharedControllerStorage().rateLimits
-            ).getRateLimitData(key).maxAmount > 0,
-            "ERC7540Facet/invalid-action"
-        );
+    function _requireRateLimitExists(bytes32 key) internal view {
+        require(_rateLimitExists(key), "ERC7540Facet/invalid-action");
     }
 
 }

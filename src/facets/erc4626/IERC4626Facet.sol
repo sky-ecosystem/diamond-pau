@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -24,6 +26,14 @@ interface IERC4626Facet is IFacet {
     event ERC4626Deposit(address indexed token, uint256 assets, uint256 shares);
 
     /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  token Address of the ERC-4626 vault token.
+     * @param  asset Address of the asset being deposited.
+     */
+    event ERC4626DepositRateLimitSet(bytes32 indexed key, address indexed token, address asset);
+
+    /**
      * @notice Emitted when the max exchange rate for a vault token is updated.
      * @param  token           Address of the ERC-4626 vault token.
      * @param  maxExchangeRate New max exchange rate in 1e36 precision.
@@ -45,6 +55,13 @@ interface IERC4626Facet is IFacet {
      * @param  shares Amount of shares burned.
      */
     event ERC4626Withdraw(address indexed token, uint256 assets, uint256 shares);
+
+    /**
+     * @notice Emitted when the withdraw rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  token Address of the ERC-4626 vault token.
+     */
+    event ERC4626WithdrawRateLimitSet(bytes32 indexed key, address indexed token);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -73,6 +90,25 @@ interface IERC4626Facet is IFacet {
         returns (uint256 assets);
 
     /**
+     * @notice Sets the deposit rate limit for a given token and asset.
+     * @param  token       Address of the ERC-4626 vault token.
+     * @param  asset       Address of the asset being deposited.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        address token,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets the max exchange rate for a vault token. The rate is computed as
      *         `EXCHANGE_RATE_PRECISION * maxExpectedAssets / shares`.
      * @param  token             Address of the ERC-4626 vault token.
@@ -80,6 +116,23 @@ interface IERC4626Facet is IFacet {
      * @param  maxExpectedAssets Maximum expected assets for the given shares.
      */
     function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
+
+    /**
+     * @notice Sets the withdraw rate limit for a given token.
+     * @param  token       Address of the ERC-4626 vault token.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setWithdrawRateLimit(
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     /**
      * @notice Withdraws a specific amount of underlying assets from a vault.
@@ -99,16 +152,10 @@ interface IERC4626Facet is IFacet {
     /// @notice Precision used for exchange rate calculations (1e36).
     function EXCHANGE_RATE_PRECISION() external pure returns (uint256);
 
-    /**
-     * @notice Rate limit key for ERC-4626 deposit operations, combined with the asset address and
-     *         vault token address to form the per-market key.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for ERC-4626 withdraw operations, combined with the vault token
-     *         address to form the per-vault keys.
-     */
+    /// @notice Rate limit key prefix for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     /**********************************************************************************************/
@@ -121,5 +168,26 @@ interface IERC4626Facet is IFacet {
      * @return maxExchangeRate Max exchange rate in 1e36 precision. Zero if not set.
      */
     function getMaxExchangeRate(address token) external view returns (uint256 maxExchangeRate);
+
+    /**
+     * @notice Returns the deposit rate limit for a given token and asset.
+     * @param  token Address of the ERC-4626 vault token.
+     * @param  asset Address of the asset being deposited.
+     * @return data  Rate limit data.
+     */
+    function getDepositRateLimit(address token, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the withdraw rate limit for a given token.
+     * @param  token Address of the ERC-4626 vault token.
+     * @return data  Rate limit data.
+     */
+    function getWithdrawRateLimit(address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

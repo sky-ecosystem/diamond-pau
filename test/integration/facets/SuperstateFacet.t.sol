@@ -31,4 +31,10 @@ contract Controller_SuperstateFacet_Tests is Integration_TestBase {
         assertEq(facet.ustb(), ustb);
     }
 
+    /**********************************************************************************************/
+    /*** setSubscribeRateLimit Tests                                                             ***/
+    /**********************************************************************************************/
+
+    // TODO
+
 }

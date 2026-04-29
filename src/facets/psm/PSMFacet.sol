@@ -88,6 +88,27 @@ contract PSMFacet is IPSMFacet, Facet {
     }
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IPSMFacet
+    function setUSDSToUSDCSwapRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_USDS_TO_USDC, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit PSMUSDSToUSDCSwapRateLimitSet(LIMIT_USDS_TO_USDC);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -100,16 +121,14 @@ contract PSMFacet is IPSMFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_USDS_TO_USDC, usdcAmount);
+        _decreaseRateLimit(LIMIT_USDS_TO_USDC, usdcAmount);
 
         uint256 usdsAmount = usdcAmount * to18ConversionFactor();
 
         // Approve USDS to DAI-USDS migrator from the proxy (assumes the proxy has enough USDS).
         _approve(usds, daiUSDS, usdsAmount);
 
-        address proxy = $.proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         // Swap USDS to DAI 1:1.
         IALMProxy(proxy).doCall(
@@ -133,18 +152,17 @@ contract PSMFacet is IPSMFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        IRateLimits($.rateLimits).triggerRateLimitIncrease(LIMIT_USDS_TO_USDC, usdcAmount);
+        _increaseRateLimit(LIMIT_USDS_TO_USDC, usdcAmount);
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC).
         _approve(usdc, psm, usdcAmount);
 
         uint256 conversionFactor = to18ConversionFactor();
         uint256 daiAmount        = usdcAmount * conversionFactor;
-        address proxy            = $.proxy;
 
         emit PSMSwapUSDCToUSDS(usdcAmount);
+
+        address proxy = _getSharedControllerStorage().proxy;
 
         // Swap all if amount is less than or equal to the max USDC that can be swapped to DAI in
         // one call, else refill and swap in chunks within the limits.
@@ -185,6 +203,16 @@ contract PSMFacet is IPSMFacet, Facet {
     /// @inheritdoc IPSMFacet
     function to18ConversionFactor() public view override returns (uint256) {
         return IPSMLike(psm).to18ConversionFactor();
+    }
+
+    /// @inheritdoc IPSMFacet
+    function usdsToUSDCSwapRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_USDS_TO_USDC);
     }
 
     /**********************************************************************************************/

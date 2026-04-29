@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -39,6 +41,13 @@ interface IUniswapV4Facet is IFacet {
         uint128         amount0,
         uint128         amount1
     );
+
+    /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  poolId Uniswap V4 pool identifier.
+     */
+    event UniswapV4DepositRateLimitSet(bytes32 indexed key, bytes32 indexed poolId);
 
     /**
      * @notice Emitted when a position's liquidity is increased.
@@ -100,6 +109,13 @@ interface IUniswapV4Facet is IFacet {
     );
 
     /**
+     * @notice Emitted when the swap rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  poolId Uniswap V4 pool identifier.
+     */
+    event UniswapV4SwapRateLimitSet(bytes32 indexed key, bytes32 indexed poolId);
+
+    /**
      * @notice Emitted when tick limits for a pool are updated.
      * @param  poolId         Uniswap V4 pool identifier.
      * @param  tickLowerMin   Minimum allowed lower tick for positions.
@@ -112,6 +128,13 @@ interface IUniswapV4Facet is IFacet {
         int24           tickUpperMax,
         uint24          maxTickSpacing
     );
+
+    /**
+     * @notice Emitted when the withdraw rate limit is set.
+     * @param  key   Rate limit key.
+     * @param  poolId Uniswap V4 pool identifier.
+     */
+    event UniswapV4WithdrawRateLimitSet(bytes32 indexed key, bytes32 indexed poolId);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -178,6 +201,40 @@ interface IUniswapV4Facet is IFacet {
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     /**
+     * @notice Sets the deposit rate limit for a given pool.
+     * @param  poolId      Uniswap V4 pool identifier.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the swap rate limit for a given pool.
+     * @param  poolId      Uniswap V4 pool identifier.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setSwapRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets the tick limits for liquidity positions on a pool.
      * @param  poolId         Uniswap V4 pool identifier.
      * @param  tickLowerMin   Minimum allowed lower tick.
@@ -189,6 +246,23 @@ interface IUniswapV4Facet is IFacet {
         int24   tickLowerMin,
         int24   tickUpperMax,
         uint24  maxTickSpacing
+    )
+        external;
+
+    /**
+     * @notice Sets the withdraw rate limit for a given pool.
+     * @param  poolId      Uniswap V4 pool identifier.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setWithdrawRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
     )
         external;
 
@@ -205,22 +279,13 @@ interface IUniswapV4Facet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for Uniswap V4 deposit (mint/increase) operations, combined with the
-     *         pool ID to form the per-pool keys.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Uniswap V4 swap operations, combined with the pool ID to form
-     *         the per-pool keys.
-     */
+    /// @notice Rate limit key prefix for swap operations.
     function LIMIT_SWAP() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Uniswap V4 withdraw (decrease) operations, combined with the pool
-     *         ID to form the per-pool keys.
-     */
+    /// @notice Rate limit key prefix for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     /// @notice Address of the Permit2 contract used for token approvals (immutable).
@@ -237,11 +302,31 @@ interface IUniswapV4Facet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Returns the deposit rate limit for a given pool.
+     * @param  poolId Uniswap V4 pool identifier.
+     * @return data   Rate limit data.
+     */
+    function getDepositRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
      * @notice Returns the configured max slippage for a Uniswap V4 pool.
      * @param  poolId      Uniswap V4 pool identifier.
      * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
      */
     function getMaxSlippage(bytes32 poolId) external view returns (uint256 maxSlippage);
+
+    /**
+     * @notice Returns the swap rate limit for a given pool.
+     * @param  poolId Uniswap V4 pool identifier.
+     * @return data   Rate limit data.
+     */
+    function getSwapRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
     /**
      * @notice Returns the configured tick limits for a Uniswap V4 pool.
@@ -254,5 +339,15 @@ interface IUniswapV4Facet is IFacet {
         external
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+
+    /**
+     * @notice Returns the withdraw rate limit for a given pool.
+     * @param  poolId Uniswap V4 pool identifier.
+     * @return data   Rate limit data.
+     */
+    function getWithdrawRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

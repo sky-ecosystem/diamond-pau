@@ -117,4 +117,10 @@ contract Controller_USDSFacet_Tests is Integration_TestBase {
         _assertReentrancyGuardWrittenToTwice(address(controller));
     }
 
+    /**********************************************************************************************/
+    /*** setMintRateLimit Tests                                                                 ***/
+    /**********************************************************************************************/
+
+    // TODO
+
 }

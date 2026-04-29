@@ -54,12 +54,16 @@ contract PAUFactory is IPAUFactory {
         almProxy.grantRole(almProxy.CONTROLLER(),     controller);
         rateLimits.grantRole(rateLimits.CONTROLLER(), controller);
 
-        // Step 3: Grant _DEFAULT_ADMIN_ROLE on ALMProxy and RateLimits to the passed admin.
+        // Step 3: Grant _DEFAULT_ADMIN_ROLE on RateLimits to the Controller.
+
+        rateLimits.grantRole(_DEFAULT_ADMIN_ROLE, controller);
+
+        // Step 4: Grant _DEFAULT_ADMIN_ROLE on ALMProxy and RateLimits to the passed admin.
 
         almProxy.grantRole(_DEFAULT_ADMIN_ROLE,   admin);
         rateLimits.grantRole(_DEFAULT_ADMIN_ROLE, admin);
 
-        // Step 4: Revoke factory's own _DEFAULT_ADMIN_ROLE on ALMProxy and RateLimits.
+        // Step 5: Revoke factory's own _DEFAULT_ADMIN_ROLE on ALMProxy and RateLimits.
 
         almProxy.revokeRole(_DEFAULT_ADMIN_ROLE,   address(this));
         rateLimits.revokeRole(_DEFAULT_ADMIN_ROLE, address(this));

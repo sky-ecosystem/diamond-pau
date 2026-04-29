@@ -82,6 +82,44 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
     }
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IWSTETHFacet
+    function setDepositRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_DEPOSIT, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit WSTETHDepositRateLimitSet(LIMIT_DEPOSIT);
+    }
+
+    /// @inheritdoc IWSTETHFacet
+    function setRequestWithdrawRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setRateLimit(LIMIT_REQUEST_WITHDRAW, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit WSTETHRequestWithdrawRateLimitSet(LIMIT_REQUEST_WITHDRAW);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -143,15 +181,11 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
+        address proxy = _getSharedControllerStorage().proxy;
 
-        address proxy             = $.proxy;
         uint256 initialETHBalance = proxy.balance;
 
-        require(
-            IRateLimits($.rateLimits).getRateLimitData(LIMIT_REQUEST_WITHDRAW).maxAmount > 0,
-            "WSTETHFacet/invalid-action"
-        );
+        require(_rateLimitExists(LIMIT_REQUEST_WITHDRAW), "WSTETHFacet/invalid-action");
 
         IALMProxy(proxy).doCall(
             withdrawQueue,
@@ -166,11 +200,27 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    /// @inheritdoc IWSTETHFacet
+    function depositRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_DEPOSIT);
+    }
+
+    /// @inheritdoc IWSTETHFacet
+    function requestWithdrawRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_REQUEST_WITHDRAW);
     }
 
 }

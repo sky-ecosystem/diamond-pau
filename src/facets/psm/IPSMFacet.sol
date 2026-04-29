@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -27,6 +29,12 @@ interface IPSMFacet is IFacet {
      */
     event PSMSwapUSDSToUSDC(uint256 usdcAmount);
 
+    /**
+     * @notice Emitted when the USDS-to-USDC rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event PSMUSDSToUSDCSwapRateLimitSet(bytes32 indexed key);
+
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
@@ -43,14 +51,26 @@ interface IPSMFacet is IFacet {
      */
     function swapUSDSToUSDC(uint256 usdcAmount) external;
 
+    /**
+     * @notice Sets the USDS-to-USDC rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setUSDSToUSDCSwapRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for USDS-to-USDC swaps. Decreased on `swapUSDSToUSDC`, increased on
-     *         `swapUSDCToUSDS`.
-     */
+    /// @notice Rate limit key prefix for USDS-to-USDC swaps.
     function LIMIT_USDS_TO_USDC() external pure returns (bytes32);
 
     /// @notice Address of the DAI token contract (immutable).
@@ -62,20 +82,25 @@ interface IPSMFacet is IFacet {
     /// @notice Address of the SKY PSM contract (immutable).
     function psm() external view returns (address);
 
+    /**
+     * @notice Returns the conversion factor to scale 6-decimal USDC amounts to 18-decimal DAI/USDS
+     *         amounts (i.e. `1e12`).
+     */
+    function to18ConversionFactor() external view returns (uint256);
+
     /// @notice Address of the USDC token contract (immutable).
     function usdc() external view returns (address);
 
     /// @notice Address of the USDS token contract (immutable).
     function usds() external view returns (address);
 
-    /**********************************************************************************************/
-    /*** View/Pure Functions                                                                    ***/
-    /**********************************************************************************************/
-
     /**
-     * @notice Returns the conversion factor to scale 6-decimal USDC amounts to 18-decimal DAI/USDS
-     *         amounts (i.e. `1e12`).
+     * @notice Returns the configured USDS-to-USDC rate limit.
+     * @return data Rate limit data.
      */
-    function to18ConversionFactor() external view returns (uint256);
+    function usdsToUSDCSwapRateLimit()
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

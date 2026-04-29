@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -20,9 +22,30 @@ interface ISuperstateFacet is IFacet {
      */
     event SuperstateSubscribe(uint256 usdcAmount);
 
+    /**
+     * @notice Emitted when the subscribe rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event SuperstateSubscribeRateLimitSet(bytes32 indexed key);
+
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
+
+    /**
+     * @notice Sets the subscribe rate limit.
+     * @param  maxAmount  Maximum amount of the rate limit.
+     * @param  slope      Slope of the rate limit.
+     * @param  lastAmount Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setSubscribeRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     /**
      * @notice Subscribes USDC to Superstate USTB.
@@ -36,6 +59,12 @@ interface ISuperstateFacet is IFacet {
 
     /// @notice Rate limit key for Superstate subscribe operations.
     function LIMIT_SUBSCRIBE() external pure returns (bytes32);
+
+    /**
+     * @notice Returns the configured subscribe rate limit.
+     * @return data Rate limit data.
+     */
+    function subscribeRateLimit() external view returns (IRateLimits.RateLimitData memory data);
 
     /// @notice Address of the USDC token contract (immutable).
     function usdc() external view returns (address);

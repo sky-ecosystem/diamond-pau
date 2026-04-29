@@ -972,7 +972,7 @@ abstract contract ForkTestBase is DssTest {
 
         wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.isOtcSwapReady.selector,
-            IOTCFacet.isSwapReady.selector
+            IOTCFacet.getIsSwapReady.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
@@ -1292,22 +1292,22 @@ abstract contract ForkTestBase is DssTest {
 
         wires[6] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.unstakeSUSDe.selector,
-            IUSDEFacet.unstakeSUSDE.selector
+            IUSDEFacet.unstake.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDE_BURN.selector,
-            IUSDEFacet.LIMIT_USDE_BURN.selector
+            IUSDEFacet.LIMIT_BURN.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_USDE_MINT.selector,
-            IUSDEFacet.LIMIT_USDE_MINT.selector
+            IUSDEFacet.LIMIT_MINT.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.LIMIT_SUSDE_COOLDOWN.selector,
-            IUSDEFacet.LIMIT_SUSDE_COOLDOWN.selector
+            IUSDEFacet.LIMIT_COOLDOWN.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

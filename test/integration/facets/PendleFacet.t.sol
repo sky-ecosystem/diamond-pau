@@ -24,4 +24,10 @@ contract Controller_PendleFacet_Tests is Integration_TestBase {
         assertEq(facet.router(), router);
     }
 
+    /**********************************************************************************************/
+    /*** setRedeemRateLimit Tests                                                               ***/
+    /**********************************************************************************************/
+
+    // TODO
+
 }

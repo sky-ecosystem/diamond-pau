@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -15,6 +17,12 @@ interface IUSDEFacet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Emitted when the USDe burn rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event USDEBurnRateLimitSet(bytes32 indexed key);
+
+    /**
      * @notice Emitted when a USDe cooldown is initiated by asset amount.
      * @param  usdeAmount Amount of USDe queued for cooldown.
      * @param  shares     Amount of sUSDe shares locked.
@@ -22,11 +30,23 @@ interface IUSDEFacet is IFacet {
     event USDECooldownAssets(uint256 usdeAmount, uint256 shares);
 
     /**
+     * @notice Emitted when the sUSDe cooldown rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event USDECooldownRateLimitSet(bytes32 indexed key);
+
+    /**
      * @notice Emitted when a USDe cooldown is initiated by share amount.
      * @param  susdeAmount Amount of sUSDe shares queued for cooldown.
      * @param  assets      Amount of USDe assets that will be received.
      */
     event USDECooldownShares(uint256 susdeAmount, uint256 assets);
+
+    /**
+     * @notice Emitted when the USDe mint rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event USDEMintRateLimitSet(bytes32 indexed key);
 
     /**
      * @notice Emitted when a USDe burn is prepared by approving USDe to the Ethena minter.
@@ -56,7 +76,7 @@ interface IUSDEFacet is IFacet {
      * @notice Emitted when sUSDe is unstaked after the cooldown period.
      * @param  assets Amount of USDe assets received from unstaking.
      */
-    event USDEUnstakeSUSDE(uint256 assets);
+    event USDEUnstake(uint256 assets);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -97,26 +117,71 @@ interface IUSDEFacet is IFacet {
     function removeDelegatedSigner(address delegatedSigner) external;
 
     /**
+     * @notice Sets the USDe burn rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setBurnRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the sUSDe cooldown rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setCooldownRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets a delegated signer on the Ethena minter for the proxy.
      * @param  delegatedSigner Address of the delegated signer to set.
      */
     function setDelegatedSigner(address delegatedSigner) external;
 
+    /**
+     * @notice Sets the USDe mint rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setMintRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     /// @notice Unstakes sUSDe after the cooldown period, receiving USDe.
-    function unstakeSUSDE() external;
+    function unstake() external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /// @notice Rate limit key for USDe burn operations.
-    function LIMIT_USDE_BURN() external view returns (bytes32);
+    /// @notice Rate limit key prefix for USDe burn operations.
+    function LIMIT_BURN() external view returns (bytes32);
 
-    /// @notice Rate limit key for USDe mint operations.
-    function LIMIT_USDE_MINT() external view returns (bytes32);
+    /// @notice Rate limit key prefix for USDe mint operations.
+    function LIMIT_MINT() external view returns (bytes32);
 
-    /// @notice Rate limit key for sUSDe cooldown operations.
-    function LIMIT_SUSDE_COOLDOWN() external view returns (bytes32);
+    /// @notice Rate limit key prefix for sUSDe cooldown operations.
+    function LIMIT_COOLDOWN() external view returns (bytes32);
 
     /// @notice Address of the Ethena minter contract (immutable).
     function ethenaMinter() external view returns (address);
@@ -129,5 +194,27 @@ interface IUSDEFacet is IFacet {
 
     /// @notice Address of the USDe token contract (immutable).
     function usde() external view returns (address);
+
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns the configured USDe burn rate limit.
+     * @return data Rate limit data.
+     */
+    function burnRateLimit() external view returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the configured USDe mint rate limit.
+     * @return data Rate limit data.
+     */
+    function mintRateLimit() external view returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the configured sUSDe cooldown rate limit.
+     * @return data Rate limit data.
+     */
+    function cooldownRateLimit() external view returns (IRateLimits.RateLimitData memory data);
 
 }

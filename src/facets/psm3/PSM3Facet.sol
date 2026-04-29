@@ -60,6 +60,54 @@ contract PSM3Facet is IPSM3Facet, Facet {
     }
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IPSM3Facet
+    function setDepositRateLimit(
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(asset != address(0), "PSM3Facet/asset-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit PSM3DepositRateLimitSet(key, asset);
+    }
+
+    /// @inheritdoc IPSM3Facet
+    function setWithdrawRateLimit(
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(asset != address(0), "PSM3Facet/asset-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit PSM3WithdrawRateLimitSet(key, asset);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -71,7 +119,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        _decreaseRateLimit(LIMIT_DEPOSIT, asset, amount);
+        _decreaseRateLimit(_getDepositRateLimitKey(asset), amount);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -114,20 +162,45 @@ contract PSM3Facet is IPSM3Facet, Facet {
             (uint256)
         );
 
-        _decreaseRateLimit(LIMIT_WITHDRAW, asset, assetsWithdrawn);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(asset), assetsWithdrawn);
 
         emit PSM3Withdraw(asset, assetsWithdrawn, startingShares - IPSM3Like(psm).shares(proxy));
     }
 
     /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(bytes32 key, address asset, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(key, asset),
-            amount
-        );
+    /// @inheritdoc IPSM3Facet
+    function getDepositRateLimit(address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(asset));
+    }
+
+    /// @inheritdoc IPSM3Facet
+    function getWithdrawRateLimit(address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(asset));
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getDepositRateLimitKey(address asset) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_DEPOSIT, asset);
+    }
+
+    function _getWithdrawRateLimitKey(address asset) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_WITHDRAW, asset);
     }
 
 }

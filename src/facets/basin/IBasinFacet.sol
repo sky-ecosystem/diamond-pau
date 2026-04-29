@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 interface IBasinFacet is IFacet {
@@ -24,6 +26,18 @@ interface IBasinFacet is IFacet {
     );
 
     /**
+     * @notice Emitted when the basin deposit rate limit is updated.
+     * @param  key   Derived key of the rate limit.
+     * @param  basin Address of the basin contract.
+     * @param  asset Address of the asset.
+     */
+    event BasinDepositRateLimitSet(
+        bytes32 indexed key,
+        address indexed basin,
+        address indexed asset
+    );
+
+    /**
      * @notice Event emitted when a withdrawal is made from a basin.
      * @param  basin           The address of the basin.
      * @param  asset           The address of the asset withdrawn.
@@ -35,6 +49,18 @@ interface IBasinFacet is IFacet {
         address indexed asset,
         uint256         assetsWithdrawn,
         uint256         sharesBurned
+    );
+
+    /**
+     * @notice Emitted when the basin withdraw rate limit is updated.
+     * @param  key   Derived key of the rate limit.
+     * @param  basin Address of the basin contract.
+     * @param  asset Address of the asset.
+     */
+    event BasinWithdrawRateLimitSet(
+        bytes32 indexed key,
+        address indexed basin,
+        address indexed asset
     );
 
     /**********************************************************************************************/
@@ -54,6 +80,44 @@ interface IBasinFacet is IFacet {
         returns (uint256 shares);
 
     /**
+     * @notice Sets the deposit rate limit for a basin and asset.
+     * @param  basin       Address of the basin contract.
+     * @param  asset       Address of the asset.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the withdraw rate limit for a basin and asset.
+     * @param  basin       Address of the basin contract.
+     * @param  asset       Address of the asset.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setWithdrawRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Withdraw up to `maxAmount` of `asset` from `basin`, return `assetsWithdrawn`.
      * @param  basin             The address of the basin.
      * @param  asset             The address of the asset withdrawn.
@@ -69,10 +133,36 @@ interface IBasinFacet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /// @notice Limit for deposit operations.
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /// @notice Limit for withdraw operations.
+    /// @notice Rate limit key prefix for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
+
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns the configured deposit rate limit for a basin and asset.
+     * @param  basin Address of the basin contract.
+     * @param  asset Address of the asset.
+     * @return data  Rate limit data.
+     */
+    function getDepositRateLimit(address basin, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the configured withdraw rate limit for a basin and asset.
+     * @param  basin Address of the basin contract.
+     * @param  asset Address of the asset.
+     * @return data  Rate limit data.
+     */
+    function getWithdrawRateLimit(address basin, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

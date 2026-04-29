@@ -291,6 +291,78 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         emit UniswapV3TWAPSecondsAgoUpdated(pool, twapSecondsAgo);
     }
 
+    /// @inheritdoc IUniswapV3Facet
+    function setDepositRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0),  "UniswapV3Facet/pool-zero-address");
+        require(token != address(0), "UniswapV3Facet/token-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(pool, token);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV3DepositRateLimitSet(key, pool, token);
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function setSwapRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0),  "UniswapV3Facet/pool-zero-address");
+        require(token != address(0), "UniswapV3Facet/token-zero-address");
+
+        bytes32 key = _getSwapRateLimitKey(pool, token);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV3SwapRateLimitSet(key, pool, token);
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function setWithdrawRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0),  "UniswapV3Facet/pool-zero-address");
+        require(token != address(0), "UniswapV3Facet/token-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(pool, token);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV3WithdrawRateLimitSet(key, pool, token);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -317,7 +389,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
 
         _approve(tokenIn, router, amountIn);
 
-        address proxy           = _getSharedControllerStorage().proxy;
+        address proxy = _getSharedControllerStorage().proxy;
+
         uint256 startingBalance = IERC20Like(tokenIn).balanceOf(proxy);
 
         amountOut = _swap({
@@ -334,7 +407,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         _approve(tokenIn, router, 0);
 
         // Rate limit decreased by value of tokenIn (the amount actually spent).
-        _decreaseRateLimit(LIMIT_SWAP, tokenIn, pool, amountSpent);
+        _decreaseRateLimit(_getSwapRateLimitKey(pool, tokenIn), amountSpent);
 
         emit UniswapV3Swap(pool, tokenIn, amountSpent, amountOut);
     }
@@ -389,8 +462,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         _approve(token0, positionManager, 0);
         _approve(token1, positionManager, 0);
 
-        _decreaseRateLimit(LIMIT_DEPOSIT, token0, pool, amounts.amount0);
-        _decreaseRateLimit(LIMIT_DEPOSIT, token1, pool, amounts.amount1);
+        _decreaseRateLimit(_getDepositRateLimitKey(pool, token0), amounts.amount0);
+        _decreaseRateLimit(_getDepositRateLimitKey(pool, token1), amounts.amount1);
 
         emit UniswapV3AddLiquidity(
             pool,
@@ -437,8 +510,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         _checkSlippage(amounts.amount0, min.amount0, maxSlippage);
         _checkSlippage(amounts.amount1, min.amount1, maxSlippage);
 
-        _decreaseRateLimit(LIMIT_WITHDRAW, token0, pool, amounts.amount0);
-        _decreaseRateLimit(LIMIT_WITHDRAW, token1, pool, amounts.amount1);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(pool, token0), amounts.amount0);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(pool, token1), amounts.amount1);
 
         emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
@@ -467,6 +540,36 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     /// @inheritdoc IUniswapV3Facet
     function getTWAPSecondsAgo(address pool) external view override returns (uint32) {
         return _getFacetStorage().poolParams[pool].twapSecondsAgo;
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getDepositRateLimit(address pool, address token)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(pool, token));
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getSwapRateLimit(address pool, address token)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getSwapRateLimitKey(pool, token));
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getWithdrawRateLimit(address pool, address token)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(pool, token));
     }
 
     /**********************************************************************************************/
@@ -934,19 +1037,24 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         }
     }
 
-    function _decreaseRateLimit(bytes32 key, address token, address pool, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressKey(key, token, pool),
-            amount
-        );
-    }
-
     function _validateTokenOwnership(uint256 tokenId) internal view {
         require(
             INonfungiblePositionManager(positionManager).ownerOf(tokenId) ==
             _getSharedControllerStorage().proxy,
             "UniswapV3Facet/proxy-does-not-own-token-id"
         );
+    }
+
+    function _getDepositRateLimitKey(address pool, address token) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, token, pool);
+    }
+
+    function _getSwapRateLimitKey(address pool, address token) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_SWAP, token, pool);
+    }
+
+    function _getWithdrawRateLimitKey(address pool, address token) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_WITHDRAW, token, pool);
     }
 
 }

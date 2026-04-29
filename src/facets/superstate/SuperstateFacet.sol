@@ -54,22 +54,57 @@ contract SuperstateFacet is ISuperstateFacet, Facet {
     }
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc ISuperstateFacet
+    function setSubscribeRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        bytes32 key = LIMIT_SUBSCRIBE;
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit SuperstateSubscribeRateLimitSet(key);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
     /// @inheritdoc ISuperstateFacet
     function subscribe(uint256 usdcAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
+        _decreaseRateLimit(LIMIT_SUBSCRIBE, usdcAmount);
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(LIMIT_SUBSCRIBE, usdcAmount);
-
-        address proxy = $.proxy;
+        address proxy = _getSharedControllerStorage().proxy;
 
         ApproveLib.approve(usdc, proxy, ustb, usdcAmount);
 
         IALMProxy(proxy).doCall(ustb, abi.encodeCall(IUSTBLike.subscribe, (usdcAmount, usdc)));
 
         emit SuperstateSubscribe(usdcAmount);
+    }
+
+    /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc ISuperstateFacet
+    function subscribeRateLimit()
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(LIMIT_SUBSCRIBE);
     }
 
 }

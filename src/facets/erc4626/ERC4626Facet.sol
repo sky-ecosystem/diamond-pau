@@ -92,6 +92,52 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         emit ERC4626MaxExchangeRateSet(token, exchangeRate);
     }
 
+    /// @inheritdoc IERC4626Facet
+    function setDepositRateLimit(
+        address token,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(token != address(0), "ERC4626Facet/token-zero-address");
+        require(asset != address(0), "ERC4626Facet/asset-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(token, asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit ERC4626DepositRateLimitSet(key, token, asset);
+    }
+
+    /// @inheritdoc IERC4626Facet
+    function setWithdrawRateLimit(
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(token != address(0), "ERC4626Facet/token-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(token);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit ERC4626WithdrawRateLimitSet(key, token);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -104,12 +150,13 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        _decreaseRateLimit(_getDepositRateLimitKey(token), amount);
-
         address proxy = _getSharedControllerStorage().proxy;
+        address asset = IERC4626Like(token).asset();
+
+        _decreaseRateLimit(_getDepositRateLimitKey(token, asset), amount);
 
         // Approve asset to token from the proxy (assumes the proxy has enough of the asset).
-        ApproveLib.approve(IERC4626Like(token).asset(), proxy, token, amount);
+        ApproveLib.approve(asset, proxy, token, amount);
 
         uint256 startingShares = IERC20Like(token).balanceOf(proxy);
 
@@ -152,7 +199,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
 
         require(shares <= maxSharesIn, "ERC4626Facet/shares-burned-too-high");
 
-        _increaseRateLimit(_getDepositRateLimitKey(token), amount);
+        _increaseRateLimit(_getDepositRateLimitKey(token, IERC4626Like(token).asset()), amount);
 
         emit ERC4626Withdraw(token, amount, shares);
     }
@@ -177,8 +224,8 @@ contract ERC4626Facet is IERC4626Facet, Facet {
 
         require(assets >= minAssetsOut, "ERC4626Facet/min-assets-out-not-met");
 
-        _decreaseRateLimit(_getWithdrawRateLimitKey(token), assets);
-        _increaseRateLimit(_getDepositRateLimitKey(token),  assets);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(token),       assets);
+        _increaseRateLimit(_getDepositRateLimitKey(token, asset), assets);
 
         emit ERC4626Redeem(token, shares, assets);
     }
@@ -192,16 +239,24 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         return _getFacetStorage().maxExchangeRates[token];
     }
 
-    /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
-    /**********************************************************************************************/
-
-    function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    /// @inheritdoc IERC4626Facet
+    function getDepositRateLimit(address token, address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(token, asset));
     }
 
-    function _increaseRateLimit(bytes32 key, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitIncrease(key, amount);
+    /// @inheritdoc IERC4626Facet
+    function getWithdrawRateLimit(address token)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(token));
     }
 
     /**********************************************************************************************/
@@ -218,11 +273,11 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         return (EXCHANGE_RATE_PRECISION * assets) / shares;
     }
 
-    function _getDepositRateLimitKey(address token) internal view returns (bytes32) {
-        return makeAddressAddressKey(LIMIT_DEPOSIT, IERC4626Like(token).asset(), token);
+    function _getDepositRateLimitKey(address token, address asset) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, asset, token);
     }
 
-    function _getWithdrawRateLimitKey(address token) internal view returns (bytes32) {
+    function _getWithdrawRateLimitKey(address token) internal pure returns (bytes32) {
         return makeAddressKey(LIMIT_WITHDRAW, token);
     }
 

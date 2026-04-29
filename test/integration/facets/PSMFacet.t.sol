@@ -58,4 +58,10 @@ contract Controller_PSMFacet_Tests is Integration_TestBase {
         assertEq(facet.usds(),    usds);
     }
 
+    /**********************************************************************************************/
+    /*** setUSDSToUSDCSwapRateLimit Tests                                                       ***/
+    /**********************************************************************************************/
+
+    // TODO
+
 }

@@ -2,113 +2,224 @@
 pragma solidity ^0.8.34;
 
 import { IController }     from "../../src/interfaces/IController.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
-import { Controller } from "../../src/Controller.sol";
-
-abstract contract IMainnetControllerFull is IController, Controller {
+interface IMainnetControllerFull is IController {
 
     /**********************************************************************************************/
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function getAaveMaxSlippage(address aToken) external view virtual returns (uint256);
+    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external;
 
-    function depositAave(address aToken, uint256 amount) external virtual;
+    function setAaveDepositRateLimit(
+        address aToken,
+        address pool,
+        address underlyingAsset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_AAVE_DEPOSIT() external pure virtual returns (bytes32);
+    function setAaveWithdrawRateLimit(
+        address aToken,
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_AAVE_WITHDRAW() external pure virtual returns (bytes32);
-
-    function setAaveMaxSlippage(address aToken, uint256 maxSlippage) external virtual;
+    function depositAave(address aToken, uint256 amount) external;
 
     function withdrawAave(address aToken, uint256 amount)
-        external virtual returns (uint256 amountWithdrawn);
+        external
+        returns (uint256 amountWithdrawn);
+
+    function LIMIT_AAVE_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_AAVE_WITHDRAW() external pure returns (bytes32);
+
+    function getAaveMaxSlippage(address aToken) external view returns (uint256);
+
+    function getAaveDepositRateLimit(address aToken, address pool, address underlyingAsset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getAaveWithdrawRateLimit(address aToken, address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** BasinFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function setBasinDepositRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function setBasinWithdrawRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     function depositBasin(address basin, address asset, uint256 amount, uint256 minSharesOut)
-        external virtual returns (uint256 shares);
+        external returns (uint256 shares);
 
     function withdrawBasin(
         address basin,
         address asset,
         uint256 maxAmount,
         uint256 minConversionRate
-    ) external virtual returns (uint256 assetsWithdrawn);
+    ) external returns (uint256 assetsWithdrawn);
 
-    function LIMIT_BASIN_DEPOSIT() external pure virtual returns (bytes32);
+    function LIMIT_BASIN_DEPOSIT() external pure returns (bytes32);
 
-    function LIMIT_BASIN_WITHDRAW() external pure virtual returns (bytes32);
+    function LIMIT_BASIN_WITHDRAW() external pure returns (bytes32);
+
+    function getBasinDepositRateLimit(address basin, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getBasinWithdrawRateLimit(address basin, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** CCTPFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function getCCTPMaxFeeCap() external view virtual returns (uint256);
+    function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
 
-    function LIMIT_USDC_TO_CCTP() external pure virtual returns (bytes32);
+    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
 
-    function LIMIT_USDC_TO_DOMAIN() external pure virtual returns (bytes32);
+    function setCCTPToCCTPRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function getCCTPMintRecipient(uint32 destinationDomain) external view virtual returns (bytes32);
+    function setCCTPToDomainRateLimit(
+        uint32  destinationDomain,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap) external virtual;
-
-    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external virtual;
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external virtual;
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external;
 
     function transferUSDCToCCTPWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
-        external virtual;
+        external;
+
+    function LIMIT_USDC_TO_CCTP() external pure returns (bytes32);
+
+    function LIMIT_USDC_TO_DOMAIN() external pure returns (bytes32);
+
+    function getCCTPMaxFeeCap() external view returns (uint256);
+
+    function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
+
+    function getCCTPToDomainRateLimit(uint32 destinationDomain)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function CCTPToCCTPRateLimit() external view returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** CentrifugeFacet actions                                                                ***/
     /**********************************************************************************************/
 
-    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external virtual;
+    function setCentrifugeRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
-    function cancelCentrifugeDepositRequest(address token) external virtual;
+    function setCentrifugeTransferRateLimit(
+        address token,
+        uint16  centrifugeId,
+        address spoke,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function claimCentrifugeCancelDepositRequest(address token) external virtual;
+    function cancelCentrifugeDepositRequest(address token) external;
 
-    function cancelCentrifugeRedeemRequest(address token) external virtual;
+    function claimCentrifugeCancelDepositRequest(address token) external;
 
-    function claimCentrifugeCancelRedeemRequest(address token) external virtual;
+    function cancelCentrifugeRedeemRequest(address token) external;
+
+    function claimCentrifugeCancelRedeemRequest(address token) external;
 
     function transferSharesCentrifuge(address token, uint128 amount, uint16 centrifugeId)
         external
-        payable
-        virtual;
+        payable;
 
-    function LIMIT_CENTRIFUGE_TRANSFER() external pure virtual returns (bytes32); // NOTE: DEPOSIT, REDEEM keys will be reused from ERC7450Facet wiring
+    // NOTE: DEPOSIT, REDEEM keys will be reused from ERC7450Facet wiring
+    function LIMIT_CENTRIFUGE_TRANSFER() external pure returns (bytes32);
 
-    function getCentrifugeRecipient(uint16 centrifugeId) external view virtual returns (bytes32);
+    function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
+
+    function getCentrifugeTransferRateLimit(address token, uint16 centrifugeId, address spoke)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** CurveFacet actions                                                                     ***/
     /**********************************************************************************************/
 
-    function addLiquidityCurve(address pool, uint256[] calldata depositAmounts, uint256 minLpAmount)
-        external virtual returns (uint256 shares);
+    function setCurveMaxSlippage(address pool, uint256 maxSlippage) external;
 
-    function getCurveMaxSlippage(address pool) external view virtual returns (uint256);
+    function setCurveDepositRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_CURVE_DEPOSIT() external pure virtual returns (bytes32);
+    function setCurveSwapRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_CURVE_SWAP() external pure virtual returns (bytes32);
-
-    function LIMIT_CURVE_WITHDRAW() external pure virtual returns (bytes32);
-
-    function removeLiquidityCurve(
-        address            pool,
-        uint256            lpBurnAmount,
-        uint256[] calldata minWithdrawAmounts
-    ) external virtual returns (uint256[] memory withdrawnTokens);
-
-    function setCurveMaxSlippage(address pool, uint256 maxSlippage) external virtual;
+    function setCurveWithdrawRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     function swapCurve(
         address pool,
@@ -116,229 +227,464 @@ abstract contract IMainnetControllerFull is IController, Controller {
         uint256 outputIndex,
         uint256 amountIn,
         uint256 minAmountOut
-    ) external virtual returns (uint256 amountOut);
+    )
+        external
+        returns (uint256 amountOut);
+
+    function addLiquidityCurve(address pool, uint256[] calldata depositAmounts, uint256 minLpAmount)
+        external
+        returns (uint256 shares);
+
+    function removeLiquidityCurve(
+        address            pool,
+        uint256            lpBurnAmount,
+        uint256[] calldata minWithdrawAmounts
+    )
+        external
+        returns (uint256[] memory withdrawnTokens);
+
+    function LIMIT_CURVE_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_CURVE_SWAP() external pure returns (bytes32);
+
+    function LIMIT_CURVE_WITHDRAW() external pure returns (bytes32);
+
+    function getCurveMaxSlippage(address pool) external view returns (uint256);
+
+    function getCurveDepositRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getCurveSwapRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getCurveWithdrawRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** DaiUsdsFacet actions                                                                   ***/
     /**********************************************************************************************/
 
-    function swapUSDSToDAI(uint256 usdsAmount) external virtual;
+    function swapUSDSToDAI(uint256 usdsAmount) external;
 
-    function swapDAIToUSDS(uint256 daiAmount) external virtual;
+    function swapDAIToUSDS(uint256 daiAmount) external;
 
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
+
+    function setERC4626DepositRateLimit(
+        address token,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function setERC4626WithdrawRateLimit(
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     function depositERC4626(address token, uint256 amount, uint256 minSharesOut)
         external
-        virtual
+        returns (uint256 shares);
+
+    function withdrawERC4626(address token, uint256 amount, uint256 maxSharesIn)
+        external
         returns (uint256 shares);
 
     function redeemERC4626(address token, uint256 shares, uint256 minAssetsOut)
         external
-        virtual returns (uint256 assets);
+        returns (uint256 assets);
 
-    function setMaxExchangeRate(
-        address token,
-        uint256 shares,
-        uint256 maxExpectedAssets
-    )
+    function EXCHANGE_RATE_PRECISION() external pure returns (uint256);
+
+    function LIMIT_4626_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_4626_WITHDRAW() external pure returns (bytes32);
+
+    function maxExchangeRates(address token) external view returns (uint256);
+
+    function getERC4626DepositRateLimit(address token, address asset)
         external
-        virtual;
+        view
+        returns (IRateLimits.RateLimitData memory);
 
-    function withdrawERC4626(address token, uint256 amount, uint256 maxSharesIn)
+    function getERC4626WithdrawRateLimit(address token)
         external
-        virtual
-        returns (uint256 shares);
-
-    function EXCHANGE_RATE_PRECISION() external pure virtual returns (uint256);
-
-    function LIMIT_4626_DEPOSIT() external pure virtual returns (bytes32);
-
-    function LIMIT_4626_WITHDRAW() external pure virtual returns (bytes32);
-
-    function maxExchangeRates(address token) external view virtual returns (uint256);
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** ERC7540Facet actions                                                                   ***/
     /**********************************************************************************************/
 
-    function claimDepositERC7540(address token) external virtual;
+    function setERC7540DepositRateLimit(
+        address token,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function claimRedeemERC7540(address token) external virtual;
+    function setERC7540RedeemRateLimit(
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function requestDepositERC7540(address token, uint256 amount) external virtual;
+    function requestDepositERC7540(address token, uint256 amount) external;
 
-    function requestRedeemERC7540(address token, uint256 shares) external virtual;
+    function claimDepositERC7540(address token) external;
 
-    function LIMIT_7540_DEPOSIT() external pure virtual returns (bytes32);
+    function requestRedeemERC7540(address token, uint256 shares) external;
 
-    function LIMIT_7540_REDEEM() external pure virtual returns (bytes32);
+    function claimRedeemERC7540(address token) external;
+
+    function LIMIT_7540_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_7540_REDEEM() external pure returns (bytes32);
+
+    function getERC7540DepositRateLimit(address token, address asset)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getERC7540RedeemRateLimit(address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** FarmFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function LIMIT_FARM_DEPOSIT() external pure virtual returns (bytes32);
+    function setFarmDepositRateLimit(
+        address farm,
+        address stakingToken,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_FARM_WITHDRAW() external pure virtual returns (bytes32);
+    function setFarmWithdrawRateLimit(
+        address farm,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function claimRewardFromFarm(address farm) external virtual returns (uint256 reward);
+    function depositToFarm(address farm, uint256 amount) external;
 
-    function depositToFarm(address farm, uint256 amount) external virtual;
+    function claimRewardFromFarm(address farm) external returns (uint256 reward);
 
-    function withdrawFromFarm(address farm, uint256 amount) external virtual returns (uint256 reward);
+    function withdrawFromFarm(address farm, uint256 amount) external returns (uint256 reward);
+
+    function LIMIT_FARM_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_FARM_WITHDRAW() external pure returns (bytes32);
+
+    function getFarmDepositRateLimit(address farm, address stakingToken)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getFarmWithdrawRateLimit(address farm)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
 
-    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
-        external virtual;
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
-    function transferTokenLayerZero(
-        address oftAddress,
-        uint256 amount,
-        uint32 destinationEndpointId
-    ) external payable virtual;
+    function setTransferRateLimit(
+        address oft,
+        uint32  destinationEndpointId,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_LAYERZERO_TRANSFER() external pure virtual returns (bytes32);
+    function transferTokenLayerZero(address oft, uint256 amount, uint32 destinationEndpointId)
+        external
+        payable;
 
-    function layerZeroRecipients(uint32 destinationEndpointId)
-        external view virtual returns (bytes32);
+    function LIMIT_LAYERZERO_TRANSFER() external pure returns (bytes32);
+
+    function layerZeroRecipients(uint32 destinationEndpointId) external view returns (bytes32);
+
+    function getLayerZeroTransferRateLimit(address oft, uint32 destinationEndpointId, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** MapleFacet actions                                                                     ***/
     /**********************************************************************************************/
 
-    function cancelMapleRedemption(address mapleToken, uint256 shares) external virtual;
+    function setMapleRedeemRateLimit(
+        address mapleToken,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function requestMapleRedemption(address mapleToken, uint256 shares) external virtual;
+    function requestMapleRedemption(address mapleToken, uint256 shares) external;
 
-    function LIMIT_MAPLE_REDEEM() external pure virtual returns (bytes32);
+    function cancelMapleRedemption(address mapleToken, uint256 shares) external;
+
+    function LIMIT_MAPLE_REDEEM() external pure returns (bytes32);
+
+    function getMapleRedeemRateLimit(address mapleToken)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
 
-    function setMerklDistributor(address distributor) external virtual;
+    function setMerklDistributor(address distributor) external;
 
-    function toggleOperatorMerkl(address operator) external virtual;
+    function toggleOperatorMerkl(address operator) external;
 
-    function merklDistributor() external view virtual returns (address);
+    function merklDistributor() external view returns (address);
 
     /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
     /**********************************************************************************************/
 
-    function setOTCMaxSlippage(address exchange, uint256 maxSlippage) external virtual;
+    function setOTCMaxSlippage(address exchange, uint256 maxSlippage) external;
 
-    function setOTCBuffer(address exchange, address otcBuffer) external virtual;
+    function setOTCBuffer(address exchange, address otcBuffer) external;
 
-    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external virtual;
+    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external;
 
-    function setOTCWhitelistedAsset(
+    function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted) external;
+
+    function setOTCSwapRateLimit(
         address exchange,
-        address asset,
-        bool isWhitelisted
-    ) external virtual;
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function otcSend(address exchange, address assetToSend, uint256 amount) external virtual;
+    function otcSend(address exchange, address assetToSend, uint256 amount) external;
 
-    function otcClaim(address exchange, address assetToClaim) external virtual;
+    function otcClaim(address exchange, address assetToClaim) external;
 
-    function LIMIT_OTC_SWAP() external pure virtual returns (bytes32);
+    function LIMIT_OTC_SWAP() external pure returns (bytes32);
 
-    function getOtcClaimWithRecharge(address exchange) external view virtual returns (uint256);
+    function getOTCBuffer(address exchange) external view returns (address);
 
-    function isOtcSwapReady(address exchange) external view virtual returns (bool);
+    function getOTCMaxSlippage(address exchange) external view returns (uint256);
+
+    function getOTCRechargeRate(address exchange) external view returns (uint256);
+
+    function otcWhitelistedAssets(address exchange, address asset) external view returns (bool);
 
     function otcs(address exchange)
         external
         view
-        virtual
         returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
 
-    function otcWhitelistedAssets(
-        address exchange,
-        address asset
-    ) external view virtual returns (bool);
+    function getOtcClaimWithRecharge(address exchange) external view returns (uint256);
+
+    function isOtcSwapReady(address exchange) external view returns (bool);
+
+    function getOTCSwapRateLimit(address exchange)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** PendleFacet actions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_PENDLE_PT_REDEEM() external pure virtual returns (bytes32);
-
-    function redeemPendlePT(
+    function setPendleRedeemRateLimit(
         address pendleMarket,
-        uint256 pyAmountIn,
-        uint256 minAmountOut
-    ) external virtual;
+        address pt,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function redeemPendlePT(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
+        external;
+
+    function LIMIT_PENDLE_PT_REDEEM() external pure returns (bytes32);
+
+    function getPendleRedeemRateLimit(address pendleMarket, address pt)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** PSMFacet actions                                                                       ***/
     /**********************************************************************************************/
 
-    function LIMIT_USDS_TO_USDC() external pure virtual returns (bytes32);
+    function setPSMUSDSToUSDCSwapRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function psmTo18ConversionFactor() external view virtual returns (uint256);
+    function swapUSDSToUSDC(uint256 usdcAmount) external;
 
-    function swapUSDSToUSDC(uint256 usdcAmount) external virtual;
+    function swapUSDCToUSDS(uint256 usdcAmount) external;
 
-    function swapUSDCToUSDS(uint256 usdcAmount) external virtual;
+    function LIMIT_USDS_TO_USDC() external pure returns (bytes32);
+
+    function psmTo18ConversionFactor() external view returns (uint256);
+
+    function PSMUSDSToUSDCSwapRateLimit() external view returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** SparkVaultFacet actions                                                                ***/
     /**********************************************************************************************/
 
-    function LIMIT_SPARK_VAULT_TAKE() external pure virtual returns (bytes32);
+    function setSparkVaultTakeRateLimit(
+        address sparkVault,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function takeFromSparkVault(address sparkVault, uint256 assetAmount) external virtual;
+    function takeFromSparkVault(address sparkVault, uint256 assetAmount) external;
+
+    function LIMIT_SPARK_VAULT_TAKE() external pure returns (bytes32);
+
+    function getSparkVaultTakeRateLimit(address sparkVault)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** SuperstateFacet actions                                                                ***/
     /**********************************************************************************************/
 
-    function LIMIT_SUPERSTATE_SUBSCRIBE() external pure virtual returns (bytes32);
+    function setSuperstateSubscribeRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function subscribeSuperstate(uint256 usdcAmount) external virtual;
+    function subscribeSuperstate(uint256 usdcAmount) external;
+
+    function LIMIT_SUPERSTATE_SUBSCRIBE() external pure returns (bytes32);
+
+    function getSuperstateSubscribeRateLimit()
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
 
-    function LIMIT_ASSET_TRANSFER() external pure virtual returns (bytes32);
+    function setTransferAssetTransferRateLimit(
+        address asset,
+        address destination,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function transferAsset(address asset, address destination, uint256 amount) external virtual;
+    function transferAsset(address asset, address destination, uint256 amount) external;
+
+    function LIMIT_ASSET_TRANSFER() external pure returns (bytes32);
+
+    function getTransferAssetTransferRateLimit(address asset, address destination)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** UniswapV3Facet actions                                                                 ***/
     /**********************************************************************************************/
 
-    function addLiquidityUniswapV3(
-        address                      pool,
-        uint256                      tokenId,
-        IUniswapV3Facet.Ticks        memory ticks,
-        IUniswapV3Facet.TokenAmounts memory target,
-        IUniswapV3Facet.TokenAmounts memory min,
-        uint256                      deadline
-    )
-        external
-        virtual
-        returns (uint256 tokenId_, uint128 liquidity_, IUniswapV3Facet.TokenAmounts memory amounts_);
+    function setUniswapV3MaxSlippage(address pool, uint256 maxSlippage) external;
 
-    function removeLiquidityUniswapV3(
-        address                      pool,
-        uint256                      tokenId,
-        uint128                      liquidity,
-        IUniswapV3Facet.TokenAmounts memory min,
-        uint256                      deadline
+    function setUniswapV3PoolMaxTickDelta(address pool, uint24 maxTickDelta) external;
+
+    function setUniswapV3AddLiquidityLowerTickBound(address pool, int24 lowerTickBound) external;
+
+    function setUniswapV3AddLiquidityUpperTickBound(address pool, int24 upperTickBound) external;
+
+    function setUniswapV3TWAPSecondsAgo(address pool, uint32 twapSecondsAgo) external;
+
+    function setUniswapV3DepositRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
     )
-        external
-        virtual
-        returns (IUniswapV3Facet.TokenAmounts memory amounts);
+        external;
+
+    function setUniswapV3SwapRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function setUniswapV3WithdrawRateLimit(
+        address pool,
+        address token,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     function swapUniswapV3(
         address pool,
@@ -348,56 +694,101 @@ abstract contract IMainnetControllerFull is IController, Controller {
         uint24  tickDelta
     )
         external
-        virtual
         returns (uint256 amountOut);
 
-    function setUniswapV3MaxSlippage(address pool, uint256 maxSlippage) external virtual;
+    function addLiquidityUniswapV3(
+        address                               pool,
+        uint256                               tokenId,
+        IUniswapV3Facet.Ticks        calldata ticks,
+        IUniswapV3Facet.TokenAmounts calldata target,
+        IUniswapV3Facet.TokenAmounts calldata min,
+        uint256                               deadline
+    )
+        external
+        returns (uint256, uint128, IUniswapV3Facet.TokenAmounts memory);
 
-    function setUniswapV3PoolMaxTickDelta(address pool, uint24 maxTickDelta) external virtual;
+    function removeLiquidityUniswapV3(
+        address                               pool,
+        uint256                               tokenId,
+        uint128                               liquidity,
+        IUniswapV3Facet.TokenAmounts calldata min,
+        uint256                               deadline
+    )
+        external
+        returns (IUniswapV3Facet.TokenAmounts memory);
 
-    function setUniswapV3AddLiquidityLowerTickBound(address pool, int24 lowerTickBound) external virtual;
+    function LIMIT_UNISWAP_V3_DEPOSIT() external pure returns (bytes32);
 
-    function setUniswapV3AddLiquidityUpperTickBound(address pool, int24 upperTickBound) external virtual;
+    function LIMIT_UNISWAP_V3_SWAP() external pure returns (bytes32);
 
-    function setUniswapV3TWAPSecondsAgo(address pool, uint32 twapSecondsAgo) external virtual;
+    function LIMIT_UNISWAP_V3_WITHDRAW() external pure returns (bytes32);
 
-    function LIMIT_UNISWAP_V3_DEPOSIT() external pure virtual returns (bytes32);
+    function getUniswapV3MaxSlippage(address pool) external view returns (uint256);
 
-    function LIMIT_UNISWAP_V3_SWAP() external pure virtual returns (bytes32);
+    function getUniswapV3PoolMaxTickDelta(address pool) external view returns (uint24);
 
-    function LIMIT_UNISWAP_V3_WITHDRAW() external pure virtual returns (bytes32);
+    function getUniswapV3AddLiquidityTickBounds(address pool)
+        external
+        view
+        returns (int24 lower, int24 upper);
 
-    function getUniswapV3MaxSlippage(address pool) external view virtual returns (uint256);
+    function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
 
-    function getUniswapV3PoolMaxTickDelta(address pool) external view virtual returns (uint24);
+    function getUniswapV3DepositRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
-    function getUniswapV3AddLiquidityTickBounds(address pool) external view virtual returns (int24 lower, int24 upper);
+    function getUniswapV3SwapRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
-    function getUniswapV3TWAPSecondsAgo(address pool) external view virtual returns (uint32);
+    function getUniswapV3WithdrawRateLimit(address pool, address token)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
     /**********************************************************************************************/
 
-    function decreaseLiquidityUniswapV4(
-        bytes32 poolId,
-        uint256 tokenId,
-        uint128 liquidityDecrease,
-        uint128 amount0Min,
-        uint128 amount1Min
-    )
-        external
-        virtual;
+    function setUniswapV4MaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
-    function increaseLiquidityUniswapV4(
+    function setUniswapV4TickLimits(
         bytes32 poolId,
-        uint256 tokenId,
-        uint128 liquidityIncrease,
-        uint128 amount0Max,
-        uint128 amount1Max
+        int24   tickLowerMin,
+        int24   tickUpperMax,
+        uint24  maxTickSpacing
     )
-        external
-        virtual;
+        external;
+
+    function setUniswapV4DepositRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function setUniswapV4SwapRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    function setUniswapV4WithdrawRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     function mintPositionUniswapV4(
         bytes32 poolId,
@@ -407,97 +798,158 @@ abstract contract IMainnetControllerFull is IController, Controller {
         uint128 amount0Max,
         uint128 amount1Max
     )
-        external
-        virtual;
+        external;
 
-    function setUniswapV4MaxSlippage(bytes32 poolId, uint256 maxSlippage) external virtual;
-
-    function setUniswapV4TickLimits(
+    function increaseLiquidityUniswapV4(
         bytes32 poolId,
-        int24 tickLowerMin,
-        int24 tickUpperMax,
-        uint24 maxTickSpacing
+        uint256 tokenId,
+        uint128 liquidityIncrease,
+        uint128 amount0Max,
+        uint128 amount1Max
     )
-        external
-        virtual;
+        external;
+
+    function decreaseLiquidityUniswapV4(
+        bytes32 poolId,
+        uint256 tokenId,
+        uint128 liquidityDecrease,
+        uint128 amount0Min,
+        uint128 amount1Min
+    )
+        external;
 
     function swapUniswapV4(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
-        external
-        virtual;
+        external;
 
-    function LIMIT_UNISWAP_V4_DEPOSIT() external pure virtual returns (bytes32);
+    function LIMIT_UNISWAP_V4_DEPOSIT() external pure returns (bytes32);
 
-    function LIMIT_UNISWAP_V4_SWAP() external pure virtual returns (bytes32);
+    function LIMIT_UNISWAP_V4_SWAP() external pure returns (bytes32);
 
-    function LIMIT_UNISWAP_V4_WITHDRAW() external pure virtual returns (bytes32);
+    function LIMIT_UNISWAP_V4_WITHDRAW() external pure returns (bytes32);
 
-    function uniswapV4MaxSlippages(bytes32 poolId) external view virtual returns (uint256);
+    function uniswapV4MaxSlippages(bytes32 poolId) external view returns (uint256);
 
     function uniswapV4TickLimits(bytes32 poolId)
         external
         view
-        virtual
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+
+    function getUniswapV4DepositRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getUniswapV4SwapRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getUniswapV4WithdrawRateLimit(bytes32 poolId)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** USDEFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function LIMIT_USDE_BURN() external view virtual returns (bytes32);
+    function setUSDEBurnRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_USDE_MINT() external view virtual returns (bytes32);
+    function setUSDEMintRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_SUSDE_COOLDOWN() external view virtual returns (bytes32);
+    function setUSDECooldownRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function cooldownAssetsSUSDe(
-        uint256 usdeAmount
-    ) external virtual returns (uint256 cooldownShares);
+    function setDelegatedSigner(address delegatedSigner) external;
 
-    function cooldownSharesSUSDe(
-        uint256 susdeAmount
-    ) external virtual returns (uint256 cooldownAssets);
+    function removeDelegatedSigner(address delegatedSigner) external;
 
-    function prepareUSDeMint(uint256 usdcAmount) external virtual;
+    function prepareUSDeMint(uint256 usdcAmount) external;
 
-    function prepareUSDeBurn(uint256 usdeAmount) external virtual;
+    function prepareUSDeBurn(uint256 usdeAmount) external;
 
-    function removeDelegatedSigner(address delegatedSigner) external virtual;
+    function cooldownAssetsSUSDe(uint256 usdeAmount) external returns (uint256 cooldownShares);
 
-    function setDelegatedSigner(address delegatedSigner) external virtual;
+    function cooldownSharesSUSDe(uint256 susdeAmount) external returns (uint256 cooldownAssets);
 
-    function unstakeSUSDe() external virtual;
+    function unstakeSUSDe() external;
+
+    function LIMIT_USDE_BURN() external view returns (bytes32);
+
+    function LIMIT_USDE_MINT() external view returns (bytes32);
+
+    function LIMIT_SUSDE_COOLDOWN() external view returns (bytes32);
+
+    function USDEBurnRateLimit() external view returns (IRateLimits.RateLimitData memory);
+
+    function USDEMintRateLimit() external view returns (IRateLimits.RateLimitData memory);
+
+    function USDECooldownRateLimit() external view returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** USDSFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function LIMIT_USDS_MINT() external pure virtual returns (bytes32);
+    function setUSDSVault(address vault) external;
 
-    function mintUSDS(uint256 usdsAmount) external virtual;
+    function setUSDSMintRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function burnUSDS(uint256 usdsAmount) external virtual;
+    function mintUSDS(uint256 usdsAmount) external;
 
-    function setUSDSVault(address vault) external virtual;
+    function burnUSDS(uint256 usdsAmount) external;
 
-    function usdsVault() external view virtual returns (address);
+    function LIMIT_USDS_MINT() external pure returns (bytes32);
+
+    function usdsVault() external view returns (address);
+
+    function USDSMintRateLimit() external view returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** WEETHFacet actions                                                                     ***/
     /**********************************************************************************************/
 
-    function LIMIT_WEETH_DEPOSIT() external pure virtual returns (bytes32);
+    function setWEETHDepositRateLimit(
+        address weethModule,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_WEETH_REQUEST_WITHDRAW() external pure virtual returns (bytes32);
+    function setWEETHWithdrawRateLimit(
+        address weethModule,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function depositToWeETH(uint256 amount, uint256 minSharesOut)
-        external
-        virtual
-        returns (uint256 shares);
-
-    function claimWithdrawalFromWeETH(address weethModule, uint256 requestId)
-        external
-        virtual
-        returns (uint256 ethReceived);
+    function depositToWeETH(uint256 amount, uint256 minSharesOut) external returns (uint256 shares);
 
     function requestWithdrawFromWeETH(
         address weethModule,
@@ -505,30 +957,69 @@ abstract contract IMainnetControllerFull is IController, Controller {
         uint256 minEETHShares
     )
         external
-        virtual
         returns (uint256 requestId);
+
+    function claimWithdrawalFromWeETH(address weethModule, uint256 requestId)
+        external
+        returns (uint256 ethReceived);
+
+    function LIMIT_WEETH_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_WEETH_REQUEST_WITHDRAW() external pure returns (bytes32);
+
+    function getWEETHDepositRateLimit(address weethModule)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
+
+    function getWEETHWithdrawRateLimit(address weethModule)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
     /**********************************************************************************************/
     /*** WrapProxyETHFacet actions                                                              ***/
     /**********************************************************************************************/
 
-    function wrapAllProxyETH() external virtual;
+    function wrapAllProxyETH() external;
 
     /**********************************************************************************************/
     /*** WSTETHFacet actions                                                                    ***/
     /**********************************************************************************************/
 
-    function LIMIT_WSTETH_DEPOSIT() external pure virtual returns (bytes32);
+    function setWSTETHDepositRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function LIMIT_WSTETH_REQUEST_WITHDRAW() external pure virtual returns (bytes32);
+    function setWSTETHRequestWithdrawRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
-    function depositToWstETH(uint256 amount) external virtual;
-
-    function claimWithdrawalFromWstETH(uint256 requestId) external virtual;
+    function depositToWstETH(uint256 amount) external;
 
     function requestWithdrawFromWstETH(uint256 amountToRedeem)
         external
-        virtual
         returns (uint256[] memory requestIds);
+
+    function claimWithdrawalFromWstETH(uint256 requestId) external;
+
+    function LIMIT_WSTETH_DEPOSIT() external pure returns (bytes32);
+
+    function LIMIT_WSTETH_REQUEST_WITHDRAW() external pure returns (bytes32);
+
+    function WSTETHDepositRateLimit() external view returns (IRateLimits.RateLimitData memory);
+
+    function WSTETHRequestWithdrawRateLimit()
+        external
+        view
+        returns (IRateLimits.RateLimitData memory);
 
 }

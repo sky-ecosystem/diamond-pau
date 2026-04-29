@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -28,6 +30,13 @@ interface ICurveFacet is IFacet {
         uint256           valueDeposited,
         uint256[]         depositAmounts
     );
+
+    /**
+     * @notice Emitted when the deposit rate limit is set.
+     * @param  key  Rate limit key.
+     * @param  pool Address of the Curve pool.
+     */
+    event CurveDepositRateLimitSet(bytes32 indexed key, address indexed pool);
 
     /**
      * @notice Emitted when the max slippage for a Curve pool is updated.
@@ -66,6 +75,20 @@ interface ICurveFacet is IFacet {
         uint256         amountOut
     );
 
+    /**
+     * @notice Emitted when the swap rate limit is set.
+     * @param  key  Rate limit key.
+     * @param  pool Address of the Curve pool.
+     */
+    event CurveSwapRateLimitSet(bytes32 indexed key, address indexed pool);
+
+    /**
+     * @notice Emitted when the withdraw rate limit is set.
+     * @param  key  Rate limit key.
+     * @param  pool Address of the Curve pool.
+     */
+    event CurveWithdrawRateLimitSet(bytes32 indexed key, address indexed pool);
+
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
@@ -97,11 +120,62 @@ interface ICurveFacet is IFacet {
         returns (uint256[] memory withdrawnTokens);
 
     /**
+     * @notice Sets the deposit rate limit for a Curve pool.
+     * @param  pool        Address of the Curve pool.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setDepositRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Sets the max slippage for a Curve pool.
      * @param  pool        Address of the Curve pool.
      * @param  maxSlippage Max slippage in 1e18 precision (1e18 = no slippage).
      */
     function setMaxSlippage(address pool, uint256 maxSlippage) external;
+
+    /**
+     * @notice Sets the swap rate limit for a Curve pool.
+     * @param  pool        Address of the Curve pool.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setSwapRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the withdraw rate limit for a Curve pool.
+     * @param  pool        Address of the Curve pool.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setWithdrawRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
 
     /**
      * @notice Swaps tokens within a Curve pool.
@@ -126,22 +200,13 @@ interface ICurveFacet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for Curve deposit operations, combined with the pool address. Rate
-     *         limited by 18-decimal normalized USD value.
-     */
+    /// @notice Rate limit key prefix for deposit operations.
     function LIMIT_DEPOSIT() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Curve swap operations, combined with the pool address. Rate
-     *         limited by 18-decimal normalized USD value.
-     */
+    /// @notice Rate limit key prefix for swap operations.
     function LIMIT_SWAP() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for Curve withdraw operations, combined with the pool address. Rate
-     *         limited by 18-decimal normalized USD value.
-     */
+    /// @notice Rate limit key prefix for withdraw operations.
     function LIMIT_WITHDRAW() external pure returns (bytes32);
 
     /**********************************************************************************************/
@@ -149,10 +214,40 @@ interface ICurveFacet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Returns the deposit rate limit for a Curve pool.
+     * @param  pool Address of the Curve pool.
+     * @return data Rate limit data.
+     */
+    function getDepositRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
      * @notice Returns the configured max slippage for a Curve pool.
      * @param  pool        Address of the Curve pool.
      * @return maxSlippage Max slippage in 1e18 precision. Zero means not set.
      */
     function getMaxSlippage(address pool) external view returns (uint256 maxSlippage);
+
+    /**
+     * @notice Returns the swap rate limit for a Curve pool.
+     * @param  pool Address of the Curve pool.
+     * @return data Rate limit data.
+     */
+    function getSwapRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the withdraw rate limit for a Curve pool.
+     * @param  pool Address of the Curve pool.
+     * @return data Rate limit data.
+     */
+    function getWithdrawRateLimit(address pool)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }

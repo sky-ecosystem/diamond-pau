@@ -4,6 +4,7 @@ pragma solidity ^0.8.34;
 import {
     makeAddressAddressKey,
     makeAddressKey,
+    makeAddressUint16AddressKey,
     makeAddressUint16Key
 } from "../../libraries/RateLimitHelpers.sol";
 
@@ -121,6 +122,31 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         );
     }
 
+    /// @inheritdoc ICentrifugeFacet
+    function setTransferRateLimit(
+        address token,
+        uint16  centrifugeId,
+        address spoke,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(token != address(0), "CentrifugeFacet/token-zero-address");
+        require(spoke != address(0), "CentrifugeFacet/spoke-zero-address");
+
+        bytes32 key = _getTransferRateLimitKey(token, centrifugeId, spoke);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit CentrifugeTransferRateLimitSet(key, token, centrifugeId, spoke);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -132,7 +158,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _rateLimitExists(_getDepositRateLimitKey(token));
+        _requireRateLimitExists(_getDepositRateLimitKey(token, IERC4626Like(token).asset()));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -152,7 +178,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _rateLimitExists(_getDepositRateLimitKey(token));
+        _requireRateLimitExists(_getDepositRateLimitKey(token, IERC4626Like(token).asset()));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -174,7 +200,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _rateLimitExists(_getRedeemRateLimitKey(token));
+        _requireRateLimitExists(_getRedeemRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -194,7 +220,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        _rateLimitExists(_getRedeemRateLimitKey(token));
+        _requireRateLimitExists(_getRedeemRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -217,13 +243,6 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressUint16Key(LIMIT_TRANSFER, token, centrifugeId),
-            amount
-        );
-
         bytes32 recipient = _getFacetStorage().recipients[centrifugeId];
 
         require(recipient != 0, "CentrifugeFacet/id-not-configured");
@@ -231,8 +250,10 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         address spoke
             = IAsyncRedeemManagerLike(ICentrifugeV3VaultLike(token).baseManager()).spoke();
 
+        _decreaseRateLimit(_getTransferRateLimitKey(token, centrifugeId, spoke), amount);
+
         // Initiate cross-chain transfer via the specific spoke address.
-        IALMProxy($.proxy).doCallWithValue{value: msg.value}(
+        IALMProxy(_getSharedControllerStorage().proxy).doCallWithValue{value: msg.value}(
             spoke,
             abi.encodeCall(
                 ISpokeLike.crosschainTransferShares,
@@ -260,25 +281,38 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         return _getFacetStorage().recipients[centrifugeId];
     }
 
+    /// @inheritdoc ICentrifugeFacet
+    function getTransferRateLimit(address token, uint16 centrifugeId, address spoke)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getTransferRateLimitKey(token, centrifugeId, spoke));
+    }
+
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _getDepositRateLimitKey(address token) internal view returns (bytes32) {
-        return makeAddressAddressKey(LIMIT_DEPOSIT, IERC4626Like(token).asset(), token);
+    function _getDepositRateLimitKey(address token, address asset) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, asset, token);
     }
 
-    function _getRedeemRateLimitKey(address token) internal view returns (bytes32) {
+    function _getRedeemRateLimitKey(address token) internal pure returns (bytes32) {
         return makeAddressKey(LIMIT_REDEEM, token);
     }
 
-    function _rateLimitExists(bytes32 key) internal view {
-        require(
-            IRateLimits(
-                _getSharedControllerStorage().rateLimits
-            ).getRateLimitData(key).maxAmount > 0,
-            "CentrifugeFacet/invalid-action"
-        );
+    function _getTransferRateLimitKey(address token, uint16 centrifugeId, address spoke)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return makeAddressUint16AddressKey(LIMIT_TRANSFER, token, centrifugeId, spoke);
+    }
+
+    function _requireRateLimitExists(bytes32 key) internal view {
+        require(_rateLimitExists(key), "CentrifugeFacet/invalid-action");
     }
 
 }

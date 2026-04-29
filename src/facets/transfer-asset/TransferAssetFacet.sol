@@ -31,6 +31,34 @@ contract TransferAssetFacet is ITransferAssetFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc ITransferAssetFacet
+    function setTransferRateLimit(
+        address asset,
+        address destination,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(asset != address(0),       "TransferAssetFacet/asset-zero-address");
+        require(destination != address(0), "TransferAssetFacet/destination-zero-address");
+
+        bytes32 key = _getTransferRateLimitKey(asset, destination);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit TransferAssetRateLimitSet(key, asset, destination);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -41,14 +69,9 @@ contract TransferAssetFacet is ITransferAssetFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
+        _decreaseRateLimit(_getTransferRateLimitKey(asset, destination), amount);
 
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressKey(LIMIT_TRANSFER, asset, destination),
-            amount
-        );
-
-        bytes memory returnData = IALMProxy($.proxy).doCall(
+        bytes memory returnData = IALMProxy(_getSharedControllerStorage().proxy).doCall(
             asset,
             abi.encodeCall(IERC20Like.transfer, (destination, amount))
         );
@@ -58,7 +81,33 @@ contract TransferAssetFacet is ITransferAssetFacet, Facet {
             "TransferAssetFacet/transfer-failed"
         );
 
-        emit TransferAssetFacetTransfer(asset, destination, amount);
+        emit TransferAssetTransfer(asset, destination, amount);
+    }
+
+    /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc ITransferAssetFacet
+    function getTransferRateLimit(address asset, address destination)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getTransferRateLimitKey(asset, destination));
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getTransferRateLimitKey(address asset, address destination)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(LIMIT_TRANSFER, asset, destination);
     }
 
 }

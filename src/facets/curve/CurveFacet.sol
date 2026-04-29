@@ -106,6 +106,72 @@ contract CurveFacet is ICurveFacet, Facet {
         emit CurveMaxSlippageSet(pool, _getFacetStorage().maxSlippages[pool] = maxSlippage);
     }
 
+    /// @inheritdoc ICurveFacet
+    function setDepositRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0), "CurveFacet/pool-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(pool);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit CurveDepositRateLimitSet(key, pool);
+    }
+
+    /// @inheritdoc ICurveFacet
+    function setSwapRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0), "CurveFacet/pool-zero-address");
+
+        bytes32 key = _getSwapRateLimitKey(pool);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit CurveSwapRateLimitSet(key, pool);
+    }
+
+    /// @inheritdoc ICurveFacet
+    function setWithdrawRateLimit(
+        address pool,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(pool != address(0), "CurveFacet/pool-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(pool);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit CurveWithdrawRateLimitSet(key, pool);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -143,7 +209,7 @@ contract CurveFacet is ICurveFacet, Facet {
             "CurveFacet/min-amount-not-met"
         );
 
-        _decreaseRateLimit(LIMIT_SWAP, pool, valueIn);
+        _decreaseRateLimit(_getSwapRateLimitKey(pool), valueIn);
 
         _approve(ICurvePoolLike(pool).coins(inputIndex), pool, amountIn);
 
@@ -202,7 +268,7 @@ contract CurveFacet is ICurveFacet, Facet {
         );
 
         // Reduce the rate limit by the aggregated underlying asset value of the deposit (e.g. USD).
-        _decreaseRateLimit(LIMIT_DEPOSIT, pool, valueDeposited);
+        _decreaseRateLimit(_getDepositRateLimitKey(pool), valueDeposited);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -279,7 +345,7 @@ contract CurveFacet is ICurveFacet, Facet {
         }
         valueWithdrawn /= 1e18;
 
-        _decreaseRateLimit(LIMIT_WITHDRAW, pool, valueWithdrawn);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(pool), valueWithdrawn);
 
         emit CurveRemoveLiquidity(pool, lpBurnAmount, valueWithdrawn, withdrawnTokens);
     }
@@ -291,6 +357,36 @@ contract CurveFacet is ICurveFacet, Facet {
     /// @inheritdoc ICurveFacet
     function getMaxSlippage(address pool) external view override returns (uint256) {
         return _getFacetStorage().maxSlippages[pool];
+    }
+
+    /// @inheritdoc ICurveFacet
+    function getDepositRateLimit(address pool)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(pool));
+    }
+
+    /// @inheritdoc ICurveFacet
+    function getSwapRateLimit(address pool)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getSwapRateLimitKey(pool));
+    }
+
+    /// @inheritdoc ICurveFacet
+    function getWithdrawRateLimit(address pool)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(pool));
     }
 
     /**********************************************************************************************/
@@ -320,14 +416,7 @@ contract CurveFacet is ICurveFacet, Facet {
         totalSwapped /= 1e18;
 
         // Convert the total value moved into an aggregated swap "amount in" by dividing it by 2.
-        _decreaseRateLimit(LIMIT_SWAP, pool, totalSwapped / 2);
-    }
-
-    function _decreaseRateLimit(bytes32 key, address pool, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressKey(key, pool),
-            amount
-        );
+        _decreaseRateLimit(_getSwapRateLimitKey(pool), totalSwapped / 2);
     }
 
     /**********************************************************************************************/
@@ -380,6 +469,18 @@ contract CurveFacet is ICurveFacet, Facet {
 
     function _toNormalizedAmount(uint256 amount, uint256 rate) internal pure returns (uint256) {
         return amount * rate / 1e18;
+    }
+
+    function _getDepositRateLimitKey(address pool) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_DEPOSIT, pool);
+    }
+
+    function _getSwapRateLimitKey(address pool) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_SWAP, pool);
+    }
+
+    function _getWithdrawRateLimitKey(address pool) internal pure returns (bytes32) {
+        return makeAddressKey(LIMIT_WITHDRAW, pool);
     }
 
 }

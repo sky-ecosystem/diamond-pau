@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -27,6 +29,19 @@ interface ICCTPFacet is IFacet {
      * @param  mintRecipient     Bytes32-encoded address that receives minted USDC.
      */
     event CCTPMintRecipientSet(uint32 indexed destinationDomain, bytes32 indexed mintRecipient);
+
+    /**
+     * @notice Emitted when the CCTP to CCTP rate limit is updated.
+     * @param  key Derived key of the rate limit.
+     */
+    event CCTPToCCTPRateLimitSet(bytes32 indexed key);
+
+    /**
+     * @notice Emitted when the CCTP to domain rate limit is updated.
+     * @param  key               Derived key of the rate limit.
+     * @param  destinationDomain CCTP domain identifier for the target chain.
+     */
+    event CCTPToDomainRateLimitSet(bytes32 indexed key, uint32 indexed destinationDomain);
 
     /**
      * @notice Emitted per depositForBurn call for off-chain attestation tracking.
@@ -59,6 +74,38 @@ interface ICCTPFacet is IFacet {
     function setMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
 
     /**
+     * @notice Sets the CCTP to CCTP rate limit.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setToCCTPRateLimit(
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
+     * @notice Sets the CCTP to domain rate limit.
+     * @param  destinationDomain CCTP domain identifier for the target chain.
+     * @param  maxAmount         Maximum amount of the rate limit.
+     * @param  slope             Slope of the rate limit.
+     * @param  lastAmount        Last amount of the rate limit.
+     * @param  lastUpdated       Timestamp of the last update of the rate limit.
+     */
+    function setToDomainRateLimit(
+        uint32  destinationDomain,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
+    /**
      * @notice Transfers USDC to a destination chain via standard CCTP burn (no fee).
      * @param  amount            Amount of USDC to transfer (6-decimal precision).
      * @param  destinationDomain CCTP domain identifier for the target chain.
@@ -80,13 +127,10 @@ interface ICCTPFacet is IFacet {
     /// @notice Always bytes32(0): any relayer can complete the message on the destination chain.
     function DESTINATION_CALLER() external pure returns (bytes32);
 
-    /// @notice Rate limit key for aggregate CCTP volume across all domains.
+    /// @notice Rate limit key prefix for aggregate CCTP volume across all domains.
     function LIMIT_TO_CCTP() external pure returns (bytes32);
 
-    /**
-     * @notice Rate limit key for per-domain CCTP volume, combined with the destination domain to
-     *         form per-domain keys.
-     */
+    /// @notice Rate limit key prefix for per-domain CCTP volume.
     function LIMIT_TO_DOMAIN() external pure returns (bytes32);
 
     /// @notice Always zero. Standard CCTP burns do not incur a fee, so the default max fee is zero.
@@ -120,5 +164,21 @@ interface ICCTPFacet is IFacet {
         external
         view
         returns (bytes32 mintRecipient);
+
+    /**
+     * @notice Returns the configured CCTP to domain rate limit.
+     * @param  destinationDomain CCTP domain identifier.
+     * @return data              Rate limit data.
+     */
+    function getToDomainRateLimit(uint32 destinationDomain)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
+
+    /**
+     * @notice Returns the configured CCTP to CCTP rate limit.
+     * @return data Rate limit data.
+     */
+    function toCCTPRateLimit() external view returns (IRateLimits.RateLimitData memory data);
 
 }

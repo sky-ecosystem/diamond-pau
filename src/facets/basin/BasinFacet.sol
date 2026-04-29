@@ -43,6 +43,58 @@ contract BasinFacet is IBasinFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
+    /*** External Interactive Admin Functions                                                   ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IBasinFacet
+    function setDepositRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(basin != address(0), "BasinFacet/basin-zero-address");
+        require(asset != address(0), "BasinFacet/asset-zero-address");
+
+        bytes32 key = _getDepositRateLimitKey(basin, asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit BasinDepositRateLimitSet(key, basin, asset);
+    }
+
+    /// @inheritdoc IBasinFacet
+    function setWithdrawRateLimit(
+        address basin,
+        address asset,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(basin != address(0), "BasinFacet/basin-zero-address");
+        require(asset != address(0), "BasinFacet/asset-zero-address");
+
+        bytes32 key = _getWithdrawRateLimitKey(basin, asset);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit BasinWithdrawRateLimitSet(key, basin, asset);
+    }
+
+    /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
 
@@ -54,7 +106,7 @@ contract BasinFacet is IBasinFacet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 shares)
     {
-        _decreaseRateLimit(LIMIT_DEPOSIT, basin, asset, amount);
+        _decreaseRateLimit(_getDepositRateLimitKey(basin, asset), amount);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -105,32 +157,45 @@ contract BasinFacet is IBasinFacet, Facet {
             "BasinFacet/min-conversion-rate-not-met"
         );
 
-        _decreaseRateLimit(LIMIT_WITHDRAW, basin, asset, assetsWithdrawn);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(basin, asset), assetsWithdrawn);
 
-        emit BasinWithdraw(
-            basin,
-            asset,
-            assetsWithdrawn,
-            sharesBurned
-        );
+        emit BasinWithdraw(basin, asset, assetsWithdrawn, sharesBurned);
     }
 
     /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _decreaseRateLimit(
-        bytes32 key,
-        address basin,
-        address asset,
-        uint256 amount
-    )
-        internal
+    /// @inheritdoc IBasinFacet
+    function getDepositRateLimit(address basin, address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
     {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressKey(key, asset, basin),
-            amount
-        );
+        return _getRateLimit(_getDepositRateLimitKey(basin, asset));
+    }
+
+    /// @inheritdoc IBasinFacet
+    function getWithdrawRateLimit(address basin, address asset)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(basin, asset));
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getDepositRateLimitKey(address basin, address asset) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_DEPOSIT, asset, basin);
+    }
+
+    function _getWithdrawRateLimitKey(address basin, address asset) internal pure returns (bytes32) {
+        return makeAddressAddressKey(LIMIT_WITHDRAW, asset, basin);
     }
 
 }

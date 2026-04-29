@@ -173,6 +173,72 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         emit UniswapV4TickLimitsSet(poolId, tickLowerMin, tickUpperMax, maxTickSpacing);
     }
 
+    /// @inheritdoc IUniswapV4Facet
+    function setDepositRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(poolId != bytes32(0), "UniswapV4Facet/zero-pool-id");
+
+        bytes32 key = _getDepositRateLimitKey(poolId);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV4DepositRateLimitSet(key, poolId);
+    }
+
+    /// @inheritdoc IUniswapV4Facet
+    function setSwapRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(poolId != bytes32(0), "UniswapV4Facet/zero-pool-id");
+
+        bytes32 key = _getSwapRateLimitKey(poolId);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV4SwapRateLimitSet(key, poolId);
+    }
+
+    /// @inheritdoc IUniswapV4Facet
+    function setWithdrawRateLimit(
+        bytes32 poolId,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(poolId != bytes32(0), "UniswapV4Facet/zero-pool-id");
+
+        bytes32 key = _getWithdrawRateLimitKey(poolId);
+
+        _setRateLimit(key, maxAmount, slope, lastAmount, lastUpdated);
+
+        emit UniswapV4WithdrawRateLimitSet(key, poolId);
+    }
+
     /**********************************************************************************************/
     /*** External Interactive Relayer Functions                                                 ***/
     /**********************************************************************************************/
@@ -338,7 +404,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         // Perform rate limit decrease.
         // NOTE: Rate limit decrease does not account for the net amount of tokenIn actually taken.
-        _decreaseRateLimit(LIMIT_SWAP, poolId, normalizedAmountIn);
+        _decreaseRateLimit(_getSwapRateLimitKey(poolId), normalizedAmountIn);
 
         address tokenOut = tokenIn == Currency.unwrap(poolKey.currency0)
             ? Currency.unwrap(poolKey.currency1)
@@ -388,6 +454,36 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         TickLimits storage tickLimits = _getFacetStorage().tickLimits[poolId];
 
         return (tickLimits.tickLowerMin, tickLimits.tickUpperMax, tickLimits.maxTickSpacing);
+    }
+
+    /// @inheritdoc IUniswapV4Facet
+    function getDepositRateLimit(bytes32 poolId)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getDepositRateLimitKey(poolId));
+    }
+
+    /// @inheritdoc IUniswapV4Facet
+    function getSwapRateLimit(bytes32 poolId)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getSwapRateLimitKey(poolId));
+    }
+
+    /// @inheritdoc IUniswapV4Facet
+    function getWithdrawRateLimit(bytes32 poolId)
+        external
+        view
+        override
+        returns (IRateLimits.RateLimitData memory data)
+    {
+        return _getRateLimit(_getWithdrawRateLimitKey(poolId));
     }
 
     /**********************************************************************************************/
@@ -448,7 +544,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         // Perform rate limit decrease.
         // NOTE: Rate limit decrease is net of any token0 or token1 received due to fees.
-        _decreaseRateLimit(LIMIT_DEPOSIT, poolId, rateLimitDecrease);
+        _decreaseRateLimit(_getDepositRateLimitKey(poolId), rateLimitDecrease);
 
         // Reset approvals for token0 and token1.
         _approveWithPermit2(token0, positionManager, 0);
@@ -486,7 +582,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         // Perform rate limit decrease.
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
-        _decreaseRateLimit(LIMIT_WITHDRAW, poolId, rateLimitDecrease);
+        _decreaseRateLimit(_getWithdrawRateLimitKey(poolId), rateLimitDecrease);
     }
 
     function _swap(
@@ -512,16 +608,21 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         return uint128(_getProxyBalance(tokenOut) - startingBalance);
     }
 
-    function _decreaseRateLimit(bytes32 key, bytes32 poolId, uint256 amount) internal {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeBytes32Key(key, poolId),
-            amount
-        );
-    }
-
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
+
+    function _getDepositRateLimitKey(bytes32 poolId) internal pure returns (bytes32) {
+        return makeBytes32Key(LIMIT_DEPOSIT, poolId);
+    }
+
+    function _getSwapRateLimitKey(bytes32 poolId) internal pure returns (bytes32) {
+        return makeBytes32Key(LIMIT_SWAP, poolId);
+    }
+
+    function _getWithdrawRateLimitKey(bytes32 poolId) internal pure returns (bytes32) {
+        return makeBytes32Key(LIMIT_WITHDRAW, poolId);
+    }
 
     function _checkTickLimits(bytes32 poolId, int24 tickLower, int24 tickUpper)
         internal

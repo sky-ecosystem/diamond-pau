@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -70,6 +72,13 @@ interface IOTCFacet is IFacet {
      * @param  normalizedRate New recharge rate in 18-decimal normalized value per second.
      */
     event OTCRechargeRateSet(address indexed exchange, uint256 normalizedRate);
+
+    /**
+     * @notice Emitted when the swap rate limit for an exchange is updated.
+     * @param  key      Derived key of the rate limit.
+     * @param  exchange Address of the OTC exchange.
+     */
+    event OTCSwapRateLimitSet(bytes32 indexed key, address indexed exchange);
 
     /**
      * @notice Emitted when assets are sent to an exchange for an OTC swap.
@@ -148,14 +157,28 @@ interface IOTCFacet is IFacet {
      */
     function setRechargeRate(address exchange, uint256 normalizedRate) external;
 
+    /**
+     * @notice Sets the swap rate limit for an exchange.
+     * @param  exchange    Address of the OTC exchange.
+     * @param  maxAmount   Maximum amount of the rate limit.
+     * @param  slope       Slope of the rate limit.
+     * @param  lastAmount  Last amount of the rate limit.
+     * @param  lastUpdated Timestamp of the last update of the rate limit.
+     */
+    function setSwapRateLimit(
+        address exchange,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        external;
+
     /**********************************************************************************************/
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /**
-     * @notice Rate limit key for OTC swap operations, combined with the exchange address to form
-     *         the per-exchange keys. Rate limited by 18-decimal normalized value.
-     */
+    /// @notice Rate limit key prefix for swap operations.
     function LIMIT_SWAP() external pure returns (bytes32);
 
     /**********************************************************************************************/
@@ -179,6 +202,14 @@ interface IOTCFacet is IFacet {
         external
         view
         returns (uint256 claimEligibility);
+
+    /**
+     * @notice Returns whether the exchange is ready for a new swap (i.e.
+     *         `claim + recharge >= normalizedSent * maxSlippage / 1e18`).
+     * @param  exchange Address of the OTC exchange.
+     * @return isReady  True if ready for a new swap.
+     */
+    function getIsSwapReady(address exchange) external view returns (bool isReady);
 
     /**
      * @notice Returns whether an asset is whitelisted for an exchange.
@@ -218,11 +249,13 @@ interface IOTCFacet is IFacet {
         returns (uint256 normalizedSent, uint256 sentTimestamp, uint256 normalizedClaimed);
 
     /**
-     * @notice Returns whether the exchange is ready for a new swap (i.e.
-     *         `claim + recharge >= normalizedSent * maxSlippage / 1e18`).
+     * @notice Returns the configured swap rate limit for an exchange.
      * @param  exchange Address of the OTC exchange.
-     * @return isReady  True if ready for a new swap.
+     * @return data     Rate limit data.
      */
-    function isSwapReady(address exchange) external view returns (bool isReady);
+    function getSwapRateLimit(address exchange)
+        external
+        view
+        returns (IRateLimits.RateLimitData memory data);
 
 }
