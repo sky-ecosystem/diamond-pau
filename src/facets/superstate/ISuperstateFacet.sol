@@ -34,8 +34,11 @@ interface ISuperstateFacet is IFacet {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /// @notice Rate limit key for Superstate subscribe operations.
-    function LIMIT_SUBSCRIBE() external pure returns (bytes32);
+    /**
+     * @notice Returns the derived rate limit key for Superstate subscribe operations.
+     * @return key Derived rate limit key.
+     */
+    function subscribeRateLimitKey() external pure returns (bytes32 key);
 
     /// @notice Address of the USDC token contract (immutable).
     function usdc() external view returns (address);

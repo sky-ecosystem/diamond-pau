@@ -7,8 +7,6 @@ import { ICurveFacet } from "../../src/facets/curve/ICurveFacet.sol";
 
 import { ICurvePoolLike as ICurvePoolLikeLib } from "../../src/facets/curve/CurveFacet.sol";
 
-import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
-
 import { ForkTestBase, ERC20Mock } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -76,9 +74,9 @@ abstract contract Curve_TestBase is ForkTestBase {
             ICurvePoolLike(CURVE_POOL).add_liquidity(amounts, 1e18, address(this));
         }
 
-        curveDepositKey  = makeAddressKey(foreignController.LIMIT_CURVE_DEPOSIT(),  CURVE_POOL);
-        curveSwapKey     = makeAddressKey(foreignController.LIMIT_CURVE_SWAP(),     CURVE_POOL);
-        curveWithdrawKey = makeAddressKey(foreignController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        curveDepositKey  = foreignController.getCurveDepositRateLimitKey(CURVE_POOL);
+        curveSwapKey     = foreignController.getCurveSwapRateLimitKey(CURVE_POOL);
+        curveWithdrawKey = foreignController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.startPrank(SPARK_EXECUTOR);
         rateLimits.setRateLimitData(curveDepositKey,  2_000_000e18, uint256(2_000_000e18) / 1 days);
@@ -235,7 +233,7 @@ contract ForeignController_Curve_AddLiquidity_FailureTests is Curve_TestBase {
     }
 
     function test_addLiquidityCurve_zeroMaxAmount() public {
-        bytes32 curveDeposit = makeAddressKey(foreignController.LIMIT_CURVE_DEPOSIT(), CURVE_POOL);
+        bytes32 curveDeposit = foreignController.getCurveDepositRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_EXECUTOR);
         rateLimits.setRateLimitData(curveDeposit, 0, 0);
@@ -539,7 +537,7 @@ contract ForeignController_Curve_RemoveLiquidity_FailureTests is Curve_TestBase 
     }
 
     function test_removeLiquidityCurve_zeroMaxAmount() public {
-        bytes32 curveWithdraw = makeAddressKey(foreignController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        bytes32 curveWithdraw = foreignController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_EXECUTOR);
         rateLimits.setRateLimitData(curveWithdraw, 0, 0);
@@ -568,7 +566,7 @@ contract ForeignController_Curve_RemoveLiquidity_FailureTests is Curve_TestBase 
 
         vm.revertToState(id);
 
-        bytes32 curveWithdraw = makeAddressKey(foreignController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        bytes32 curveWithdraw = foreignController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         // Set to below boundary
         vm.prank(SPARK_EXECUTOR);
@@ -744,7 +742,7 @@ contract ForeignController_Curve_Swap_FailureTests is Curve_TestBase {
     }
 
     function test_swapCurve_zeroMaxAmount() public {
-        bytes32 curveSwap = makeAddressKey(foreignController.LIMIT_CURVE_SWAP(), CURVE_POOL);
+        bytes32 curveSwap = foreignController.getCurveSwapRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_EXECUTOR);
         rateLimits.setRateLimitData(curveSwap, 0, 0);

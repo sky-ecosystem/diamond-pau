@@ -5,8 +5,6 @@ import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/util
 
 import { ICurveFacet } from "../../src/facets/curve/ICurveFacet.sol";
 
-import { makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
-
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
@@ -42,9 +40,9 @@ abstract contract Curve_TestBase is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        curveDepositKey  = makeAddressKey(mainnetController.LIMIT_CURVE_DEPOSIT(),  CURVE_POOL);
-        curveSwapKey     = makeAddressKey(mainnetController.LIMIT_CURVE_SWAP(),     CURVE_POOL);
-        curveWithdrawKey = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        curveDepositKey  = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
+        curveSwapKey     = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
+        curveWithdrawKey = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveDepositKey,  2_000_000e18, uint256(2_000_000e18) / 1 days);
@@ -173,7 +171,7 @@ contract MainnetController_Curve_AddLiquidity_Tests is Curve_TestBase {
     }
 
     function test_addLiquidityCurve_zeroMaxAmount() external {
-        bytes32 curveDeposit = makeAddressKey(mainnetController.LIMIT_CURVE_DEPOSIT(), CURVE_POOL);
+        bytes32 curveDeposit = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveDeposit, 0, 0);
@@ -494,7 +492,7 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
     }
 
     function test_removeLiquidityCurve_zeroMaxAmount() external {
-        bytes32 curveWithdraw = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        bytes32 curveWithdraw = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveWithdraw, 0, 0);
@@ -527,7 +525,7 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
 
         vm.revertToState(id);
 
-        bytes32 curveWithdraw = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        bytes32 curveWithdraw = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         // Set to below boundary
         vm.prank(SPARK_PROXY);
@@ -711,7 +709,7 @@ contract MainnetController_Curve_Swap_Tests is Curve_TestBase {
     }
 
     function test_swapCurve_zeroMaxAmount() external {
-        bytes32 curveSwap = makeAddressKey(mainnetController.LIMIT_CURVE_SWAP(), CURVE_POOL);
+        bytes32 curveSwap = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
 
         vm.prank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveSwap, 0, 0);
@@ -869,9 +867,9 @@ contract MainnetController_Curve_3Pool_Tests is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        curveDepositKey  = makeAddressKey(mainnetController.LIMIT_CURVE_DEPOSIT(),  CURVE_POOL);
-        curveSwapKey     = makeAddressKey(mainnetController.LIMIT_CURVE_SWAP(),     CURVE_POOL);
-        curveWithdrawKey = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        curveDepositKey  = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
+        curveSwapKey     = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
+        curveWithdrawKey = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveDepositKey,  5_000_000e18, uint256(5_000_000e18) / 1 days);
@@ -944,9 +942,9 @@ contract MainnetController_Curve_SUSDS_USDT_Pool_Tests is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        curveDepositKey  = makeAddressKey(mainnetController.LIMIT_CURVE_DEPOSIT(),  CURVE_POOL);
-        curveSwapKey     = makeAddressKey(mainnetController.LIMIT_CURVE_SWAP(),     CURVE_POOL);
-        curveWithdrawKey = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        curveDepositKey  = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
+        curveSwapKey     = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
+        curveWithdrawKey = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveDepositKey,  5_000_000e18, uint256(5_000_000e18) / 1 days);
@@ -1156,9 +1154,9 @@ contract MainnetController_Curve_SUSDS_USDT_Pool_E2ETests is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        curveDepositKey  = makeAddressKey(mainnetController.LIMIT_CURVE_DEPOSIT(),  CURVE_POOL);
-        curveSwapKey     = makeAddressKey(mainnetController.LIMIT_CURVE_SWAP(),     CURVE_POOL);
-        curveWithdrawKey = makeAddressKey(mainnetController.LIMIT_CURVE_WITHDRAW(), CURVE_POOL);
+        curveDepositKey  = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
+        curveSwapKey     = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
+        curveWithdrawKey = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(curveDepositKey,  2_000_000e18, uint256(2_000_000e18) / 1 days);
