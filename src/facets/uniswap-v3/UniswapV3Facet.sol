@@ -231,6 +231,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
         require(
             maxTickDelta > 0 && maxTickDelta <= MAX_TICK_DELTA,
             "UniswapV3Facet/max-tick-delta-oob"
@@ -248,6 +249,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         Ticks storage tickBounds = _getFacetStorage().poolParams[pool].liquidityTickBounds;
 
         require(
@@ -265,6 +268,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         Ticks storage tickBounds = _getFacetStorage().poolParams[pool].liquidityTickBounds;
 
         require(
@@ -282,6 +287,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         // Required due to casting in UniswapV3OracleLibrary.consult
         // Limits twapSecondsAgo to approximately 68 years
         require(twapSecondsAgo < uint32(type(int32).max), "UniswapV3Facet/twap-seconds-ago-oob");
