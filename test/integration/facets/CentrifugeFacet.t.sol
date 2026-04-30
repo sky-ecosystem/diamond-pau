@@ -79,6 +79,12 @@ contract Controller_CentrifugeFacet_SetRecipient_Tests is CentrifugeFacet_TestBa
         controller.setCentrifugeRecipient(1, centrifugeRecipient1);
     }
 
+    function test_setCentrifugeRecipient_zeroAddress() external {
+        vm.expectRevert("CentrifugeFacet/invalid-recipient");
+        vm.prank(admin);
+        controller.setCentrifugeRecipient(1, bytes32(0));
+    }
+
     function test_setCentrifugeRecipient() external {
         assertEq(controller.getCentrifugeRecipient(1), bytes32(0));
         assertEq(controller.getCentrifugeRecipient(2), bytes32(0));
