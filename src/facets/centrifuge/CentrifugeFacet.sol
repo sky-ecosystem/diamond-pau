@@ -156,7 +156,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        IALMProxy(proxy).doCall(
+        bytes memory result = IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelDepositRequest,
@@ -164,7 +164,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
             )
         );
 
-        emit CentrifugeClaimCancelDepositRequest(token);
+        emit CentrifugeClaimCancelDepositRequest(token, abi.decode(result, (uint256)));
     }
 
     /// @inheritdoc ICentrifugeFacet
@@ -198,7 +198,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        IALMProxy(proxy).doCall(
+        bytes memory result = IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelRedeemRequest,
@@ -206,7 +206,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
             )
         );
 
-        emit CentrifugeClaimCancelRedeemRequest(token);
+        emit CentrifugeClaimCancelRedeemRequest(token, abi.decode(result, (uint256)));
     }
 
     /// @inheritdoc ICentrifugeFacet
