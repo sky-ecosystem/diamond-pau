@@ -24,6 +24,8 @@ interface IAsyncRedeemManagerLike {
 
 interface ICentrifugeV3VaultLike {
 
+    function baseManager() external view returns (address);
+
     function cancelDepositRequest(uint256 requestId, address controller) external;
 
     function cancelRedeemRequest(uint256 requestId, address controller) external;
@@ -36,11 +38,17 @@ interface ICentrifugeV3VaultLike {
         external
         returns (uint256 shares);
 
-    function baseManager() external view returns (address);
-
     function poolId() external view returns (uint64);
 
     function scId() external view returns (bytes16);
+
+    function share() external view returns (address);
+
+}
+
+interface IERC20Like {
+
+    function balanceOf(address owner) external view returns (uint256);
 
 }
 
@@ -154,9 +162,12 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
     {
         _rateLimitExists(_getDepositRateLimitKey(token));
 
+        address asset = IERC4626Like(token).asset();
         address proxy = _getSharedControllerStorage().proxy;
 
-        bytes memory result = IALMProxy(proxy).doCall(
+        uint256 balanceBefore = IERC20Like(asset).balanceOf(proxy);
+
+        IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelDepositRequest,
@@ -164,7 +175,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
             )
         );
 
-        emit CentrifugeClaimCancelDepositRequest(token, abi.decode(result, (uint256)));
+        uint256 balanceAfter = IERC20Like(asset).balanceOf(proxy);
+
+        emit CentrifugeClaimCancelDepositRequest(token, balanceAfter - balanceBefore);
     }
 
     /// @inheritdoc ICentrifugeFacet
@@ -197,8 +210,11 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         _rateLimitExists(_getRedeemRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
+        address share = ICentrifugeV3VaultLike(token).share();
 
-        bytes memory result = IALMProxy(proxy).doCall(
+        uint256 balanceBefore = IERC20Like(share).balanceOf(proxy);
+
+        IALMProxy(proxy).doCall(
             token,
             abi.encodeCall(
                 ICentrifugeV3VaultLike(token).claimCancelRedeemRequest,
@@ -206,7 +222,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
             )
         );
 
-        emit CentrifugeClaimCancelRedeemRequest(token, abi.decode(result, (uint256)));
+        uint256 balanceAfter = IERC20Like(share).balanceOf(proxy);
+
+        emit CentrifugeClaimCancelRedeemRequest(token, balanceAfter - balanceBefore);
     }
 
     /// @inheritdoc ICentrifugeFacet
