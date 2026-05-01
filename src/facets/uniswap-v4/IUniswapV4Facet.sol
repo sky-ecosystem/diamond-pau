@@ -223,7 +223,18 @@ interface IUniswapV4Facet is IFacet {
      * @param  poolId Uniswap V4 pool identifier.
      * @return key    Derived rate limit key.
      */
-    function getDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+    function getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+
+    /**
+     * @notice Returns the derived deposit rate limit key for a pool and token.
+     * @param  poolId Uniswap V4 pool identifier.
+     * @param  token  Address of the token being deposited.
+     * @return key    Derived rate limit key.
+     */
+    function getAssetDepositRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**
      * @notice Returns the configured max slippage for a Uniswap V4 pool.
