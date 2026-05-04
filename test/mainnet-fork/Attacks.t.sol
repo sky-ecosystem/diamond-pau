@@ -7,6 +7,8 @@ import {
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
+import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
+
 import { makeAddressAddressKey, makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
@@ -20,6 +22,8 @@ import { Pendle_TestBase }                   from "./Pendle.t.sol";
 import { WEETH_TestBase }                    from "./WEETH.t.sol";
 
 interface IERC20Like {
+
+    function approve(address spender, uint256 amount) external returns (bool);
 
     function transfer(address to, uint256 amount) external returns (bool);
 
@@ -299,6 +303,7 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(key), 10_000_000e6);
 
         deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
+
         deal(relayer, 1 ether);
 
         ILayerZeroOFTLike.SendParam memory sendParams = ILayerZeroOFTLike.SendParam({
@@ -320,11 +325,7 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(key), 9_000_000e6);
 
         // Attack: mock token() to return a different asset.
-        vm.mockCall(
-            USDT_OFT,
-            abi.encodeWithSignature("token()"),
-            abi.encode(Ethereum.DAI)
-        );
+        vm.mockCall(USDT_OFT, abi.encodeWithSignature("token()"), abi.encode(Ethereum.DAI));
 
         // Cannot transfer with changed token key.
         vm.expectRevert("RateLimits/zero-maxAmount");
@@ -392,6 +393,9 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
 
         assertLt(rateLimits.getCurrentRateLimit(redeemKey), beforeLimit);
 
+        vm.prank(PT_WHALE);
+        IERC20Like(pt).transfer(address(almProxy), 500_000e18);
+
         // Attack: market implementation changes readTokens() to return a different PT.
         vm.mockCall(
             address(pendleMarket),
@@ -399,11 +403,10 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
             abi.encode(sy, Ethereum.DAI, yt)
         );
 
-        vm.prank(PT_WHALE);
-        IERC20Like(pt).transfer(address(almProxy), 500_000e18);
+        vm.prank(address(almProxy));
+        IERC20Like(pt).approve(GroveEthereum.PENDLE_ROUTER, type(uint256).max);
 
-        // Cannot redeem with the changed market token.
-        vm.expectRevert();
+        vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
     }
