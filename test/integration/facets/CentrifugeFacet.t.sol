@@ -80,7 +80,7 @@ contract Controller_CentrifugeFacet_SetRecipient_Tests is CentrifugeFacet_TestBa
     }
 
     function test_setCentrifugeRecipient_zeroAddress() external {
-        vm.expectRevert("CentrifugeFacet/invalid-recipient");
+        vm.expectRevert("CentrifugeFacet/zero-recipient");
         vm.prank(admin);
         controller.setCentrifugeRecipient(1, bytes32(0));
     }

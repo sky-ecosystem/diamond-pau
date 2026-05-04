@@ -153,7 +153,7 @@ contract Controller_CCTPFacet_Tests is Integration_TestBase {
     }
 
     function test_setCCTPMintRecipient_zeroAddress() external {
-        vm.expectRevert("CCTPFacet/invalid-recipient");
+        vm.expectRevert("CCTPFacet/zero-recipient");
         vm.prank(admin);
         controller.setCCTPMintRecipient(1, bytes32(0));
     }

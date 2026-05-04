@@ -91,7 +91,7 @@ contract Controller_LayerZeroFacet_Admin_Tests is LayerZeroFacet_TestBase {
     }
 
     function test_setRecipient_zeroAddress() external {
-        vm.expectRevert("LayerZeroFacet/invalid-recipient");
+        vm.expectRevert("LayerZeroFacet/zero-recipient");
         vm.prank(admin);
         controller.setRecipient(0, bytes32(0));
     }

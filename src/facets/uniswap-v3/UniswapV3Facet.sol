@@ -232,6 +232,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         require(
             maxTickDelta > 0 && maxTickDelta <= MAX_TICK_DELTA,
             "UniswapV3Facet/max-tick-delta-oob"

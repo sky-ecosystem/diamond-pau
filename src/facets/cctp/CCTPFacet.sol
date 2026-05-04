@@ -128,7 +128,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(recipient != bytes32(0), "CCTPFacet/invalid-recipient");
+        require(recipient != bytes32(0), "CCTPFacet/zero-recipient");
 
         emit CCTPMintRecipientSet(
             destinationDomain,
