@@ -48,6 +48,7 @@ contract ForkTestBase is Test {
     /**********************************************************************************************/
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 constant FREEZER_ROLE       = keccak256("FREEZER");
     bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
 
     address pocket   = makeAddr("pocket");
@@ -137,8 +138,10 @@ contract ForkTestBase is Test {
 
         vm.startPrank(GROVE_EXECUTOR);
 
-        accessControls.grantRole(accessControls.FREEZER_ROLE(), ALM_FREEZER);
-        accessControls.grantRole(accessControls.RELAYER_ROLE(), ALM_RELAYER);
+        accessControls.grantRole(FREEZER_ROLE, ALM_FREEZER);
+        accessControls.grantRole(RELAYER_ROLE, ALM_RELAYER);
+
+        accessControls.setRoleRevoker(RELAYER_ROLE, FREEZER_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](2);
         integrationIds[0] = "CENTRIFUGE_FACET";
@@ -198,8 +201,8 @@ contract ForkTestBase is Test {
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.LIMIT_CENTRIFUGE_TRANSFER.selector,
-            ICentrifugeFacet.LIMIT_TRANSFER.selector
+            IForeignControllerFull.getCentrifugeTransferRateLimitKey.selector,
+            ICentrifugeFacet.getTransferRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
@@ -243,13 +246,13 @@ contract ForkTestBase is Test {
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.LIMIT_7540_DEPOSIT.selector,
-            IERC7540Facet.LIMIT_DEPOSIT.selector
+            IForeignControllerFull.getERC7540DepositRateLimitKey.selector,
+            IERC7540Facet.getDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.LIMIT_7540_REDEEM.selector,
-            IERC7540Facet.LIMIT_REDEEM.selector
+            IForeignControllerFull.getERC7540RedeemRateLimitKey.selector,
+            IERC7540Facet.getRedeemRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

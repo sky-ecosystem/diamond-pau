@@ -8,8 +8,7 @@ import {
 import { ApproveLib }                  from "../../libraries/ApproveLib.sol";
 import { makeAddressAddressUint32Key } from "../../libraries/RateLimitHelpers.sol";
 
-import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
-import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
 import { IFacet } from "../IFacet.sol";
 
@@ -128,8 +127,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    /// @inheritdoc ILayerZeroFacet
-    bytes32 public constant override LIMIT_TRANSFER = keccak256("LIMIT_LAYERZERO_TRANSFER");
+    bytes32 internal constant _LIMIT_TRANSFER = keccak256("LIMIT_LAYERZERO_TRANSFER");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -160,33 +158,27 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
     //       KEEP RATE LIMIT AT ZERO until LayerZero dependencies are live and
     //       all functionality has been thoroughly integration tested.
     /// @inheritdoc ILayerZeroFacet
-    function transfer(address oftAddress, uint256 amount, uint32 destinationEndpointId)
+    function transfer(address oft, uint256 amount, uint32 destinationEndpointId)
         external
         payable
         override
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        address token = ILayerZeroLike(oftAddress).token();
+        address proxy = _getSharedControllerStorage().proxy;
+        address token = ILayerZeroLike(oft).token();
 
-        SharedControllerStorage storage $ = _getSharedControllerStorage();
-
-        IRateLimits($.rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressUint32Key(LIMIT_TRANSFER, token, oftAddress, destinationEndpointId),
-            amount
-        );
+        _decreaseRateLimit(getTransferRateLimitKey(oft, destinationEndpointId, token), amount);
 
         bytes32 recipient = _getFacetStorage().recipients[destinationEndpointId];
 
         require(recipient != bytes32(0), "LayerZeroFacet/recipient-not-set");
 
-        address proxy = $.proxy;
-
         // NOTE: Full integration testing of this logic is not possible without OFTs with
         //       approvalRequired == false. Add integration testing for this case before using in
         //       production.
-        if (ILayerZeroLike(oftAddress).approvalRequired()) {
-            ApproveLib.approve(token, proxy, oftAddress, amount);
+        if (ILayerZeroLike(oft).approvalRequired()) {
+            ApproveLib.approve(token, proxy, oft, amount);
         }
 
         ILayerZeroLike.SendParam memory sendParams = ILayerZeroLike.SendParam({
@@ -202,7 +194,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
         // Query the min amount received on the destination chain and set it.
         ( , , ILayerZeroLike.OFTReceipt memory receipt ) = abi.decode(
             IALMProxy(proxy).doCall(
-                oftAddress,
+                oft,
                 abi.encodeCall(ILayerZeroLike.quoteOFT, (sendParams))
             ),
             (ILayerZeroLike.OFTLimit, ILayerZeroLike.OFTFeeDetail[], ILayerZeroLike.OFTReceipt)
@@ -212,14 +204,14 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
 
         ILayerZeroLike.MessagingFee memory fee = abi.decode(
             IALMProxy(proxy).doCall(
-                oftAddress,
+                oft,
                 abi.encodeCall(ILayerZeroLike.quoteSend, (sendParams, false))
             ),
             (ILayerZeroLike.MessagingFee)
         );
 
         IALMProxy(proxy).doCallWithValue{value: fee.nativeFee}(
-            oftAddress,
+            oft,
             abi.encodeCall(ILayerZeroLike.send, (sendParams, fee, proxy)),
             fee.nativeFee
         );
@@ -233,7 +225,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
             require(success, "LayerZeroFacet/refund-failed");
         }
 
-        emit LayerZeroTransfer(oftAddress, destinationEndpointId, amount, fee.nativeFee);
+        emit LayerZeroTransfer(oft, destinationEndpointId, amount, fee.nativeFee);
     }
 
     /**********************************************************************************************/
@@ -243,6 +235,16 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
     /// @inheritdoc ILayerZeroFacet
     function getRecipient(uint32 destinationEndpointId) external view override returns (bytes32) {
         return _getFacetStorage().recipients[destinationEndpointId];
+    }
+
+    /// @inheritdoc ILayerZeroFacet
+    function getTransferRateLimitKey(address oft, uint32 destinationEndpointId, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressUint32Key(_LIMIT_TRANSFER, token, oft, destinationEndpointId);
     }
 
 }
