@@ -31,6 +31,12 @@ interface IERC20Like {
 
 }
 
+interface IAavePoolWithdraw {
+
+    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+
+}
+
 interface ILayerZeroOFTLike {
 
     struct MessagingFee {
@@ -88,6 +94,51 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_attack_assetChanged_withdrawAave() external {
+        bytes32 aaveDepositKey = makeAddressAddressKey(
+            mainnetController.LIMIT_AAVE_DEPOSIT(),
+            Ethereum.USDS,
+            ATOKEN_USDS
+        );
+
+        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 25_000_000e18);
+
+        // Deposit succeeds with the original underlying (USDS).
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 24_000_000e18);
+
+        address changedUnderlying = Ethereum.DAI;
+
+        uint256 withdrawAmount = 1_000_000e18;
+
+        vm.mockCall(
+            ATOKEN_USDS,
+            abi.encodeWithSignature("UNDERLYING_ASSET_ADDRESS()"),
+            abi.encode(changedUnderlying)
+        );
+        vm.mockCall(
+            changedUnderlying,
+            abi.encodeWithSignature("balanceOf(address)", address(almProxy)),
+            abi.encode(uint256(0))
+        );
+        vm.mockCall(
+            POOL,
+            abi.encodeCall(
+                IAavePoolWithdraw.withdraw,
+                (changedUnderlying, withdrawAmount, address(almProxy))
+            ),
+            abi.encode(withdrawAmount)
+        );
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.withdrawAave(ATOKEN_USDS, withdrawAmount);
     }
 
 }
@@ -189,6 +240,32 @@ contract MainnetController_ERC4626_Attack_Tests is ERC4626_SUSDS_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
         mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
+    }
+
+    function test_attack_assetChanged_withdrawERC4626() external {
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 5_000_000e18);
+
+        // Deposit succeeds with the original underlying (USDS).
+        vm.startPrank(relayer);
+        mainnetController.mintUSDS(1_000_000e18);
+        mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
+        vm.stopPrank();
+
+        assertEq(rateLimits.getCurrentRateLimit(depositKey), 4_000_000e18);
+
+        uint256 maxAssets = susds.convertToAssets(susds.balanceOf(address(almProxy)));
+
+        // Attack: mock asset() to return a different address.
+        address changedAsset = Ethereum.DAI;
+        vm.mockCall(
+            address(susds),
+            abi.encodeWithSignature("asset()"),
+            abi.encode(changedAsset)
+        );
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(relayer);
+        mainnetController.withdrawERC4626(address(susds), maxAssets, type(uint256).max);
     }
 
 }
