@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { ICentrifugeFacet } from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
 
 import {
@@ -64,6 +66,12 @@ contract MainnetController_CentrifugeV3_TransferShares_Tests is CentrifugeV3_Tes
 
         vm.prank(SPARK_PROXY);
         mainnetController.setCentrifugeRecipient(DESTINATION_CENTRIFUGE_ID, target);
+    }
+
+    function test_transferSharesCentrifuge_reentrancy() external {
+        _setControllerEntered();
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        mainnetController.transferSharesCentrifuge(CENTRIFUGE_VAULT, 1_000_000e6, DESTINATION_CENTRIFUGE_ID);
     }
 
     function test_transferSharesCentrifuge_notRelayer() external {

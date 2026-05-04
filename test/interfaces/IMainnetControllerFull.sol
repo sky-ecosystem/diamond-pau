@@ -210,17 +210,13 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
-    function getFarmWithdrawRateLimitKey(address farm)
-        external
-        pure
-        returns (bytes32 key);
+    function getFarmWithdrawRateLimitKey(address farm) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
 
-    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
-        external;
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
     function transferTokenLayerZero(address oft, uint256 amount, uint32 destinationEndpointId)
         external
@@ -293,10 +289,7 @@ interface IMainnetControllerFull is IController {
 
     function isOtcSwapReady(address exchange) external view returns (bool);
 
-    function getOTCSwapRateLimitKey(address exchange)
-        external
-        pure
-        returns (bytes32 key);
+    function getOTCSwapRateLimitKey(address exchange) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** PendleFacet actions                                                                    ***/
@@ -336,10 +329,7 @@ interface IMainnetControllerFull is IController {
 
     function subscribeSuperstate(uint256 usdcAmount) external;
 
-    function superstateSubscribeRateLimitKey()
-        external
-        pure
-        returns (bytes32 key);
+    function superstateSubscribeRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
@@ -475,20 +465,11 @@ interface IMainnetControllerFull is IController {
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
-    function getUniswapV4DepositRateLimitKey(bytes32 poolId)
-        external
-        pure
-        returns (bytes32 key);
+    function getUniswapV4DepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 
-    function getUniswapV4SwapRateLimitKey(bytes32 poolId)
-        external
-        view
-        returns (bytes32 key);
+    function getUniswapV4SwapRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 
-    function getUniswapV4WithdrawRateLimitKey(bytes32 poolId)
-        external
-        view
-        returns (bytes32 key);
+    function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** USDEFacet actions                                                                      ***/
@@ -580,9 +561,6 @@ interface IMainnetControllerFull is IController {
 
     function wstethDepositRateLimitKey() external pure returns (bytes32 key);
 
-    function wstethRequestWithdrawRateLimitKey()
-        external
-        pure
-        returns (bytes32 key);
+    function wstethRequestWithdrawRateLimitKey() external pure returns (bytes32 key);
 
 }

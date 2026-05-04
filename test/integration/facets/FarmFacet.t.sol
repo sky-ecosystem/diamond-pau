@@ -59,8 +59,8 @@ contract Controller_FarmFacet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getDepositRateLimitKey() external {
-        bytes32 keyPrefix   = keccak256("LIMIT_FARM_DEPOSIT");
-        address farm        = makeAddr("farm");
+        bytes32 keyPrefix    = keccak256("LIMIT_FARM_DEPOSIT");
+        address farm         = makeAddr("farm");
         address stakingToken = makeAddr("stakingToken");
 
         assertEq(

@@ -166,10 +166,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
         address proxy = _getSharedControllerStorage().proxy;
         address token = ILayerZeroLike(oft).token();
 
-        _decreaseRateLimit(
-            getTransferRateLimitKey(oft, destinationEndpointId, token),
-            amount
-        );
+        _decreaseRateLimit(getTransferRateLimitKey(oft, destinationEndpointId, token), amount);
 
         bytes32 recipient = _getFacetStorage().recipients[destinationEndpointId];
 

@@ -453,7 +453,12 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV3Facet
-    function getLiquidityTickBounds(address pool) external view override returns (int24 lower, int24 upper) {
+    function getLiquidityTickBounds(address pool)
+        external
+        view
+        override
+        returns (int24 lower, int24 upper)
+    {
         Ticks storage tickBounds = _getFacetStorage().poolParams[pool].liquidityTickBounds;
 
         return (tickBounds.lower, tickBounds.upper);

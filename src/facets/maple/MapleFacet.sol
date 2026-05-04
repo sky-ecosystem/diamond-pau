@@ -65,10 +65,7 @@ contract MapleFacet is IMapleFacet, Facet {
         nonReentrant
         onlyRole(RELAYER_ROLE)
     {
-        require(
-            _rateLimitExists(getRedeemRateLimitKey(mapleToken)),
-            "MapleFacet/invalid-action"
-        );
+        require(_rateLimitExists(getRedeemRateLimitKey(mapleToken)), "MapleFacet/invalid-action");
 
         address proxy = _getSharedControllerStorage().proxy;
 

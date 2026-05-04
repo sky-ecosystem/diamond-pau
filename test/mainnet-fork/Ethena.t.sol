@@ -160,9 +160,8 @@ contract MainnetController_Ethena_PrepareUSDEMint_Tests is Ethena_TestBase {
     }
 
     function test_prepareUSDEMint_zeroMaxAmount() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.usdeMintRateLimitKey(), 0, 0);
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
@@ -170,13 +169,8 @@ contract MainnetController_Ethena_PrepareUSDEMint_Tests is Ethena_TestBase {
     }
 
     function test_prepareUSDEMint_rateLimitBoundary() external {
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            mainnetController.usdeMintRateLimitKey(),
-            100e6,
-            uint256(100e6) / 1 hours
-        );
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e6, uint256(100e6) / 1 hours);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
@@ -257,9 +251,8 @@ contract MainnetController_Ethena_PrepareUSDEBurn_Tests is Ethena_TestBase {
     }
 
     function test_prepareUSDEBurn_zeroMaxAmount() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.usdeBurnRateLimitKey(), 0, 0);
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
@@ -267,13 +260,8 @@ contract MainnetController_Ethena_PrepareUSDEBurn_Tests is Ethena_TestBase {
     }
 
     function test_prepareUSDEBurn_rateLimitBoundary() external {
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            mainnetController.usdeBurnRateLimitKey(),
-            100e18,
-            uint256(100e18) / 1 hours
-        );
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e18, uint256(100e18) / 1 hours);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
@@ -354,9 +342,8 @@ contract MainnetController_Ethena_CooldownAssetsSUSDE_Tests is Ethena_TestBase {
     }
 
     function test_cooldownAssetsSUSDE_zeroMaxAmount() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.usdeCooldownRateLimitKey(), 0, 0);
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
@@ -367,13 +354,8 @@ contract MainnetController_Ethena_CooldownAssetsSUSDE_Tests is Ethena_TestBase {
         // For success case (exchange rate is more than 1:1)
         deal(address(susde), address(almProxy), 100e18);
 
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            mainnetController.usdeCooldownRateLimitKey(),
-            100e18,
-            uint256(100e18) / 1 hours
-        );
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e18, uint256(100e18) / 1 hours);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
@@ -474,9 +456,8 @@ contract MainnetController_Ethena_CooldownSharesSUSDE_Tests is Ethena_TestBase {
     function test_cooldownSharesSUSDE_zeroMaxAmount() external {
         deal(address(susde), address(almProxy), 100e18);  // To get past call
 
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.usdeCooldownRateLimitKey(), 0, 0);
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
@@ -486,13 +467,8 @@ contract MainnetController_Ethena_CooldownSharesSUSDE_Tests is Ethena_TestBase {
     function test_cooldownSharesSUSDE_rateLimitBoundary() external {
         deal(address(susde), address(almProxy), 100e18);  // For success case
 
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            mainnetController.usdeCooldownRateLimitKey(),
-            100e18,
-            uint256(100e18) / 1 hours
-        );
-        vm.stopPrank();
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e18, uint256(100e18) / 1 hours);
 
         uint256 overBoundaryShares = susde.convertToShares(100e18 + 2);
         uint256 boundaryShares     = susde.convertToShares(100e18 + 1);

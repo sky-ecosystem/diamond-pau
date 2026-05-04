@@ -233,10 +233,8 @@ contract ForeignController_Curve_AddLiquidity_FailureTests is Curve_TestBase {
     }
 
     function test_addLiquidityCurve_zeroMaxAmount() public {
-        bytes32 curveDeposit = foreignController.getCurveDepositRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(curveDeposit, 0, 0);
+        rateLimits.setRateLimitData(curveDepositKey, 0, 0);
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 1_000_000e6;
@@ -537,10 +535,8 @@ contract ForeignController_Curve_RemoveLiquidity_FailureTests is Curve_TestBase 
     }
 
     function test_removeLiquidityCurve_zeroMaxAmount() public {
-        bytes32 curveWithdraw = foreignController.getCurveWithdrawRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(curveWithdraw, 0, 0);
+        rateLimits.setRateLimitData(curveWithdrawKey, 0, 0);
 
         uint256 lpTokensReceived = _addLiquidity(1_000_000e6, 1_000_000e6);
 
@@ -566,11 +562,9 @@ contract ForeignController_Curve_RemoveLiquidity_FailureTests is Curve_TestBase 
 
         vm.revertToState(id);
 
-        bytes32 curveWithdraw = foreignController.getCurveWithdrawRateLimitKey(CURVE_POOL);
-
         // Set to below boundary
         vm.prank(SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(curveWithdraw, totalWithdrawn - 1, totalWithdrawn / 1 days);
+        rateLimits.setRateLimitData(curveWithdrawKey, totalWithdrawn - 1, totalWithdrawn / 1 days);
 
         vm.prank(relayer);
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -578,7 +572,7 @@ contract ForeignController_Curve_RemoveLiquidity_FailureTests is Curve_TestBase 
 
         // Set to boundary
         vm.prank(SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(curveWithdraw, totalWithdrawn, totalWithdrawn / 1 days);
+        rateLimits.setRateLimitData(curveWithdrawKey, totalWithdrawn, totalWithdrawn / 1 days);
 
         vm.prank(relayer);
         foreignController.removeLiquidityCurve(CURVE_POOL, lpTokensReceived, minWithdrawAmounts);
@@ -742,10 +736,8 @@ contract ForeignController_Curve_Swap_FailureTests is Curve_TestBase {
     }
 
     function test_swapCurve_zeroMaxAmount() public {
-        bytes32 curveSwap = foreignController.getCurveSwapRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_EXECUTOR);
-        rateLimits.setRateLimitData(curveSwap, 0, 0);
+        rateLimits.setRateLimitData(curveSwapKey, 0, 0);
 
         vm.prank(relayer);
         vm.expectRevert("RateLimits/zero-maxAmount");

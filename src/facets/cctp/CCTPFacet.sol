@@ -66,7 +66,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_TO_CCTP  = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 internal constant _LIMIT_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 internal constant _LIMIT_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
 
     /// @inheritdoc ICCTPFacet

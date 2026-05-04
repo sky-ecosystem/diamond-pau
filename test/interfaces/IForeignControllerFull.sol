@@ -167,8 +167,7 @@ interface IForeignControllerFull is IController {
     /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
 
-    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient)
-        external;
+    function setLayerZeroRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
     function transferTokenLayerZero(address oft, uint256 amount, uint32 destinationEndpointId)
         external

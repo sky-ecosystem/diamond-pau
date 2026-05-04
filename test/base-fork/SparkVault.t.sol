@@ -248,7 +248,6 @@ contract ForeignController_SparkVault_TakeFrom_E2ETests is SparkVault_TestBase {
 
         // Step 3 (spell): Set the rate limits
 
-        takeKey     = foreignController.getSparkVaultTakeRateLimitKey(address(sparkVault));
         transferKey = foreignController.getTransferAssetTransferRateLimitKey(Base.USDC, address(sparkVault));
 
         bytes32 morphoDepositKey  = foreignController.getERC4626DepositRateLimitKey(Base.MORPHO_VAULT_SUSDC, Base.USDC);

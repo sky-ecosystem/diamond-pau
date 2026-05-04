@@ -43,7 +43,7 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_DEPOSIT           = keccak256("LIMIT_WSTETH_DEPOSIT");
+    bytes32 internal constant _LIMIT_DEPOSIT          = keccak256("LIMIT_WSTETH_DEPOSIT");
     bytes32 internal constant _LIMIT_REQUEST_WITHDRAW = keccak256("LIMIT_WSTETH_REQUEST_WITHDRAW");
 
     /// @inheritdoc IFacet

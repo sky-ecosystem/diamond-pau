@@ -171,7 +171,10 @@ contract WEETHFacet is IWEETHFacet, Facet {
         );
 
         // NOTE: An authorized weethModule is enforced by the rate limit key.
-        _decreaseRateLimit(getRequestWithdrawRateLimitKey(weethModule, eeth, liquidityPool), eethAmount);
+        _decreaseRateLimit(
+            getRequestWithdrawRateLimitKey(weethModule, eeth, liquidityPool),
+            eethAmount
+        );
 
         // Request withdrawal of ETH from eETH.
         ApproveLib.approve(eeth, proxy, liquidityPool, eethAmount);

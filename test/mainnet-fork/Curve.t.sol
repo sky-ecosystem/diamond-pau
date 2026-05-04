@@ -171,10 +171,8 @@ contract MainnetController_Curve_AddLiquidity_Tests is Curve_TestBase {
     }
 
     function test_addLiquidityCurve_zeroMaxAmount() external {
-        bytes32 curveDeposit = mainnetController.getCurveDepositRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(curveDeposit, 0, 0);
+        rateLimits.setRateLimitData(curveDepositKey, 0, 0);
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 1_000_000e6;
@@ -492,10 +490,8 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
     }
 
     function test_removeLiquidityCurve_zeroMaxAmount() external {
-        bytes32 curveWithdraw = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(curveWithdraw, 0, 0);
+        rateLimits.setRateLimitData(curveWithdrawKey, 0, 0);
 
         uint256 lpTokensReceived = _addLiquidity(1_000_000e6, 1_000_000e6);
 
@@ -525,11 +521,9 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
 
         vm.revertToState(id);
 
-        bytes32 curveWithdraw = mainnetController.getCurveWithdrawRateLimitKey(CURVE_POOL);
-
         // Set to below boundary
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(curveWithdraw, totalWithdrawn - 1, totalWithdrawn / 1 days);
+        rateLimits.setRateLimitData(curveWithdrawKey, totalWithdrawn - 1, totalWithdrawn / 1 days);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
@@ -537,7 +531,7 @@ contract MainnetController_Curve_RemoveLiquidity_Tests is Curve_TestBase {
 
         // Set to boundary
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(curveWithdraw, totalWithdrawn, totalWithdrawn / 1 days);
+        rateLimits.setRateLimitData(curveWithdrawKey, totalWithdrawn, totalWithdrawn / 1 days);
 
         vm.prank(relayer);
         mainnetController.removeLiquidityCurve(CURVE_POOL, lpTokensReceived, minWithdrawAmounts);
@@ -709,10 +703,8 @@ contract MainnetController_Curve_Swap_Tests is Curve_TestBase {
     }
 
     function test_swapCurve_zeroMaxAmount() external {
-        bytes32 curveSwap = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL);
-
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(curveSwap, 0, 0);
+        rateLimits.setRateLimitData(curveSwapKey, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(relayer);
