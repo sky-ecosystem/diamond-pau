@@ -124,7 +124,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc ICentrifugeFacet
@@ -132,7 +132,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _requireRateLimitExists(getDepositRateLimitKey(token, IERC4626Like(token).asset()));
 
@@ -152,7 +152,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _requireRateLimitExists(getDepositRateLimitKey(token, IERC4626Like(token).asset()));
 
@@ -179,7 +179,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _requireRateLimitExists(getRedeemRateLimitKey(token));
 
@@ -199,7 +199,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _requireRateLimitExists(getRedeemRateLimitKey(token));
 
@@ -227,7 +227,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         payable
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         bytes32 recipient = _getFacetStorage().recipients[centrifugeId];
 

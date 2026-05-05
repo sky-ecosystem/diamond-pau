@@ -149,7 +149,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     // NOTE: !!! This function was deployed without integration testing !!!
@@ -161,7 +161,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
         payable
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         address proxy = _getSharedControllerStorage().proxy;
         address token = ILayerZeroLike(oft).token();

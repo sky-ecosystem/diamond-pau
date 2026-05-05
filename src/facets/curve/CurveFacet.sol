@@ -101,7 +101,7 @@ contract CurveFacet is ICurveFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc ICurveFacet
@@ -115,7 +115,7 @@ contract CurveFacet is ICurveFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 amountOut)
     {
         uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
@@ -162,7 +162,7 @@ contract CurveFacet is ICurveFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 shares)
     {
         uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
@@ -223,7 +223,7 @@ contract CurveFacet is ICurveFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256[] memory withdrawnTokens)
     {
         uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];

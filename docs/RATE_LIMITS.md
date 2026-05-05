@@ -13,7 +13,7 @@ Rate limit keys are constructed by hashing together a **function identifier** an
 - **Examples:**
   - Depositing liquidity to a specific Uniswap V4 pool requires the rate limit key `keccak256(abi.encode(LIMIT_UNISWAP_V4_DEPOSIT, poolId))` to be set
   - Withdrawing an aToken from Aave requires the rate limit key `keccak256(abi.encode(LIMIT_AAVE_WITHDRAW, aToken))` to be set
-- **Security benefit:** Prevents relayers from interacting with arbitrary/malicious contracts - only governance-approved integrations have valid rate limit keys
+- **Security benefit:** Prevents allocators from interacting with arbitrary/malicious contracts - only governance-approved integrations have valid rate limit keys
 - **Operational benefit:** New integrations can be onboarded with lower rate limits to ease into use, and then increased to manage ongoing risk/exposure, and providing a clear audit trail
 
 See `RateLimitHelpers.sol` for the key generation utilities (e.g., `makeAddressKey`).
@@ -123,4 +123,4 @@ Some operations verify a rate limit is configured (`maxAmount > 0`) without decr
 Rate limits must take into account:
 
 1. **Risk tolerance** for a given protocol
-2. **Griefing attacks** (e.g., repetitive transactions with high slippage by malicious relayer)
+2. **Griefing attacks** (e.g., repetitive transactions with high slippage by malicious allocator)

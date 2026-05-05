@@ -168,7 +168,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IUniswapV4Facet
@@ -183,7 +183,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _checkTickLimits(poolId, tickLower, tickUpper);
 
@@ -231,7 +231,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         // Must not increase liquidity on a position that is not owned by the ALMProxy.
         require(
@@ -280,7 +280,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         PoolKey memory poolKey = _getPoolKeyFromTokenId(tokenId);
 
@@ -312,7 +312,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         uint256 maxSlippage = _getFacetStorage().maxSlippages[poolId];
 

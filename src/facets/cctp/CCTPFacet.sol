@@ -131,7 +131,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc ICCTPFacet
@@ -139,7 +139,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _transfer(amount, MAX_FEE, destinationDomain);
     }
@@ -149,7 +149,7 @@ contract CCTPFacet is ICCTPFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _transfer(amount, maxFee, destinationDomain);
     }

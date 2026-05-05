@@ -56,7 +56,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IPSM3Facet
@@ -64,7 +64,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 shares)
     {
         _decreaseRateLimit(getDepositRateLimitKey(asset), amount);
@@ -92,7 +92,7 @@ contract PSM3Facet is IPSM3Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 assetsWithdrawn)
     {
         address proxy = _getSharedControllerStorage().proxy;

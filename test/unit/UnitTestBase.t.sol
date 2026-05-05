@@ -12,12 +12,12 @@ abstract contract UnitTestBase is Test {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     bytes32 constant CONTROLLER_ROLE = keccak256("CONTROLLER");
-    bytes32 constant FREEZER_ROLE    = keccak256("FREEZER");
-    bytes32 constant RELAYER_ROLE    = keccak256("RELAYER");
+    bytes32 constant FREEZER_ROLE    = keccak256("FREEZER_ROLE");
+    bytes32 constant ALLOCATOR_ROLE  = keccak256("ALLOCATOR_ROLE");
 
     address internal admin        = makeAddr("admin");
     address internal freezer      = makeAddr("freezer");
-    address internal relayer      = makeAddr("relayer");
+    address internal allocator    = makeAddr("allocator");
     address internal unauthorized = makeAddr("unauthorized");
 
     function _assertReentrancyGuardWrittenToTwice(address instance) internal {

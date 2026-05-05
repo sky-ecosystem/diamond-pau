@@ -178,11 +178,11 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.expectRevert(abi.encodeWithSelector(
             IFacet.AccessControlUnauthorizedAccount.selector,
-            relayer,
+            allocator,
             DEFAULT_ADMIN_ROLE
         ));
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         controller.setMaxSlippage(address(0), 0);
     }
 
@@ -232,11 +232,11 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.expectRevert(abi.encodeWithSelector(
             IFacet.AccessControlUnauthorizedAccount.selector,
-            relayer,
+            allocator,
             DEFAULT_ADMIN_ROLE
         ));
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         controller.setMaxTickDelta(address(0), 0);
     }
 
@@ -300,11 +300,11 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.expectRevert(abi.encodeWithSelector(
             IFacet.AccessControlUnauthorizedAccount.selector,
-            relayer,
+            allocator,
             DEFAULT_ADMIN_ROLE
         ));
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         controller.setLiquidityLowerTickBound(address(0), 0);
     }
 
@@ -381,11 +381,11 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.expectRevert(abi.encodeWithSelector(
             IFacet.AccessControlUnauthorizedAccount.selector,
-            relayer,
+            allocator,
             DEFAULT_ADMIN_ROLE
         ));
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         controller.setLiquidityUpperTickBound(address(0), 0);
     }
 
@@ -453,11 +453,11 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.expectRevert(abi.encodeWithSelector(
             IFacet.AccessControlUnauthorizedAccount.selector,
-            relayer,
+            allocator,
             DEFAULT_ADMIN_ROLE
         ));
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         controller.setTWAPSecondsAgo(address(0), 0);
     }
 
