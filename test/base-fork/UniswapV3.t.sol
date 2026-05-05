@@ -544,7 +544,7 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
 
     function test_addLiquidityUniswapV3_zeroMaxAmount_token0() public {
         uint256 amount0 = 1_000_000e18;
-        uint256 amount1 = 1_000_000e6;
+        uint256 amount1 = 0;
 
         vm.prank(Base.SPARK_EXECUTOR);
         rateLimits.setRateLimitData(uniswapV3_UsdsUsdcPool_UsdsAddLiquidityKey, 0, 0);
@@ -574,7 +574,7 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
     }
 
     function test_addLiquidityUniswapV3_zeroMaxAmount_token1() public {
-        uint256 amount0 = 1_000_000e18;
+        uint256 amount0 = 0;
         uint256 amount1 = 1_000_000e6;
 
         vm.prank(Base.SPARK_EXECUTOR);
@@ -588,8 +588,8 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
             _getPool(),
             0,
             IUniswapV3Facet.Ticks({
-                lower: initTick + 50,
-                upper: initTick + 100
+                lower: initTick - 100,
+                upper: initTick - 50
             }),
             IUniswapV3Facet.TokenAmounts({
                 amount0: amount0,
@@ -606,7 +606,7 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
 
     function test_addLiquidityUniswapV3_zeroMaxAmount_aggregate() public {
         uint256 amount0 = 1_000_000e18;
-        uint256 amount1 = 1_000_000e6;
+        uint256 amount1 = 0;
 
         vm.prank(Base.SPARK_EXECUTOR);
         rateLimits.setRateLimitData(uniswapV3_UsdsUsdcPool_AggregateAddLiquidityKey, 0, 0);
@@ -636,8 +636,8 @@ contract ForeignController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
     }
 
     function test_addLiquidityUniswapV3_rateLimitExceeded_aggregate() public {
-        uint256 amount0 = 2_000_000e18;
-        uint256 amount1 = 2_000_000e6;
+        uint256 amount0 = 3_000_000e18;
+        uint256 amount1 = 0;
 
         vm.startPrank(Base.SPARK_EXECUTOR);
         rateLimits.setUnlimitedRateLimitData(uniswapV3_UsdsUsdcPool_UsdsAddLiquidityKey);
