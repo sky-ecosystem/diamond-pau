@@ -175,7 +175,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     int24 public constant override MIN_TICK = -887_272;
 
     /// @inheritdoc IUniswapV3Facet
-    int24 public constant override MAX_TICK =  887_272;
+    int24 public constant override MAX_TICK = 887_272;
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
