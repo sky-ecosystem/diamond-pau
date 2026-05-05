@@ -131,13 +131,13 @@ contract CurveFacet is ICurveFacet, Facet {
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
         // Makes the assumption that value in should equal value out.
-        uint256 estimatedAmountOut = _fromNormalizedAmount(
-            _toNormalizedAmount(amountIn,  rates[inputIndex]),
+        uint256 equivalentAmountOut = _fromNormalizedAmount(
+            _toNormalizedAmount(amountIn, rates[inputIndex]),
             rates[outputIndex]
         );
 
         require(
-            minAmountOut >= estimatedAmountOut * maxSlippage / 1e18,
+            minAmountOut >= equivalentAmountOut * maxSlippage / 1e18,
             "CurveFacet/min-amount-not-met"
         );
 
@@ -372,10 +372,10 @@ contract CurveFacet is ICurveFacet, Facet {
         // Compute the swap value by taking the difference of the current underlying asset values
         // from minted shares vs the deposited funds to find the tokens that were swapped in.
         for (uint256 i; i < depositAmounts.length; ++i) {
-            uint256 assetValue = _getPoolBalance(pool, i) * shares / totalSupply;
+            uint256 resultingUnderlying = _getPoolBalance(pool, i) * shares / totalSupply;
 
             // Positive value means the asset was swapped in.
-            swappedInAmounts[i] = int256(depositAmounts[i]) - int256(assetValue);
+            swappedInAmounts[i] = int256(depositAmounts[i]) - int256(resultingUnderlying);
         }
     }
 

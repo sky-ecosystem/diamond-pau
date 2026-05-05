@@ -328,11 +328,8 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             "UniswapV4Facet/invalid-tokenIn"
         );
 
-        uint256 normalizedAmountIn = _getNormalizedBalance(tokenIn, amountIn);
-
-        // Perform rate limit decrease.
         // NOTE: Rate limit decrease does not account for the net amount of tokenIn actually taken.
-        _decreaseRateLimit(getSwapRateLimitKey(poolId), normalizedAmountIn);
+        _decreaseRateLimit(getSwapRateLimitKey(poolId, tokenIn), amountIn);
 
         address tokenOut = tokenIn == Currency.unwrap(poolKey.currency0)
             ? Currency.unwrap(poolKey.currency1)
@@ -340,7 +337,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         require(
             _getNormalizedBalance(tokenOut, amountOutMin) * 1e18 >=
-            normalizedAmountIn * maxSlippage,
+            _getNormalizedBalance(tokenIn, amountIn) * maxSlippage,
             "UniswapV4Facet/amountOutMin-too-low"
         );
 
@@ -373,7 +370,12 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV4Facet
-    function getAssetDepositRateLimitKey(bytes32 poolId, address token) public pure override returns (bytes32) {
+    function getAssetDepositRateLimitKey(bytes32 poolId, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeAddressBytes32Key(_LIMIT_DEPOSIT, token, poolId);
     }
 
@@ -383,8 +385,8 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV4Facet
-    function getSwapRateLimitKey(bytes32 poolId) public pure override returns (bytes32) {
-        return makeBytes32Key(_LIMIT_SWAP, poolId);
+    function getSwapRateLimitKey(bytes32 poolId, address token) public pure override returns (bytes32) {
+        return makeAddressBytes32Key(_LIMIT_SWAP, token, poolId);
     }
 
     /// @inheritdoc IUniswapV4Facet
@@ -500,7 +502,6 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             _getNormalizedBalance(token0, amount0) +
             _getNormalizedBalance(token1, amount1);
 
-        // Perform rate limit decrease.
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
         _decreaseRateLimit(getWithdrawRateLimitKey(poolId), rateLimitDecrease);
     }

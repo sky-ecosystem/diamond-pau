@@ -485,7 +485,10 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
-    function getUniswapV4SwapRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+    function getUniswapV4SwapRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 

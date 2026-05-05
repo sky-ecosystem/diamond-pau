@@ -1018,7 +1018,6 @@ contract MainnetController_Curve_3Pool_Tests is ForkTestBase {
         assertEq(withdrawnAmounts[1], 0.22809783e8);
         assertEq(withdrawnAmounts[2], 0.41478858e8);
 
-        // Some accuracy differences because of fees
         assertEq(derivedSwapAmount,         0.64310277e8);
         assertEq(1e8 - withdrawnAmounts[0], 0.64310277e8);
     }
@@ -1117,10 +1116,8 @@ contract MainnetController_Curve_SUSDS_USDT_Pool_Tests is ForkTestBase {
         assertEq(susds.convertToAssets(withdrawnAmounts[0]), 666_655.261741191232680640e18);
         assertEq(withdrawnAmounts[1],                        333_327.974363e6);
 
-        // Some accuracy differences because of fees
-        assertEq(derivedSwapAmount, 318_439.244889314469602262e18);
-
-        assertEq(1_000_000e18 - susds.convertToAssets(withdrawnAmounts[0]), 333_344.738258808767319360e18);
+        assertEq(derivedSwapAmount,                 318_439.244889314469602262e18);
+        assertEq(susdsAmount - withdrawnAmounts[0], 318_439.244889314469602262e18);
     }
 
 }

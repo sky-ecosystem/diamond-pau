@@ -34,7 +34,7 @@ interface IControllerLike {
 
     function getAssetDepositRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
 
-    function getSwapRateLimitKey(bytes32 poolId) external pure returns (bytes32);
+    function getSwapRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
 
     function getWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32);
 
@@ -296,8 +296,12 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
 
     function test_getSwapRateLimitKey() external {
         bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_SWAP");
+        address token     = makeAddr("token");
 
-        assertEq(controller.getSwapRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
+        assertEq(
+            controller.getSwapRateLimitKey(_POOL_ID, token),
+            makeAddressBytes32Key(keyPrefix, token, _POOL_ID)
+        );
     }
 
     /**********************************************************************************************/

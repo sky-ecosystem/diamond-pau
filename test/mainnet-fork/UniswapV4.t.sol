@@ -134,7 +134,8 @@ abstract contract UniswapV4_TestBase is ForkTestBase {
     bytes32 internal _aggregateDepositLimitKey;
     bytes32 internal _token0DepositLimitKey;
     bytes32 internal _token1DepositLimitKey;
-    bytes32 internal _swapLimitKey;
+    bytes32 internal _token0SwapLimitKey;
+    bytes32 internal _token1SwapLimitKey;
     bytes32 internal _withdrawLimitKey;
 
     /**********************************************************************************************/
@@ -444,9 +445,14 @@ abstract contract UniswapV4_TestBase is ForkTestBase {
             address(almProxy), _getBalanceOf(currencyIn, address(almProxy)) + amountIn
         );
 
-        uint256 tokenInBeforeCall   = _getBalanceOf(currencyIn, address(almProxy));
-        uint256 tokenOutBeforeCall  = _getBalanceOf(currencyOut, address(almProxy));
-        uint256 rateLimitBeforeCall = rateLimits.getCurrentRateLimit(_swapLimitKey);
+        uint256 tokenInBeforeCall  = _getBalanceOf(currencyIn, address(almProxy));
+        uint256 tokenOutBeforeCall = _getBalanceOf(currencyOut, address(almProxy));
+
+        PoolKey memory poolKey = IPositionManagerLike(_UNISWAP_V4_POSITION_MANAGER).poolKeys(bytes25(poolId));
+
+        bytes32 swapLimitKey = tokenIn == Currency.unwrap(poolKey.currency0) ? _token0SwapLimitKey : _token1SwapLimitKey;
+
+        uint256 rateLimitBeforeCall = rateLimits.getCurrentRateLimit(swapLimitKey);
 
         vm.prank(relayer);
         mainnetController.swapUniswapV4(poolId, tokenIn, amountIn, amountOutMin);
@@ -458,7 +464,7 @@ abstract contract UniswapV4_TestBase is ForkTestBase {
         assertGe(amountOut, amountOutMin);
 
         assertEq(
-            rateLimitBeforeCall - rateLimits.getCurrentRateLimit(_swapLimitKey),
+            rateLimitBeforeCall - rateLimits.getCurrentRateLimit(swapLimitKey),
             _toNormalizedAmount(currencyIn, amountIn)
         );
 
@@ -904,7 +910,8 @@ abstract contract UniswapV4_USDC_USDT_TestBase is UniswapV4_TestBase {
         _token0DepositLimitKey    = mainnetController.getUniswapV4AssetDepositRateLimitKey(_POOL_ID, Ethereum.USDC);
         _token1DepositLimitKey    = mainnetController.getUniswapV4AssetDepositRateLimitKey(_POOL_ID, Ethereum.USDT);
         _withdrawLimitKey         = mainnetController.getUniswapV4WithdrawRateLimitKey(_POOL_ID);
-        _swapLimitKey             = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID);
+        _token0SwapLimitKey       = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID, Ethereum.USDC);
+        _token1SwapLimitKey       = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID, Ethereum.USDT);
     }
 
 }
@@ -1169,7 +1176,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_usdc() external {
+    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         uint256 expectedDecrease = 340.756158e6;
 
         vm.startPrank(SPARK_PROXY);
@@ -1212,7 +1219,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_usdt() external {
+    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         uint256 expectedDecrease = 159.209953e6;
 
         vm.startPrank(SPARK_PROXY);
@@ -1546,7 +1553,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_usdc() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, -10, 0, 1_000_000e6);
 
         uint256 expectedDecrease = 340.756158e6;
@@ -1594,7 +1601,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_usdt() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, -10, 0, 1_000_000e6);
 
         uint256 expectedDecrease = 159.209953e6;
@@ -1905,10 +1912,19 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         mainnetController.swapUniswapV4(_POOL_ID, address(0), 0, 0);
     }
 
-    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary() external {
+    function test_swapUniswapV4_revertsWhenInputTokenNotForPool() external {
+        vm.prank(SPARK_PROXY);
+        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
+
+        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
+        vm.prank(relayer);
+        mainnetController.swapUniswapV4(_POOL_ID, address(1), 1_000_000e6, 1_000_000e6);
+    }
+
+    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 1_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 1_000_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDC, 1_000_000e6, 0.99e18);
@@ -1933,21 +1949,38 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_swapUniswapV4_revertsWhenInputTokenNotForPool() external {
+    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token1SwapLimitKey, 1_000_000e18, 0);
         vm.stopPrank();
 
-        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
+        uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDT, 1_000_000e6, 0.99e18);
+
+        deal(Ethereum.USDT, address(almProxy), 1_000_000e6 + 1);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
-        mainnetController.swapUniswapV4(_POOL_ID, address(1), 1_000_000e6, 1_000_000e6);
+        mainnetController.swapUniswapV4({
+            poolId       : _POOL_ID,
+            tokenIn      : Ethereum.USDT,
+            amountIn     : 1_000_000e6 + 1,
+            amountOutMin : amountOutMin
+        });
+
+        vm.prank(relayer);
+        mainnetController.swapUniswapV4({
+            poolId       : _POOL_ID,
+            tokenIn      : Ethereum.USDT,
+            amountIn     : 1_000_000e6,
+            amountOutMin : amountOutMin
+        });
     }
 
     function test_swapUniswapV4_revertsWhenAmountOutMinTooLowBoundary() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
@@ -1963,7 +1996,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     function test_swapUniswapV4_revertsWhenAmountOutMinNotMetBoundary() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
@@ -1986,7 +2019,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     function test_swapUniswapV4_token0toToken1() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDC, 1_000_000e6, 0.99e18);
@@ -2012,7 +2045,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     function test_swapUniswapV4_token1toToken0() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token1SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDT, 1_000_000e6, 0.99e18);
@@ -2125,18 +2158,20 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     {
         amountIn = uint128(_bound(uint256(amountIn), 1e6, 1_000_000e6));
 
-        vm.startPrank(SPARK_PROXY);
-        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 1_000_000e18, 0);
-        vm.stopPrank();
-
         address tokenIn = swapDirection ? Ethereum.USDC : Ethereum.USDT;
 
+        bytes32 swapLimitKey = swapDirection ? _token0SwapLimitKey : _token1SwapLimitKey;
+
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
+        rateLimits.setRateLimitData(swapLimitKey, 1_000_000e18, 0);
+        vm.stopPrank();
+
         uint128 amountOutMin    = _getSwapAmountOutMin(_POOL_ID, tokenIn, amountIn, 0.99e18);
-        uint256 rateLimitBefore = rateLimits.getCurrentRateLimit(_swapLimitKey);
+        uint256 rateLimitBefore = rateLimits.getCurrentRateLimit(swapLimitKey);
         uint256 amountOut       = _swap(_POOL_ID, tokenIn, amountIn, amountOutMin);
 
-        assertEq(rateLimits.getCurrentRateLimit(_swapLimitKey), rateLimitBefore - _to18From6Decimals(amountIn));
+        assertEq(rateLimits.getCurrentRateLimit(swapLimitKey), rateLimitBefore - _to18From6Decimals(amountIn));
 
         assertGe(amountOut, amountOutMin);
 
@@ -2941,7 +2976,8 @@ abstract contract UniswapV4_USDT_USDS_TestBase is UniswapV4_TestBase {
         _token0DepositLimitKey    = mainnetController.getUniswapV4AssetDepositRateLimitKey(_POOL_ID, Ethereum.USDT);
         _token1DepositLimitKey    = mainnetController.getUniswapV4AssetDepositRateLimitKey(_POOL_ID, Ethereum.USDS);
         _withdrawLimitKey         = mainnetController.getUniswapV4WithdrawRateLimitKey(_POOL_ID);
-        _swapLimitKey             = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID);
+        _token0SwapLimitKey       = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID, Ethereum.USDT);
+        _token1SwapLimitKey       = mainnetController.getUniswapV4SwapRateLimitKey(_POOL_ID, Ethereum.USDS);
     }
 }
 
@@ -3205,7 +3241,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_usdt() external {
+    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         uint256 expectedDecrease = 12_871.843781e6;
 
         vm.startPrank(SPARK_PROXY);
@@ -3248,7 +3284,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_usds() external {
+    function test_mintPositionUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         uint256 expectedDecrease = 16_902.069677368778256533e18;
 
         vm.startPrank(SPARK_PROXY);
@@ -3612,7 +3648,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_usdt() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, 276_000, 276_600, 1_000_000e12);
 
         uint256 expectedDecrease = 12_871.843781e6;
@@ -3660,7 +3696,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_usds() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, 276_000, 276_600, 1_000_000e12);
 
         uint256 expectedDecrease = 16_902.069677368778256533e18;
@@ -3971,10 +4007,19 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         mainnetController.swapUniswapV4(_POOL_ID, address(0), 0, 0);
     }
 
-    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary() external {
+    function test_swapUniswapV4_revertsWhenInputTokenNotForPool() external {
+        vm.prank(SPARK_PROXY);
+        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
+
+        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
+        vm.prank(relayer);
+        mainnetController.swapUniswapV4(_POOL_ID, address(1), 10_000e6, 10_000e6);
+    }
+
+    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary_token0() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 10_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 10_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDT, 10_000e6, 0.99e18);
@@ -3999,21 +4044,38 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_swapUniswapV4_revertsWhenInputTokenNotForPool() external {
+    function test_swapUniswapV4_revertsWhenRateLimitExceededBoundary_token1() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token1SwapLimitKey, 10_000e18, 0);
         vm.stopPrank();
 
-        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
+        uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDS, 10_000e6, 0.99e18);
+
+        deal(Ethereum.USDS, address(almProxy), 10_000e6 + 1);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(relayer);
-        mainnetController.swapUniswapV4(_POOL_ID, address(1), 10_000e6, 10_000e6);
+        mainnetController.swapUniswapV4({
+            poolId       : _POOL_ID,
+            tokenIn      : Ethereum.USDS,
+            amountIn     : 10_000e6 + 1,
+            amountOutMin : amountOutMin
+        });
+
+        vm.prank(relayer);
+        mainnetController.swapUniswapV4({
+            poolId       : _POOL_ID,
+            tokenIn      : Ethereum.USDS,
+            amountIn     : 10_000e6,
+            amountOutMin : amountOutMin
+        });
     }
 
     function test_swapUniswapV4_revertsWhenAmountOutMinTooLowBoundary() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDT, address(almProxy), 10_000e6);
@@ -4029,7 +4091,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
     function test_swapUniswapV4_revertsWhenAmountOutMinNotMetBoundary() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token0SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDT, address(almProxy), 10_000e6);
@@ -4052,7 +4114,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
     function test_swapUniswapV4_token0toToken1() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token1SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDT, 10_000e6, 0.99e18);
@@ -4078,7 +4140,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
     function test_swapUniswapV4_token1toToken0() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 2_000_000e18, 0);
+        rateLimits.setRateLimitData(_token1SwapLimitKey, 2_000_000e18, 0);
         vm.stopPrank();
 
         uint128 amountOutMin = _getSwapAmountOutMin(_POOL_ID, Ethereum.USDS, 3_000e18, 0.99e18);
@@ -4198,19 +4260,21 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
             amountIn = uint128(_bound(uint256(amountIn), 1e18, 1_000_000e18));
         }
 
-        vm.startPrank(SPARK_PROXY);
-        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
-        rateLimits.setRateLimitData(_swapLimitKey, 1_000_000e18, 0);
-        vm.stopPrank();
-
         address tokenIn = swapDirection ? Ethereum.USDT : Ethereum.USDS;
 
+        bytes32 swapLimitKey = swapDirection ? _token0SwapLimitKey : _token1SwapLimitKey;
+
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.setUniswapV4MaxSlippage(_POOL_ID, 0.98e18);
+        rateLimits.setRateLimitData(swapLimitKey, 1_000_000e18, 0);
+        vm.stopPrank();
+
         uint128 amountOutMin    = _getSwapAmountOutMin(_POOL_ID, tokenIn, amountIn, 0.99e18);
-        uint256 rateLimitBefore = rateLimits.getCurrentRateLimit(_swapLimitKey);
+        uint256 rateLimitBefore = rateLimits.getCurrentRateLimit(swapLimitKey);
         uint256 amountOut       = _swap(_POOL_ID, tokenIn, amountIn, amountOutMin);
 
         assertEq(
-            rateLimits.getCurrentRateLimit(_swapLimitKey),
+            rateLimits.getCurrentRateLimit(swapLimitKey),
             rateLimitBefore - (swapDirection ? _to18From6Decimals(amountIn) : amountIn)
         );
 
