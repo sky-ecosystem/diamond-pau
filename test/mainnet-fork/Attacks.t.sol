@@ -64,11 +64,7 @@ interface ILayerZeroOFTLike {
 contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
 
     function test_attack_assetChanged_depositAave() external {
-        bytes32 aaveDepositKey = makeAddressAddressKey(
-            mainnetController.LIMIT_AAVE_DEPOSIT(),
-            Ethereum.USDS,
-            ATOKEN_USDS
-        );
+        bytes32 aaveDepositKey = mainnetController.getAaveDepositRateLimitKey(ATOKEN_USDS, POOL, Ethereum.USDS);
 
         assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 25_000_000e18);
 
@@ -97,11 +93,7 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
     }
 
     function test_attack_assetChanged_withdrawAave() external {
-        bytes32 aaveDepositKey = makeAddressAddressKey(
-            mainnetController.LIMIT_AAVE_DEPOSIT(),
-            Ethereum.USDS,
-            ATOKEN_USDS
-        );
+        bytes32 aaveDepositKey = mainnetController.getAaveDepositRateLimitKey(ATOKEN_USDS, POOL, Ethereum.USDS);
 
         assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 25_000_000e18);
 
@@ -153,11 +145,7 @@ contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
         vm.prank(ROOT);
         restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
 
-        depositKey = makeAddressAddressKey(
-            mainnetController.LIMIT_7540_DEPOSIT(),
-            Ethereum.USDC,
-            address(jTreasuryVault)
-        );
+        depositKey = mainnetController.getERC7540DepositRateLimitKey(address(jTreasuryVault), Ethereum.USDC);
 
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(depositKey, 2_000_000e6, uint256(2_000_000e6) / 1 days);
@@ -329,11 +317,7 @@ contract MainnetController_Farm_Attack_Tests is Farm_TestBase {
     function setUp() public override {
         super.setUp();
 
-        depositKey = makeAddressAddressKey(
-            mainnetController.LIMIT_FARM_DEPOSIT(),
-            Ethereum.USDS,
-            FARM
-        );
+        depositKey = mainnetController.getFarmDepositRateLimitKey(FARM, Ethereum.USDS);
     }
 
     function test_attack_stakingTokenChanged_depositToFarm() external {
@@ -497,7 +481,7 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
     function setUp() public override {
         super.setUp();
 
-        depositKey = makeAddressKey(mainnetController.LIMIT_WEETH_DEPOSIT(), address(eeth));
+        depositKey = mainnetController.getWEETHDepositRateLimitKey(address(eeth), address(liquidityPool));
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(depositKey, 1_000e18, uint256(1_000e18) / 1 days);
@@ -521,6 +505,11 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
             Ethereum.WEETH,
             abi.encodeWithSignature("eETH()"),
             abi.encode(Ethereum.DAI)
+        );
+        vm.mockCall(
+            Ethereum.DAI,
+            abi.encodeWithSignature("liquidityPool()"),
+            abi.encode(address(liquidityPool))
         );
 
         // Cannot deposit with the changed eETH address.
