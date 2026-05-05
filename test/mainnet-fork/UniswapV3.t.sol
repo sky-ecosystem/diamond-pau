@@ -1039,7 +1039,7 @@ contract MainnetController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         uint256 amount1 = 1_000_000e6;
 
         vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey, 0, 0);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey, 0, 0);
 
         _fundProxy(amount0, amount1);
 
