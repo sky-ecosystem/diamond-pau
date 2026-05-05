@@ -318,21 +318,11 @@ abstract contract ForkTestBase is Test {
 
         vm.label(merklFacet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](3);
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](1);
 
         merklWires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.setMerklDistributor.selector,
-            IMerklFacet.setDistributor.selector
-        );
-
-        merklWires[1] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.toggleOperatorMerkl.selector,
             IMerklFacet.toggleOperator.selector
-        );
-
-        merklWires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.merklDistributor.selector,
-            IMerklFacet.distributor.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

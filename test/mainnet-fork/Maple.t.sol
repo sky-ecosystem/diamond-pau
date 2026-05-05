@@ -50,7 +50,7 @@ abstract contract Maple_TestBase is ForkTestBase {
         super.setUp();
 
         depositKey = mainnetController.getERC4626DepositRateLimitKey(address(SYRUP), Ethereum.USDC);
-        redeemKey  = mainnetController.getMapleRedeemRateLimitKey(address(SYRUP));
+        redeemKey  = mainnetController.getMapleRequestRedeemRateLimitKey(address(SYRUP));
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(depositKey, 1_000_000e6, uint256(1_000_000e6) / 1 days);

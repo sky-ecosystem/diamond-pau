@@ -11,9 +11,13 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function getDepositRateLimitKey(address token, address asset) external pure returns (bytes32);
+    function getRequestDepositRateLimitKey(address token, address asset) external pure returns (bytes32 key);
 
-    function getRedeemRateLimitKey(address token) external pure returns (bytes32);
+    function getClaimDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getRequestRedeemRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getClaimRedeemRateLimitKey(address token) external pure returns (bytes32 key);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
@@ -30,16 +34,26 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "ERC7540Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.getDepositRateLimitKey.selector,
-            IERC7540Facet.getDepositRateLimitKey.selector
+            IControllerLike.getRequestDepositRateLimitKey.selector,
+            IERC7540Facet.getRequestDepositRateLimitKey.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IControllerLike.getRedeemRateLimitKey.selector,
-            IERC7540Facet.getRedeemRateLimitKey.selector
+            IControllerLike.getClaimDepositRateLimitKey.selector,
+            IERC7540Facet.getClaimDepositRateLimitKey.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IControllerLike.getRequestRedeemRateLimitKey.selector,
+            IERC7540Facet.getRequestRedeemRateLimitKey.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IControllerLike.getClaimRedeemRateLimitKey.selector,
+            IERC7540Facet.getClaimRedeemRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -52,32 +66,6 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
-    }
-
-    /**********************************************************************************************/
-    /*** getDepositRateLimitKey Tests                                                           ***/
-    /**********************************************************************************************/
-
-    function test_getDepositRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_7540_DEPOSIT");
-        address token     = makeAddr("token");
-        address asset     = makeAddr("asset");
-
-        assertEq(
-            controller.getDepositRateLimitKey(token, asset),
-            makeAddressAddressKey(keyPrefix, asset, token)
-        );
-    }
-
-    /**********************************************************************************************/
-    /*** getRedeemRateLimitKey Tests                                                            ***/
-    /**********************************************************************************************/
-
-    function test_getRedeemRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_7540_REDEEM");
-        address token     = makeAddr("token");
-
-        assertEq(controller.getRedeemRateLimitKey(token), makeAddressKey(keyPrefix, token));
     }
 
 }

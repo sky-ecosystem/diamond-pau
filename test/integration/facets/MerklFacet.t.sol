@@ -24,80 +24,70 @@ contract Controller_MerklFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
-    function setUp() external {
-        controller = IControllerLike(_deploy());
+    // function setUp() external {
+    //     controller = IControllerLike(_deploy());
 
-        address facet = address(new MerklFacet());
+    //     address facet = address(new MerklFacet());
 
-        vm.label(facet, "MerklFacet");
+    //     vm.label(facet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+    //     IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
-        wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.setDistributor.selector,
-            IMerklFacet.setDistributor.selector
-        );
+    //     IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
 
-        wires[1] = IEnumerableIntegrations.Wire(
-            IControllerLike.distributor.selector,
-            IMerklFacet.distributor.selector
-        );
+    //     vm.prank(beaconAdmin);
+    //     beacon.setIntegration("MERKL_FACET", config);
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
+    //     bytes32[] memory integrationIds = new bytes32[](1);
+    //     integrationIds[0] = "MERKL_FACET";
 
-        vm.prank(beaconAdmin);
-        beacon.setIntegration("MERKL_FACET", config);
+    //     vm.prank(admin);
+    //     controller.updateIntegrations(integrationIds);
+    // }
 
-        bytes32[] memory integrationIds = new bytes32[](1);
-        integrationIds[0] = "MERKL_FACET";
+    // /**********************************************************************************************/
+    // /*** setDistributor Tests                                                                   ***/
+    // /**********************************************************************************************/
 
-        vm.prank(admin);
-        controller.updateIntegrations(integrationIds);
-    }
+    // function test_setDistributor_reentrancy() external {
+    //     _setEntered(address(controller));
+    //     vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+    //     controller.setDistributor(address(0));
+    // }
 
-    /**********************************************************************************************/
-    /*** setDistributor Tests                                                                   ***/
-    /**********************************************************************************************/
+    // function test_setDistributor_unauthorizedAccount() external {
+    //     vm.expectRevert(abi.encodeWithSignature(
+    //         "AccessControlUnauthorizedAccount(address,bytes32)",
+    //         unauthorized,
+    //         DEFAULT_ADMIN_ROLE
+    //     ));
 
-    function test_setDistributor_reentrancy() external {
-        _setEntered(address(controller));
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setDistributor(address(0));
-    }
+    //     vm.prank(unauthorized);
+    //     controller.setDistributor(address(0));
+    // }
 
-    function test_setDistributor_unauthorizedAccount() external {
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            unauthorized,
-            DEFAULT_ADMIN_ROLE
-        ));
+    // function test_setDistributor_zeroAddress() external {
+    //     vm.expectRevert("MerklFacet/zero-distributor");
+    //     vm.prank(admin);
+    //     controller.setDistributor(address(0));
+    // }
 
-        vm.prank(unauthorized);
-        controller.setDistributor(address(0));
-    }
+    // function test_setDistributor() external {
+    //     address distributor = makeAddr("distributor");
 
-    function test_setDistributor_zeroAddress() external {
-        vm.expectRevert("MerklFacet/zero-distributor");
-        vm.prank(admin);
-        controller.setDistributor(address(0));
-    }
+    //     assertEq(controller.distributor(), address(0));
 
-    function test_setDistributor() external {
-        address distributor = makeAddr("distributor");
+    //     vm.record();
 
-        assertEq(controller.distributor(), address(0));
+    //     vm.expectEmit(address(controller));
+    //     emit IMerklFacet.MerklDistributorSet(distributor);
 
-        vm.record();
+    //     vm.prank(admin);
+    //     controller.setDistributor(distributor);
 
-        vm.expectEmit(address(controller));
-        emit IMerklFacet.MerklDistributorSet(distributor);
+    //     assertEq(controller.distributor(), distributor);
 
-        vm.prank(admin);
-        controller.setDistributor(distributor);
-
-        assertEq(controller.distributor(), distributor);
-
-        _assertReentrancyGuardWrittenToTwice(address(controller));
-    }
+    //     _assertReentrancyGuardWrittenToTwice(address(controller));
+    // }
 
 }

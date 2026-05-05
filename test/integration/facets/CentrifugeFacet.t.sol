@@ -26,6 +26,14 @@ interface IControllerLike {
 
     function getRedeemRateLimitKey(address token) external pure returns (bytes32);
 
+    function getCancelDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getClaimCancelDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getCancelRedeemRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getClaimCancelRedeemRateLimitKey(address token) external pure returns (bytes32 key);
+
     function getTransferRateLimitKey(address token, uint16 centrifugeId, address spoke)
         external
         pure
@@ -49,7 +57,7 @@ contract Controller_CentrifugeFacet_Tests is Integration_TestBase {
 
         vm.label(facet, "CentrifugeFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setRecipient.selector,
@@ -62,16 +70,26 @@ contract Controller_CentrifugeFacet_Tests is Integration_TestBase {
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IControllerLike.getDepositRateLimitKey.selector,
-            ICentrifugeFacet.getDepositRateLimitKey.selector
+            IControllerLike.getCancelDepositRateLimitKey.selector,
+            ICentrifugeFacet.getCancelDepositRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IControllerLike.getRedeemRateLimitKey.selector,
-            ICentrifugeFacet.getRedeemRateLimitKey.selector
+            IControllerLike.getClaimCancelDepositRateLimitKey.selector,
+            ICentrifugeFacet.getClaimCancelDepositRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
+            IControllerLike.getCancelRedeemRateLimitKey.selector,
+            ICentrifugeFacet.getCancelRedeemRateLimitKey.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            IControllerLike.getClaimCancelRedeemRateLimitKey.selector,
+            ICentrifugeFacet.getClaimCancelRedeemRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
             IControllerLike.getTransferRateLimitKey.selector,
             ICentrifugeFacet.getTransferRateLimitKey.selector
         );

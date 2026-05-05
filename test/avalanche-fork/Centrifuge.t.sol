@@ -73,7 +73,7 @@ contract ForeignController_Centrifuge_RequestDepositERC7540_Tests is Centrifuge_
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = foreignController.getERC7540DepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
+        key = foreignController.getERC7540RequestDepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
@@ -139,7 +139,8 @@ contract ForeignController_Centrifuge_RequestDepositERC7540_Tests is Centrifuge_
 
 contract ForeignController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_TestBase {
 
-    bytes32 key;
+    bytes32 requestDepositKey;
+    bytes32 claimDepositKey;
 
     function setUp() public override {
         super.setUp();
@@ -147,10 +148,12 @@ contract ForeignController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = foreignController.getERC7540DepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
+        requestDepositKey = foreignController.getERC7540RequestDepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
+        claimDepositKey   = foreignController.getERC7540ClaimDepositRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
-        rateLimits.setRateLimitData(key, 1_500_000e6, uint256(1_500_000e6) / 1 days);
+        rateLimits.setRateLimitData(requestDepositKey, 1_500_000e6, uint256(1_500_000e6) / 1 days);
+        rateLimits.setRateLimitData(claimDepositKey,   1_500_000e6, uint256(1_500_000e6) / 1 days);
     }
 
     function test_claimDepositERC7540_notAllocator() external {
@@ -164,7 +167,7 @@ contract ForeignController_Centrifuge_ClaimDepositERC7540_Tests is Centrifuge_Te
 
     function test_claimDepositERC7540_invalidAction() external {
         vm.prank(GROVE_EXECUTOR);
-        rateLimits.setRateLimitData(key, 0, 0);
+        rateLimits.setRateLimitData(claimDepositKey, 0, 0);
 
         vm.expectRevert("ERC7540Facet/invalid-action");
         vm.prank(ALM_ALLOCATOR);
@@ -340,7 +343,7 @@ contract ForeignController_Centrifuge_CancelDepositERC7540_Tests is Centrifuge_T
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = foreignController.getERC7540DepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
+        key = foreignController.getCentrifugeCancelDepositRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
@@ -365,6 +368,14 @@ contract ForeignController_Centrifuge_CancelDepositERC7540_Tests is Centrifuge_T
     }
 
     function test_cancelCentrifugeDepositRequest() external {
+        vm.startPrank(GROVE_EXECUTOR);
+        rateLimits.setRateLimitData(
+            foreignController.getERC7540RequestDepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE),
+            1_000_000e6,
+            uint256(1_000_000e6) / 1 days
+        );
+        vm.stopPrank();
+
         deal(address(usdcAvalanche), address(almProxy), 1_000_000e6);
 
         vm.expectEmit(address(foreignController));
@@ -401,7 +412,7 @@ contract ForeignController_Centrifuge_ClaimCancelDeposit_Tests is Centrifuge_Tes
         vm.prank(root);
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
 
-        key = foreignController.getERC7540DepositRateLimitKey(address(centrifugeV3Vault), USDC_AVALANCHE);
+        key = foreignController.getCentrifugeClaimCancelDepositRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
@@ -504,7 +515,7 @@ contract ForeignController_Centrifuge_RequestRedeemERC7540_Tests is Centrifuge_T
         spoke.updatePricePoolPerShare(poolId, scId, 1e18, uint64(block.timestamp));
         vm.stopPrank();
 
-        key = foreignController.getERC7540RedeemRateLimitKey(address(centrifugeV3Vault));
+        key = foreignController.getERC7540RequestRedeemRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
@@ -586,7 +597,7 @@ contract ForeignController_Centrifuge_ClaimRedeemERC7540_Tests is Centrifuge_Tes
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = foreignController.getERC7540RedeemRateLimitKey(address(centrifugeV3Vault));
+        key = foreignController.getERC7540ClaimRedeemRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 2_000_000e6, uint256(2_000_000e6) / 1 days);
@@ -812,7 +823,7 @@ contract ForeignController_Centrifuge_CancelRedeemRequest_Tests is Centrifuge_Te
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = foreignController.getERC7540RedeemRateLimitKey(address(centrifugeV3Vault));
+        key = foreignController.getCentrifugeCancelRedeemRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
@@ -877,7 +888,7 @@ contract ForeignController_Centrifuge_ClaimCancelRedeemRequest_Tests is Centrifu
         vaultTokenHook.updateMember(address(vaultToken), address(almProxy), type(uint64).max);
         vm.stopPrank();
 
-        key = foreignController.getERC7540RedeemRateLimitKey(address(centrifugeV3Vault));
+        key = foreignController.getCentrifugeClaimCancelRedeemRateLimitKey(address(centrifugeV3Vault));
 
         vm.prank(GROVE_EXECUTOR);
         rateLimits.setRateLimitData(key, 1_000_000e6, uint256(1_000_000e6) / 1 days);
