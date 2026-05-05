@@ -3,10 +3,10 @@ pragma solidity ^0.8.34;
 
 import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
-import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
-import { IFacet }                  from "../../../src/facets/IFacet.sol";
-import { IUniswapV4Facet }         from "../../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
-import { makeBytes32Key }          from "../../../src/libraries/RateLimitHelpers.sol";
+import { IEnumerableIntegrations }               from "../../../src/interfaces/IEnumerableIntegrations.sol";
+import { IFacet }                                from "../../../src/facets/IFacet.sol";
+import { IUniswapV4Facet }                       from "../../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
+import { makeAddressBytes32Key, makeBytes32Key } from "../../../src/libraries/RateLimitHelpers.sol";
 
 import { UniswapV4Facet } from "../../../src/facets/uniswap-v4/UniswapV4Facet.sol";
 
@@ -30,7 +30,9 @@ interface IControllerLike {
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
-    function getDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32);
+    function getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32);
+
+    function getAssetDepositRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
 
     function getSwapRateLimitKey(bytes32 poolId) external pure returns (bytes32);
 
@@ -57,7 +59,7 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setMaxSlippage.selector,
@@ -80,16 +82,21 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IControllerLike.getDepositRateLimitKey.selector,
-            IUniswapV4Facet.getDepositRateLimitKey.selector
+            IControllerLike.getAggregateDepositRateLimitKey.selector,
+            IUniswapV4Facet.getAggregateDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
+            IControllerLike.getAssetDepositRateLimitKey.selector,
+            IUniswapV4Facet.getAssetDepositRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
             IControllerLike.getSwapRateLimitKey.selector,
             IUniswapV4Facet.getSwapRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IControllerLike.getWithdrawRateLimitKey.selector,
             IUniswapV4Facet.getWithdrawRateLimitKey.selector
         );
@@ -260,13 +267,75 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** getDepositRateLimitKey Tests                                                           ***/
+    /*** getAggregateDepositRateLimitKey Tests                                                  ***/
     /**********************************************************************************************/
 
-    function test_getDepositRateLimitKey() external {
+    function test_getAggregateDepositRateLimitKey() external {
         bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_DEPOSIT");
 
-        assertEq(controller.getDepositRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
+        assertEq(controller.getAggregateDepositRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
+    }
+
+    function testFuzz_getAggregateDepositRateLimitKey(bytes32 poolId) external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_DEPOSIT");
+
+        assertEq(controller.getAggregateDepositRateLimitKey(poolId), makeBytes32Key(keyPrefix, poolId));
+    }
+
+    /**********************************************************************************************/
+    /*** getAssetDepositRateLimitKey Tests                                                      ***/
+    /**********************************************************************************************/
+
+    function test_getAssetDepositRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_DEPOSIT");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getAssetDepositRateLimitKey(_POOL_ID, token),
+            makeAddressBytes32Key(keyPrefix, token, _POOL_ID)
+        );
+    }
+
+    function testFuzz_getAssetDepositRateLimitKey(bytes32 poolId, address token) external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_DEPOSIT");
+
+        assertEq(
+            controller.getAssetDepositRateLimitKey(poolId, token),
+            makeAddressBytes32Key(keyPrefix, token, poolId)
+        );
+    }
+
+    function test_getAssetDepositRateLimitKey_differentTokensSamePool_uniqueKeys() external {
+        address token0 = makeAddr("token0");
+        address token1 = makeAddr("token1");
+
+        bytes32 key0 = controller.getAssetDepositRateLimitKey(_POOL_ID, token0);
+        bytes32 key1 = controller.getAssetDepositRateLimitKey(_POOL_ID, token1);
+
+        assertTrue(key0 != key1);
+    }
+
+    function test_getAssetDepositRateLimitKey_sameTokenDifferentPools_uniqueKeys() external {
+        bytes32 poolId0 = bytes32(uint256(1));
+        bytes32 poolId1 = bytes32(uint256(2));
+        address token   = makeAddr("token");
+
+        bytes32 key0 = controller.getAssetDepositRateLimitKey(poolId0, token);
+        bytes32 key1 = controller.getAssetDepositRateLimitKey(poolId1, token);
+
+        assertTrue(key0 != key1);
+    }
+
+    // The aggregate key uses makeBytes32Key(prefix, poolId) and the asset key uses
+    // makeAddressBytes32Key(prefix, token, poolId). Even when the encoding could overlap,
+    // abi.encode's type-aware encoding ensures uniqueness.
+    function test_aggregateAndAssetDepositKeys_differentEncoding_uniqueKeys() external {
+        address token = makeAddr("token");
+
+        bytes32 aggregateKey = controller.getAggregateDepositRateLimitKey(_POOL_ID);
+        bytes32 assetKey     = controller.getAssetDepositRateLimitKey(_POOL_ID, token);
+
+        assertTrue(aggregateKey != assetKey);
     }
 
     /**********************************************************************************************/
@@ -279,6 +348,12 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         assertEq(controller.getSwapRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
     }
 
+    function testFuzz_getSwapRateLimitKey(bytes32 poolId) external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_SWAP");
+
+        assertEq(controller.getSwapRateLimitKey(poolId), makeBytes32Key(keyPrefix, poolId));
+    }
+
     /**********************************************************************************************/
     /*** getWithdrawRateLimitKey Tests                                                          ***/
     /**********************************************************************************************/
@@ -287,6 +362,29 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_WITHDRAW");
 
         assertEq(controller.getWithdrawRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
+    }
+
+    function testFuzz_getWithdrawRateLimitKey(bytes32 poolId) external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_WITHDRAW");
+
+        assertEq(controller.getWithdrawRateLimitKey(poolId), makeBytes32Key(keyPrefix, poolId));
+    }
+
+    // Confirm deposit, swap, and withdraw keys all differ for the same pool.
+    function test_allKeys_differentPrefixes_uniqueKeys() external {
+        address token = makeAddr("token");
+
+        bytes32 aggregateDepositKey = controller.getAggregateDepositRateLimitKey(_POOL_ID);
+        bytes32 assetDepositKey     = controller.getAssetDepositRateLimitKey(_POOL_ID, token);
+        bytes32 swapKey             = controller.getSwapRateLimitKey(_POOL_ID);
+        bytes32 withdrawKey         = controller.getWithdrawRateLimitKey(_POOL_ID);
+
+        assertTrue(aggregateDepositKey != assetDepositKey);
+        assertTrue(aggregateDepositKey != swapKey);
+        assertTrue(aggregateDepositKey != withdrawKey);
+        assertTrue(assetDepositKey     != swapKey);
+        assertTrue(assetDepositKey     != withdrawKey);
+        assertTrue(swapKey             != withdrawKey);
     }
 
 }

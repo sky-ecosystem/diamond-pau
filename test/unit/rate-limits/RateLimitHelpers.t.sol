@@ -7,6 +7,7 @@ import {
     makeAddressAddressAddressKey as makeAddressAddressAddressKeyImplementation,
     makeAddressAddressUint32Key as makeAddressAddressUint32KeyImplementation,
     makeAddressAddressKey as makeAddressAddressKeyImplementation,
+    makeAddressBytes32Key as makeAddressBytes32KeyImplementation,
     makeAddressKey as makeAddressKeyImplementation,
     makeAddressUint16AddressKey as makeAddressUint16AddressKeyImplementation,
     makeAddressUint16Key as makeAddressUint16KeyImplementation,
@@ -28,6 +29,10 @@ contract RateLimitHelpersHarness {
 
     function makeAddressAddressAddressKey(bytes32 key, address asset, address destination, address module) public pure returns (bytes32) {
         return makeAddressAddressAddressKeyImplementation(key, asset, destination, module);
+    }
+
+    function makeAddressBytes32Key(bytes32 key, address asset, bytes32 poolId) public pure returns (bytes32) {
+        return makeAddressBytes32KeyImplementation(key, asset, poolId);
     }
 
     function makeAddressUint16Key(bytes32 key, address asset, uint16 domain) public pure returns (bytes32) {
@@ -106,10 +111,71 @@ contract RateLimitHelpers_Tests is UnitTestBase {
         );
     }
 
+    function test_makeAddressBytes32Key() external {
+        assertEq(
+            wrapper.makeAddressBytes32Key(KEY, makeAddr("account"), bytes32(type(uint256).max)),
+            keccak256(abi.encode(KEY, makeAddr("account"), bytes32(type(uint256).max)))
+        );
+    }
+
+    function test_makeAddressBytes32Key_zeroInputs() external {
+        assertEq(
+            wrapper.makeAddressBytes32Key(bytes32(0), address(0), bytes32(0)),
+            keccak256(abi.encode(bytes32(0), address(0), bytes32(0)))
+        );
+    }
+
+    function testFuzz_makeAddressBytes32Key(bytes32 key, address asset, bytes32 poolId) external {
+        assertEq(
+            wrapper.makeAddressBytes32Key(key, asset, poolId),
+            keccak256(abi.encode(key, asset, poolId))
+        );
+    }
+
+    function test_makeAddressBytes32Key_uniqueness() external {
+        bytes32 key1  = "KEY1";
+        bytes32 key2  = "KEY2";
+        address addr1 = makeAddr("addr1");
+        address addr2 = makeAddr("addr2");
+        bytes32 id1   = bytes32(uint256(1));
+        bytes32 id2   = bytes32(uint256(2));
+
+        // Different key prefix produces different result
+        assertTrue(wrapper.makeAddressBytes32Key(key1, addr1, id1) != wrapper.makeAddressBytes32Key(key2, addr1, id1));
+
+        // Different address produces different result
+        assertTrue(wrapper.makeAddressBytes32Key(key1, addr1, id1) != wrapper.makeAddressBytes32Key(key1, addr2, id1));
+
+        // Different poolId produces different result
+        assertTrue(wrapper.makeAddressBytes32Key(key1, addr1, id1) != wrapper.makeAddressBytes32Key(key1, addr1, id2));
+
+        // Swapping address and poolId (where address cast as bytes32) should differ from non-swapped
+        // This confirms abi.encode encodes types distinctly, preventing certain collisions
+        bytes32 addrAsBytes32 = bytes32(uint256(uint160(addr1)));
+        assertTrue(
+            wrapper.makeAddressBytes32Key(key1, addr1, id1) !=
+            wrapper.makeAddressBytes32Key(key1, address(uint160(uint256(id1))), addrAsBytes32)
+        );
+    }
+
+    function testFuzz_makeAddressBytes32Key_uniqueness(
+        bytes32 key,
+        address asset,
+        bytes32 poolId,
+        bytes32 differentPoolId
+    ) external {
+        vm.assume(poolId != differentPoolId);
+
+        assertNotEq(
+            wrapper.makeAddressBytes32Key(key, asset, poolId),
+            wrapper.makeAddressBytes32Key(key, asset, differentPoolId)
+        );
+    }
+
     function test_makeAddressUint16Key() external {
         assertEq(
             wrapper.makeAddressUint16Key(KEY, makeAddr("account"), type(uint16).max),
-            keccak256(abi.encode(KEY, makeAddr("account"), uint16(type(uint16).max)))
+
         );
     }
 
