@@ -1009,8 +1009,13 @@ contract ForeignController_Centrifuge_TransferShares_Tests is Centrifuge_TestBas
     }
 
     function test_transferSharesCentrifuge_zeroMaxAmount() external {
-        vm.prank(GROVE_EXECUTOR);
+        vm.startPrank(GROVE_EXECUTOR);
+
         rateLimits.setRateLimitData(key, 0, 0);
+
+        foreignController.setCentrifugeRecipient(DESTINATION_CENTRIFUGE_ID, target);
+
+        vm.stopPrank();
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(ALM_RELAYER);
