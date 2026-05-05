@@ -47,9 +47,9 @@ contract ForkTestBase is Test {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
-    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
 
     address pocket   = makeAddr("pocket");
     address skyAdmin = makeAddr("skyAdmin");

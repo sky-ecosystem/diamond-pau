@@ -146,9 +146,9 @@ abstract contract ForkTestBase is DssTest {
 
     bytes32 constant ilk = "ILK-A";
 
+    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
-    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
 
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 

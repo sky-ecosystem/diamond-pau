@@ -7,8 +7,8 @@ import {
 
 /**
  * @title  IALMProxyFreezable
- * @notice Proxy contract with freezer and allocator roles. Allocators execute calls through the proxy,
- *         and freezers can revoke allocator access as an emergency measure.
+ * @notice Proxy contract with freezer and allocator roles. Allocators execute calls through the
+ *         proxy, and freezers can revoke allocator access as an emergency measure.
  */
 interface IALMProxyFreezable is IAccessControl {
 

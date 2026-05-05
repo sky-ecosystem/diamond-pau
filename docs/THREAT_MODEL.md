@@ -25,7 +25,7 @@ This document outlines the threat model for PAU, including attack vectors, trust
 
 ## Primary Threat: Compromised Allocator
 
-The system is designed with the assumption that a `ALLOCATOR` can be fully compromised by a malicious actor. This is the primary threat the architecture defends against.
+The system is designed with the assumption that an actor with `ALLOCATOR_ROLE` can be fully compromised by a malicious actor. This is the primary threat the architecture defends against.
 
 ### Attack Vectors
 
@@ -41,7 +41,7 @@ The system is designed with the assumption that a `ALLOCATOR` can be fully compr
 ### Design Principles
 
 1. **Value cannot leave the system** - All operations must keep funds within the PAU system of contracts
-   - Exception: Asynchronous integrations (e.g., BUIDL, Ethena) where funds go to whitelisted addresses
+    - Exception: Asynchronous integrations (e.g., BUIDL, Ethena) where funds go to whitelisted addresses
 
 2. **Losses bounded by rate limits** - Any single attack is limited to the current rate limit capacity
 

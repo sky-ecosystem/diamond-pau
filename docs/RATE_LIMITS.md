@@ -11,8 +11,8 @@ The `RateLimits` contract enforces rate limits on the Controller. Rate limits ar
 Rate limit keys are constructed by hashing together a **function identifier** and an **address or ID** (e.g., pool address, vault address, token address). This mechanism serves as an implicit **whitelist/onboarding system**:
 
 - **Examples:**
-  - Depositing liquidity to a specific Uniswap V4 pool requires the rate limit key `keccak256(abi.encode(LIMIT_UNISWAP_V4_DEPOSIT, poolId))` to be set
-  - Withdrawing an aToken from Aave requires the rate limit key `keccak256(abi.encode(LIMIT_AAVE_WITHDRAW, aToken))` to be set
+    - Depositing liquidity to a specific Uniswap V4 pool requires the rate limit key `keccak256(abi.encode(LIMIT_UNISWAP_V4_DEPOSIT, poolId))` to be set
+    - Withdrawing an aToken from Aave requires the rate limit key `keccak256(abi.encode(LIMIT_AAVE_WITHDRAW, aToken))` to be set
 - **Security benefit:** Prevents allocators from interacting with arbitrary/malicious contracts - only governance-approved integrations have valid rate limit keys
 - **Operational benefit:** New integrations can be onboarded with lower rate limits to ease into use, and then increased to manage ongoing risk/exposure, and providing a clear audit trail
 

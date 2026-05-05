@@ -23,9 +23,9 @@ contract PAUFactory_IntegrationTests is Test {
     bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
 
     address internal admin        = makeAddr("admin");
+    address internal allocator    = makeAddr("allocator");
     address internal beacon       = makeAddr("beacon");
     address internal freezer      = makeAddr("freezer");
-    address internal allocator    = makeAddr("allocator");
     address internal unauthorized = makeAddr("unauthorized");
 
     PAUFactory internal factory;
