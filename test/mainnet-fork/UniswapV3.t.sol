@@ -1003,13 +1003,131 @@ contract MainnetController_UniswapV3_AddLiquidity_FailureTests is UniswapV3_Test
         vm.stopPrank();
     }
 
-    // TODO: test_addLiquidityUniswapV3_zeroMaxAmount_token0
+    function test_addLiquidityUniswapV3_zeroMaxAmount_token0() public {
+        uint256 amount0 = 1_000_000e6;
+        uint256 amount1 = 0;
 
-    // TODO: test_addLiquidityUniswapV3_zeroMaxAmount_token1
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey, 0, 0);
 
-    // TODO: test_addLiquidityUniswapV3_zeroMaxAmount_aggregate
+        _fundProxy(amount0, amount1);
 
-    // TODO: test_addLiquidityUniswapV3_rateLimitExceeded_aggregate
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            IUniswapV3Facet.Ticks({
+                lower: initTick + 50,
+                upper: initTick + 100
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0,
+                amount1: amount1
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0 * 98 / 100,
+                amount1: amount1 * 98 / 100
+            }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
+    function test_addLiquidityUniswapV3_zeroMaxAmount_token1() public {
+        uint256 amount0 = 0;
+        uint256 amount1 = 1_000_000e6;
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey, 0, 0);
+
+        _fundProxy(amount0, amount1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            IUniswapV3Facet.Ticks({
+                lower: initTick - 100,
+                upper: initTick - 50
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0,
+                amount1: amount1
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0 * 98 / 100,
+                amount1: amount1 * 98 / 100
+            }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
+    function test_addLiquidityUniswapV3_zeroMaxAmount_aggregate() public {
+        uint256 amount0 = 1_000_000e18;
+        uint256 amount1 = 0;
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_AggregateAddLiquidityKey, 0, 0);
+
+        _fundProxy(amount0, amount1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            IUniswapV3Facet.Ticks({
+                lower: initTick + 50,
+                upper: initTick + 100
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0,
+                amount1: amount1
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0 * 98 / 100,
+                amount1: amount1 * 98 / 100
+            }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
+    function test_addLiquidityUniswapV3_rateLimitExceeded_aggregate() public {
+        uint256 amount0 = 3_000_000e18;
+        uint256 amount1 = 0;
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setUnlimitedRateLimitData(uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey);
+        rateLimits.setUnlimitedRateLimitData(uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey);
+        vm.stopPrank();
+
+        _fundProxy(amount0, amount1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            IUniswapV3Facet.Ticks({
+                lower: initTick + 50,
+                upper: initTick + 100
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0,
+                amount1: amount1
+            }),
+            IUniswapV3Facet.TokenAmounts({
+                amount0: amount0 * 98 / 100,
+                amount1: amount1 * 98 / 100
+            }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
 
     function test_addLiquidityUniswapV3_rateLimitExceeded_token0() public {
         uint256 amount0 = 2_000_000e18;

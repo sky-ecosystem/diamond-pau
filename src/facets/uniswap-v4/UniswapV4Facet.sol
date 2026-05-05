@@ -367,7 +367,12 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IUniswapV4Facet
-    function getAggregateDepositRateLimitKey(bytes32 poolId) public pure override returns (bytes32) {
+    function getAggregateDepositRateLimitKey(bytes32 poolId)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeBytes32Key(_LIMIT_DEPOSIT, poolId);
     }
 
@@ -387,7 +392,12 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV4Facet
-    function getSwapRateLimitKey(bytes32 poolId, address token) public pure override returns (bytes32) {
+    function getSwapRateLimitKey(bytes32 poolId, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeAddressBytes32Key(_LIMIT_SWAP, token, poolId);
     }
 
