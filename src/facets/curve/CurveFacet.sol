@@ -120,7 +120,7 @@ contract CurveFacet is ICurveFacet, Facet {
         onlyRole(RELAYER_ROLE)
         returns (uint256 amountOut)
     {
-        require(inputIndex  != outputIndex, "CurveFacet/invalid-indices");
+        require(inputIndex != outputIndex, "CurveFacet/invalid-indices");
 
         uint256 numCoins = ICurvePoolLike(pool).N_COINS();
 
@@ -430,7 +430,7 @@ contract CurveFacet is ICurveFacet, Facet {
 
         // Makes the assumption that value in should equal value out.
         uint256 equivalentAmountOut = _fromNormalizedAmount(
-            _toNormalizedAmount(amountIn,  rates[inputIndex]),
+            _toNormalizedAmount(amountIn, rates[inputIndex]),
             rates[outputIndex]
         );
 
