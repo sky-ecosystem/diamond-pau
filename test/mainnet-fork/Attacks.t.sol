@@ -22,7 +22,12 @@ import { Farm_TestBase }                     from "./Farm.t.sol";
 import { LayerZero_TestBase }                from "./LayerZero.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
 import { Pendle_TestBase }                   from "./Pendle.t.sol";
+import { UniswapV3_TestBase }                from "./UniswapV3.t.sol";
 import { WEETH_TestBase }                    from "./WEETH.t.sol";
+
+import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
+
+import { INonfungiblePositionManager, IUniswapV3PoolLike } from "../interfaces/UniswapV3.sol";
 
 interface IERC20Like {
 
@@ -125,7 +130,7 @@ contract MainnetController_Curve_Attack_Tests is Curve_TestBase {
 
         deal(Ethereum.USDT, address(almProxy), 1);
 
-        // Cannot swap with changed coins() token key.
+        // Cannot swap with changed coins().
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
         mainnetController.swapCurve(CURVE_POOL, 1, 0, 1, type(uint256).max);
@@ -172,6 +177,7 @@ contract MainnetController_Curve_Attack_Tests is Curve_TestBase {
 
         uint256 minLpAmount = (usdcAmount + usdtAmount) * 1e12 * 98/100;
 
+        // Cannot add liquidity with changed coins().
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
         mainnetController.addLiquidityCurve(CURVE_POOL, amounts, minLpAmount);
@@ -472,6 +478,96 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
 
 }
 
+contract MainnetController_UniswapV3_Attack_Tests is UniswapV3_TestBase {
+
+    function _defaultAddParams()
+        internal
+        view
+        returns (
+            IUniswapV3Facet.Ticks memory tick,
+            IUniswapV3Facet.TokenAmounts memory target,
+            IUniswapV3Facet.TokenAmounts memory min
+        )
+    {
+        tick = IUniswapV3Facet.Ticks({
+            lower : _toSpacedTick(initTick - 100),
+            upper : _toSpacedTick(initTick + 100)
+        });
+
+        uint256 amount0 = 10_000 * 10 ** uint256(token0Decimals);
+        uint256 amount1 = 10_000 * 10 ** uint256(token1.decimals());
+
+        target = IUniswapV3Facet.TokenAmounts({ amount0: amount0, amount1: amount1 });
+        min    = _minLiquidityPosition(amount0, amount1);
+    }
+
+    function test_attack_token0Changed_addLiquidity() external {
+        (IUniswapV3Facet.Ticks memory tick, IUniswapV3Facet.TokenAmounts memory target, IUniswapV3Facet.TokenAmounts memory min) =
+            _defaultAddParams();
+
+        // Mint succeeds with the original token0()/token1() responses.
+        deal(address(token0), address(almProxy), target.amount0);
+        deal(address(token1), address(almProxy), target.amount1);
+
+        vm.prank(allocator);
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            tick,
+            target,
+            min,
+            block.timestamp + 1 hours
+        );
+
+        // Attack: returns a different token0().
+        vm.mockCall(
+            _getPool(),
+            abi.encodeCall(IUniswapV3PoolLike.token0, ()),
+            abi.encode(Ethereum.DAI)
+        );
+
+        // Keep mint path and mock PositionManager.mint so execution reaches rate-limit
+        // decrement logic instead of reverting inside PositionManager.
+        vm.mockCall(
+            UNISWAP_V3_POSITION_MANAGER,
+            abi.encodeCall(
+                INonfungiblePositionManager.mint,
+                (
+                    INonfungiblePositionManager.MintParams({
+                        token0         : Ethereum.DAI,
+                        token1         : address(token1),
+                        fee            : poolFee,
+                        tickLower      : tick.lower,
+                        tickUpper      : tick.upper,
+                        amount0Desired : target.amount0,
+                        amount1Desired : target.amount1,
+                        amount0Min     : min.amount0,
+                        amount1Min     : min.amount1,
+                        recipient      : address(almProxy),
+                        deadline       : block.timestamp + 1 hours
+                    })
+                )
+            ),
+            abi.encode(uint256(1), uint128(1), uint256(0), uint256(0))
+        );
+
+        deal(Ethereum.DAI, address(almProxy), target.amount0);
+        deal(address(token1), address(almProxy), target.amount1);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.addLiquidityUniswapV3(
+            _getPool(),
+            0,
+            tick,
+            target,
+            min,
+            block.timestamp + 1 hours
+        );
+    }
+
+}
+
 contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
 
     bytes32 depositKey;
@@ -517,3 +613,4 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
     }
 
 }
+
