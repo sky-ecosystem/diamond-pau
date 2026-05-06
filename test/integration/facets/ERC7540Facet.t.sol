@@ -73,7 +73,7 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getRequestDepositRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_REQUEST_DEPOSIT");
+        bytes32 keyPrefix = keccak256("LIMIT_7540_REQUEST_DEPOSIT");
         address token     = makeAddr("token");
         address asset     = makeAddr("asset");
 
@@ -88,7 +88,7 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getClaimDepositRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_CLAIM_DEPOSIT");
+        bytes32 keyPrefix = keccak256("LIMIT_7540_CLAIM_DEPOSIT");
         address token     = makeAddr("token");
 
         assertEq(
@@ -102,7 +102,7 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getRequestRedeemRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_REQUEST_REDEEM");
+        bytes32 keyPrefix = keccak256("LIMIT_7540_REQUEST_REDEEM");
         address token     = makeAddr("token");
 
         assertEq(
@@ -116,7 +116,7 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getClaimRedeemRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_CLAIM_REDEEM");
+        bytes32 keyPrefix = keccak256("LIMIT_7540_CLAIM_REDEEM");
         address token     = makeAddr("token");
 
         assertEq(
