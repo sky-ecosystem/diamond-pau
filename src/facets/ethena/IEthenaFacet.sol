@@ -116,7 +116,7 @@ interface IEthenaFacet is IFacet {
     function cooldownRateLimitKey() external pure returns (bytes32 key);
 
     /// @notice Address of the Ethena minter contract (immutable).
-    function ethenaMinter() external view returns (address);
+    function minter() external view returns (address);
 
     /// @notice The derived rate limit key for USDe mint operations.
     function mintRateLimitKey() external pure returns (bytes32 key);

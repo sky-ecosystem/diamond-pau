@@ -60,7 +60,7 @@ contract EthenaFacet is IEthenaFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IEthenaFacet
-    address public immutable override ethenaMinter;
+    address public immutable override minter;
 
     /// @inheritdoc IEthenaFacet
     address public immutable override susde;
@@ -75,16 +75,16 @@ contract EthenaFacet is IEthenaFacet, Facet {
     /*** Constructor                                                                            ***/
     /**********************************************************************************************/
 
-    constructor(address ethenaMinter_, address susde_, address usdc_, address usde_) {
-        require(ethenaMinter_ != address(0), "EthenaFacet/zero-ethenaMinter");
-        require(susde_        != address(0), "EthenaFacet/zero-susde");
-        require(usdc_         != address(0), "EthenaFacet/zero-usdc");
-        require(usde_         != address(0), "EthenaFacet/zero-usde");
+    constructor(address minter_, address susde_, address usdc_, address usde_) {
+        require(minter_ != address(0), "EthenaFacet/zero-minter");
+        require(susde_  != address(0), "EthenaFacet/zero-susde");
+        require(usdc_   != address(0), "EthenaFacet/zero-usdc");
+        require(usde_   != address(0), "EthenaFacet/zero-usde");
 
-        ethenaMinter = ethenaMinter_;
-        susde        = susde_;
-        usdc         = usdc_;
-        usde         = usde_;
+        minter = minter_;
+        susde  = susde_;
+        usdc   = usdc_;
+        usde   = usde_;
     }
 
     /**********************************************************************************************/
@@ -101,7 +101,7 @@ contract EthenaFacet is IEthenaFacet, Facet {
         require(_rateLimitExists(setDelegatedSignerRateLimitKey()), "EthenaFacet/invalid-action");
 
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
-            ethenaMinter,
+            minter,
             abi.encodeCall(IEthenaMinterLike.setDelegatedSigner, (delegatedSigner))
         );
 
@@ -115,10 +115,13 @@ contract EthenaFacet is IEthenaFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        require(_rateLimitExists(removeDelegatedSignerRateLimitKey()), "EthenaFacet/invalid-action");
+        require(
+            _rateLimitExists(removeDelegatedSignerRateLimitKey()),
+            "EthenaFacet/invalid-action"
+        );
 
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
-            ethenaMinter,
+            minter,
             abi.encodeCall(IEthenaMinterLike.removeDelegatedSigner, (delegatedSigner))
         );
 
@@ -134,7 +137,7 @@ contract EthenaFacet is IEthenaFacet, Facet {
     {
         _decreaseRateLimit(mintRateLimitKey(), usdcAmount);
 
-        ApproveLib.approve(usdc, _getSharedControllerStorage().proxy, ethenaMinter, usdcAmount);
+        ApproveLib.approve(usdc, _getSharedControllerStorage().proxy, minter, usdcAmount);
 
         emit EthenaPrepareMint(usdcAmount);
     }
@@ -148,7 +151,7 @@ contract EthenaFacet is IEthenaFacet, Facet {
     {
         _decreaseRateLimit(burnRateLimitKey(), usdeAmount);
 
-        ApproveLib.approve(usde, _getSharedControllerStorage().proxy, ethenaMinter, usdeAmount);
+        ApproveLib.approve(usde, _getSharedControllerStorage().proxy, minter, usdeAmount);
 
         emit EthenaPrepareBurn(usdeAmount);
     }

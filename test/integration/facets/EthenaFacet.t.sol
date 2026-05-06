@@ -34,7 +34,7 @@ contract Controller_EthenaFacet_Tests is Integration_TestBase {
         controller = IControllerLike(_deploy());
 
         address facet = address(new EthenaFacet(
-            makeAddr("ethenaMinter"),
+            makeAddr("minter"),
             makeAddr("susde"),
             makeAddr("usdc"),
             makeAddr("usde")
@@ -91,37 +91,37 @@ contract Controller_EthenaFacet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_constructor_zeroEthenaMinter() external {
-        vm.expectRevert("EthenaFacet/zero-ethenaMinter");
+        vm.expectRevert("EthenaFacet/zero-minter");
         new EthenaFacet(address(0), address(0), address(0), address(0));
     }
 
     function test_constructor_zeroSusde() external {
         vm.expectRevert("EthenaFacet/zero-susde");
-        new EthenaFacet(makeAddr("ethenaMinter"), address(0), address(0), address(0));
+        new EthenaFacet(makeAddr("minter"), address(0), address(0), address(0));
     }
 
     function test_constructor_zeroUSDC() external {
         vm.expectRevert("EthenaFacet/zero-usdc");
-        new EthenaFacet(makeAddr("ethenaMinter"), makeAddr("susde"), address(0), address(0));
+        new EthenaFacet(makeAddr("minter"), makeAddr("susde"), address(0), address(0));
     }
 
     function test_constructor_zeroUSDE() external {
         vm.expectRevert("EthenaFacet/zero-usde");
-        new EthenaFacet(makeAddr("ethenaMinter"), makeAddr("susde"), makeAddr("usdc"), address(0));
+        new EthenaFacet(makeAddr("minter"), makeAddr("susde"), makeAddr("usdc"), address(0));
     }
 
     function test_constructor() external {
-        address ethenaMinter = makeAddr("ethenaMinter");
-        address susde        = makeAddr("susde");
-        address usdc         = makeAddr("usdc");
-        address usde         = makeAddr("usde");
+        address minter = makeAddr("minter");
+        address susde  = makeAddr("susde");
+        address usdc   = makeAddr("usdc");
+        address usde   = makeAddr("usde");
 
-        EthenaFacet facet = new EthenaFacet(ethenaMinter, susde, usdc, usde);
+        EthenaFacet facet = new EthenaFacet(minter, susde, usdc, usde);
 
-        assertEq(facet.ethenaMinter(), ethenaMinter);
-        assertEq(facet.susde(),        susde);
-        assertEq(facet.usdc(),         usdc);
-        assertEq(facet.usde(),         usde);
+        assertEq(facet.minter(), minter);
+        assertEq(facet.susde(),  susde);
+        assertEq(facet.usdc(),   usdc);
+        assertEq(facet.usde(),   usde);
     }
 
     /**********************************************************************************************/
