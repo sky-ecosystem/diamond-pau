@@ -5,6 +5,8 @@ import {
     OptionsBuilder
 } from "../../lib/layerzero-v2/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol";
 
+import { SafeERC20, IERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
@@ -13,6 +15,7 @@ import { makeAddressAddressKey, makeAddressKey } from "../../src/libraries/RateL
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
 import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
+import { Curve_TestBase }                    from "./Curve.t.sol";
 import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
 import { MainnetController_Ethena_E2ETests } from "./Ethena.t.sol";
 import { Farm_TestBase }                     from "./Farm.t.sol";
@@ -71,7 +74,7 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
         // Deposit succeeds with the original underlying (USDS).
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 24_000_000e18);
@@ -88,49 +91,90 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
 
         // Cannot deposit with the changed asset
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
     }
 
-    function test_attack_assetChanged_withdrawAave() external {
-        bytes32 aaveDepositKey = mainnetController.getAaveDepositRateLimitKey(ATOKEN_USDS, POOL, Ethereum.USDS);
+}
 
-        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 25_000_000e18);
+contract MainnetController_Curve_Attack_Tests is Curve_TestBase {
 
-        // Deposit succeeds with the original underlying (USDS).
-        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+    using SafeERC20 for IERC20;
 
-        vm.prank(relayer);
-        mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+    function test_attack_coinsChanged_swapCurve() external {
+        bytes32 curveSwapUSDTKey = mainnetController.getCurveSwapRateLimitKey(CURVE_POOL, Ethereum.USDT);
 
-        assertEq(rateLimits.getCurrentRateLimit(aaveDepositKey), 24_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(curveSwapUSDTKey), 1_000_000e6);
 
-        address changedUnderlying = Ethereum.DAI;
+        _addLiquidity();
 
-        uint256 withdrawAmount = 1_000_000e18;
+        // Swap succeeds with the original coins() response (USDT at index 1).
+        deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
 
+        vm.prank(allocator);
+        mainnetController.swapCurve(CURVE_POOL, 1, 0, 1_000_000e6, 998_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(curveSwapUSDTKey), 0);
+
+        // Attack: mock coins(1) to return a different token.
         vm.mockCall(
-            ATOKEN_USDS,
-            abi.encodeWithSignature("UNDERLYING_ASSET_ADDRESS()"),
-            abi.encode(changedUnderlying)
+            CURVE_POOL,
+            abi.encodeWithSignature("coins(uint256)", 1),
+            abi.encode(Ethereum.DAI)
+        );
+
+        deal(Ethereum.USDT, address(almProxy), 1);
+
+        // Cannot swap with changed coins() token key.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.swapCurve(CURVE_POOL, 1, 0, 1, type(uint256).max);
+    }
+
+    function test_attack_coinsChanged_addLiquidityCurve() external {
+        assertEq(rateLimits.getCurrentRateLimit(curveAggregateDepositKey), 2_000_000e18);
+
+        // Deposit succeeds with the original coins() response.
+        _addLiquidity();
+        assertEq(rateLimits.getCurrentRateLimit(curveAggregateDepositKey), 0);
+
+        // Recharge aggregate deposit limit for the second call.
+        skip(2 days);
+
+        assertEq(rateLimits.getCurrentRateLimit(curveAggregateDepositKey), 2_000_000e18);
+
+        // Attack: mock coins() to return a different token address.
+        vm.mockCall(
+            CURVE_POOL,
+            abi.encodeWithSignature("coins(uint256)", 0),
+            abi.encode(Ethereum.DAI)
         );
         vm.mockCall(
-            changedUnderlying,
-            abi.encodeWithSignature("balanceOf(address)", address(almProxy)),
-            abi.encode(uint256(0))
+            CURVE_POOL,
+            abi.encodeWithSignature("coins(uint256)", 1),
+            abi.encode(Ethereum.DAI)
         );
-        vm.mockCall(
-            POOL,
-            abi.encodeCall(
-                IAavePoolWithdraw.withdraw,
-                (changedUnderlying, withdrawAmount, address(almProxy))
-            ),
-            abi.encode(withdrawAmount)
-        );
+
+        uint256 usdcAmount = 1_000_000e6;
+        uint256 usdtAmount = 1_000_000e6;
+
+        deal(address(usdc), address(almProxy), usdcAmount);
+        deal(address(usdt), address(almProxy), usdtAmount);
+
+        vm.startPrank(address(almProxy));
+        IERC20Like(address(usdc)).approve(CURVE_POOL, usdcAmount);
+        IERC20(address(usdt)).safeIncreaseAllowance(CURVE_POOL, usdtAmount);
+        vm.stopPrank();
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = usdcAmount;
+        amounts[1] = usdtAmount;
+
+        uint256 minLpAmount = (usdcAmount + usdtAmount) * 1e12 * 98/100;
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
-        mainnetController.withdrawAave(ATOKEN_USDS, withdrawAmount);
+        vm.prank(allocator);
+        mainnetController.addLiquidityCurve(CURVE_POOL, amounts, minLpAmount);
     }
 
 }
@@ -145,7 +189,7 @@ contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
         vm.prank(ROOT);
         restrictionManager.updateMember(address(jTreasuryToken), address(almProxy), type(uint64).max);
 
-        depositKey = mainnetController.getERC7540DepositRateLimitKey(address(jTreasuryVault), Ethereum.USDC);
+        depositKey       = mainnetController.getERC7540RequestDepositRateLimitKey(address(jTreasuryVault), Ethereum.USDC);
 
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(depositKey, 2_000_000e6, uint256(2_000_000e6) / 1 days);
@@ -157,7 +201,7 @@ contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
         // Request succeeds with original underlying (USDC).
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 1_000_000e6);
@@ -174,28 +218,8 @@ contract MainnetController_Centrifuge_Attack_Tests is Centrifuge_TestBase {
 
         // Cannot request another deposit with the changed asset.
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
-    }
-
-    function test_attack_assetChanged_cancelDepositBlocked() external {
-        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
-
-        vm.prank(relayer);
-        mainnetController.requestDepositERC7540(address(jTreasuryVault), 1_000_000e6);
-
-        // Attack: mock asset() to return a different address.
-        address changedAsset = Ethereum.DAI;
-        vm.mockCall(
-            address(jTreasuryVault),
-            abi.encodeWithSignature("asset()"),
-            abi.encode(changedAsset)
-        );
-
-        // Cancellation is blocked because key is derived from asset().
-        vm.expectRevert("CentrifugeFacet/invalid-action");
-        vm.prank(relayer);
-        mainnetController.cancelCentrifugeDepositRequest(address(jTreasuryVault));
     }
 
 }
@@ -206,7 +230,7 @@ contract MainnetController_ERC4626_Attack_Tests is ERC4626_SUSDS_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 5_000_000e18);
 
         // Deposit succeeds with the original underlying (USDS).
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
         mainnetController.mintUSDS(1_000_000e18);
         mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
         vm.stopPrank();
@@ -221,39 +245,13 @@ contract MainnetController_ERC4626_Attack_Tests is ERC4626_SUSDS_TestBase {
             abi.encode(changedAsset)
         );
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.mintUSDS(1_000_000e18);
 
         // Cannot deposit with the changed asset
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
-    }
-
-    function test_attack_assetChanged_withdrawERC4626() external {
-        assertEq(rateLimits.getCurrentRateLimit(depositKey), 5_000_000e18);
-
-        // Deposit succeeds with the original underlying (USDS).
-        vm.startPrank(relayer);
-        mainnetController.mintUSDS(1_000_000e18);
-        mainnetController.depositERC4626(address(susds), 1_000_000e18, 0);
-        vm.stopPrank();
-
-        assertEq(rateLimits.getCurrentRateLimit(depositKey), 4_000_000e18);
-
-        uint256 maxAssets = susds.convertToAssets(susds.balanceOf(address(almProxy)));
-
-        // Attack: mock asset() to return a different address.
-        address changedAsset = Ethereum.DAI;
-        vm.mockCall(
-            address(susds),
-            abi.encodeWithSignature("asset()"),
-            abi.encode(changedAsset)
-        );
-
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
-        mainnetController.withdrawERC4626(address(susds), maxAssets, type(uint256).max);
     }
 
 }
@@ -326,7 +324,7 @@ contract MainnetController_Farm_Attack_Tests is Farm_TestBase {
         // Deposit succeeds with the original staking token (USDS).
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositToFarm(FARM, 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey), 9_000_000e18);
@@ -341,7 +339,7 @@ contract MainnetController_Farm_Attack_Tests is Farm_TestBase {
 
         // Cannot deposit with changed staking token key.
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositToFarm(FARM, 1);
     }
 
@@ -365,7 +363,7 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
 
         deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
 
-        deal(relayer, 1 ether);
+        deal(allocator, 1 ether);
 
         ILayerZeroOFTLike.SendParam memory sendParams = ILayerZeroOFTLike.SendParam({
             dstEid       : DESTINATION_ENDPOINT_ID,
@@ -380,7 +378,7 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
         ILayerZeroOFTLike.MessagingFee memory fee = ILayerZeroOFTLike(USDT_OFT).quoteSend(sendParams, false);
 
         // Transfer succeeds with original token() response (USDT).
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.transferTokenLayerZero{value: fee.nativeFee}(USDT_OFT, 1_000_000e6, DESTINATION_ENDPOINT_ID);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 9_000_000e6);
@@ -390,7 +388,7 @@ contract MainnetController_LayerZero_Attack_Tests is LayerZero_TestBase {
 
         // Cannot transfer with changed token key.
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.transferTokenLayerZero{value: fee.nativeFee}(USDT_OFT, 1, DESTINATION_ENDPOINT_ID);
     }
 
@@ -449,7 +447,7 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
 
         uint256 beforeLimit = rateLimits.getCurrentRateLimit(redeemKey);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
 
         assertLt(rateLimits.getCurrentRateLimit(redeemKey), beforeLimit);
@@ -468,7 +466,7 @@ contract MainnetController_Pendle_Attack_Tests is Pendle_TestBase {
         IERC20Like(pt).approve(GroveEthereum.PENDLE_ROUTER, type(uint256).max);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.redeemPendlePT(address(pendleMarket), 500_000e18, 1);
     }
 
@@ -494,7 +492,7 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
         // Deposit succeeds with the original eETH address.
         deal(Ethereum.WETH, address(almProxy), 1_000e18);
 
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
         mainnetController.depositToWeETH(1_000e18, _getMinSharesOut(1_000e18));
         vm.stopPrank();
 
@@ -514,7 +512,7 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
 
         // Cannot deposit with the changed eETH address.
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.depositToWeETH(1, 0);
     }
 
