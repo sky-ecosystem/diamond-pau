@@ -11,6 +11,9 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 
+import { Currency } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/Currency.sol";
+import { PoolKey }  from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
+
 import { makeAddressAddressKey, makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
@@ -23,6 +26,7 @@ import { LayerZero_TestBase }                from "./LayerZero.t.sol";
 import { Maple_TestBase }                    from "./Maple.t.sol";
 import { Pendle_TestBase }                   from "./Pendle.t.sol";
 import { UniswapV3_TestBase }                from "./UniswapV3.t.sol";
+import { UniswapV4_USDC_USDT_TestBase }      from "./UniswapV4.t.sol";
 import { WEETH_TestBase }                    from "./WEETH.t.sol";
 
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
@@ -43,6 +47,10 @@ interface IAavePoolWithdraw {
 
     function withdraw(address asset, uint256 amount, address to) external returns (uint256);
 
+}
+
+interface IUniswapV4PositionManagerLike {
+    function poolKeys(bytes25 poolId) external view returns (PoolKey memory poolKey);
 }
 
 interface ILayerZeroOFTLike {
@@ -502,22 +510,25 @@ contract MainnetController_UniswapV3_Attack_Tests is UniswapV3_TestBase {
     }
 
     function test_attack_token0Changed_addLiquidity() external {
-        (IUniswapV3Facet.Ticks memory tick, IUniswapV3Facet.TokenAmounts memory target, IUniswapV3Facet.TokenAmounts memory min) =
-            _defaultAddParams();
+        (
+            IUniswapV3Facet.Ticks memory tick,
+            IUniswapV3Facet.TokenAmounts memory target,
+            IUniswapV3Facet.TokenAmounts memory min
+        ) =_defaultAddParams();
 
         // Mint succeeds with the original token0()/token1() responses.
         deal(address(token0), address(almProxy), target.amount0);
         deal(address(token1), address(almProxy), target.amount1);
 
         vm.prank(allocator);
-        mainnetController.addLiquidityUniswapV3(
-            _getPool(),
-            0,
-            tick,
-            target,
-            min,
-            block.timestamp + 1 hours
-        );
+        mainnetController.addLiquidityUniswapV3({
+            pool     : _getPool(),
+            tokenId  : 0,
+            ticks    : tick,
+            target   : target,
+            min      : min,
+            deadline : block.timestamp + 1 hours
+        });
 
         // Attack: returns a different token0().
         vm.mockCall(
@@ -551,19 +562,66 @@ contract MainnetController_UniswapV3_Attack_Tests is UniswapV3_TestBase {
             abi.encode(uint256(1), uint128(1), uint256(0), uint256(0))
         );
 
-        deal(Ethereum.DAI, address(almProxy), target.amount0);
+        deal(Ethereum.DAI,    address(almProxy), target.amount0);
         deal(address(token1), address(almProxy), target.amount1);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
-        mainnetController.addLiquidityUniswapV3(
-            _getPool(),
-            0,
-            tick,
-            target,
-            min,
-            block.timestamp + 1 hours
+        mainnetController.addLiquidityUniswapV3({
+            pool     : _getPool(),
+            tokenId  : 0,
+            ticks    : tick,
+            target   : target,
+            min      : min,
+            deadline : block.timestamp + 1 hours
+        });
+    }
+
+}
+
+contract MainnetController_UniswapV4_Attack_Tests is UniswapV4_USDC_USDT_TestBase {
+
+    function _setV4MintConfig() internal {
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.setUniswapV4TickLimits(_POOL_ID, -60, 60, 20);
+        rateLimits.setRateLimitData(_aggregateDepositLimitKey, 5_000_000e18, uint256(5_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(_token0DepositLimitKey,    5_000_000e6,  uint256(5_000_000e6)  / 1 days);
+        rateLimits.setRateLimitData(_token1DepositLimitKey,    5_000_000e6,  uint256(5_000_000e6)  / 1 days);
+        vm.stopPrank();
+    }
+
+    function test_attack_poolKeysCurrency0Changed_mintPosition() external {
+        _setV4MintConfig();
+
+        (uint128 amount0Max, uint128 amount1Max) = _getIncreasePositionMaxAmounts(_POOL_ID, -10, 0, 1_000_000e6, 0.99e18);
+
+        PoolKey memory originalPoolKey = IUniswapV4PositionManagerLike(_UNISWAP_V4_POSITION_MANAGER).poolKeys(bytes25(_POOL_ID));
+
+        // Ensure proxy is funded for each mint attempt.
+        deal(Currency.unwrap(originalPoolKey.currency0), address(almProxy), amount0Max);
+        deal(Currency.unwrap(originalPoolKey.currency1), address(almProxy), amount1Max);
+
+        // Mint succeeds with original poolKeys() response.
+        vm.prank(allocator);
+        mainnetController.mintPositionUniswapV4(_POOL_ID, -10, 0, 1_000_000e6, amount0Max, amount1Max);
+
+        PoolKey memory changedPoolKey = originalPoolKey;
+        changedPoolKey.currency0 = Currency.wrap(Ethereum.DAI);
+
+        deal(Currency.unwrap(originalPoolKey.currency0), address(almProxy), amount0Max);
+        deal(Currency.unwrap(originalPoolKey.currency1), address(almProxy), amount1Max);
+
+        // Attack: returns a different poolKeys().
+        vm.mockCall(
+            _UNISWAP_V4_POSITION_MANAGER,
+            abi.encodeWithSignature("poolKeys(bytes25)", bytes25(_POOL_ID)),
+            abi.encode(changedPoolKey)
         );
+
+        // Cannot mint if mutable poolKeys() dependency changes.
+        vm.expectRevert("UniswapV4Facet/poolKey-poolId-mismatch");
+        vm.prank(allocator);
+        mainnetController.mintPositionUniswapV4(_POOL_ID, -10, 0, 1_000_000e6, amount0Max, amount1Max);
     }
 
 }
