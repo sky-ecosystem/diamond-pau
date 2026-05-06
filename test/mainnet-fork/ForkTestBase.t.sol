@@ -743,11 +743,16 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(merklFacet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](1);
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](2);
 
         merklWires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.toggleOperatorMerkl.selector,
             IMerklFacet.toggleOperator.selector
+        );
+
+        merklWires[1] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getMerklToggleOperatorRateLimitKey.selector,
+            IMerklFacet.getToggleOperatorRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

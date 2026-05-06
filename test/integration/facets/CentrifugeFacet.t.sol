@@ -7,7 +7,6 @@ import { ICentrifugeFacet }        from "../../../src/facets/centrifuge/ICentrif
 import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
 
 import {
-    makeAddressAddressKey,
     makeAddressKey,
     makeAddressUint16AddressKey
 } from "../../../src/libraries/RateLimitHelpers.sol";
@@ -21,10 +20,6 @@ interface IControllerLike {
     function setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
     function getRecipient(uint16 centrifugeId) external view returns (bytes32);
-
-    function getDepositRateLimitKey(address token, address asset) external pure returns (bytes32);
-
-    function getRedeemRateLimitKey(address token) external pure returns (bytes32);
 
     function getCancelDepositRateLimitKey(address token) external pure returns (bytes32 key);
 
@@ -167,29 +162,59 @@ contract Controller_CentrifugeFacet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** getDepositRateLimitKey Tests                                                           ***/
+    /*** getCancelDepositRateLimitKey Tests                                                     ***/
     /**********************************************************************************************/
 
-    function test_getDepositRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_7540_DEPOSIT");
+    function test_getCancelDepositRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_CENTRIFUGE_CANCEL_DEPOSIT");
         address token     = makeAddr("token");
-        address asset     = makeAddr("asset");
 
         assertEq(
-            controller.getDepositRateLimitKey(token, asset),
-            makeAddressAddressKey(keyPrefix, asset, token)
+            controller.getCancelDepositRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
         );
     }
 
     /**********************************************************************************************/
-    /*** getRedeemRateLimitKey Tests                                                            ***/
+    /*** getClaimCancelDepositRateLimitKey Tests                                                ***/
     /**********************************************************************************************/
 
-    function test_getRedeemRateLimitKey() external {
-        bytes32 keyPrefix = keccak256("LIMIT_7540_REDEEM");
+    function test_getClaimCancelDepositRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_CENTRIFUGE_CLAIM_CANCEL_DEPOSIT");
         address token     = makeAddr("token");
 
-        assertEq(controller.getRedeemRateLimitKey(token), makeAddressKey(keyPrefix, token));
+        assertEq(
+            controller.getClaimCancelDepositRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getCancelRedeemRateLimitKey Tests                                                      ***/
+    /**********************************************************************************************/
+
+    function test_getCancelRedeemRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_CENTRIFUGE_CANCEL_REDEEM");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getCancelRedeemRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getClaimCancelRedeemRateLimitKey Tests                                                 ***/
+    /**********************************************************************************************/
+
+    function test_getClaimCancelRedeemRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_CENTRIFUGE_CLAIM_CANCEL_REDEEM");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getClaimCancelRedeemRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
     }
 
     /**********************************************************************************************/

@@ -34,6 +34,21 @@ abstract contract Merkl_TestBase is ForkTestBase {
 
     function setUp() public override {
         super.setUp();
+
+        bytes32 toggleKey1 = foreignController.getMerklToggleOperatorRateLimitKey(
+            address(merklDistributor),
+            operator1
+        );
+
+        bytes32 toggleKey2 = foreignController.getMerklToggleOperatorRateLimitKey(
+            address(merklDistributor),
+            operator2
+        );
+
+        vm.startPrank(SPARK_EXECUTOR);
+        rateLimits.setRateLimitData(toggleKey1, type(uint256).max, 0);
+        rateLimits.setRateLimitData(toggleKey2, type(uint256).max, 0);
+        vm.stopPrank();
     }
 
 }
@@ -47,6 +62,14 @@ contract ForeignController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
             ALLOCATOR_ROLE
         ));
         foreignController.toggleOperatorMerkl(address(merklDistributor), operator1);
+    }
+
+    function test_toggleOperatorMerkl_invalidAction() external {
+        address freshOperator = makeAddr("freshOperator");
+
+        vm.expectRevert("MerklFacet/invalid-action");
+        vm.prank(allocator);
+        foreignController.toggleOperatorMerkl(address(merklDistributor), freshOperator);
     }
 
 }

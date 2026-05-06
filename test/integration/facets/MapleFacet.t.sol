@@ -55,14 +55,25 @@ contract Controller_MapleFacet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** getRedeemRateLimitKey Tests                                                            ***/
+    /*** getRequestRedeemRateLimitKey Tests                                                     ***/
     /**********************************************************************************************/
 
-    function test_getRedeemRateLimitKey() external {
-        bytes32 keyPrefix  = keccak256("LIMIT_MAPLE_REDEEM");
+    function test_getRequestRedeemRateLimitKey() external {
+        bytes32 keyPrefix  = keccak256("LIMIT_MAPLE_REQUEST_REDEEM");
         address mapleToken = makeAddr("mapleToken");
 
         assertEq(controller.getRequestRedeemRateLimitKey(mapleToken), makeAddressKey(keyPrefix, mapleToken));
+    }
+
+    /**********************************************************************************************/
+    /*** getCancelRedeemRateLimitKey Tests                                                      ***/
+    /**********************************************************************************************/
+
+    function test_getCancelRedeemRateLimitKey() external {
+        bytes32 keyPrefix  = keccak256("LIMIT_MAPLE_CANCEL_REDEEM");
+        address mapleToken = makeAddr("mapleToken");
+
+        assertEq(controller.getCancelRedeemRateLimitKey(mapleToken), makeAddressKey(keyPrefix, mapleToken));
     }
 
 }

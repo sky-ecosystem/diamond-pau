@@ -276,6 +276,11 @@ interface IMainnetControllerFull is IController {
 
     function toggleOperatorMerkl(address distributor, address operator) external;
 
+    function getMerklToggleOperatorRateLimitKey(address distributor, address operator)
+        external
+        pure
+        returns (bytes32 key);
+
     /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
     /**********************************************************************************************/

@@ -36,6 +36,21 @@ abstract contract Merkl_TestBase is ForkTestBase {
 
     function setUp() public override {
         super.setUp();
+
+        bytes32 toggleKey1 = mainnetController.getMerklToggleOperatorRateLimitKey(
+            address(merklDistributor),
+            operator1
+        );
+
+        bytes32 toggleKey2 = mainnetController.getMerklToggleOperatorRateLimitKey(
+            address(merklDistributor),
+            operator2
+        );
+
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setRateLimitData(toggleKey1, type(uint256).max, 0);
+        rateLimits.setRateLimitData(toggleKey2, type(uint256).max, 0);
+        vm.stopPrank();
     }
 
     function _getBlock() internal pure override returns (uint256) {
@@ -55,10 +70,12 @@ contract MainnetController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
         mainnetController.toggleOperatorMerkl(address(merklDistributor), operator1);
     }
 
-    function test_toggleOperatorMerkl_zeroOperator() external {
-        vm.expectRevert("MerklFacet/zero-operator");
+    function test_toggleOperatorMerkl_invalidAction() external {
+        address freshOperator = makeAddr("freshOperator");
+
+        vm.expectRevert("MerklFacet/invalid-action");
         vm.prank(allocator);
-        mainnetController.toggleOperatorMerkl(address(merklDistributor), address(0));
+        mainnetController.toggleOperatorMerkl(address(merklDistributor), freshOperator);
     }
 
 }
