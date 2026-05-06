@@ -47,9 +47,9 @@ contract ForkTestBase is Test {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 constant FREEZER_ROLE       = keccak256("FREEZER");
-    bytes32 constant RELAYER_ROLE       = keccak256("RELAYER");
+    bytes32 constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
 
     address pocket   = makeAddr("pocket");
     address skyAdmin = makeAddr("skyAdmin");
@@ -59,7 +59,7 @@ contract ForkTestBase is Test {
     /**********************************************************************************************/
 
     address constant ALM_FREEZER                 = Avalanche.ALM_FREEZER;
-    address constant ALM_RELAYER                 = Avalanche.ALM_RELAYER;
+    address constant ALM_ALLOCATOR               = Avalanche.ALM_RELAYER;
     address constant CCTP_TOKEN_MESSENGER        = Avalanche.CCTP_TOKEN_MESSENGER_V2;
     address constant GROVE_EXECUTOR              = Avalanche.GROVE_EXECUTOR;
     address constant USDC_AVALANCHE              = Avalanche.USDC;
@@ -138,10 +138,10 @@ contract ForkTestBase is Test {
 
         vm.startPrank(GROVE_EXECUTOR);
 
-        accessControls.grantRole(FREEZER_ROLE, ALM_FREEZER);
-        accessControls.grantRole(RELAYER_ROLE, ALM_RELAYER);
+        accessControls.grantRole(FREEZER_ROLE,   ALM_FREEZER);
+        accessControls.grantRole(ALLOCATOR_ROLE, ALM_ALLOCATOR);
 
-        accessControls.setRoleRevoker(RELAYER_ROLE, FREEZER_ROLE);
+        accessControls.setRoleRevoker(ALLOCATOR_ROLE, FREEZER_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](2);
         integrationIds[0] = "CENTRIFUGE_FACET";
@@ -168,7 +168,7 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.setCentrifugeRecipient.selector,
@@ -201,13 +201,33 @@ contract ForkTestBase is Test {
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeTransferRateLimitKey.selector,
-            ICentrifugeFacet.getTransferRateLimitKey.selector
+            IForeignControllerFull.getCentrifugeRecipient.selector,
+            ICentrifugeFacet.getRecipient.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeRecipient.selector,
-            ICentrifugeFacet.getRecipient.selector
+            IForeignControllerFull.getCentrifugeCancelDepositRateLimitKey.selector,
+            ICentrifugeFacet.getCancelDepositRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getCentrifugeClaimCancelDepositRateLimitKey.selector,
+            ICentrifugeFacet.getClaimCancelDepositRateLimitKey.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getCentrifugeCancelRedeemRateLimitKey.selector,
+            ICentrifugeFacet.getCancelRedeemRateLimitKey.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getCentrifugeClaimCancelRedeemRateLimitKey.selector,
+            ICentrifugeFacet.getClaimCancelRedeemRateLimitKey.selector
+        );
+
+        wires[11] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getCentrifugeTransferRateLimitKey.selector,
+            ICentrifugeFacet.getTransferRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -223,7 +243,7 @@ contract ForkTestBase is Test {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.requestDepositERC7540.selector,
@@ -246,13 +266,23 @@ contract ForkTestBase is Test {
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540DepositRateLimitKey.selector,
-            IERC7540Facet.getDepositRateLimitKey.selector
+            IForeignControllerFull.getERC7540RequestDepositRateLimitKey.selector,
+            IERC7540Facet.getRequestDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540RedeemRateLimitKey.selector,
-            IERC7540Facet.getRedeemRateLimitKey.selector
+            IForeignControllerFull.getERC7540ClaimDepositRateLimitKey.selector,
+            IERC7540Facet.getClaimDepositRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getERC7540RequestRedeemRateLimitKey.selector,
+            IERC7540Facet.getRequestRedeemRateLimitKey.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getERC7540ClaimRedeemRateLimitKey.selector,
+            IERC7540Facet.getClaimRedeemRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

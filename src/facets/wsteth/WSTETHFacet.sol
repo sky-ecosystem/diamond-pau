@@ -45,6 +45,7 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
 
     bytes32 internal constant _LIMIT_DEPOSIT          = keccak256("LIMIT_WSTETH_DEPOSIT");
     bytes32 internal constant _LIMIT_REQUEST_WITHDRAW = keccak256("LIMIT_WSTETH_REQUEST_WITHDRAW");
+    bytes32 internal constant _LIMIT_CLAIM_WITHDRAW   = keccak256("LIMIT_WSTETH_CLAIM_WITHDRAW");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -77,11 +78,11 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IWSTETHFacet
-    function deposit(uint256 amount) external override nonReentrant onlyRole(RELAYER_ROLE) {
+    function deposit(uint256 amount) external override nonReentrant onlyRole(ALLOCATOR_ROLE) {
         _decreaseRateLimit(depositRateLimitKey(), amount);
 
         address proxy = _getSharedControllerStorage().proxy;
@@ -98,7 +99,7 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256[] memory requestIds)
     {
         uint256 stethAmount = IWSTETHLike(wsteth).getStETHByWstETH(amountToRedeem);
@@ -136,13 +137,13 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         address proxy = _getSharedControllerStorage().proxy;
 
         uint256 initialETHBalance = proxy.balance;
 
-        require(_rateLimitExists(requestWithdrawRateLimitKey()), "WSTETHFacet/invalid-action");
+        require(_rateLimitExists(claimWithdrawRateLimitKey()), "WSTETHFacet/invalid-action");
 
         IALMProxy(proxy).doCall(
             withdrawQueue,
@@ -168,6 +169,11 @@ contract WSTETHFacet is IWSTETHFacet, Facet {
     /// @inheritdoc IWSTETHFacet
     function requestWithdrawRateLimitKey() public pure override returns (bytes32) {
         return _LIMIT_REQUEST_WITHDRAW;
+    }
+
+    /// @inheritdoc IWSTETHFacet
+    function claimWithdrawRateLimitKey() public pure override returns (bytes32) {
+        return _LIMIT_CLAIM_WITHDRAW;
     }
 
 }

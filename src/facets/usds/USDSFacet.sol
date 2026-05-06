@@ -53,6 +53,7 @@ contract USDSFacet is IUSDSFacet, Facet {
     /**********************************************************************************************/
 
     bytes32 internal constant _LIMIT_MINT = keccak256("LIMIT_USDS_MINT");
+    bytes32 internal constant _LIMIT_BURN = keccak256("LIMIT_USDS_BURN");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -85,11 +86,11 @@ contract USDSFacet is IUSDSFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IUSDSFacet
-    function mint(uint256 usdsAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
+    function mint(uint256 usdsAmount) external override nonReentrant onlyRole(ALLOCATOR_ROLE) {
         _decreaseRateLimit(mintRateLimitKey(), usdsAmount);
 
         address proxy  = _getSharedControllerStorage().proxy;
@@ -112,8 +113,9 @@ contract USDSFacet is IUSDSFacet, Facet {
     }
 
     /// @inheritdoc IUSDSFacet
-    function burn(uint256 usdsAmount) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _increaseRateLimit(mintRateLimitKey(), usdsAmount);
+    function burn(uint256 usdsAmount) external override nonReentrant onlyRole(ALLOCATOR_ROLE) {
+        _decreaseRateLimit(burnRateLimitKey(),    usdsAmount);
+        _tryIncreaseRateLimit(mintRateLimitKey(), usdsAmount);
 
         address proxy  = _getSharedControllerStorage().proxy;
         address vault_ = _getFacetStorage().vault;
@@ -143,6 +145,11 @@ contract USDSFacet is IUSDSFacet, Facet {
     /// @inheritdoc IUSDSFacet
     function mintRateLimitKey() public pure override returns (bytes32) {
         return _LIMIT_MINT;
+    }
+
+    /// @inheritdoc IUSDSFacet
+    function burnRateLimitKey() public pure override returns (bytes32) {
+        return _LIMIT_BURN;
     }
 
 }

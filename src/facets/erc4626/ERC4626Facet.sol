@@ -89,7 +89,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IERC4626Facet
@@ -97,7 +97,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 shares)
     {
         address proxy = _getSharedControllerStorage().proxy;
@@ -130,7 +130,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 shares)
     {
         _decreaseRateLimit(getWithdrawRateLimitKey(token), amount);
@@ -149,7 +149,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
 
         require(shares <= maxSharesIn, "ERC4626Facet/shares-burned-too-high");
 
-        _increaseRateLimit(getDepositRateLimitKey(token, IERC4626Like(token).asset()), amount);
+        _tryIncreaseRateLimit(getDepositRateLimitKey(token, IERC4626Like(token).asset()), amount);
 
         emit ERC4626Withdraw(token, amount, shares);
     }
@@ -159,7 +159,7 @@ contract ERC4626Facet is IERC4626Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 assets)
     {
         address proxy = _getSharedControllerStorage().proxy;
@@ -174,8 +174,8 @@ contract ERC4626Facet is IERC4626Facet, Facet {
 
         require(assets >= minAssetsOut, "ERC4626Facet/min-assets-out-not-met");
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(token),       assets);
-        _increaseRateLimit(getDepositRateLimitKey(token, asset), assets);
+        _decreaseRateLimit(getWithdrawRateLimitKey(token),          assets);
+        _tryIncreaseRateLimit(getDepositRateLimitKey(token, asset), assets);
 
         emit ERC4626Redeem(token, shares, assets);
     }

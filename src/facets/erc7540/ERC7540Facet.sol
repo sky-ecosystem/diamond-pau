@@ -48,14 +48,16 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_DEPOSIT = keccak256("LIMIT_7540_DEPOSIT");
-    bytes32 internal constant _LIMIT_REDEEM  = keccak256("LIMIT_7540_REDEEM");
+    bytes32 internal constant _LIMIT_REQUEST_DEPOSIT = keccak256("LIMIT_7540_REQUEST_DEPOSIT");
+    bytes32 internal constant _LIMIT_CLAIM_DEPOSIT   = keccak256("LIMIT_7540_CLAIM_DEPOSIT");
+    bytes32 internal constant _LIMIT_REQUEST_REDEEM  = keccak256("LIMIT_7540_REQUEST_REDEEM");
+    bytes32 internal constant _LIMIT_CLAIM_REDEEM    = keccak256("LIMIT_7540_CLAIM_REDEEM");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IERC7540Facet
@@ -63,14 +65,14 @@ contract ERC7540Facet is IERC7540Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         address proxy = _getSharedControllerStorage().proxy;
         address asset = IERC4626Like(token).asset();
 
         ApproveLib.approve(asset, proxy, token, amount);
 
-        _decreaseRateLimit(getDepositRateLimitKey(token, asset), amount);
+        _decreaseRateLimit(getRequestDepositRateLimitKey(token, asset), amount);
 
         // Submit deposit request by transferring assets
         IALMProxy(proxy).doCall(
@@ -82,8 +84,8 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     }
 
     /// @inheritdoc IERC7540Facet
-    function claimDeposit(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _requireRateLimitExists(getDepositRateLimitKey(token, IERC4626Like(token).asset()));
+    function claimDeposit(address token) external override nonReentrant onlyRole(ALLOCATOR_ROLE) {
+        _requireRateLimitExists(getClaimDepositRateLimitKey(token));
 
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 shares = IERC4626Like(token).maxMint(proxy);
@@ -99,10 +101,10 @@ contract ERC7540Facet is IERC7540Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _decreaseRateLimit(
-            getRedeemRateLimitKey(token),
+            getRequestRedeemRateLimitKey(token),
             IERC4626Like(token).convertToAssets(shares)
         );
 
@@ -117,8 +119,8 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     }
 
     /// @inheritdoc IERC7540Facet
-    function claimRedeem(address token) external override nonReentrant onlyRole(RELAYER_ROLE) {
-        _requireRateLimitExists(getRedeemRateLimitKey(token));
+    function claimRedeem(address token) external override nonReentrant onlyRole(ALLOCATOR_ROLE) {
+        _requireRateLimitExists(getClaimRedeemRateLimitKey(token));
 
         address proxy  = _getSharedControllerStorage().proxy;
         uint256 assets = IERC4626Like(token).maxWithdraw(proxy);
@@ -137,18 +139,33 @@ contract ERC7540Facet is IERC7540Facet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IERC7540Facet
-    function getDepositRateLimitKey(address token, address asset)
+    function getRequestDepositRateLimitKey(address token, address asset)
         public
         pure
         override
         returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_DEPOSIT, asset, token);
+        return makeAddressAddressKey(_LIMIT_REQUEST_DEPOSIT, asset, token);
     }
 
     /// @inheritdoc IERC7540Facet
-    function getRedeemRateLimitKey(address token) public pure override returns (bytes32) {
-        return makeAddressKey(_LIMIT_REDEEM, token);
+    function getClaimDepositRateLimitKey(address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressKey(_LIMIT_CLAIM_DEPOSIT, token);
+    }
+
+    /// @inheritdoc IERC7540Facet
+    function getRequestRedeemRateLimitKey(address token) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_REQUEST_REDEEM, token);
+    }
+
+    /// @inheritdoc IERC7540Facet
+    function getClaimRedeemRateLimitKey(address token) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_CLAIM_REDEEM, token);
     }
 
     /**********************************************************************************************/

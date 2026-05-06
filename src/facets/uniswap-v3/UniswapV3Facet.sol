@@ -8,8 +8,8 @@ import {
     LiquidityAmounts
 } from "../../../lib/dss-allocator/src/funnels/uniV3/LiquidityAmounts.sol";
 
-import { ApproveLib }            from "../../libraries/ApproveLib.sol";
-import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }                            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey, makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -24,6 +24,8 @@ import { IUniswapV3Facet } from "./IUniswapV3Facet.sol";
 interface IERC20Like {
 
     function balanceOf(address account) external view returns (uint256);
+
+    function decimals() external view returns (uint8);
 
 }
 
@@ -175,7 +177,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     int24 public constant override MIN_TICK = -887_272;
 
     /// @inheritdoc IUniswapV3Facet
-    int24 public constant override MAX_TICK =  887_272;
+    int24 public constant override MAX_TICK = 887_272;
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -225,6 +227,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         require(
             maxTickDelta > 0 && maxTickDelta <= MAX_TICK_DELTA,
             "UniswapV3Facet/max-tick-delta-oob"
@@ -242,6 +246,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         Ticks storage tickBounds = _getFacetStorage().poolParams[pool].liquidityTickBounds;
 
         require(
@@ -259,6 +265,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         Ticks storage tickBounds = _getFacetStorage().poolParams[pool].liquidityTickBounds;
 
         require(
@@ -276,6 +284,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(pool != address(0), "UniswapV3Facet/pool-zero-address");
+
         // Required due to casting in UniswapV3OracleLibrary.consult
         // Limits twapSecondsAgo to approximately 68 years
         require(twapSecondsAgo < uint32(type(int32).max), "UniswapV3Facet/twap-seconds-ago-oob");
@@ -286,7 +296,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IUniswapV3Facet
@@ -300,7 +310,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 amountOut)
     {
         PoolParams storage poolParams = _getFacetStorage().poolParams[pool];
@@ -346,7 +356,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 resultingTokenId, uint128 liquidity, TokenAmounts memory amounts)
     {
         _validateAddLiquidityParameters(pool, ticks, target, min);
@@ -384,8 +394,13 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         _approve(token0, positionManager, 0);
         _approve(token1, positionManager, 0);
 
-        _decreaseRateLimit(getDepositRateLimitKey(pool, token0), amounts.amount0);
-        _decreaseRateLimit(getDepositRateLimitKey(pool, token1), amounts.amount1);
+        uint256 aggregateAmount =
+            _toNormalizedAmount(token0, amounts.amount0) +
+            _toNormalizedAmount(token1, amounts.amount1);
+
+        _decreaseRateLimit(getAggregateDepositRateLimitKey(pool),     aggregateAmount);
+        _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token0), amounts.amount0);
+        _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token1), amounts.amount1);
 
         emit UniswapV3AddLiquidity(
             pool,
@@ -409,7 +424,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (TokenAmounts memory amounts)
     {
         address token0 = IUniswapV3PoolLike(pool).token0();
@@ -423,17 +438,26 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             liquidity : liquidity
         });
 
-        amounts = _callDecreaseLiquidity(tokenId, liquidity, min, deadline);
+        uint256 startingToken0Balance = _getProxyBalance(token0);
+        uint256 startingToken1Balance = _getProxyBalance(token1);
+
+        _callDecreaseLiquidity(tokenId, liquidity, min, deadline);
 
         _callCollect(tokenId);
+
+        amounts.amount0 = _getProxyBalance(token0) - startingToken0Balance;
+        amounts.amount1 = _getProxyBalance(token1) - startingToken1Balance;
 
         uint256 maxSlippage = _getFacetStorage().maxSlippages[pool];
 
         _checkSlippage(amounts.amount0, min.amount0, maxSlippage);
         _checkSlippage(amounts.amount1, min.amount1, maxSlippage);
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(pool, token0), amounts.amount0);
-        _decreaseRateLimit(getWithdrawRateLimitKey(pool, token1), amounts.amount1);
+        uint256 valueWithdrawn =
+            _toNormalizedAmount(token0, amounts.amount0) +
+            _toNormalizedAmount(token1, amounts.amount1);
+
+        _decreaseRateLimit(getWithdrawRateLimitKey(pool), valueWithdrawn);
 
         emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
@@ -443,7 +467,12 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IUniswapV3Facet
-    function getDepositRateLimitKey(address pool, address token)
+    function getAggregateDepositRateLimitKey(address pool) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_DEPOSIT, pool);
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getAssetDepositRateLimitKey(address pool, address token)
         public
         pure
         override
@@ -490,13 +519,13 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV3Facet
-    function getWithdrawRateLimitKey(address pool, address token)
+    function getWithdrawRateLimitKey(address pool)
         public
         pure
         override
         returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_WITHDRAW, token, pool);
+        return makeAddressKey(_LIMIT_WITHDRAW, pool);
     }
 
     /**********************************************************************************************/
@@ -528,10 +557,13 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             sqrtPriceLimitX96 : sqrtPriceLimitX96
         });
 
-        return abi.decode(
-            IALMProxy(_getSharedControllerStorage().proxy).doCall(router, callData),
-            (uint256)
-        );
+        address proxy = _getSharedControllerStorage().proxy;
+
+        uint256 startingBalance = IERC20Like(tokenOut).balanceOf(proxy);
+
+        IALMProxy(proxy).doCall(router, callData);
+
+        return IERC20Like(tokenOut).balanceOf(proxy) - startingBalance;
     }
 
     function _getSwapCallData(
@@ -722,12 +754,14 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         internal
         returns (uint256 tokenId, uint128 liquidity, TokenAmounts memory amounts)
     {
-        address proxy = _getSharedControllerStorage().proxy;
+        address proxy  = _getSharedControllerStorage().proxy;
+        address token0 = IUniswapV3PoolLike(pool).token0();
+        address token1 = IUniswapV3PoolLike(pool).token1();
 
         INonfungiblePositionManager.MintParams memory mintParams
             = INonfungiblePositionManager.MintParams({
-                token0         : IUniswapV3PoolLike(pool).token0(),
-                token1         : IUniswapV3PoolLike(pool).token1(),
+                token0         : token0,
+                token1         : token1,
                 fee            : IUniswapV3PoolLike(pool).fee(),
                 tickLower      : ticks.lower,
                 tickUpper      : ticks.upper,
@@ -739,17 +773,18 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
                 deadline       : deadline
             });
 
+        uint256 startingToken0Balance = _getProxyBalance(token0);
+        uint256 startingToken1Balance = _getProxyBalance(token1);
+
         bytes memory result = IALMProxy(proxy).doCall(
             positionManager,
             abi.encodeCall(INonfungiblePositionManager.mint, mintParams)
         );
 
-        (
-            tokenId,
-            liquidity,
-            amounts.amount0,
-            amounts.amount1
-        ) = abi.decode(result, (uint256, uint128, uint256, uint256));
+        ( tokenId, liquidity, , ) = abi.decode(result, (uint256, uint128, uint256, uint256));
+
+        amounts.amount0 = startingToken0Balance - _getProxyBalance(token0);
+        amounts.amount1 = startingToken1Balance - _getProxyBalance(token1);
     }
 
     function _increaseLiquidity(
@@ -784,7 +819,13 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         require(tickLower == ticks.lower, "UniswapV3Facet/lower-tick-does-not-match-position");
         require(tickUpper == ticks.upper, "UniswapV3Facet/upper-tick-does-not-match-position");
 
-        return _callIncreaseLiquidity(tokenId, target, min, deadline);
+        uint256 startingToken0Balance = _getProxyBalance(token0);
+        uint256 startingToken1Balance = _getProxyBalance(token1);
+
+        liquidity = _callIncreaseLiquidity(tokenId, target, min, deadline);
+
+        amounts.amount0 = startingToken0Balance - _getProxyBalance(token0);
+        amounts.amount1 = startingToken1Balance - _getProxyBalance(token1);
     }
 
     function _callIncreaseLiquidity(
@@ -794,7 +835,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         uint256               deadline
     )
         internal
-        returns (uint128 liquidity, TokenAmounts memory amounts)
+        returns (uint128 liquidity)
     {
         INonfungiblePositionManager.IncreaseLiquidityParams memory increaseLiquidityParams
             = INonfungiblePositionManager.IncreaseLiquidityParams({
@@ -814,11 +855,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             )
         );
 
-        (
-            liquidity,
-            amounts.amount0,
-            amounts.amount1
-        ) = abi.decode(result, (uint128, uint256, uint256));
+        ( liquidity, , ) = abi.decode(result, (uint128, uint256, uint256));
     }
 
     /**********************************************************************************************/
@@ -865,9 +902,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         uint256               deadline
     )
         internal
-        returns (TokenAmounts memory amounts)
     {
-        bytes memory result = IALMProxy(_getSharedControllerStorage().proxy).doCall(
+        IALMProxy(_getSharedControllerStorage().proxy).doCall(
             positionManager,
             abi.encodeCall(
                 INonfungiblePositionManager.decreaseLiquidity,
@@ -880,14 +916,12 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
                 })
             )
         );
-
-        ( amounts.amount0, amounts.amount1 ) = abi.decode(result, (uint256, uint256));
     }
 
-    function _callCollect(uint256 tokenId) internal returns (TokenAmounts memory amounts) {
+    function _callCollect(uint256 tokenId) internal {
         address proxy = _getSharedControllerStorage().proxy;
 
-        bytes memory result = IALMProxy(proxy).doCall(
+        IALMProxy(proxy).doCall(
             positionManager,
             abi.encodeCall(
                 INonfungiblePositionManager.collect,
@@ -899,8 +933,6 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
                 })
             )
         );
-
-        ( amounts.amount0, amounts.amount1 ) = abi.decode(result, (uint256, uint256));
     }
 
     function _checkSlippage(uint256 amount, uint256 minAmount, uint256 maxSlippage) internal pure {
@@ -962,6 +994,14 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             tickLower := signextend(2, tickLower)
             tickUpper := signextend(2, tickUpper)
         }
+    }
+
+    function _getProxyBalance(address token) internal view returns (uint256) {
+        return IERC20Like(token).balanceOf(_getSharedControllerStorage().proxy);
+    }
+
+    function _toNormalizedAmount(address token, uint256 amount) internal view returns (uint256) {
+        return amount * 1e18 / (10 ** IERC20Like(token).decimals());
     }
 
     function _validateTokenOwnership(uint256 tokenId) internal view {

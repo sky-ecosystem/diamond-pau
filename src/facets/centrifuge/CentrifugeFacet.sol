@@ -2,7 +2,6 @@
 pragma solidity ^0.8.34;
 
 import {
-    makeAddressAddressKey,
     makeAddressKey,
     makeAddressUint16AddressKey
 } from "../../libraries/RateLimitHelpers.sol";
@@ -95,8 +94,16 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_DEPOSIT  = keccak256("LIMIT_7540_DEPOSIT");
-    bytes32 internal constant _LIMIT_REDEEM   = keccak256("LIMIT_7540_REDEEM");
+    bytes32 internal constant _LIMIT_CANCEL_DEPOSIT = keccak256("LIMIT_CENTRIFUGE_CANCEL_DEPOSIT");
+
+    bytes32 internal constant _LIMIT_CLAIM_CANCEL_DEPOSIT
+        = keccak256("LIMIT_CENTRIFUGE_CLAIM_CANCEL_DEPOSIT");
+
+    bytes32 internal constant _LIMIT_CANCEL_REDEEM = keccak256("LIMIT_CENTRIFUGE_CANCEL_REDEEM");
+
+    bytes32 internal constant _LIMIT_CLAIM_CANCEL_REDEEM
+        = keccak256("LIMIT_CENTRIFUGE_CLAIM_CANCEL_REDEEM");
+
     bytes32 internal constant _LIMIT_TRANSFER = keccak256("LIMIT_CENTRIFUGE_TRANSFER");
 
     // Requests for Centrifuge pools are non-fungible and all have ID = 0.
@@ -117,6 +124,8 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(recipient != bytes32(0), "CentrifugeFacet/zero-recipient");
+
         emit CentrifugeRecipientSet(
             centrifugeId,
             _getFacetStorage().recipients[centrifugeId] = recipient
@@ -124,7 +133,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc ICentrifugeFacet
@@ -132,9 +141,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
-        _requireRateLimitExists(getDepositRateLimitKey(token, IERC4626Like(token).asset()));
+        _requireRateLimitExists(getCancelDepositRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -152,9 +161,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
-        _requireRateLimitExists(getDepositRateLimitKey(token, IERC4626Like(token).asset()));
+        _requireRateLimitExists(getClaimCancelDepositRateLimitKey(token));
 
         address asset = IERC4626Like(token).asset();
         address proxy = _getSharedControllerStorage().proxy;
@@ -179,9 +188,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
-        _requireRateLimitExists(getRedeemRateLimitKey(token));
+        _requireRateLimitExists(getCancelRedeemRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -199,9 +208,9 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
-        _requireRateLimitExists(getRedeemRateLimitKey(token));
+        _requireRateLimitExists(getClaimCancelRedeemRateLimitKey(token));
 
         address proxy = _getSharedControllerStorage().proxy;
         address share = ICentrifugeV3VaultLike(token).share();
@@ -227,7 +236,7 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
         payable
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         bytes32 recipient = _getFacetStorage().recipients[centrifugeId];
 
@@ -263,23 +272,43 @@ contract CentrifugeFacet is ICentrifugeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc ICentrifugeFacet
-    function getDepositRateLimitKey(address token, address asset)
-        public
-        pure
-        override
-        returns (bytes32)
-    {
-        return makeAddressAddressKey(_LIMIT_DEPOSIT, asset, token);
-    }
-
-    /// @inheritdoc ICentrifugeFacet
     function getRecipient(uint16 centrifugeId) external view override returns (bytes32) {
         return _getFacetStorage().recipients[centrifugeId];
     }
 
     /// @inheritdoc ICentrifugeFacet
-    function getRedeemRateLimitKey(address token) public pure override returns (bytes32) {
-        return makeAddressKey(_LIMIT_REDEEM, token);
+    function getCancelDepositRateLimitKey(address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressKey(_LIMIT_CANCEL_DEPOSIT, token);
+    }
+
+    /// @inheritdoc ICentrifugeFacet
+    function getClaimCancelDepositRateLimitKey(address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressKey(_LIMIT_CLAIM_CANCEL_DEPOSIT, token);
+    }
+
+    /// @inheritdoc ICentrifugeFacet
+    function getCancelRedeemRateLimitKey(address token) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_CANCEL_REDEEM, token);
+    }
+
+    /// @inheritdoc ICentrifugeFacet
+    function getClaimCancelRedeemRateLimitKey(address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressKey(_LIMIT_CLAIM_CANCEL_REDEEM, token);
     }
 
     /// @inheritdoc ICentrifugeFacet

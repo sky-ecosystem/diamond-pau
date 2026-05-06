@@ -22,7 +22,7 @@ abstract contract Facet is IFacet, ControllerSharedStorage, ReentrancyGuardUpgra
     bytes32 public constant override DEFAULT_ADMIN_ROLE = 0x00;
 
     /// @inheritdoc IFacet
-    bytes32 public constant override RELAYER_ROLE = keccak256("RELAYER");
+    bytes32 public constant override ALLOCATOR_ROLE = keccak256("ALLOCATOR_ROLE");
 
     /**********************************************************************************************/
     /*** Modifiers                                                                              ***/
@@ -49,6 +49,12 @@ abstract contract Facet is IFacet, ControllerSharedStorage, ReentrancyGuardUpgra
 
     function _decreaseRateLimit(bytes32 key, uint256 amount) internal {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(key, amount);
+    }
+
+    function _tryIncreaseRateLimit(bytes32 key, uint256 amount) internal {
+        if (!_rateLimitExists(key)) return;
+
+        _increaseRateLimit(key, amount);
     }
 
     /**********************************************************************************************/

@@ -26,11 +26,11 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         mainnetController.wrapAllProxyETH();
     }
 
-    function test_wrapAllProxyETH_notRelayer() external {
+    function test_wrapAllProxyETH_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.wrapAllProxyETH();
     }
@@ -41,7 +41,7 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.wrapAllProxyETH();
 
         _assertReentrancyGuardWrittenToTwice();
@@ -50,7 +50,23 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         assertEq(WETH.balanceOf(address(almProxy)), 0);
     }
 
+    function test_wrapAllProxyETH_invalidAction() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(mainnetController.wrapAllProxyETHRateLimitKey(), 0, 0);
+        vm.stopPrank();
+
+        vm.deal(address(almProxy), 1 ether);
+
+        vm.expectRevert("WrapProxyETHFacet/invalid-action");
+        vm.prank(allocator);
+        mainnetController.wrapAllProxyETH();
+    }
+
     function test_wrapAllProxyETH() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(mainnetController.wrapAllProxyETHRateLimitKey(), type(uint256).max, 0);
+        vm.stopPrank();
+
         vm.deal(address(almProxy), 1 ether);
 
         assertEq(address(almProxy).balance,         1 ether);
@@ -61,7 +77,7 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         vm.expectEmit(address(mainnetController));
         emit IWrapProxyETHFacet.WrapProxyETHWrap(1 ether);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.wrapAllProxyETH();
 
         _assertReentrancyGuardWrittenToTwice();

@@ -69,14 +69,14 @@ interface IMainnetControllerFull is IController {
 
     function getCCTPMaxFeeCap() external view returns (uint256);
 
+    function toCCTPRateLimitKey() external pure returns (bytes32 key);
+
     function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
 
     function getCCTPToDomainRateLimitKey(uint32 destinationDomain)
         external
         pure
         returns (bytes32 key);
-
-    function toCCTPRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** CentrifugeFacet actions                                                                ***/
@@ -97,6 +97,14 @@ interface IMainnetControllerFull is IController {
         payable;
 
     function getCentrifugeRecipient(uint16 centrifugeId) external view returns (bytes32);
+
+    function getCentrifugeCancelDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getCentrifugeClaimCancelDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getCentrifugeCancelRedeemRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getCentrifugeClaimCancelRedeemRateLimitKey(address token) external pure returns (bytes32 key);
 
     function getCentrifugeTransferRateLimitKey(address token, uint16 centrifugeId, address spoke)
         external
@@ -133,9 +141,17 @@ interface IMainnetControllerFull is IController {
 
     function getCurveMaxSlippage(address pool) external view returns (uint256);
 
-    function getCurveDepositRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getCurveAggregateDepositRateLimitKey(address pool) external pure returns (bytes32 key);
 
-    function getCurveSwapRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getCurveAssetDepositRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getCurveSwapRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     function getCurveWithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
 
@@ -188,12 +204,16 @@ interface IMainnetControllerFull is IController {
 
     function claimRedeemERC7540(address token) external;
 
-    function getERC7540DepositRateLimitKey(address token, address asset)
+    function getERC7540RequestDepositRateLimitKey(address token, address asset)
         external
         pure
         returns (bytes32 key);
 
-    function getERC7540RedeemRateLimitKey(address token) external pure returns (bytes32 key);
+    function getERC7540ClaimDepositRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getERC7540RequestRedeemRateLimitKey(address token) external pure returns (bytes32 key);
+
+    function getERC7540ClaimRedeemRateLimitKey(address token) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** FarmFacet actions                                                                      ***/
@@ -204,6 +224,8 @@ interface IMainnetControllerFull is IController {
     function claimRewardFromFarm(address farm) external returns (uint256 reward);
 
     function withdrawFromFarm(address farm, uint256 amount) external returns (uint256 reward);
+
+    function getFarmClaimRewardRateLimitKey(address farm) external pure returns (bytes32 key);
 
     function getFarmDepositRateLimitKey(address farm, address stakingToken)
         external
@@ -241,7 +263,9 @@ interface IMainnetControllerFull is IController {
 
     function cancelMapleRedemption(address mapleToken, uint256 shares) external;
 
-    function getMapleRedeemRateLimitKey(address mapleToken)
+    function getMapleCancelRedeemRateLimitKey(address mapleToken) external pure returns (bytes32 key);
+
+    function getMapleRequestRedeemRateLimitKey(address mapleToken)
         external
         pure
         returns (bytes32 key);
@@ -250,11 +274,12 @@ interface IMainnetControllerFull is IController {
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
 
-    function setMerklDistributor(address distributor) external;
+    function toggleOperatorMerkl(address distributor, address operator) external;
 
-    function toggleOperatorMerkl(address operator) external;
-
-    function merklDistributor() external view returns (address);
+    function getMerklToggleOperatorRateLimitKey(address distributor, address operator)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
@@ -387,31 +412,33 @@ interface IMainnetControllerFull is IController {
         external
         returns (IUniswapV3Facet.TokenAmounts memory);
 
-    function getUniswapV3MaxSlippage(address pool) external view returns (uint256);
+    function getUniswapV3AggregateDepositRateLimitKey(address pool)
+        external
+        pure
+        returns (bytes32 key);
 
-    function getUniswapV3PoolMaxTickDelta(address pool) external view returns (uint24);
+    function getUniswapV3AssetDepositRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     function getUniswapV3AddLiquidityTickBounds(address pool)
         external
         view
         returns (int24 lower, int24 upper);
 
-    function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
+    function getUniswapV3MaxSlippage(address pool) external view returns (uint256);
 
-    function getUniswapV3DepositRateLimitKey(address pool, address token)
-        external
-        pure
-        returns (bytes32 key);
+    function getUniswapV3PoolMaxTickDelta(address pool) external view returns (uint24);
 
     function getUniswapV3SwapRateLimitKey(address pool, address token)
         external
         pure
         returns (bytes32 key);
 
-    function getUniswapV3WithdrawRateLimitKey(address pool, address token)
-        external
-        pure
-        returns (bytes32 key);
+    function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
+
+    function getUniswapV3WithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
@@ -458,26 +485,37 @@ interface IMainnetControllerFull is IController {
     function swapUniswapV4(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external;
 
+    function getUniswapV4AggregateDepositRateLimitKey(bytes32 poolId)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV4AssetDepositRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
+
     function uniswapV4MaxSlippages(bytes32 poolId) external view returns (uint256);
+
+    function getUniswapV4SwapRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     function uniswapV4TickLimits(bytes32 poolId)
         external
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
-    function getUniswapV4DepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
-
-    function getUniswapV4SwapRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
-
     function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
-    /*** USDEFacet actions                                                                      ***/
+    /*** EthenaFacet actions                                                                    ***/
     /**********************************************************************************************/
 
-    function setDelegatedSigner(address delegatedSigner) external;
+    function setEthenaDelegatedSigner(address delegatedSigner) external;
 
-    function removeDelegatedSigner(address delegatedSigner) external;
+    function removeEthenaDelegatedSigner(address delegatedSigner) external;
 
     function prepareUSDeMint(uint256 usdcAmount) external;
 
@@ -489,11 +527,17 @@ interface IMainnetControllerFull is IController {
 
     function unstakeSUSDe() external;
 
-    function usdeBurnRateLimitKey() external pure returns (bytes32 key);
+    function setEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
+
+    function removeEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
 
     function usdeMintRateLimitKey() external pure returns (bytes32 key);
 
+    function usdeBurnRateLimitKey() external pure returns (bytes32 key);
+
     function usdeCooldownRateLimitKey() external pure returns (bytes32 key);
+
+    function usdeUnstakeRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** USDSFacet actions                                                                      ***/
@@ -508,6 +552,8 @@ interface IMainnetControllerFull is IController {
     function usdsVault() external view returns (address);
 
     function usdsMintRateLimitKey() external pure returns (bytes32 key);
+
+    function usdsBurnRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** WEETHFacet actions                                                                     ***/
@@ -541,11 +587,18 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
+    function getWEETHClaimWithdrawRateLimitKey(address weethModule)
+        external
+        pure
+        returns (bytes32 key);
+
     /**********************************************************************************************/
     /*** WrapProxyETHFacet actions                                                              ***/
     /**********************************************************************************************/
 
     function wrapAllProxyETH() external;
+
+    function wrapAllProxyETHRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** WSTETHFacet actions                                                                    ***/
@@ -562,5 +615,7 @@ interface IMainnetControllerFull is IController {
     function wstethDepositRateLimitKey() external pure returns (bytes32 key);
 
     function wstethRequestWithdrawRateLimitKey() external pure returns (bytes32 key);
+
+    function wstethClaimWithdrawRateLimitKey() external pure returns (bytes32 key);
 
 }

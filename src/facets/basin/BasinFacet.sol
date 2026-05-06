@@ -12,6 +12,12 @@ import { Facet } from "../Facet.sol";
 
 import { IBasinFacet } from "./IBasinFacet.sol";
 
+interface IERC20Like {
+
+    function balanceOf(address account) external view returns (uint256);
+
+}
+
 interface IBasinLike {
 
     function deposit(address asset, address receiver, uint256 assetsToDeposit)
@@ -39,7 +45,7 @@ contract BasinFacet is IBasinFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc IBasinFacet
@@ -47,7 +53,7 @@ contract BasinFacet is IBasinFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 shares)
     {
         _decreaseRateLimit(getDepositRateLimitKey(basin, asset), amount);
@@ -57,15 +63,12 @@ contract BasinFacet is IBasinFacet, Facet {
         // Approve `asset` to Basin from the proxy (assumes the proxy has enough `asset`).
         ApproveLib.approve(asset, proxy, basin, amount);
 
-        // Deposit `amount` of `asset` in the Basin, decode the result to get `shares`.
-        // NOTE: The basin contract is immutable, so the return value can be trusted.
-        shares = abi.decode(
-            IALMProxy(proxy).doCall(
-                basin,
-                abi.encodeCall(IBasinLike.deposit, (asset, proxy, amount))
-            ),
-            (uint256)
-        );
+        uint256 startingShares = IBasinLike(basin).shares(proxy);
+
+        // Deposit `amount` of `asset` in the Basin.
+        IALMProxy(proxy).doCall(basin, abi.encodeCall(IBasinLike.deposit, (asset, proxy, amount)));
+
+        shares = IBasinLike(basin).shares(proxy) - startingShares;
 
         require(shares >= minSharesOut, "BasinFacet/min-shares-out-not-met");
 
@@ -77,24 +80,23 @@ contract BasinFacet is IBasinFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
         returns (uint256 assetsWithdrawn)
     {
         address proxy = _getSharedControllerStorage().proxy;
 
         uint256 startingShares = IBasinLike(basin).shares(proxy);
+        uint256 startingAssets = IERC20Like(asset).balanceOf(proxy);
 
-        // Withdraw up to `maxAmount` of `asset` in the Basin, decode the result to get
-        // `assetsWithdrawn` (assumes the proxy has enough Basin shares).
-        assetsWithdrawn = abi.decode(
-            IALMProxy(proxy).doCall(
-                basin,
-                abi.encodeCall(IBasinLike.withdraw, (asset, proxy, maxAmount))
-            ),
-            (uint256)
+        // Withdraw up to `maxAmount` of `asset` in the Basin.
+        IALMProxy(proxy).doCall(
+            basin,
+            abi.encodeCall(IBasinLike.withdraw, (asset, proxy, maxAmount))
         );
 
         uint256 sharesBurned = startingShares - IBasinLike(basin).shares(proxy);
+
+        assetsWithdrawn = IERC20Like(asset).balanceOf(proxy) - startingAssets;
 
         require(
             assetsWithdrawn * 1e18 >= sharesBurned * minConversionRate,
