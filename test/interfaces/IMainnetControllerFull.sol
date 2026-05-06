@@ -69,14 +69,14 @@ interface IMainnetControllerFull is IController {
 
     function getCCTPMaxFeeCap() external view returns (uint256);
 
+    function toCCTPRateLimitKey() external pure returns (bytes32 key);
+
     function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
 
     function getCCTPToDomainRateLimitKey(uint32 destinationDomain)
         external
         pure
         returns (bytes32 key);
-
-    function toCCTPRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** CentrifugeFacet actions                                                                ***/
@@ -407,17 +407,6 @@ interface IMainnetControllerFull is IController {
         external
         returns (IUniswapV3Facet.TokenAmounts memory);
 
-    function getUniswapV3MaxSlippage(address pool) external view returns (uint256);
-
-    function getUniswapV3PoolMaxTickDelta(address pool) external view returns (uint24);
-
-    function getUniswapV3AddLiquidityTickBounds(address pool)
-        external
-        view
-        returns (int24 lower, int24 upper);
-
-    function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
-
     function getUniswapV3AggregateDepositRateLimitKey(address pool)
         external
         pure
@@ -428,10 +417,21 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
+    function getUniswapV3AddLiquidityTickBounds(address pool)
+        external
+        view
+        returns (int24 lower, int24 upper);
+
+    function getUniswapV3MaxSlippage(address pool) external view returns (uint256);
+
+    function getUniswapV3PoolMaxTickDelta(address pool) external view returns (uint24);
+
     function getUniswapV3SwapRateLimitKey(address pool, address token)
         external
         pure
         returns (bytes32 key);
+
+    function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
 
     function getUniswapV3WithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
 
@@ -480,13 +480,6 @@ interface IMainnetControllerFull is IController {
     function swapUniswapV4(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external;
 
-    function uniswapV4MaxSlippages(bytes32 poolId) external view returns (uint256);
-
-    function uniswapV4TickLimits(bytes32 poolId)
-        external
-        view
-        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
-
     function getUniswapV4AggregateDepositRateLimitKey(bytes32 poolId)
         external
         pure
@@ -497,10 +490,17 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
+    function uniswapV4MaxSlippages(bytes32 poolId) external view returns (uint256);
+
     function getUniswapV4SwapRateLimitKey(bytes32 poolId, address token)
         external
         pure
         returns (bytes32 key);
+
+    function uniswapV4TickLimits(bytes32 poolId)
+        external
+        view
+        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
     function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
 
