@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 import { Ethereum as SparkEthereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
@@ -60,6 +62,14 @@ abstract contract Merkl_TestBase is ForkTestBase {
 }
 
 contract MainnetController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
+
+    function test_toggleOperatorMerkl_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        vm.prank(allocator);
+        mainnetController.toggleOperatorMerkl(address(merklDistributor), operator1);
+    }
 
     function test_toggleOperatorMerkl_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(

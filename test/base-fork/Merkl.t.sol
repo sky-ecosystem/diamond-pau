@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+
 import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol";
 import { Base as SparkBase } from "../../lib/spark-address-registry/src/Base.sol";
 
@@ -54,6 +56,14 @@ abstract contract Merkl_TestBase is ForkTestBase {
 }
 
 contract ForeignController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
+
+    function test_toggleOperatorMerkl_reentrancy() external {
+        _setControllerEntered();
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        vm.prank(allocator);
+        foreignController.toggleOperatorMerkl(address(merklDistributor), operator1);
+    }
 
     function test_toggleOperatorMerkl_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(
