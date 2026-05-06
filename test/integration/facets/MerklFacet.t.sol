@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ReentrancyGuard } from "../../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-
 import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
 import { IMerklFacet }             from "../../../src/facets/merkl/IMerklFacet.sol";
+import { makeAddressAddressKey }   from "../../../src/libraries/RateLimitHelpers.sol";
 
 import { MerklFacet } from "../../../src/facets/merkl/MerklFacet.sol";
 
@@ -12,11 +11,12 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function setDistributor(address distributor) external;
+    function getToggleOperatorRateLimitKey(address distributor, address operator)
+        external
+        pure
+        returns (bytes32);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
-
-    function distributor() external view returns (address);
 
 }
 
@@ -24,70 +24,45 @@ contract Controller_MerklFacet_Tests is Integration_TestBase {
 
     IControllerLike internal controller;
 
-    // function setUp() external {
-    //     controller = IControllerLike(_deploy());
+    function setUp() external {
+        controller = IControllerLike(_deploy());
 
-    //     address facet = address(new MerklFacet());
+        address facet = address(new MerklFacet());
 
-    //     vm.label(facet, "MerklFacet");
+        vm.label(facet, "MerklFacet");
 
-    //     IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](1);
 
-    //     IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
+        wires[0] = IEnumerableIntegrations.Wire(
+            IControllerLike.getToggleOperatorRateLimitKey.selector,
+            IMerklFacet.getToggleOperatorRateLimitKey.selector
+        );
 
-    //     vm.prank(beaconAdmin);
-    //     beacon.setIntegration("MERKL_FACET", config);
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
 
-    //     bytes32[] memory integrationIds = new bytes32[](1);
-    //     integrationIds[0] = "MERKL_FACET";
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("MERKL_FACET", config);
 
-    //     vm.prank(admin);
-    //     controller.updateIntegrations(integrationIds);
-    // }
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "MERKL_FACET";
 
-    // /**********************************************************************************************/
-    // /*** setDistributor Tests                                                                   ***/
-    // /**********************************************************************************************/
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+    }
 
-    // function test_setDistributor_reentrancy() external {
-    //     _setEntered(address(controller));
-    //     vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-    //     controller.setDistributor(address(0));
-    // }
+    /**********************************************************************************************/
+    /*** getToggleOperatorRateLimitKey Tests                                                    ***/
+    /**********************************************************************************************/
 
-    // function test_setDistributor_unauthorizedAccount() external {
-    //     vm.expectRevert(abi.encodeWithSignature(
-    //         "AccessControlUnauthorizedAccount(address,bytes32)",
-    //         unauthorized,
-    //         DEFAULT_ADMIN_ROLE
-    //     ));
+    function test_getToggleOperatorRateLimitKey() external {
+        bytes32 keyPrefix   = keccak256("LIMIT_MERKL_TOGGLE_OPERATOR");
+        address distributor = makeAddr("distributor");
+        address operator    = makeAddr("operator");
 
-    //     vm.prank(unauthorized);
-    //     controller.setDistributor(address(0));
-    // }
-
-    // function test_setDistributor_zeroAddress() external {
-    //     vm.expectRevert("MerklFacet/zero-distributor");
-    //     vm.prank(admin);
-    //     controller.setDistributor(address(0));
-    // }
-
-    // function test_setDistributor() external {
-    //     address distributor = makeAddr("distributor");
-
-    //     assertEq(controller.distributor(), address(0));
-
-    //     vm.record();
-
-    //     vm.expectEmit(address(controller));
-    //     emit IMerklFacet.MerklDistributorSet(distributor);
-
-    //     vm.prank(admin);
-    //     controller.setDistributor(distributor);
-
-    //     assertEq(controller.distributor(), distributor);
-
-    //     _assertReentrancyGuardWrittenToTwice(address(controller));
-    // }
+        assertEq(
+            controller.getToggleOperatorRateLimitKey(distributor, operator),
+            makeAddressAddressKey(keyPrefix, operator, distributor)
+        );
+    }
 
 }

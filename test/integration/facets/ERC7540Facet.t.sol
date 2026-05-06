@@ -68,4 +68,61 @@ contract Controller_ERC7540Facet_Tests is Integration_TestBase {
         controller.updateIntegrations(integrationIds);
     }
 
+    /**********************************************************************************************/
+    /*** getRequestDepositRateLimitKey Tests                                                    ***/
+    /**********************************************************************************************/
+
+    function test_getRequestDepositRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_REQUEST_DEPOSIT");
+        address token     = makeAddr("token");
+        address asset     = makeAddr("asset");
+
+        assertEq(
+            controller.getRequestDepositRateLimitKey(token, asset),
+            makeAddressAddressKey(keyPrefix, asset, token)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getClaimDepositRateLimitKey Tests                                                      ***/
+    /**********************************************************************************************/
+
+    function test_getClaimDepositRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_CLAIM_DEPOSIT");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getClaimDepositRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getRequestRedeemRateLimitKey Tests                                                     ***/
+    /**********************************************************************************************/
+
+    function test_getRequestRedeemRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_REQUEST_REDEEM");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getRequestRedeemRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getClaimRedeemRateLimitKey Tests                                                       ***/
+    /**********************************************************************************************/
+
+    function test_getClaimRedeemRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_ERC7540_CLAIM_REDEEM");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getClaimRedeemRateLimitKey(token),
+            makeAddressKey(keyPrefix, token)
+        );
+    }
+
 }

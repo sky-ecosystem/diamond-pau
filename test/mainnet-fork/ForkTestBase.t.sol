@@ -1365,7 +1365,7 @@ abstract contract ForkTestBase is DssTest {
             IUSDEFacet.removeDelegatedSignerRateLimitKey.selector
         );
 
-        wires[0] = IEnumerableIntegrations.Wire(
+        wires[9] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.usdeMintRateLimitKey.selector,
             IUSDEFacet.mintRateLimitKey.selector
         );
