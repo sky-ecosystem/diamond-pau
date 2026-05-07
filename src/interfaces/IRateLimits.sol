@@ -129,7 +129,7 @@ interface IRateLimits is IAccessControl {
 
     /**
      * @notice Triggers the rate limit for a specific key and reduces the available amount by the
-     *         amount by the provided value.
+     *         provided value.
      * @param  key              The identifier for the rate limit.
      * @param  amountToDecrease The amount to decrease from the current rate limit.
      * @return newLimit         The updated rate limit after the deduction.
