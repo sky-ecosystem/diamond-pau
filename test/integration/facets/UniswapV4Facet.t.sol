@@ -38,6 +38,12 @@ interface IControllerLike {
 
     function getWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32);
 
+    function permit2() external view returns (address);
+
+    function positionManager() external view returns (address);
+
+    function router() external view returns (address);
+
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
@@ -59,7 +65,7 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](11);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setMaxSlippage.selector,
@@ -99,6 +105,21 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         wires[7] = IEnumerableIntegrations.Wire(
             IControllerLike.getWithdrawRateLimitKey.selector,
             IUniswapV4Facet.getWithdrawRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IControllerLike.permit2.selector,
+            IUniswapV4Facet.permit2.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IControllerLike.positionManager.selector,
+            IUniswapV4Facet.positionManager.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IControllerLike.router.selector,
+            IUniswapV4Facet.router.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -142,6 +163,16 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         assertEq(facet.permit2(),         permit2);
         assertEq(facet.positionManager(), positionManager);
         assertEq(facet.router(),          router);
+    }
+
+    /**********************************************************************************************/
+    /*** Immutables Tests                                                                       ***/
+    /**********************************************************************************************/
+
+    function test_immutables() external {
+        assertEq(controller.permit2(),         makeAddr("permit2"));
+        assertEq(controller.positionManager(), makeAddr("positionManager"));
+        assertEq(controller.router(),          makeAddr("router"));
     }
 
     /**********************************************************************************************/

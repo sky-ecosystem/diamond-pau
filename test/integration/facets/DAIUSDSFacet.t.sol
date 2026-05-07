@@ -1,11 +1,68 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { IDAIUSDSFacet }           from "../../../src/facets/dai-usds/IDAIUSDSFacet.sol";
+import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
+
 import { DAIUSDSFacet } from "../../../src/facets/dai-usds/DAIUSDSFacet.sol";
 
 import { Integration_TestBase } from "../TestBase.t.sol";
 
+interface IControllerLike {
+
+    function dai() external view returns (address);
+
+    function daiUSDS() external view returns (address);
+
+    function usds() external view returns (address);
+
+    function updateIntegrations(bytes32[] memory integrationIds) external;
+
+}
+
 contract Controller_DAIUSDSFacet_Tests is Integration_TestBase {
+
+    IControllerLike internal controller;
+
+    function setUp() external {
+        controller = IControllerLike(_deploy());
+
+        address facet = address(new DAIUSDSFacet(
+            makeAddr("dai"),
+            makeAddr("daiUSDS"),
+            makeAddr("usds")
+        ));
+
+        vm.label(facet, "DAIUSDSFacet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IControllerLike.dai.selector,
+            IDAIUSDSFacet.dai.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IControllerLike.daiUSDS.selector,
+            IDAIUSDSFacet.daiUSDS.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IControllerLike.usds.selector,
+            IDAIUSDSFacet.usds.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
+
+        vm.prank(beaconAdmin);
+        beacon.setIntegration("DAIUSDS_FACET", config);
+
+        bytes32[] memory integrationIds = new bytes32[](1);
+        integrationIds[0] = "DAIUSDS_FACET";
+
+        vm.prank(admin);
+        controller.updateIntegrations(integrationIds);
+    }
 
     /**********************************************************************************************/
     /*** Constructor Tests                                                                      ***/
@@ -36,6 +93,16 @@ contract Controller_DAIUSDSFacet_Tests is Integration_TestBase {
         assertEq(facet.dai(),     dai);
         assertEq(facet.daiUSDS(), daiUSDS);
         assertEq(facet.usds(),    usds);
+    }
+
+    /**********************************************************************************************/
+    /*** Immutables Tests                                                                       ***/
+    /**********************************************************************************************/
+
+    function test_immutables() external {
+        assertEq(controller.dai(),     makeAddr("dai"));
+        assertEq(controller.daiUSDS(), makeAddr("daiUSDS"));
+        assertEq(controller.usds(),    makeAddr("usds"));
     }
 
 }

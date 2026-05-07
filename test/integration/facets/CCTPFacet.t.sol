@@ -25,6 +25,16 @@ interface IControllerLike {
 
     function toCCTPRateLimitKey() external pure returns (bytes32);
 
+    function cctp() external view returns (address);
+
+    function usdc() external view returns (address);
+
+    function DESTINATION_CALLER() external pure returns (bytes32);
+
+    function MAX_FEE() external pure returns (uint256);
+
+    function MAX_FINALITY_THRESHOLD() external pure returns (uint32);
+
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
@@ -43,7 +53,7 @@ contract Controller_CCTPFacet_Tests is Integration_TestBase {
 
         vm.label(facet, "CCTPFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](11);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.getMaxFeeCap.selector,
@@ -73,6 +83,31 @@ contract Controller_CCTPFacet_Tests is Integration_TestBase {
         wires[5] = IEnumerableIntegrations.Wire(
             IControllerLike.getToDomainRateLimitKey.selector,
             ICCTPFacet.getToDomainRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
+            IControllerLike.cctp.selector,
+            ICCTPFacet.cctp.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
+            IControllerLike.usdc.selector,
+            ICCTPFacet.usdc.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IControllerLike.DESTINATION_CALLER.selector,
+            ICCTPFacet.DESTINATION_CALLER.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IControllerLike.MAX_FEE.selector,
+            ICCTPFacet.MAX_FEE.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IControllerLike.MAX_FINALITY_THRESHOLD.selector,
+            ICCTPFacet.MAX_FINALITY_THRESHOLD.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -109,6 +144,18 @@ contract Controller_CCTPFacet_Tests is Integration_TestBase {
 
         assertEq(facet.cctp(), cctp);
         assertEq(facet.usdc(), usdc);
+    }
+
+    /**********************************************************************************************/
+    /*** Immutables and Constants Tests                                                         ***/
+    /**********************************************************************************************/
+
+    function test_immutablesAndConstants() external {
+        assertEq(controller.cctp(),                   makeAddr("cctp"));
+        assertEq(controller.DESTINATION_CALLER(),     bytes32(0));
+        assertEq(controller.MAX_FEE(),                0);
+        assertEq(controller.MAX_FINALITY_THRESHOLD(), 2_000);
+        assertEq(controller.usdc(),                   makeAddr("usdc"));
     }
 
     /**********************************************************************************************/

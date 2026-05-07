@@ -40,6 +40,16 @@ interface IControllerLike {
 
     function getWithdrawRateLimitKey(address pool) external pure returns (bytes32);
 
+    function positionManager() external view returns (address);
+
+    function router() external view returns (address);
+
+    function MAX_TICK_DELTA() external pure returns (uint24);
+
+    function MIN_TICK() external pure returns (int24);
+
+    function MAX_TICK() external pure returns (int24);
+
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
 }
@@ -60,7 +70,7 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "UniswapV3Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](18);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setMaxSlippage.selector,
@@ -127,6 +137,31 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
             IUniswapV3Facet.getWithdrawRateLimitKey.selector
         );
 
+        wires[13] = IEnumerableIntegrations.Wire(
+            IControllerLike.positionManager.selector,
+            IUniswapV3Facet.positionManager.selector
+        );
+
+        wires[14] = IEnumerableIntegrations.Wire(
+            IControllerLike.router.selector,
+            IUniswapV3Facet.router.selector
+        );
+
+        wires[15] = IEnumerableIntegrations.Wire(
+            IControllerLike.MAX_TICK_DELTA.selector,
+            IUniswapV3Facet.MAX_TICK_DELTA.selector
+        );
+
+        wires[16] = IEnumerableIntegrations.Wire(
+            IControllerLike.MIN_TICK.selector,
+            IUniswapV3Facet.MIN_TICK.selector
+        );
+
+        wires[17] = IEnumerableIntegrations.Wire(
+            IControllerLike.MAX_TICK.selector,
+            IUniswapV3Facet.MAX_TICK.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
 
         vm.prank(beaconAdmin);
@@ -161,6 +196,18 @@ contract Controller_UniswapV3Facet_Tests is Integration_TestBase {
 
         assertEq(facet.positionManager(), positionManager);
         assertEq(facet.router(),          router);
+    }
+
+    /**********************************************************************************************/
+    /*** Immutables and Constants Tests                                                         ***/
+    /**********************************************************************************************/
+
+    function test_immutablesAndConstants() external {
+        assertEq(controller.MAX_TICK_DELTA(),  _MAX_TICK_DELTA);
+        assertEq(controller.MIN_TICK(),        _MIN_UNISWAP_TICK);
+        assertEq(controller.MAX_TICK(),        _MAX_UNISWAP_TICK);
+        assertEq(controller.positionManager(), makeAddr("positionManager"));
+        assertEq(controller.router(),          makeAddr("router"));
     }
 
     /**********************************************************************************************/
