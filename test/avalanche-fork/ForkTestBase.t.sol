@@ -12,6 +12,8 @@ import { Avalanche } from "../../lib/grove-address-registry/src/Avalanche.sol";
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
+import { IFacet } from "../../src/facets/IFacet.sol";
+
 import { ICentrifugeFacet } from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
 import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
 
@@ -168,7 +170,7 @@ contract ForkTestBase is Test {
 
         vm.label(centrifugeFacet, "CentrifugeFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](14);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.setCentrifugeRecipient.selector,
@@ -230,6 +232,16 @@ contract ForkTestBase is Test {
             ICentrifugeFacet.getTransferRateLimitKey.selector
         );
 
+        wires[12] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.CENTRIFUGE_FACET_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        wires[13] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.CENTRIFUGE_REQUEST_ID.selector,
+            ICentrifugeFacet.REQUEST_ID.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
             facet : centrifugeFacet,
             wires : wires
@@ -243,7 +255,7 @@ contract ForkTestBase is Test {
 
         vm.label(erc7540Facet, "ERC7540Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.requestDepositERC7540.selector,
@@ -283,6 +295,11 @@ contract ForkTestBase is Test {
         wires[7] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.getERC7540ClaimRedeemRateLimitKey.selector,
             IERC7540Facet.getClaimRedeemRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.ERC7540_FACET_VERSION.selector,
+            IFacet.VERSION.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
