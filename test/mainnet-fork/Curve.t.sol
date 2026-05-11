@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { SafeERC20, IERC20 } from "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { ICurveFacet } from "../../src/facets/curve/ICurveFacet.sol";
@@ -15,6 +17,10 @@ interface IERC20Like {
 
     function totalSupply() external view returns (uint256);
 
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+
 }
 
 interface ICurvePoolLike {
@@ -24,6 +30,56 @@ interface ICurvePoolLike {
     function get_virtual_price() external view returns (uint256);
 
     function stored_rates() external view returns (uint256[] memory);
+
+}
+
+contract MockCurvePool {
+
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable token0;
+    IERC20 public immutable token1;
+
+    uint256 public immutable underDeliverAmount;
+
+    constructor(IERC20 token0_, IERC20 token1_, uint256 underDeliverAmount_) {
+        token0             = token0_;
+        token1             = token1_;
+        underDeliverAmount = underDeliverAmount_;
+    }
+
+    function N_COINS() external pure returns (uint256) {
+        return 2;
+    }
+
+    function coins(uint256 index) external view returns (address) {
+        return index == 0 ? address(token0) : address(token1);
+    }
+
+    function stored_rates() external pure returns (uint256[] memory rates) {
+        rates = new uint256[](2);
+        rates[0] = 1e18;
+        rates[1] = 1e18;
+    }
+
+    function exchange(
+        int128  inputIndex,
+        int128  outputIndex,
+        uint256 amountIn,
+        uint256,
+        address receiver
+    )
+        external
+        returns (uint256)
+    {
+        IERC20 tokenIn  = inputIndex == 0 ? token0 : token1;
+        IERC20 tokenOut = outputIndex == 0 ? token0 : token1;
+
+        tokenIn.transferFrom(msg.sender, address(this), amountIn);
+        tokenOut.safeTransfer(receiver, underDeliverAmount);
+
+        return underDeliverAmount;
+    }
 
 }
 
@@ -752,6 +808,27 @@ contract MainnetController_Curve_Swap_Tests is Curve_TestBase {
 
         vm.prank(allocator);
         mainnetController.swapCurve(CURVE_POOL, 1, 0, 1_000_000e6, 998_000e6);
+    }
+
+    function test_swapCurve_minAmountOutNotMet() external {
+        address mockPool = address(new MockCurvePool(IERC20(address(usdc)), IERC20(address(usdt)), 1));
+
+        deal(address(usdc), address(almProxy), 1_000e6);
+        deal(address(usdt), mockPool,          1_000e6);
+
+        bytes32 swapKey = mainnetController.getCurveSwapRateLimitKey(mockPool, address(usdc));
+
+        vm.startPrank(SPARK_PROXY);
+
+        mainnetController.setCurveMaxSlippage(mockPool, 0.9e18);
+
+        rateLimits.setUnlimitedRateLimitData(swapKey);
+
+        vm.stopPrank();
+
+        vm.expectRevert("CurveFacet/min-amount-out-not-met");
+        vm.prank(allocator);
+        mainnetController.swapCurve(mockPool, 0, 1, 1_000e6, 999e6);
     }
 
     function test_swapCurve_usdc() external {

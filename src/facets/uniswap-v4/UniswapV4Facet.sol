@@ -359,6 +359,10 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             callData : callData
         });
 
+        // Slippage on measured tokens received; the router still receives `amountOutMin` so it
+        // may revert first, but balance deltas are the trust anchor for output sizing.
+        require(amountOut >= amountOutMin, "UniswapV4Facet/min-amount-not-met");
+
         emit UniswapV4Swap(poolId, tokenIn, tokenOut, amountIn, amountOut);
     }
 

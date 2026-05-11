@@ -150,6 +150,8 @@ contract CurveFacet is ICurveFacet, Facet {
 
         amountOut = IERC20Like(tokenOut).balanceOf(proxy) - startingBalance;
 
+        require(amountOut >= minAmountOut, "CurveFacet/min-amount-out-not-met");
+
         emit CurveSwap(pool, inputIndex, outputIndex, amountIn, amountOut);
     }
 
@@ -207,6 +209,8 @@ contract CurveFacet is ICurveFacet, Facet {
         );
 
         shares = ICurvePoolLike(pool).balanceOf(proxy) - startingShares;
+
+        require(shares >= minLpAmount, "CurveFacet/min-lp-not-met");
 
         _decreaseRateLimitsForAddLiquidity(pool, tokens, depositAmounts, shares);
 
