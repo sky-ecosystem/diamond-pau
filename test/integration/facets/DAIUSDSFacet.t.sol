@@ -89,7 +89,7 @@ contract Controller_DAIUSDSFacet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** daiToUSDSSwapRateLimitKey Tests                                                          ***/
+    /*** daiToUSDSSwapRateLimitKey Tests                                                        ***/
     /**********************************************************************************************/
 
     function test_daiToUSDSSwapRateLimitKey() external {
@@ -97,7 +97,7 @@ contract Controller_DAIUSDSFacet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** usdsToDAISwapRateLimitKey Tests                                                           ***/
+    /*** usdsToDAISwapRateLimitKey Tests                                                        ***/
     /**********************************************************************************************/
 
     function test_usdsToDAISwapRateLimitKey() external {
