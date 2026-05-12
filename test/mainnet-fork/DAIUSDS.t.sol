@@ -87,6 +87,8 @@ contract MainnetController_DAIUSDS_SwapUSDSToDAI_Tests is DAIUSDS_TestBase {
 
         assertEq(USDS.allowance(address(almProxy), Ethereum.DAI_USDS), 0);
 
+        assertEq(rateLimits.getCurrentRateLimit(mainnetController.usdsToDAISwapRateLimitKey()), 2_000_000e18);
+
         vm.record();
 
         vm.expectEmit(address(mainnetController));
@@ -162,6 +164,8 @@ contract MainnetController_DAIUSDS_SwapDAIToUSDS_Tests is DAIUSDS_TestBase {
         assertEq(dai.totalSupply(),                DAI_SUPPLY);  // Supply not updated on deal
 
         assertEq(dai.allowance(address(almProxy), Ethereum.DAI_USDS), 0);
+
+        assertEq(rateLimits.getCurrentRateLimit(mainnetController.daiToUSDSSwapRateLimitKey()), 2_000_000e18);
 
         vm.record();
 
