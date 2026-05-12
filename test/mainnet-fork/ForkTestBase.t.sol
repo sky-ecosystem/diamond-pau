@@ -20,7 +20,6 @@ import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
 import { Ethereum as GroveEthereum } from "../../lib/grove-address-registry/src/Ethereum.sol";
 
-import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
@@ -126,11 +125,6 @@ interface IVaultLike {
 abstract contract ForkTestBase is DssTest {
 
     using DomainHelpers for *;
-
-    struct MintRecipient {
-        uint32  domain;
-        bytes32 mintRecipient;
-    }
 
     /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
@@ -357,33 +351,27 @@ abstract contract ForkTestBase is DssTest {
 
         mainnetController.updateIntegrations(integrationIds);
 
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-        });
-
-
-        for (uint256 i; i < mintRecipients.length; ++i) {
-            mainnetController.setCCTPMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
-        }
-
         IVaultLike(ilkInst.vault).rely(address(almProxy));
         IBufferLike(IVaultLike(ilkInst.vault).buffer()).approve(address(usds), address(almProxy), type(uint256).max);
 
-        uint256 usdsMaxAmount = 5_000_000e18;
-        uint256 usdsSlope     = uint256(1_000_000e18) / 4 hours;
-        uint256 usdcMaxAmount = 5_000_000e6;
-        uint256 usdcSlope     = uint256(1_000_000e6) / 4 hours;
-
-        bytes32 domainKeyBase = mainnetController.getCCTPToDomainRateLimitKey(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-
         // NOTE: Using minimal config for test base setup
-        rateLimits.setRateLimitData(mainnetController.usdsMintRateLimitKey(),          usdsMaxAmount, usdsSlope);
-        rateLimits.setRateLimitData(mainnetController.psmUSDSToUSDCSwapRateLimitKey(), usdcMaxAmount, usdcSlope);
-        rateLimits.setRateLimitData(mainnetController.toCCTPRateLimitKey(),            usdcMaxAmount, usdcSlope);
-        rateLimits.setRateLimitData(domainKeyBase,                                     usdcMaxAmount, usdcSlope);
+        rateLimits.setRateLimitData(
+            mainnetController.usdsMintRateLimitKey(),
+            5_000_000e18,
+            uint256(1_000_000e18) / 4 hours
+        );
+
+        rateLimits.setRateLimitData(
+            mainnetController.psmUSDCToUSDSSwapRateLimitKey(),
+            5_000_000e6,
+            uint256(1_000_000e6) / 4 hours
+        );
+
+        rateLimits.setRateLimitData(
+            mainnetController.psmUSDSToUSDCSwapRateLimitKey(),
+            5_000_000e6,
+            uint256(1_000_000e6) / 4 hours
+        );
 
         vm.stopPrank();
 
@@ -659,44 +647,29 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(cctpFacet, "CCTPFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setCCTPMaxFeeCap.selector,
-            ICCTPFacet.setMaxFeeCap.selector
+            IMainnetControllerFull.setCCTPDomainParameters.selector,
+            ICCTPFacet.setDomainParameters.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setCCTPMintRecipient.selector,
-            ICCTPFacet.setMintRecipient.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.transferUSDCToCCTP.selector,
             ICCTPFacet.transfer.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferUSDCToCCTPWithFee.selector,
-            ICCTPFacet.transferWithFee.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCCTPMaxFeeCap.selector,
-            ICCTPFacet.maxFeeCap.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.toCCTPRateLimitKey.selector,
             ICCTPFacet.toCCTPRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCCTPMintRecipient.selector,
-            ICCTPFacet.getMintRecipient.selector
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getCCTPDomainParameters.selector,
+            ICCTPFacet.getDomainParameters.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.getCCTPToDomainRateLimitKey.selector,
             ICCTPFacet.getToDomainRateLimitKey.selector
         );
@@ -718,7 +691,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(daiUSDSFacet, "DAIUSDSFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.swapUSDSToDAI.selector,
@@ -728,6 +701,16 @@ abstract contract ForkTestBase is DssTest {
         wires[1] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.swapDAIToUSDS.selector,
             IDAIUSDSFacet.swapDAIToUSDS.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.daiToUSDSSwapRateLimitKey.selector,
+            IDAIUSDSFacet.daiToUSDSSwapRateLimitKey.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.usdsToDAISwapRateLimitKey.selector,
+            IDAIUSDSFacet.usdsToDAISwapRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -1189,7 +1172,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(psmFacet, "PSMFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.swapUSDSToUSDC.selector,
@@ -1207,6 +1190,11 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.psmUSDCToUSDSSwapRateLimitKey.selector,
+            IPSMFacet.usdcToUSDSSwapRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.psmUSDSToUSDCSwapRateLimitKey.selector,
             IPSMFacet.usdsToUSDCSwapRateLimitKey.selector
         );
