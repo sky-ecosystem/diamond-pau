@@ -257,8 +257,7 @@ contract CurveFacet is ICurveFacet, Facet {
         uint256[] memory startingBalances = new uint256[](minWithdrawAmounts.length);
 
         // NOTE: Not rate limiting on the individual tokens (i.e. trusting the `coins` array) since
-        //       the tokens of the pool are rate limited on deposit and the contract is, for all
-        //       intents and purposes, immutable.
+        //       the tokens of the pool are rate limited on deposit and the contract is immutable.
         for (uint256 i = 0; i < minWithdrawAmounts.length; ++i) {
             tokens[i]           = ICurvePoolLike(pool).coins(i);
             startingBalances[i] = IERC20Like(tokens[i]).balanceOf(proxy);

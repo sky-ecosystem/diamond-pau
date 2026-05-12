@@ -293,7 +293,6 @@ contract ForeignController_Morpho_Withdraw_FailureTests is Morpho_TestBase {
 
         deal(Base.USDS, address(almProxy), 1_000_000e18);
 
-
         vm.prank(allocator);
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18, 0);
 
