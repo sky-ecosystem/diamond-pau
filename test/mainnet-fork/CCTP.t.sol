@@ -693,7 +693,7 @@ contract CCTP_Transfer_IntegrationTests is BaseChain_CCTP_TestBase {
         // Same maxFee is used for each transaction, which is inaccurate but its fine since final deducted fee is not maxFee.
         _expectBaseCCTPEmit(296_114, 1_000_000e6, 100);
         _expectBaseCCTPEmit(296_115, 1_000_000e6, 100);
-        _expectBaseCCTPEmit(296_116, 600_000e6,  100);
+        _expectBaseCCTPEmit(296_116, 600_000e6,   100);
 
         vm.prank(allocator);
         foreignController.transferUSDCToCCTP(

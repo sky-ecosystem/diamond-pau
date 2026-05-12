@@ -77,6 +77,7 @@ interface ICCTPFacet is IFacet {
      * @param  amount            Amount of USDC to transfer (6-decimal precision).
      * @param  destinationDomain CCTP domain identifier for the target chain.
      * @param  feeCapRate        Fee cap rate (in basis points) for the transfer(s).
+     *                           Fee cap rate should be zero until CCTP introduces fees.
      */
     function transfer(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) external;
 
