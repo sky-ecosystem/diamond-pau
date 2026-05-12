@@ -381,6 +381,7 @@ abstract contract ForkTestBase is DssTest {
 
         // NOTE: Using minimal config for test base setup
         rateLimits.setRateLimitData(mainnetController.usdsMintRateLimitKey(),          usdsMaxAmount, usdsSlope);
+        rateLimits.setRateLimitData(mainnetController.psmUSDCToUSDSSwapRateLimitKey(), usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(mainnetController.psmUSDSToUSDCSwapRateLimitKey(), usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(mainnetController.toCCTPRateLimitKey(),            usdcMaxAmount, usdcSlope);
         rateLimits.setRateLimitData(domainKeyBase,                                     usdcMaxAmount, usdcSlope);
@@ -1199,7 +1200,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(psmFacet, "PSMFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.swapUSDSToUSDC.selector,
@@ -1217,6 +1218,11 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.psmUSDCToUSDSSwapRateLimitKey.selector,
+            IPSMFacet.usdcToUSDSSwapRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.psmUSDSToUSDCSwapRateLimitKey.selector,
             IPSMFacet.usdsToUSDCSwapRateLimitKey.selector
         );
