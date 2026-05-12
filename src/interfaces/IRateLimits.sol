@@ -153,7 +153,7 @@ interface IRateLimits is IAccessControl {
     /*** Variables                                                                              ***/
     /**********************************************************************************************/
 
-    /// @notice Role identifier for controller accounts that can set rate limits.
+    /// @notice Role identifier for controller accounts that can increase/decrease rate limits.
     function CONTROLLER() external view returns (bytes32);
 
     /**********************************************************************************************/
