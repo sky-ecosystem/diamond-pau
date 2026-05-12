@@ -156,8 +156,7 @@ contract LayerZeroFacet is ILayerZeroFacet, Facet {
         }
 
         uint256 decimalConversionRate = ILayerZeroLike(oft).decimalConversionRate();
-
-        uint256 minAmountLD = (amount / decimalConversionRate) * decimalConversionRate;
+        uint256 minAmountLD           = (amount / decimalConversionRate) * decimalConversionRate;
 
         require(minAmountLD > 0, "LayerZeroFacet/zero-min-amount");
 
