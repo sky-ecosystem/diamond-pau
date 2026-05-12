@@ -17,9 +17,9 @@ abstract contract Integration_TestBase is Test {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 internal constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
+    bytes32 internal constant ALLOCATOR_ROLE       = keccak256("ALLOCATOR_ROLE");
+    bytes32 internal constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
+    bytes32 internal constant DEFAULT_ADMIN_ROLE   = 0x00;
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ReentrancyGuard")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 internal constant _REENTRANCY_GUARD_SLOT        = 0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
@@ -48,9 +48,13 @@ abstract contract Integration_TestBase is Test {
         IAccessControls accessControls = IAccessControls(IController(payable(controller)).accessControls());
 
         vm.startPrank(admin);
-        accessControls.grantRole(ALLOCATOR_ROLE,      allocator);
-        accessControls.grantRole(FREEZER_ROLE,        freezer);
-        accessControls.setRoleRevoker(ALLOCATOR_ROLE, FREEZER_ROLE);
+        accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
+
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
+        //       holds the custom role logic and calls into AccessControls.
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
+
         vm.stopPrank();
 
         vm.label(address(beacon),                               "Beacon");

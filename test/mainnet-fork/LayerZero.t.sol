@@ -448,10 +448,12 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         vm.startPrank(SPARK_EXECUTOR);
 
-        foreignAccessControls.grantRole(FREEZER_ROLE,   freezer);
-        foreignAccessControls.grantRole(ALLOCATOR_ROLE, allocator);
+        foreignAccessControls.grantRole(ALLOCATOR_ROLE,       allocator);
+        foreignAccessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
 
-        foreignAccessControls.setRoleRevoker(ALLOCATOR_ROLE, FREEZER_ROLE);
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
+        //       holds the custom role logic and calls into AccessControls.
+        foreignAccessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "LAYER_ZERO_FACET";

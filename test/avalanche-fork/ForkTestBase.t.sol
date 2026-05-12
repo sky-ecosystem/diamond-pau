@@ -47,9 +47,9 @@ contract ForkTestBase is Test {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
-    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
+    bytes32 constant ALLOCATOR_ROLE       = keccak256("ALLOCATOR_ROLE");
+    bytes32 constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
+    bytes32 constant DEFAULT_ADMIN_ROLE   = 0x00;
 
     address pocket   = makeAddr("pocket");
     address skyAdmin = makeAddr("skyAdmin");
@@ -137,10 +137,12 @@ contract ForkTestBase is Test {
 
         vm.startPrank(GROVE_EXECUTOR);
 
-        accessControls.grantRole(FREEZER_ROLE,   ALM_FREEZER);
-        accessControls.grantRole(ALLOCATOR_ROLE, ALM_ALLOCATOR);
+        accessControls.grantRole(ALLOCATOR_ROLE,       ALM_ALLOCATOR);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, ALM_FREEZER);
 
-        accessControls.setRoleRevoker(ALLOCATOR_ROLE, FREEZER_ROLE);
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
+        //       holds the custom role logic and calls into AccessControls.
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](2);
         integrationIds[0] = "CENTRIFUGE_FACET";

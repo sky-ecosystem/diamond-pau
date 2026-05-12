@@ -18,9 +18,9 @@ contract PAUFactory_IntegrationTests is Test {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 internal constant FREEZER_ROLE       = keccak256("FREEZER_ROLE");
-    bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
+    bytes32 internal constant ALLOCATOR_ROLE       = keccak256("ALLOCATOR_ROLE");
+    bytes32 internal constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
+    bytes32 internal constant DEFAULT_ADMIN_ROLE   = 0x00;
 
     address internal admin        = makeAddr("admin");
     address internal allocator    = makeAddr("allocator");
@@ -112,15 +112,15 @@ contract PAUFactory_IntegrationTests is Test {
 
         vm.startPrank(admin);
 
-        accessControls.grantRole(FREEZER_ROLE,   freezer);
-        accessControls.grantRole(ALLOCATOR_ROLE, allocator);
+        accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
 
-        accessControls.setRoleRevoker(ALLOCATOR_ROLE, FREEZER_ROLE);
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
+        //       holds the custom role logic and calls into AccessControls.
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        assertEq(accessControls.hasRole(FREEZER_ROLE,   freezer),   true);
-        assertEq(accessControls.hasRole(ALLOCATOR_ROLE, allocator), true);
-
-        assertEq(accessControls.getRoleRevoker(ALLOCATOR_ROLE), FREEZER_ROLE);
+        assertEq(accessControls.hasRole(ALLOCATOR_ROLE,       allocator), true);
+        assertEq(accessControls.hasRole(ALLOCATOR_ADMIN_ROLE, freezer),   true);
 
         // Admin can grant CONTROLLER role on ALMProxy and RateLimits.
 
