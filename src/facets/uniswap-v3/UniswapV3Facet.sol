@@ -457,7 +457,9 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             _toNormalizedAmount(token0, amounts.amount0) +
             _toNormalizedAmount(token1, amounts.amount1);
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(pool), valueWithdrawn);
+        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(pool),     valueWithdrawn);
+        _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token0), amounts.amount0);
+        _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token1), amounts.amount1);
 
         emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
@@ -519,13 +521,23 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV3Facet
-    function getWithdrawRateLimitKey(address pool)
+    function getAggregateWithdrawRateLimitKey(address pool)
         public
         pure
         override
         returns (bytes32)
     {
         return makeAddressKey(_LIMIT_WITHDRAW, pool);
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getAssetWithdrawRateLimitKey(address pool, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_WITHDRAW, token, pool);
     }
 
     /**********************************************************************************************/

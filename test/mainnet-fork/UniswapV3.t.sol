@@ -42,14 +42,18 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
     bytes32 uniswapV3_UsdcUsdtPool_AggregateAddLiquidityKey;
     bytes32 uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey;
     bytes32 uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey;
-    bytes32 uniswapV3_UsdcUsdtPool_RemoveLiquidityKey;
+    bytes32 uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey;
+    bytes32 uniswapV3_UsdcUsdtPool_UsdcRemoveLiquidityKey;
+    bytes32 uniswapV3_UsdcUsdtPool_UsdtRemoveLiquidityKey;
 
     bytes32 uniswapV3_DaiUsdcPool_DaiSwapKey;
     bytes32 uniswapV3_DaiUsdcPool_UsdcSwapKey;
     bytes32 uniswapV3_DaiUsdcPool_AggregateAddLiquidityKey;
     bytes32 uniswapV3_DaiUsdcPool_DaiAddLiquidityKey;
     bytes32 uniswapV3_DaiUsdcPool_UsdcAddLiquidityKey;
-    bytes32 uniswapV3_DaiUsdcPool_RemoveLiquidityKey;
+    bytes32 uniswapV3_DaiUsdcPool_AggregateRemoveLiquidityKey;
+    bytes32 uniswapV3_DaiUsdcPool_DaiRemoveLiquidityKey;
+    bytes32 uniswapV3_DaiUsdcPool_UsdcRemoveLiquidityKey;
 
     IUniswapV3PoolLike internal pool;
     IERC20             internal token0;
@@ -90,8 +94,18 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
             address(usdt)
         );
 
-        uniswapV3_UsdcUsdtPool_RemoveLiquidityKey = mainnetController.getUniswapV3WithdrawRateLimitKey(
+        uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey = mainnetController.getUniswapV3AggregateWithdrawRateLimitKey(
             UNISWAP_V3_USDC_USDT_POOL
+        );
+
+        uniswapV3_UsdcUsdtPool_UsdcRemoveLiquidityKey = mainnetController.getUniswapV3AssetWithdrawRateLimitKey(
+            UNISWAP_V3_USDC_USDT_POOL,
+            address(usdc)
+        );
+
+        uniswapV3_UsdcUsdtPool_UsdtRemoveLiquidityKey = mainnetController.getUniswapV3AssetWithdrawRateLimitKey(
+            UNISWAP_V3_USDC_USDT_POOL,
+            address(usdt)
         );
 
         uniswapV3_DaiUsdcPool_DaiSwapKey = mainnetController.getUniswapV3SwapRateLimitKey(
@@ -118,8 +132,18 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
             address(usdc)
         );
 
-        uniswapV3_DaiUsdcPool_RemoveLiquidityKey = mainnetController.getUniswapV3WithdrawRateLimitKey(
+        uniswapV3_DaiUsdcPool_AggregateRemoveLiquidityKey = mainnetController.getUniswapV3AggregateWithdrawRateLimitKey(
             UNISWAP_V3_DAI_USDC_POOL
+        );
+
+        uniswapV3_DaiUsdcPool_DaiRemoveLiquidityKey = mainnetController.getUniswapV3AssetWithdrawRateLimitKey(
+            UNISWAP_V3_DAI_USDC_POOL,
+            address(dai)
+        );
+
+        uniswapV3_DaiUsdcPool_UsdcRemoveLiquidityKey = mainnetController.getUniswapV3AssetWithdrawRateLimitKey(
+            UNISWAP_V3_DAI_USDC_POOL,
+            address(usdc)
         );
 
         vm.startPrank(Ethereum.SPARK_PROXY);
@@ -132,12 +156,18 @@ abstract contract UniswapV3_TestBase is ForkTestBase {
         rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_AggregateAddLiquidityKey, 2_000_000e18, uint256(2_000_000e18) / 1 days);
         rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
         rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
-        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_AggregateAddLiquidityKey,  2_000_000e18, uint256(2_000_000e18) / 1 days);
-        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_DaiAddLiquidityKey,        1_000_000e18, uint256(1_000_000e18) / 1 days);
-        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_UsdcAddLiquidityKey,       1_000_000e6,  uint256(1_000_000e6)  / 1 days);
 
-        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_RemoveLiquidityKey, 2_000_000e18, uint256(2_000_000e18) / 1 days);
-        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_RemoveLiquidityKey,  2_000_000e18, uint256(2_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_AggregateAddLiquidityKey, 2_000_000e18, uint256(2_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_DaiAddLiquidityKey,       1_000_000e18, uint256(1_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_UsdcAddLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
+
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey, 2_000_000e18, uint256(2_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcRemoveLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdtRemoveLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
+
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_AggregateRemoveLiquidityKey, 2_000_000e18, uint256(2_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_DaiRemoveLiquidityKey,       1_000_000e18, uint256(1_000_000e18) / 1 days);
+        rateLimits.setRateLimitData(uniswapV3_DaiUsdcPool_UsdcRemoveLiquidityKey,      1_000_000e6,  uint256(1_000_000e6)  / 1 days);
 
         // Set a higher slippage to allow for successes
         mainnetController.setUniswapV3MaxSlippage(_getPool(), 0.98e18);
@@ -2048,10 +2078,41 @@ contract MainnetController_UniswapV3_RemoveLiquidity_FailureTests is UniswapV3_T
         vm.stopPrank();
     }
 
-    function test_removeLiquidityUniswapV3_rateLimitExceeded() public {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_RemoveLiquidityKey, 1, 0);
+    function test_removeLiquidityUniswapV3_rateLimitExceeded_aggregate() public {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey, 1, 0);
+
+        vm.startPrank(allocator);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.removeLiquidityUniswapV3(
+            _getPool(),
+            tokenId,
+            liquidity,
+            IUniswapV3Facet.TokenAmounts({ amount0: defaultMinAmount0, amount1: defaultMinAmount1 }),
+            block.timestamp + 1 hours
+        );
         vm.stopPrank();
+    }
+
+    function test_removeLiquidityUniswapV3_rateLimitExceeded_token0() public {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdcRemoveLiquidityKey, 1, 0);
+
+        vm.startPrank(allocator);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.removeLiquidityUniswapV3(
+            _getPool(),
+            tokenId,
+            liquidity,
+            IUniswapV3Facet.TokenAmounts({ amount0: defaultMinAmount0, amount1: defaultMinAmount1 }),
+            block.timestamp + 1 hours
+        );
+        vm.stopPrank();
+    }
+
+    function test_removeLiquidityUniswapV3_rateLimitExceeded_token1() public {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(uniswapV3_UsdcUsdtPool_UsdtRemoveLiquidityKey, 1, 0);
 
         vm.startPrank(allocator);
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -2229,7 +2290,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_DAIUSDC_E2ETests is Uniswap
             liquidity,
             minAmount0 * 9999/10000,
             minAmount1 * 9999/10000,
-            uniswapV3_DaiUsdcPool_RemoveLiquidityKey
+            uniswapV3_DaiUsdcPool_AggregateRemoveLiquidityKey
         );
     }
 
@@ -2248,7 +2309,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_DAIUSDC_E2ETests is Uniswap
             totalLiquidity,
             amount0Added * 9999/10000,
             amount1Added * 9999/10000,
-            uniswapV3_DaiUsdcPool_RemoveLiquidityKey
+            uniswapV3_DaiUsdcPool_AggregateRemoveLiquidityKey
         );
     }
 
@@ -2271,7 +2332,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_USDCUSDT_E2ETests is Uniswa
             liquidity,
             minAmount0 * 9999/10000,
             minAmount1 * 9999/10000,
-            uniswapV3_UsdcUsdtPool_RemoveLiquidityKey
+            uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey
         );
     }
 
@@ -2290,7 +2351,7 @@ contract MainnetController_UniswapV3_RemoveLiquidity_USDCUSDT_E2ETests is Uniswa
             totalLiquidity,
             amount0Added * 9999/10000,
             amount1Added * 9999/10000,
-            uniswapV3_UsdcUsdtPool_RemoveLiquidityKey
+            uniswapV3_UsdcUsdtPool_AggregateRemoveLiquidityKey
         );
     }
 

@@ -472,7 +472,15 @@ interface IMainnetControllerFull is IController {
 
     function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
 
-    function getUniswapV3WithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getUniswapV3AggregateWithdrawRateLimitKey(address pool)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV3AssetWithdrawRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
