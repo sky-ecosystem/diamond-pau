@@ -362,6 +362,12 @@ abstract contract ForkTestBase is DssTest {
         );
 
         rateLimits.setRateLimitData(
+            mainnetController.psmUSDCToUSDSSwapRateLimitKey(),
+            5_000_000e6,
+            uint256(1_000_000e6) / 4 hours
+        );
+
+        rateLimits.setRateLimitData(
             mainnetController.psmUSDSToUSDCSwapRateLimitKey(),
             5_000_000e6,
             uint256(1_000_000e6) / 4 hours
@@ -1156,7 +1162,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(psmFacet, "PSMFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.swapUSDSToUSDC.selector,
@@ -1174,6 +1180,11 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.psmUSDCToUSDSSwapRateLimitKey.selector,
+            IPSMFacet.usdcToUSDSSwapRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.psmUSDSToUSDCSwapRateLimitKey.selector,
             IPSMFacet.usdsToUSDCSwapRateLimitKey.selector
         );
