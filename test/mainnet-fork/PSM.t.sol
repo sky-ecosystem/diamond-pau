@@ -568,16 +568,16 @@ contract MainnetController_PSM_SwapUSDCToUSDS_Tests is PSM_TestBase {
         skip(1 hours);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 4_849_999.998400e6);
-        assertEq(USDS.balanceOf(address(almProxy)),   400_000e18);
         assertEq(USDC.balanceOf(address(almProxy)),   9_600_000e6);
+        assertEq(USDS.balanceOf(address(almProxy)),   400_000e18);
 
         vm.expectEmit(address(mainnetController));
         emit IPSMFacet.PSMSwapUSDCToUSDS(4_849_999.998400e6);
         mainnetController.swapUSDCToUSDS(4_849_999.998400e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
-        assertEq(USDS.balanceOf(address(almProxy)),   5_249_999.998400000000000000e18);
         assertEq(USDC.balanceOf(address(almProxy)),   4_750_000.001600e6);
+        assertEq(USDS.balanceOf(address(almProxy)),   5_249_999.998400000000000000e18);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         mainnetController.swapUSDCToUSDS(1);
