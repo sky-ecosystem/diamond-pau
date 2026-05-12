@@ -391,11 +391,11 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
 
     // NOTE: This test covers the case where token returns null for transfer
     function test_otcSend_usdt() external {
-        bytes32 sendRateLimit = mainnetController.getOTCSendRateLimitKey(exchange, Ethereum.USDT);
+        bytes32 sendRateLimitKey = mainnetController.getOTCSendRateLimitKey(exchange, Ethereum.USDT);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         mainnetController.setOTCBuffer(exchange, address(otcBuffer));
-        rateLimits.setRateLimitData(sendRateLimit, 10_000_000e6, 0);
+        rateLimits.setRateLimitData(sendRateLimitKey, 10_000_000e6, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDT, address(almProxy), 10_000_000e6);
@@ -403,7 +403,7 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         assertEq(USDT.balanceOf(address(almProxy)), 10_000_000e6);
         assertEq(USDT.balanceOf(exchange),          0);
 
-        assertEq(rateLimits.getCurrentRateLimit(sendRateLimit), 10_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 10_000_000e6);
 
         assertTrue(mainnetController.isOtcSwapReady(exchange));
 
@@ -433,17 +433,17 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         assertEq(USDT.balanceOf(address(almProxy)), 0);
         assertEq(USDT.balanceOf(exchange),          10_000_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(sendRateLimit), 0);
+        assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 0);
 
         assertFalse(mainnetController.isOtcSwapReady(exchange));
     }
 
     function test_otcSend_usds() external {
-        bytes32 sendRateLimit = mainnetController.getOTCSendRateLimitKey(exchange, Ethereum.USDS);
+        bytes32 sendRateLimitKey = mainnetController.getOTCSendRateLimitKey(exchange, Ethereum.USDS);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         mainnetController.setOTCBuffer(exchange, address(otcBuffer));
-        rateLimits.setRateLimitData(sendRateLimit, 10_000_000e18, 0);
+        rateLimits.setRateLimitData(sendRateLimitKey, 10_000_000e18, 0);
         vm.stopPrank();
 
         deal(Ethereum.USDS, address(almProxy), 10_000_000e18);
@@ -451,7 +451,7 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         assertEq(USDS.balanceOf(address(almProxy)), 10_000_000e18);
         assertEq(USDS.balanceOf(exchange),          0);
 
-        assertEq(rateLimits.getCurrentRateLimit(sendRateLimit), 10_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 10_000_000e18);
 
         assertTrue(mainnetController.isOtcSwapReady(exchange));
 
@@ -481,7 +481,7 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         assertEq(USDS.balanceOf(address(almProxy)), 0);
         assertEq(USDS.balanceOf(exchange),          10_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(sendRateLimit), 0);
+        assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 0);
 
         assertFalse(mainnetController.isOtcSwapReady(exchange));
     }
@@ -623,21 +623,21 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
 
 contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
-    bytes32 internal usdtSendRateLimit;
-    bytes32 internal usdsSendRateLimit;
+    bytes32 internal usdtSendRateLimitKey;
+    bytes32 internal usdsSendRateLimitKey;
 
     function setUp() public virtual override {
         super.setUp();
 
-        usdtSendRateLimit = mainnetController.getOTCSendRateLimitKey(exchange,  Ethereum.USDT);
-        usdsSendRateLimit = mainnetController.getOTCSendRateLimitKey(exchange,  Ethereum.USDS);
+        usdtSendRateLimitKey = mainnetController.getOTCSendRateLimitKey(exchange,  Ethereum.USDT);
+        usdsSendRateLimitKey = mainnetController.getOTCSendRateLimitKey(exchange,  Ethereum.USDS);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         mainnetController.setOTCBuffer(exchange, address(otcBuffer));
 
-        rateLimits.setRateLimitData(usdtSendRateLimit, 10_000_000e6,  0);
-        rateLimits.setRateLimitData(usdsSendRateLimit, 10_000_000e18, 0);
+        rateLimits.setRateLimitData(usdtSendRateLimitKey, 10_000_000e6,  0);
+        rateLimits.setRateLimitData(usdsSendRateLimitKey, 10_000_000e18, 0);
 
         rateLimits.setRateLimitData(mainnetController.getOTCClaimRateLimitKey(exchange, Ethereum.USDT), type(uint256).max, 0);
         rateLimits.setRateLimitData(mainnetController.getOTCClaimRateLimitKey(exchange, Ethereum.USDS), type(uint256).max, 0);
@@ -655,7 +655,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertEq(USDT.balanceOf(address(almProxy)), 10_000_000e6);
         assertEq(USDT.balanceOf(exchange),          0);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimit), 10_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), 10_000_000e6);
 
         _assertOTCState({
             normalizedSent:    0,
@@ -677,7 +677,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertEq(USDT.balanceOf(address(almProxy)),  0);
         assertEq(USDT.balanceOf(exchange),           10_000_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimit), 0);
+        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), 0);
 
         _assertOTCState({
             normalizedSent:    10_000_000e18,
@@ -780,7 +780,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         // Step 5: Swap another asset using the same rate limit
 
-        uint256 currentRateLimit = rateLimits.getCurrentRateLimit(usdsSendRateLimit);
+        uint256 currentRateLimit = rateLimits.getCurrentRateLimit(usdsSendRateLimitKey);
 
         assertGt(currentRateLimit, 200_000e18);
 
@@ -799,7 +799,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         vm.prank(allocator);
         mainnetController.otcSend(exchange, Ethereum.USDS, 200_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimit), currentRateLimit - 200_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), currentRateLimit - 200_000e18);
 
         assertEq(USDS.balanceOf(address(almProxy)), 9_780_000e18);
         assertEq(USDS.balanceOf(exchange),          200_000e18);
@@ -822,7 +822,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertEq(USDS.balanceOf(address(almProxy)), 10_000_000e18);
         assertEq(USDS.balanceOf(exchange),          0);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimit), 10_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), 10_000_000e18);
 
         _assertOTCState({
             normalizedSent:    0,
@@ -844,7 +844,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertEq(USDS.balanceOf(address(almProxy)), 0);
         assertEq(USDS.balanceOf(exchange),          10_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimit), 0);
+        assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), 0);
 
         _assertOTCState({
             normalizedSent:    10_000_000e18,
@@ -947,7 +947,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         // Step 5: Swap another asset using the same rate limit
 
-        uint256 currentRateLimit = rateLimits.getCurrentRateLimit(usdtSendRateLimit);
+        uint256 currentRateLimit = rateLimits.getCurrentRateLimit(usdtSendRateLimitKey);
 
         assertGt(currentRateLimit, 200_000e6);
 
@@ -966,7 +966,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         vm.prank(allocator);
         mainnetController.otcSend(exchange, Ethereum.USDT, 200_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimit), currentRateLimit - 200_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), currentRateLimit - 200_000e6);
 
         assertEq(USDT.balanceOf(address(almProxy)), 9_780_000e6);
         assertEq(USDT.balanceOf(exchange),          200_000e6);

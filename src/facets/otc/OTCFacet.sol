@@ -233,12 +233,22 @@ contract OTCFacet is IOTCFacet, Facet {
     }
 
     /// @inheritdoc IOTCFacet
-    function getSendRateLimitKey(address exchange, address asset) public pure override returns (bytes32) {
+    function getSendRateLimitKey(address exchange, address asset)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeAddressAddressKey(_LIMIT_SEND, asset, exchange);
     }
 
     /// @inheritdoc IOTCFacet
-    function getClaimRateLimitKey(address exchange, address asset) public pure override returns (bytes32) {
+    function getClaimRateLimitKey(address exchange, address asset)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeAddressAddressKey(_LIMIT_CLAIM, asset, exchange);
     }
 
