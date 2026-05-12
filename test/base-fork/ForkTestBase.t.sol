@@ -14,8 +14,6 @@ import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
-import { CCTPForwarder } from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
-
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
 import { ICurveFacet }         from "../../src/facets/curve/ICurveFacet.sol";
 import { IERC4626Facet }       from "../../src/facets/erc4626/IERC4626Facet.sol";
@@ -81,9 +79,8 @@ abstract contract ForkTestBase is Test {
     /*** Base addresses                                                                         ***/
     /**********************************************************************************************/
 
-    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
-    address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
-    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
+    address constant SPARK_EXECUTOR = Base.SPARK_EXECUTOR;
+    address constant SSR_ORACLE     = Base.SSR_AUTH_ORACLE;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -253,6 +250,51 @@ abstract contract ForkTestBase is Test {
     /*** Facet wiring helpers                                                                   ***/
     /**********************************************************************************************/
 
+    function _wireAaveFacet() internal {
+        address aaveFacet = address(new AaveFacet());
+
+        vm.label(aaveFacet, "AaveFacet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.setAaveMaxSlippage.selector,
+            IAaveFacet.setMaxSlippage.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getAaveMaxSlippage.selector,
+            IAaveFacet.getMaxSlippage.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.depositAave.selector,
+            IAaveFacet.deposit.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.withdrawAave.selector,
+            IAaveFacet.withdraw.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getAaveDepositRateLimitKey.selector,
+            IAaveFacet.getDepositRateLimitKey.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getAaveWithdrawRateLimitKey.selector,
+            IAaveFacet.getWithdrawRateLimitKey.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : aaveFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("AAVE_FACET", config);
+    }
+
     function _wireCurveFacet() internal {
         address curveFacet = address(new CurveFacet());
 
@@ -313,101 +355,6 @@ abstract contract ForkTestBase is Test {
         beacon.setIntegration("CURVE_FACET", config);
     }
 
-    function _wireMerklFacet() internal {
-        address merklFacet = address(new MerklFacet());
-
-        vm.label(merklFacet, "MerklFacet");
-
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](2);
-
-        merklWires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.toggleOperatorMerkl.selector,
-            IMerklFacet.toggleOperator.selector
-        );
-
-        merklWires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getMerklToggleOperatorRateLimitKey.selector,
-            IMerklFacet.getToggleOperatorRateLimitKey.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : merklFacet,
-            wires : merklWires
-        });
-
-        beacon.setIntegration("MERKL_FACET", config);
-    }
-
-    function _wirePendleFacet() internal {
-        address pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
-
-        vm.label(pendleFacet, "PendleFacet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.redeemPendlePT.selector,
-            IPendleFacet.redeem.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getPendleRedeemRateLimitKey.selector,
-            IPendleFacet.getRedeemRateLimitKey.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : pendleFacet,
-            wires : wires
-        });
-
-        beacon.setIntegration("PENDLE_FACET", config);
-    }
-
-    function _wireAaveFacet() internal {
-        address aaveFacet = address(new AaveFacet());
-
-        vm.label(aaveFacet, "AaveFacet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.setAaveMaxSlippage.selector,
-            IAaveFacet.setMaxSlippage.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getAaveMaxSlippage.selector,
-            IAaveFacet.getMaxSlippage.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.depositAave.selector,
-            IAaveFacet.deposit.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.withdrawAave.selector,
-            IAaveFacet.withdraw.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getAaveDepositRateLimitKey.selector,
-            IAaveFacet.getDepositRateLimitKey.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getAaveWithdrawRateLimitKey.selector,
-            IAaveFacet.getWithdrawRateLimitKey.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : aaveFacet,
-            wires : wires
-        });
-
-        beacon.setIntegration("AAVE_FACET", config);
-    }
-
     function _wireERC4626Facet() internal {
         address erc4626Facet = address(new ERC4626Facet());
 
@@ -463,6 +410,91 @@ abstract contract ForkTestBase is Test {
         beacon.setIntegration("ERC4626_FACET", config);
     }
 
+    function _wireMerklFacet() internal {
+        address merklFacet = address(new MerklFacet());
+
+        vm.label(merklFacet, "MerklFacet");
+
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](2);
+
+        merklWires[0] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.toggleOperatorMerkl.selector,
+            IMerklFacet.toggleOperator.selector
+        );
+
+        merklWires[1] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getMerklToggleOperatorRateLimitKey.selector,
+            IMerklFacet.getToggleOperatorRateLimitKey.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : merklFacet,
+            wires : merklWires
+        });
+
+        beacon.setIntegration("MERKL_FACET", config);
+    }
+
+    function _wirePendleFacet() internal {
+        address pendleFacet = address(new PendleFacet(GroveBase.PENDLE_ROUTER));
+
+        vm.label(pendleFacet, "PendleFacet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.redeemPendlePT.selector,
+            IPendleFacet.redeem.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getPendleRedeemRateLimitKey.selector,
+            IPendleFacet.getRedeemRateLimitKey.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : pendleFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PENDLE_FACET", config);
+    }
+
+    function _wirePSM3Facet() internal {
+        address psm3Facet = address(new PSM3Facet(address(psmBase)));
+
+        vm.label(psm3Facet, "PSM3Facet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.depositPSM.selector,
+            IPSM3Facet.deposit.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.withdrawPSM.selector,
+            IPSM3Facet.withdraw.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getPSMDepositRateLimitKey.selector,
+            IPSM3Facet.getDepositRateLimitKey.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.getPSMWithdrawRateLimitKey.selector,
+            IPSM3Facet.getWithdrawRateLimitKey.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : psm3Facet,
+            wires : wires
+        });
+
+        beacon.setIntegration("PSM3_FACET", config);
+    }
+
     function _wireSparkVaultFacet() internal {
         address sparkVaultFacet = address(new SparkVaultFacet());
 
@@ -511,41 +543,6 @@ abstract contract ForkTestBase is Test {
         });
 
         beacon.setIntegration("TRANSFER_ASSET_FACET", config);
-    }
-
-    function _wirePSM3Facet() internal {
-        address psm3Facet = address(new PSM3Facet(address(psmBase)));
-
-        vm.label(psm3Facet, "PSM3Facet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.depositPSM.selector,
-            IPSM3Facet.deposit.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.withdrawPSM.selector,
-            IPSM3Facet.withdraw.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getPSMDepositRateLimitKey.selector,
-            IPSM3Facet.getDepositRateLimitKey.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getPSMWithdrawRateLimitKey.selector,
-            IPSM3Facet.getWithdrawRateLimitKey.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : psm3Facet,
-            wires : wires
-        });
-
-        beacon.setIntegration("PSM3_FACET", config);
     }
 
     function _wireUniswapV3Facet() internal {

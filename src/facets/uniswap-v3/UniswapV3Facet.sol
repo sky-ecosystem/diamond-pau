@@ -255,7 +255,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             "UniswapV3Facet/lower-tick-oob"
         );
 
-        emit UniswapV3LowerTickUpdated(pool, tickBounds.lower = lowerTickBound);
+        emit UniswapV3LowerTickSet(pool, tickBounds.lower = lowerTickBound);
     }
 
     /// @inheritdoc IUniswapV3Facet
@@ -274,7 +274,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             "UniswapV3Facet/upper-tick-oob"
         );
 
-        emit UniswapV3UpperTickUpdated(pool, tickBounds.upper = upperTickBound);
+        emit UniswapV3UpperTickSet(pool, tickBounds.upper = upperTickBound);
     }
 
     /// @inheritdoc IUniswapV3Facet
@@ -292,7 +292,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
 
         _getFacetStorage().poolParams[pool].twapSecondsAgo = twapSecondsAgo;
 
-        emit UniswapV3TWAPSecondsAgoUpdated(pool, twapSecondsAgo);
+        emit UniswapV3TWAPSecondsAgoSet(pool, twapSecondsAgo);
     }
 
     /**********************************************************************************************/
@@ -437,6 +437,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             token1    : token1,
             liquidity : liquidity
         });
+
+        _callCollect(tokenId); // Collect fees first.
 
         uint256 startingToken0Balance = _getProxyBalance(token0);
         uint256 startingToken1Balance = _getProxyBalance(token1);

@@ -44,6 +44,7 @@ contract PSMFacet is IPSMFacet, Facet {
     /**********************************************************************************************/
 
     bytes32 internal constant _LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 internal constant _LIMIT_USDC_TO_USDS = keccak256("LIMIT_USDC_TO_USDS");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -89,8 +90,8 @@ contract PSMFacet is IPSMFacet, Facet {
     /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
-    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
-    //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
+    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses USDC
+    //       precision for both `buyGemNoFee` and `sellGemNoFee`.
     /// @inheritdoc IPSMFacet
     function swapUSDSToUSDC(uint256 usdcAmount)
         external
@@ -129,7 +130,8 @@ contract PSMFacet is IPSMFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        _increaseRateLimit(usdsToUSDCSwapRateLimitKey(), usdcAmount);
+        _tryIncreaseRateLimit(usdsToUSDCSwapRateLimitKey(), usdcAmount);
+        _decreaseRateLimit(usdcToUSDSSwapRateLimitKey(),    usdcAmount);
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC).
         _approve(usdc, psm, usdcAmount);
@@ -183,6 +185,11 @@ contract PSMFacet is IPSMFacet, Facet {
     }
 
     /// @inheritdoc IPSMFacet
+    function usdcToUSDSSwapRateLimitKey() public pure override returns (bytes32) {
+        return _LIMIT_USDC_TO_USDS;
+    }
+
+    /// @inheritdoc IPSMFacet
     function usdsToUSDCSwapRateLimitKey() public pure override returns (bytes32) {
         return _LIMIT_USDS_TO_USDC;
     }
@@ -191,7 +198,7 @@ contract PSMFacet is IPSMFacet, Facet {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    // NOTE: As swaps are only done between USDC and USDS, no need for `ApproveLib`.
+    // NOTE: As swaps are only done between USDC, DAI, and USDS, no need for `ApproveLib`.
     function _approve(address token, address spender, uint256 amount) internal {
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
             token,

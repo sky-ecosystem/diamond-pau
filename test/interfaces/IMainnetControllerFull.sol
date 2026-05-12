@@ -58,20 +58,22 @@ interface IMainnetControllerFull is IController {
     /*** CCTPFacet actions                                                                      ***/
     /**********************************************************************************************/
 
-    function setCCTPMaxFeeCap(uint256 maxFeeCap) external;
+    function setCCTPDomainParameters(
+        uint32  destinationDomain,
+        bytes32 recipient,
+        uint32  minFeeCapRate,
+        uint32  maxFeeCapRate
+    ) external;
 
-    function setCCTPMintRecipient(uint32 destinationDomain, bytes32 recipient) external;
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain) external;
-
-    function transferUSDCToCCTPWithFee(uint256 usdcAmount, uint256 maxFee, uint32 destinationDomain)
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain, uint64 feeCapRate)
         external;
-
-    function getCCTPMaxFeeCap() external view returns (uint256);
 
     function toCCTPRateLimitKey() external pure returns (bytes32 key);
 
-    function getCCTPMintRecipient(uint32 destinationDomain) external view returns (bytes32);
+    function getCCTPDomainParameters(uint32 destinationDomain)
+        external
+        view
+        returns (bytes32 mintRecipient, uint32 minFeeCapRate, uint32 maxFeeCapRate);
 
     function getCCTPToDomainRateLimitKey(uint32 destinationDomain)
         external
@@ -163,6 +165,10 @@ interface IMainnetControllerFull is IController {
 
     function swapDAIToUSDS(uint256 daiAmount) external;
 
+    function daiToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
+
+    function usdsToDAISwapRateLimitKey() external pure returns (bytes32 key);
+
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
@@ -216,6 +222,36 @@ interface IMainnetControllerFull is IController {
     function getERC7540ClaimRedeemRateLimitKey(address token) external pure returns (bytes32 key);
 
     /**********************************************************************************************/
+    /*** EthenaFacet actions                                                                    ***/
+    /**********************************************************************************************/
+
+    function setEthenaDelegatedSigner(address delegatedSigner) external;
+
+    function removeEthenaDelegatedSigner(address delegatedSigner) external;
+
+    function prepareUSDeMint(uint256 usdcAmount) external;
+
+    function prepareUSDeBurn(uint256 usdeAmount) external;
+
+    function cooldownAssetsSUSDe(uint256 usdeAmount) external returns (uint256 cooldownShares);
+
+    function cooldownSharesSUSDe(uint256 susdeAmount) external returns (uint256 cooldownAssets);
+
+    function unstakeSUSDe() external;
+
+    function setEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
+
+    function removeEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
+
+    function usdeMintRateLimitKey() external pure returns (bytes32 key);
+
+    function usdeBurnRateLimitKey() external pure returns (bytes32 key);
+
+    function usdeCooldownRateLimitKey() external pure returns (bytes32 key);
+
+    function usdeUnstakeRateLimitKey() external pure returns (bytes32 key);
+
+    /**********************************************************************************************/
     /*** FarmFacet actions                                                                      ***/
     /**********************************************************************************************/
 
@@ -223,7 +259,7 @@ interface IMainnetControllerFull is IController {
 
     function claimRewardFromFarm(address farm) external returns (uint256 reward);
 
-    function withdrawFromFarm(address farm, uint256 amount) external returns (uint256 reward);
+    function withdrawFromFarm(address farm, uint256 amount) external;
 
     function getFarmClaimRewardRateLimitKey(address farm) external pure returns (bytes32 key);
 
@@ -289,13 +325,11 @@ interface IMainnetControllerFull is IController {
 
     function setOTCBuffer(address exchange, address otcBuffer) external;
 
-    function setOTCRechargeRate(address exchange, uint256 rechargeRate18) external;
+    function setOTCRechargeRate(address exchange, uint256 normalizedRate) external;
 
-    function setOTCWhitelistedAsset(address exchange, address asset, bool isWhitelisted) external;
+    function otcSend(address exchange, address asset, uint256 amount) external;
 
-    function otcSend(address exchange, address assetToSend, uint256 amount) external;
-
-    function otcClaim(address exchange, address assetToClaim) external;
+    function otcClaim(address exchange, address asset) external;
 
     function getOTCBuffer(address exchange) external view returns (address);
 
@@ -303,18 +337,24 @@ interface IMainnetControllerFull is IController {
 
     function getOTCRechargeRate(address exchange) external view returns (uint256);
 
-    function otcWhitelistedAssets(address exchange, address asset) external view returns (bool);
-
     function otcs(address exchange)
         external
         view
-        returns (uint256 sent18, uint256 sentTimestamp, uint256 claimed18);
+        returns (uint256 normalizedSent, uint256 sentTimestamp, uint256 normalizedClaimed);
 
     function getOtcClaimWithRecharge(address exchange) external view returns (uint256);
 
     function isOtcSwapReady(address exchange) external view returns (bool);
 
-    function getOTCSwapRateLimitKey(address exchange) external pure returns (bytes32 key);
+    function getOTCSendRateLimitKey(address exchange, address asset)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getOTCClaimRateLimitKey(address exchange, address asset)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** PendleFacet actions                                                                    ***/
@@ -337,6 +377,8 @@ interface IMainnetControllerFull is IController {
     function swapUSDCToUSDS(uint256 usdcAmount) external;
 
     function psmTo18ConversionFactor() external view returns (uint256);
+
+    function psmUSDCToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
 
     function psmUSDSToUSDCSwapRateLimitKey() external pure returns (bytes32 key);
 
@@ -508,36 +550,6 @@ interface IMainnetControllerFull is IController {
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
     function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
-
-    /**********************************************************************************************/
-    /*** EthenaFacet actions                                                                    ***/
-    /**********************************************************************************************/
-
-    function setEthenaDelegatedSigner(address delegatedSigner) external;
-
-    function removeEthenaDelegatedSigner(address delegatedSigner) external;
-
-    function prepareUSDeMint(uint256 usdcAmount) external;
-
-    function prepareUSDeBurn(uint256 usdeAmount) external;
-
-    function cooldownAssetsSUSDe(uint256 usdeAmount) external returns (uint256 cooldownShares);
-
-    function cooldownSharesSUSDe(uint256 susdeAmount) external returns (uint256 cooldownAssets);
-
-    function unstakeSUSDe() external;
-
-    function setEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
-
-    function removeEthenaDelegatedSignerRateLimitKey() external pure returns (bytes32 key);
-
-    function usdeMintRateLimitKey() external pure returns (bytes32 key);
-
-    function usdeBurnRateLimitKey() external pure returns (bytes32 key);
-
-    function usdeCooldownRateLimitKey() external pure returns (bytes32 key);
-
-    function usdeUnstakeRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** USDSFacet actions                                                                      ***/

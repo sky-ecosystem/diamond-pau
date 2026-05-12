@@ -13,7 +13,6 @@ import { Arbitrum } from "../../lib/spark-address-registry/src/Arbitrum.sol";
 
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 
-import { CCTPForwarder }         from "../../lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Domain, DomainHelpers } from "../../lib/xchain-helpers/src/testing/Domain.sol";
 
 import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
@@ -63,6 +62,8 @@ interface ILayerZeroLike {
         uint256         amountSentLD,
         uint256         amountReceivedLD
     );
+
+    function decimalConversionRate() external view returns (uint256);
 
     function quoteSend(SendParam calldata sendParam, bool payInLzToken)
         external
@@ -201,6 +202,30 @@ contract MainnetController_LayerZero_TransferToken_Tests is LayerZero_TestBase {
         mainnetController.transferTokenLayerZero{value: fee.nativeFee}(
             USDT_OFT,
             10_000_000e6,
+            DESTINATION_ENDPOINT_ID
+        );
+    }
+
+    function test_transferTokenLayerZero_zeroMinAmount() external {
+        vm.startPrank(SPARK_PROXY);
+
+        rateLimits.setRateLimitData(key, 10_000_000e6, 0);
+
+        mainnetController.setLayerZeroRecipient(DESTINATION_ENDPOINT_ID, target);
+
+        vm.stopPrank();
+
+        deal(allocator, 0.1 ether);
+
+        uint256 decimalConversionRate = ILayerZeroLike(USDT_OFT).decimalConversionRate();
+
+        uint256 amount = decimalConversionRate - 1;
+
+        vm.expectRevert("LayerZeroFacet/zero-min-amount");
+        vm.prank(allocator);
+        mainnetController.transferTokenLayerZero{value: 0.1 ether}(
+            USDT_OFT,
+            amount,
             DESTINATION_ENDPOINT_ID
         );
     }
@@ -349,7 +374,6 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     /*** Arbitrum addresses                                                                     ***/
     /**********************************************************************************************/
 
-    address internal constant CCTP_MESSENGER_ARB = Arbitrum.CCTP_TOKEN_MESSENGER;
     address internal constant SPARK_EXECUTOR     = Arbitrum.SPARK_EXECUTOR;
     address internal constant SSR_ORACLE         = Arbitrum.SSR_AUTH_ORACLE;
     address internal constant USDT_OFT           = 0x14E4A1B13bf7F943c8ff7C51fb60FA964A298D92;
@@ -597,6 +621,30 @@ contract ForeignController_LayerZero_TransferToken_Tests is ArbitrumChain_LayerZ
         foreignController.transferTokenLayerZero{value: fee.nativeFee}(
             USDT_OFT,
             10_000_000e6,
+            DESTINATION_ENDPOINT_ID
+        );
+    }
+
+    function test_transferTokenLayerZero_zeroMinAmount() external {
+        vm.startPrank(SPARK_EXECUTOR);
+
+        foreignRateLimits.setRateLimitData(key, 10_000_000e6, 0);
+
+        foreignController.setLayerZeroRecipient(DESTINATION_ENDPOINT_ID, target);
+
+        vm.stopPrank();
+
+        deal(allocator, 0.1 ether);
+
+        uint256 decimalConversionRate = ILayerZeroLike(USDT_OFT).decimalConversionRate();
+
+        uint256 amount = decimalConversionRate - 1;
+
+        vm.expectRevert("LayerZeroFacet/zero-min-amount");
+        vm.prank(allocator);
+        foreignController.transferTokenLayerZero{value: 0.1 ether}(
+            USDT_OFT,
+            amount,
             DESTINATION_ENDPOINT_ID
         );
     }
