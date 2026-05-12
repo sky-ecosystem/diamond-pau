@@ -48,6 +48,10 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
     }
 
     function test_wrapAllProxyETH_zeroBalance() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(mainnetController.wrapAllProxyETHRateLimitKey(), type(uint256).max, 0);
+        vm.stopPrank();
+
         assertEq(address(almProxy).balance,         0);
         assertEq(WETH.balanceOf(address(almProxy)), 0);
 
