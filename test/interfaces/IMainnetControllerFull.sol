@@ -163,6 +163,10 @@ interface IMainnetControllerFull is IController {
 
     function swapDAIToUSDS(uint256 daiAmount) external;
 
+    function daiToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
+
+    function usdsToDAISwapRateLimitKey() external pure returns (bytes32 key);
+
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
@@ -371,6 +375,8 @@ interface IMainnetControllerFull is IController {
     function swapUSDCToUSDS(uint256 usdcAmount) external;
 
     function psmTo18ConversionFactor() external view returns (uint256);
+
+    function psmUSDCToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
 
     function psmUSDSToUSDCSwapRateLimitKey() external pure returns (bytes32 key);
 
