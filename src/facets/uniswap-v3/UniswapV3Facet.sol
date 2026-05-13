@@ -688,7 +688,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
                 expectedLiquidity,
                 true
             );
-        } else if (twapTick > ticks.upper) {
+        } else if (twapTick >= ticks.upper) {
             expectedAmount1 = UniswapV3Utils.getAmount1Delta(
                 sqrtRatioLowerX96,
                 sqrtRatioUpperX96,
