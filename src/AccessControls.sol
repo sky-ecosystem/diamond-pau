@@ -19,8 +19,28 @@ contract AccessControls is IAccessControls, AccessControlEnumerable {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
+    /**********************************************************************************************/
+    /*** External Interactive Functions                                                         ***/
+    /**********************************************************************************************/
+
     function setRoleAdmin(bytes32 role, bytes32 adminRole) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setRoleAdmin(role, adminRole);
+    }
+
+    /**********************************************************************************************/
+    /*** External View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    /// @inheritdoc IAccessControls
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(IAccessControls, AccessControlEnumerable)
+        returns (bool)
+    {
+        return
+            interfaceId == type(IAccessControls).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
 }

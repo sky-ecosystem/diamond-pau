@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { IAccessControl } from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControl }           from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IAccessControlEnumerable } from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
+import { IERC165 }                  from "../../lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
 import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
 
@@ -51,6 +53,54 @@ contract AccessControls_Tests is UnitTestBase {
         AccessControls accessControls_ = new AccessControls(admin);
 
         assertEq(accessControls_.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+    }
+
+    /**********************************************************************************************/
+    /*** setRoleAdmin Tests                                                                     ***/
+    /**********************************************************************************************/
+
+    function test_setRoleAdmin_unauthorized() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            unauthorized,
+            DEFAULT_ADMIN_ROLE
+        ));
+
+        vm.prank(unauthorized);
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
+    }
+
+    function test_setRoleAdmin() external {
+        assertEq(accessControls.getRoleAdmin(ALLOCATOR_ROLE), DEFAULT_ADMIN_ROLE);
+
+        vm.expectEmit();
+        emit IAccessControl.RoleAdminChanged(ALLOCATOR_ROLE, DEFAULT_ADMIN_ROLE, ALLOCATOR_ADMIN_ROLE);
+
+        vm.prank(admin);
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
+
+        assertEq(accessControls.getRoleAdmin(ALLOCATOR_ROLE), ALLOCATOR_ADMIN_ROLE);
+
+        vm.expectEmit();
+        emit IAccessControl.RoleAdminChanged(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+
+        vm.prank(admin);
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, DEFAULT_ADMIN_ROLE);
+
+        assertEq(accessControls.getRoleAdmin(ALLOCATOR_ROLE), DEFAULT_ADMIN_ROLE);
+    }
+
+    /**********************************************************************************************/
+    /*** supportsInterface Tests                                                                ***/
+    /**********************************************************************************************/
+
+    function test_supportsInterface() external {
+        assertEq(accessControls.supportsInterface(type(IAccessControls).interfaceId),          true);
+        assertEq(accessControls.supportsInterface(type(IAccessControlEnumerable).interfaceId), true);
+        assertEq(accessControls.supportsInterface(type(IAccessControl).interfaceId),           true);
+        assertEq(accessControls.supportsInterface(type(IERC165).interfaceId),                  true);
+        assertEq(accessControls.supportsInterface(0x00000000),                                 false);
+        assertEq(accessControls.supportsInterface(0xffffffff),                                 false);
     }
 
 }

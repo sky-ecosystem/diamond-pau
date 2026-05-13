@@ -30,4 +30,15 @@ interface IAccessControls is IAccessControlEnumerable {
      */
     function setRoleAdmin(bytes32 role, bytes32 adminRole) external;
 
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Returns true if the contract supports the given interface.
+     * @param  interfaceId The 4-byte interface identifier (ERC-165).
+     * @return isSupported True if the interface is supported, false otherwise.
+     */
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+
 }
