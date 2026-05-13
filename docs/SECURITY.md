@@ -76,10 +76,11 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 **Guarantee:** Any ETH left in the `ALMProxy` can always be removed.
 
-| Method            | Access           | Description                                                  |
-| ----------------- | ---------------- | ------------------------------------------------------------ |
-| `doCallWithValue` | `CONTROLLER`     | Allows arbitrary calls with ETH value attached from ALMProxy |
-| `wrapAll`         | `ALLOCATOR_ROLE` | Wraps all ETH in ALMProxy to WETH (via WrapProxyETHFacet)    |
+| Method                              | Access       | Description                                                              |
+| ------------------------------------| ------------ | ------------------------------------------------------------------------ |
+| `ALMProxy.doCallWithValue`          | `CONTROLLER` | Allows arbitrary calls with ETH value attached from `ALMProxy`.          |
+| `ALMProxyFreezable.doCallWithValue` | `RELAYER`    | Allows arbitrary calls with ETH value attached from `ALMProxyFreezable`. |
+| `wrapAll`                           | `RELAYER`    | Wraps all ETH in `ALMProxy` to WETH (via `WrapProxyETHFacet`).           |
 
 **Use Cases:**
 
@@ -88,7 +89,11 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 - Convert ETH to WETH for standard token handling
 - Emergency fund extraction
 
-**Security:** The `doCallWithValue` function is governance-controlled and does not introduce attack vectors for compromised allocators. The `wrapAll` function is allocator-accessible but only converts ETH to WETH within the ALMProxy, keeping funds in the system.
+**Security:**
+
+- `ALMProxy.doCallWithValue` is gated by the `CONTROLLER` role, which is held only by the `Controller` contract. A compromised relayer can therefore only reach this function indirectly through facets wired into the `Controller`, where rate limits and per-facet logic apply.
+- `ALMProxyFreezable.doCallWithValue` is gated by the `RELAYER` role directly and is callable by a compromised relayer. `ALMProxyFreezable` is not intended to hold funds, and the `FREEZER` role can revoke a compromised relayer via `removeRelayer` to halt further calls.
+- `wrapAll` is relayer-accessible but only converts ETH to WETH within the `ALMProxy`, keeping funds in the system.
 
 ---
 

@@ -51,6 +51,16 @@ For example, after minting USDS:
 - `lastAmount` is decremented by the minted amount
 - `lastUpdated` is set to `block.timestamp`
 
+### Events
+
+`RateLimits` emits the following events (declared in `IRateLimits`):
+
+| Event                          | Emitted When                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------- |
+| `RateLimitDataSet`             | Admin sets the rate limit data for a key (max amount, slope, last amount, last updated).      |
+| `RateLimitDecreaseTriggered`   | The `CONTROLLER` triggers a decrease for a key after an operation consumes the rate limit.    |
+| `RateLimitIncreaseTriggered`   | The `CONTROLLER` triggers an increase for a key (e.g., on cancellation paths or refunds).     |
+
 ---
 
 ## Rate Limit Design Decisions
@@ -83,10 +93,10 @@ For example, after minting USDS:
 
 **Decision:** Rate limits are **not** cancelled in the PSM3 integration (PSM3Facet).
 
-| Operation     | Rate Limit Behavior                    |
-| ------------- | -------------------------------------- |
-| `depositPSM`  | Decreases rate limit                   |
-| `withdrawPSM` | Decreases rate limit (no cancellation) |
+| Operation  | Rate Limit Behavior                    |
+| ---------- | -------------------------------------- |
+| `deposit`  | Decreases rate limit                   |
+| `withdraw` | Decreases rate limit (no cancellation) |
 
 **Additional Decision:** `minShares` parameter is not added to PSM3 operations.
 
@@ -112,7 +122,7 @@ For example, after minting USDS:
 Some operations verify a rate limit is configured (`maxAmount > 0`) without decreasing it. This serves as an implicit whitelist: if the rate limit key was never set by governance, the operation reverts. Examples:
 
 - `WSTETHFacet.claimWithdrawal`: checks `LIMIT_REQUEST_WITHDRAW.maxAmount > 0`
-- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule).maxAmount > 0`
+- `WEETHFacet.claimWithdrawal`: checks `makeAddressAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, eETH, weethModule).maxAmount > 0`
 - `ERC4626Facet.withdraw`/`redeem`: calls `triggerRateLimitIncrease` on the deposit key, which requires `maxAmount > 0` for the same vault
 - `AaveFacet.withdraw`: calls `triggerRateLimitIncrease` on the deposit key, which requires `maxAmount > 0` for the same aToken
 
