@@ -69,8 +69,8 @@ abstract contract ForkTestBase is Test {
     bytes32 constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
     bytes32 constant DEFAULT_ADMIN_ROLE   = 0x00;
 
-    address freezer   = Base.ALM_FREEZER_MULTISIG;
-    address allocator = Base.ALM_RELAYER_MULTISIG;
+    address allocator      = Base.ALM_RELAYER_MULTISIG;
+    address allocatorAdmin = Base.ALM_FREEZER_MULTISIG;
 
     address pocket   = makeAddr("pocket");
     address skyAdmin = makeAddr("skyAdmin");
@@ -158,7 +158,7 @@ abstract contract ForkTestBase is Test {
         vm.startPrank(SPARK_EXECUTOR);
 
         accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
-        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
         // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
         //       holds the custom role logic and calls into AccessControls.

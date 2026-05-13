@@ -155,8 +155,8 @@ abstract contract ForkTestBase is DssTest {
     address internal constant _UNISWAP_V4_POSITION_MANAGER = 0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e;
     address internal constant _UNISWAP_V4_ROUTER           = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
 
-    address freezer   = Ethereum.ALM_FREEZER_MULTISIG;
-    address allocator = Ethereum.ALM_RELAYER_MULTISIG;
+    address allocator      = Ethereum.ALM_RELAYER_MULTISIG;
+    address allocatorAdmin = Ethereum.ALM_FREEZER_MULTISIG;
 
     address backstopAllocator = makeAddr("backstopAllocator");  // TODO: Replace with real backstop
 
@@ -318,7 +318,7 @@ abstract contract ForkTestBase is DssTest {
 
         accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
         accessControls.grantRole(ALLOCATOR_ROLE,       backstopAllocator);
-        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
         // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
         //       holds the custom role logic and calls into AccessControls.

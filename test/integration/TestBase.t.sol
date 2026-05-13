@@ -26,11 +26,11 @@ abstract contract Integration_TestBase is Test {
     bytes32 internal constant _REENTRANCY_GUARD_NOT_ENTERED = bytes32(uint256(1));
     bytes32 internal constant _REENTRANCY_GUARD_ENTERED     = bytes32(uint256(2));
 
-    address internal admin        = makeAddr("admin");
-    address internal allocator    = makeAddr("allocator");
-    address internal beaconAdmin  = makeAddr("beaconAdmin");
-    address internal freezer      = makeAddr("freezer");
-    address internal unauthorized = makeAddr("unauthorized");
+    address internal admin          = makeAddr("admin");
+    address internal allocator      = makeAddr("allocator");
+    address internal allocatorAdmin = makeAddr("allocatorAdmin");
+    address internal beaconAdmin    = makeAddr("beaconAdmin");
+    address internal unauthorized   = makeAddr("unauthorized");
 
     Beacon     internal beacon;
     PAUFactory internal factory;
@@ -49,7 +49,7 @@ abstract contract Integration_TestBase is Test {
 
         vm.startPrank(admin);
         accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
-        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, freezer);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
         // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
         //       holds the custom role logic and calls into AccessControls.
