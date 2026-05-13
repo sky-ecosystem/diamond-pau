@@ -170,10 +170,10 @@ Function overloading is not recommended in facets. When a facet has overloaded f
 
 Some operations use a "gate-check" pattern where they verify a rate limit is configured (`maxAmount > 0`) without actually decreasing the rate limit. This serves as an implicit whitelist mechanism. Used by:
 
-- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_REQUEST_WITHDRAW.maxAmount > 0`
-- `WEETHFacet.claimWithdrawal`: checks `makeAddressAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, eETH, weethModule).maxAmount > 0`
+- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_WSTETH_CLAIM_WITHDRAW.maxAmount > 0`
+- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weethModule).maxAmount > 0`
 
-This ensures the corresponding request-withdraw rate limit key was configured by governance before claims are allowed.
+The check is on a dedicated claim-side key. Configuring only the request-withdraw key is not sufficient. The `requestWithdraw` will succeed and queue shares with Lido/EtherFi, but `claimWithdrawal` will later revert with `WSTETHFacet/invalid-action` or `WEETHFacet/invalid-action` until the claim key is added.
 
 ---
 
