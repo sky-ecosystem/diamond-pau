@@ -392,8 +392,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         foreignAccessControls.grantRole(ALLOCATOR_ROLE,       allocator);
         foreignAccessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
-        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
-        //       holds the custom role logic and calls into AccessControls.
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role 
+        //       logic that calls into AccessControls to perform grants and revocations.
         foreignAccessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](1);

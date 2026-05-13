@@ -94,7 +94,7 @@ contract AccessControls_Tests is UnitTestBase {
     /*** supportsInterface Tests                                                                ***/
     /**********************************************************************************************/
 
-    function test_supportsInterface() external {
+    function test_supportsInterface() external view {
         assertEq(accessControls.supportsInterface(type(IAccessControls).interfaceId),          true);
         assertEq(accessControls.supportsInterface(type(IAccessControlEnumerable).interfaceId), true);
         assertEq(accessControls.supportsInterface(type(IAccessControl).interfaceId),           true);

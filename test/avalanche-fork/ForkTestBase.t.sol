@@ -58,8 +58,8 @@ contract ForkTestBase is Test {
     /*** Avalanche addresses                                                                    ***/
     /**********************************************************************************************/
 
-    address constant ALM_ALLOCATOR               = Avalanche.ALM_RELAYER;
-    address constant ALM_ALLOCATOR_ADMIN         = Avalanche.ALM_FREEZER;
+    address constant ALLOCATOR                   = Avalanche.ALM_RELAYER;
+    address constant ALLOCATOR_ADMIN             = Avalanche.ALM_FREEZER;
     address constant GROVE_EXECUTOR              = Avalanche.GROVE_EXECUTOR;
     address constant USDC_AVALANCHE              = Avalanche.USDC;
     address constant UNISWAP_V3_ROUTER           = 0xbb00FF08d01D300023C629E8fFfFcb65A5a578cE;
@@ -137,11 +137,11 @@ contract ForkTestBase is Test {
 
         vm.startPrank(GROVE_EXECUTOR);
 
-        accessControls.grantRole(ALLOCATOR_ROLE,       ALM_ALLOCATOR);
-        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, ALM_ALLOCATOR_ADMIN);
+        accessControls.grantRole(ALLOCATOR_ROLE,       ALLOCATOR);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, ALLOCATOR_ADMIN);
 
-        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be interacting with a wrapper module that
-        //       holds the custom role logic and calls into AccessControls.
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role 
+        //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
         bytes32[] memory integrationIds = new bytes32[](2);
