@@ -156,7 +156,15 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
-    function getCurveWithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getCurveAggregateWithdrawRateLimitKey(address pool)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getCurveAssetWithdrawRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** DaiUsdsFacet actions                                                                   ***/

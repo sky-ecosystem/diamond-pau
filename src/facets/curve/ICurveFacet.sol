@@ -148,10 +148,21 @@ interface ICurveFacet is IFacet {
     function getSwapRateLimitKey(address pool, address token) external pure returns (bytes32 key);
 
     /**
-     * @notice Returns the derived withdraw rate limit key for a Curve pool.
+     * @notice Returns the derived aggregate withdraw rate limit key for a Curve pool.
      * @param  pool Address of the Curve pool.
      * @return key  Derived rate limit key.
      */
-    function getWithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getAggregateWithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+
+    /**
+     * @notice Returns the derived withdraw rate limit key for a Curve pool and token.
+     * @param  pool  Address of the Curve pool.
+     * @param  token Address of the token.
+     * @return key   Derived rate limit key.
+     */
+    function getAssetWithdrawRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
 }

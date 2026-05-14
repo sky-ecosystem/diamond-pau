@@ -257,7 +257,7 @@ contract CurveFacet is ICurveFacet, Facet {
 
         _validateRemoveLiquidity(pool, shares, minWithdrawAmounts, withdrawnAmounts, rates);
 
-        _decreaseWithdrawRateLimit(pool, withdrawnAmounts, rates);
+        _decreaseWithdrawRateLimit(pool, tokens, withdrawnAmounts, rates);
 
         emit CurveRemoveLiquidity(pool, shares, withdrawnAmounts);
     }
@@ -297,8 +297,18 @@ contract CurveFacet is ICurveFacet, Facet {
     }
 
     /// @inheritdoc ICurveFacet
-    function getWithdrawRateLimitKey(address pool) public pure override returns (bytes32) {
+    function getAggregateWithdrawRateLimitKey(address pool) public pure override returns (bytes32) {
         return makeAddressKey(_LIMIT_WITHDRAW, pool);
+    }
+
+    /// @inheritdoc ICurveFacet
+    function getAssetWithdrawRateLimitKey(address pool, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_WITHDRAW, token, pool);
     }
 
     /**********************************************************************************************/
@@ -329,7 +339,12 @@ contract CurveFacet is ICurveFacet, Facet {
     )
         internal
     {
-        uint256 valueDeposited;
+
+        // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
+        //       the assumption that the tokens are valued equally
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
+        uint256 aggregateAmount;
 
         for (uint256 i = 0; i < tokens.length; ++i) {
             uint256 amount = amounts[i];
@@ -338,27 +353,38 @@ contract CurveFacet is ICurveFacet, Facet {
 
             _decreaseRateLimit(getAssetDepositRateLimitKey(pool, tokens[i]), amount);
 
-            valueDeposited += _toNormalizedAmount(amount, rates[i]);
+            aggregateAmount += _toNormalizedAmount(amount, rates[i]);
         }
 
         // Reduce the rate limit by the aggregated underlying asset value of the deposit (e.g. USD).
-        _decreaseRateLimit(getAggregateDepositRateLimitKey(pool), valueDeposited);
+        _decreaseRateLimit(getAggregateDepositRateLimitKey(pool), aggregateAmount);
     }
 
     function _decreaseWithdrawRateLimit(
         address          pool,
+        address[] memory tokens,
         uint256[] memory amounts,
         uint256[] memory rates
     )
         internal
     {
-        uint256 valueWithdrawn;
+        // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
+        //       makes the assumption that the tokens are valued equally
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
+        uint256 aggregateAmount;
 
         for (uint256 i = 0; i < amounts.length; ++i) {
-            valueWithdrawn += _toNormalizedAmount(amounts[i], rates[i]);
+            uint256 amount = amounts[i];
+
+            if (amount == 0) continue;
+
+            _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, tokens[i]), amount);
+
+            aggregateAmount += _toNormalizedAmount(amount, rates[i]);
         }
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(pool), valueWithdrawn);
+        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(pool), aggregateAmount);
     }
 
     /**********************************************************************************************/
