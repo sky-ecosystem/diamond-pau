@@ -968,7 +968,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.setLayerZeroRecipient.selector,
@@ -988,6 +988,11 @@ abstract contract ForkTestBase is DssTest {
         wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.getLayerZeroTransferRateLimitKey.selector,
             ILayerZeroFacet.getTransferRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.quoteTransferLayerZero.selector,
+            ILayerZeroFacet.quoteTransfer.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
