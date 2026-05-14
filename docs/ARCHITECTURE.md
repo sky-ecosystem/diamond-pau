@@ -47,7 +47,7 @@ Factory contract for deploying complete PAU systems. Takes a Beacon address at c
 
 ### AccessControls
 
-Wraps OpenZeppelin `AccessControlEnumerable` to define the PAU-specific roles used by facets at runtime. Declares `FREEZER_ROLE` and `ALLOCATOR_ROLE` as constants. Provides a `removeAllocator` function gated by `FREEZER_ROLE` for emergency revocation of a compromised allocator without requiring a slower governance process. A separate contract was used here to make facet development easier (external call to a module vs. maintaining ACL storage across all facets).
+A thin extension of OpenZeppelin `AccessControlEnumerable`. The constructor grants `DEFAULT_ADMIN_ROLE` to the configured admin (reverts on a zero address). Role grants and revocations follow standard OpenZeppelin semantics, each role's admin can grant or revoke it, with `DEFAULT_ADMIN_ROLE` as the admin for every role by default. The only PAU-specific addition is `setRoleAdmin(role, adminRole)`, an external wrapper around OZ's internal `_setRoleAdmin` gated by `DEFAULT_ADMIN_ROLE`, which lets governance delegate the admin of any role (for example, making a custom `ALLOCATOR_ADMIN_ROLE` the admin of `ALLOCATOR_ROLE`). No PAU-specific roles, custom role-revoker logic, or emergency-revocation helpers are baked into this contract. Use cases that need custom role granters or revokers (for example, a freezer that can revoke a compromised allocator outside the governance path) should be implemented as separate modules layered on top of `AccessControls`. The module holds the custom role logic, is granted the relevant admin role, and calls into `AccessControls` to perform grants and revocations. For example, a party that wants asymmetric thresholds (a low-threshold multisig that can only revoke roles for fast incident response, and a high-threshold multisig that can grant roles via slower governance) can implement that policy in a custom module on top of `AccessControls`, granting the module the relevant admin role and exposing only the desired grant/revoke entry points to each multisig. A separate contract was used here to make facet development easier (external call to a module vs. maintaining ACL storage across all facets).
 
 ### RateLimits
 
@@ -98,17 +98,17 @@ The diagram below provides an example of calling to mint USDS using the Sky allo
 
 ## Permissions
 
-All Contracts except Controller, PAUFactory, ControllerSharedStorage and the facets (via
-FacetBase) inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. Controller, PAUFactory, ControllerSharedStorage and the facets (via
-FacetBase) do not inherit AccessControl directly, they rely on an external AccessControls
+All contracts except `Controller`, `PAUFactory`, `ControllerSharedStorage` and the facets (via
+`Facet`) inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. `Controller`, `PAUFactory`, `ControllerSharedStorage` and the facets (via
+`Facet`) do not inherit `AccessControl` directly, they rely on an external `AccessControls`
 contract for role checks. The following roles are defined:
 
 | Role                 | Description                                                                                                                                                                      |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_ADMIN_ROLE` | Admin role that can grant and revoke roles. Also used for general admin functions in all contracts.                                                                              |
-| `ALLOCATOR_ROLE`     | Used for the offchain allocator system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`.                                               |
-| `FREEZER_ROLE`       | Allows removal of a compromised `ALLOCATOR_ROLE`. Intended for use with a backup allocator that the system can fall back to.                                                     |
-| `CONTROLLER`         | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits. |
+| `DEFAULT_ADMIN_ROLE`   | Admin role that can grant and revoke roles. Also used for general admin functions in all contracts.                                                                              |
+| `ALLOCATOR_ROLE`       | Used for the offchain allocator system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`.                                               |
+| Allocator role admin   | Whichever role governance sets as the admin of `ALLOCATOR_ROLE` via `accessControls.setRoleAdmin`. That role can grant and revoke `ALLOCATOR_ROLE`. Defaults to `DEFAULT_ADMIN_ROLE` and is expected to be delegated to a custom module that implements the desired grant/revoke policy. |
+| `CONTROLLER`           | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits. |
 
 ## Contract Interactions
 
@@ -116,7 +116,7 @@ contract for role checks. The following roles are defined:
 
 ## Facets
 
-The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase` that provides the `onlyRole` modifier, and the `FacetBase` inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` which provides reentrancy protection, shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
+The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `Facet` (the abstract base contract), which provides the `onlyRole` modifier and inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` for reentrancy protection and shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
 | Facet                | Purpose                                        |
 | -------------------- | ---------------------------------------------- |
