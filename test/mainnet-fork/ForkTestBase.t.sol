@@ -320,7 +320,7 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(ALLOCATOR_ROLE,       backstopAllocator);
         accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
-        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role 
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
@@ -1393,7 +1393,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(uniswapV4Facet, "UniswapV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.setUniswapV4MaxSlippage.selector,
@@ -1451,8 +1451,13 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4WithdrawRateLimitKey.selector,
-            IUniswapV4Facet.getWithdrawRateLimitKey.selector
+            IMainnetControllerFull.getUniswapV4AggregateWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[12] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getUniswapV4AssetWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAssetWithdrawRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({

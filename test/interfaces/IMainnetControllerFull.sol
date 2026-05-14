@@ -558,7 +558,15 @@ interface IMainnetControllerFull is IController {
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
-    function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+    function getUniswapV4AggregateWithdrawRateLimitKey(bytes32 poolId)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV4AssetWithdrawRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** USDSFacet actions                                                                      ***/
