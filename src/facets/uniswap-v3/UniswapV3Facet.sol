@@ -400,6 +400,10 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             _toNormalizedAmount(token0, amounts.amount0) +
             _toNormalizedAmount(token1, amounts.amount1);
 
+        // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
+        //       the assumption that the tokens are valued equally
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
         _decreaseRateLimit(getAggregateDepositRateLimitKey(pool),     aggregateAmount);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token1), amounts.amount1);
@@ -461,6 +465,10 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             _toNormalizedAmount(token0, amounts.amount0) +
             _toNormalizedAmount(token1, amounts.amount1);
 
+        // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which makes
+        //       the assumption that the tokens are valued equally
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
         _decreaseRateLimit(getAggregateWithdrawRateLimitKey(pool),     valueWithdrawn);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token1), amounts.amount1);
