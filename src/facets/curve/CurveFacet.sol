@@ -334,6 +334,8 @@ contract CurveFacet is ICurveFacet, Facet {
         for (uint256 i = 0; i < tokens.length; ++i) {
             uint256 amount = amounts[i];
 
+            if (amount == 0) continue;
+
             _decreaseRateLimit(getAssetDepositRateLimitKey(pool, tokens[i]), amount);
 
             valueDeposited += _toNormalizedAmount(amount, rates[i]);
@@ -375,7 +377,7 @@ contract CurveFacet is ICurveFacet, Facet {
         // Compute the swap value by taking the difference of the current underlying asset values
         // from minted shares vs the deposited funds to find the tokens that were swapped in.
         for (uint256 i; i < inputAmounts.length; ++i) {
-            uint256 resultingUnderlying = _getPoolBalance(pool, i) * shares / totalSupply;
+            uint256 resultingUnderlying = ICurvePoolLike(pool).balances(i) * shares / totalSupply;
 
             // Positive value means the asset was swapped in.
             swappedInAmounts[i] =
@@ -392,9 +394,12 @@ contract CurveFacet is ICurveFacet, Facet {
         depositedAmounts = new uint256[](inputAmounts.length);
 
         for (uint256 i = 0; i < inputAmounts.length; ++i) {
-            // TODO: Add comment explaining the formula.
+            // A negative `swappedInAmounts[i]` implies that underlying balance was higher than the
+            // input amount, so the deposit rate limit should be reduced by the full "deposited"
+            // amount, which is the resulting underlying balance.
             int256 depositedAmount = _safeCastToInt256(inputAmounts[i]) - swappedInAmounts[i];
 
+            // In practice this will not be possible, just adding as a safety check.
             if (depositedAmount <= 0) continue;
 
             depositedAmounts[i] = uint256(depositedAmount);
@@ -429,10 +434,6 @@ contract CurveFacet is ICurveFacet, Facet {
 
     function _toNormalizedAmount(uint256 amount, uint256 rate) internal pure returns (uint256) {
         return amount * rate / 1e18;
-    }
-
-    function _getPoolBalance(address pool, uint256 index) internal view returns (uint256) {
-        return ICurvePoolLike(pool).balances(index);
     }
 
     function _safeCastToInt256(uint256 value) internal pure returns (int256) {
@@ -541,9 +542,9 @@ contract CurveFacet is ICurveFacet, Facet {
         for (uint256 i = 0; i < minWithdrawAmounts.length; ++i) {
             uint256 minWithdrawAmount = minWithdrawAmounts[i];
 
-            minWithdrawValue += _toNormalizedAmount(minWithdrawAmount, rates[i]);
-
             require(withdrawnAmounts[i] >= minWithdrawAmount, "CurveFacet/min-amount-not-met");
+
+            minWithdrawValue += _toNormalizedAmount(minWithdrawAmount, rates[i]);
         }
 
         // Check that the aggregated minimums are greater than the max slippage amount.
