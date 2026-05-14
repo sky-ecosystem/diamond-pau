@@ -2,6 +2,7 @@
 pragma solidity ^0.8.34;
 
 import { IController }     from "../../src/interfaces/IController.sol";
+import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
 interface IMainnetControllerFull is IController {
@@ -292,6 +293,13 @@ interface IMainnetControllerFull is IController {
         pure
         returns (bytes32 key);
 
+    function quoteTransferLayerZero(address oft, uint256 amount, uint32 destinationEndpointId)
+        external
+        returns (
+            ILayerZeroFacet.SendParam    memory sendParams,
+            ILayerZeroFacet.MessagingFee memory fee
+        );
+
     /**********************************************************************************************/
     /*** MapleFacet actions                                                                     ***/
     /**********************************************************************************************/
@@ -481,7 +489,15 @@ interface IMainnetControllerFull is IController {
 
     function getUniswapV3TWAPSecondsAgo(address pool) external view returns (uint32);
 
-    function getUniswapV3WithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getUniswapV3AggregateWithdrawRateLimitKey(address pool)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV3AssetWithdrawRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** UniswapV4Facet actions                                                                 ***/
@@ -550,7 +566,15 @@ interface IMainnetControllerFull is IController {
         view
         returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
 
-    function getUniswapV4WithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+    function getUniswapV4AggregateWithdrawRateLimitKey(bytes32 poolId)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV4AssetWithdrawRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** USDSFacet actions                                                                      ***/

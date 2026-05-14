@@ -118,6 +118,10 @@ contract PSMFacet is IPSMFacet, Facet {
         // Swap DAI to USDC through the PSM.
         IALMProxy(proxy).doCall(psm, abi.encodeCall(IPSMLike.buyGemNoFee, (proxy, usdcAmount)));
 
+        // Clear approvals
+        _approve(usds, daiUSDS, 0);
+        _approve(dai,  psm,     0);
+
         emit PSMSwapUSDSToUSDC(usdcAmount);
     }
 
@@ -172,6 +176,10 @@ contract PSMFacet is IPSMFacet, Facet {
             daiUSDS,
             abi.encodeCall(IDAIUSDSLike.daiToUsds, (proxy, daiAmount))
         );
+
+        // Clear approvals
+        _approve(usdc, psm,     0);
+        _approve(dai,  daiUSDS, 0);
     }
 
     /**********************************************************************************************/

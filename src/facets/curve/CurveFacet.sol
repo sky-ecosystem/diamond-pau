@@ -141,6 +141,9 @@ contract CurveFacet is ICurveFacet, Facet {
 
         amountOut = IERC20Like(tokenOut).balanceOf(proxy) - startingBalance;
 
+        // Clear approvals
+        _approve(tokenIn, pool, 0);
+
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 
         _validateSwap(
@@ -186,6 +189,11 @@ contract CurveFacet is ICurveFacet, Facet {
         );
 
         shares = ICurvePoolLike(pool).balanceOf(proxy) - startingShares;
+
+        // Clear approvals
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            _approve(tokens[i], pool, 0);
+        }
 
         uint256[] memory rates = ICurvePoolLike(pool).stored_rates();
 

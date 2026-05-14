@@ -2,6 +2,7 @@
 pragma solidity ^0.8.34;
 
 import { IController }     from "../../src/interfaces/IController.sol";
+import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
 interface IForeignControllerFull is IController {
@@ -163,6 +164,13 @@ interface IForeignControllerFull is IController {
         pure
         returns (bytes32 key);
 
+    function quoteTransferLayerZero(address oft, uint256 amount, uint32 destinationEndpointId)
+        external
+        returns (
+            ILayerZeroFacet.SendParam    memory sendParams,
+            ILayerZeroFacet.MessagingFee memory fee
+        );
+
     /**********************************************************************************************/
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
@@ -290,6 +298,14 @@ interface IForeignControllerFull is IController {
         pure
         returns (bytes32 key);
 
-    function getUniswapV3WithdrawRateLimitKey(address pool) external pure returns (bytes32 key);
+    function getUniswapV3AggregateWithdrawRateLimitKey(address pool)
+        external
+        pure
+        returns (bytes32 key);
+
+    function getUniswapV3AssetWithdrawRateLimitKey(address pool, address token)
+        external
+        pure
+        returns (bytes32 key);
 
 }

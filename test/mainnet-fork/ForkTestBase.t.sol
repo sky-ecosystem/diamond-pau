@@ -320,7 +320,7 @@ abstract contract ForkTestBase is DssTest {
         accessControls.grantRole(ALLOCATOR_ROLE,       backstopAllocator);
         accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
-        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role 
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
@@ -968,7 +968,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(layerZeroFacet, "LayerZeroFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.setLayerZeroRecipient.selector,
@@ -988,6 +988,11 @@ abstract contract ForkTestBase is DssTest {
         wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.getLayerZeroTransferRateLimitKey.selector,
             ILayerZeroFacet.getTransferRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.quoteTransferLayerZero.selector,
+            ILayerZeroFacet.quoteTransfer.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -1289,7 +1294,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](16);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](17);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.setUniswapV3MaxSlippage.selector,
@@ -1367,8 +1372,13 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[15] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3WithdrawRateLimitKey.selector,
-            IUniswapV3Facet.getWithdrawRateLimitKey.selector
+            IMainnetControllerFull.getUniswapV3AggregateWithdrawRateLimitKey.selector,
+            IUniswapV3Facet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[16] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getUniswapV3AssetWithdrawRateLimitKey.selector,
+            IUniswapV3Facet.getAssetWithdrawRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -1388,7 +1398,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(uniswapV4Facet, "UniswapV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.setUniswapV4MaxSlippage.selector,
@@ -1446,8 +1456,13 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4WithdrawRateLimitKey.selector,
-            IUniswapV4Facet.getWithdrawRateLimitKey.selector
+            IMainnetControllerFull.getUniswapV4AggregateWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[12] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.getUniswapV4AssetWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAssetWithdrawRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
