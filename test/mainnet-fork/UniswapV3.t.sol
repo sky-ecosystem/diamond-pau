@@ -1877,9 +1877,9 @@ contract MainnetController_UniswapV3_AddLiquidity_DAIUSDC_E2ETests is UniswapV3_
 
     function _getKeys() internal view returns (Keys memory) {
         return Keys({
-            aggregateAddLiquidityKey: uniswapV3_DaiUsdcPool_AggregateAddLiquidityKey,
-            token0RateLimitKey:       uniswapV3_DaiUsdcPool_DaiAddLiquidityKey,
-            token1RateLimitKey:       uniswapV3_DaiUsdcPool_UsdcAddLiquidityKey
+            aggregateAddLiquidityKey : uniswapV3_DaiUsdcPool_AggregateAddLiquidityKey,
+            token0RateLimitKey       : uniswapV3_DaiUsdcPool_DaiAddLiquidityKey,
+            token1RateLimitKey       : uniswapV3_DaiUsdcPool_UsdcAddLiquidityKey
         });
     }
 
@@ -1939,9 +1939,9 @@ contract MainnetController_UniswapV3_AddLiquidity_USDCUSDT_E2ETests is UniswapV3
 
     function _getKeys() internal view returns (Keys memory) {
         return Keys({
-            aggregateAddLiquidityKey: uniswapV3_UsdcUsdtPool_AggregateAddLiquidityKey,
-            token0RateLimitKey:       uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey,
-            token1RateLimitKey:       uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey
+            aggregateAddLiquidityKey : uniswapV3_UsdcUsdtPool_AggregateAddLiquidityKey,
+            token0RateLimitKey       : uniswapV3_UsdcUsdtPool_UsdcAddLiquidityKey,
+            token1RateLimitKey       : uniswapV3_UsdcUsdtPool_UsdtAddLiquidityKey
         });
     }
 
