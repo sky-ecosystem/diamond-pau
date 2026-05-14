@@ -68,7 +68,7 @@ That mismatch is how a sync can revert with `CallSelectorAlreadyWired`: a **new*
 
 In short, the Beacon guarantees collision-free wiring among **current** Beacon integrations; it cannot guarantee that every Controller’s local copy is collision-free with **its** still-installed integrations until those admins run `removeIntegrations` (or otherwise reconcile IDs) before pulling configs that reuse selectors.
 
-If a Controller admin wants to sync a new integration that is reusing an selector already wired by another unrelated integration, they should decide if they can safely remove or update the existing integration before syncing the new integration.
+If a Controller admin wants to sync a new integration that is reusing a selector already wired by another unrelated integration, they should decide if they can safely remove or update the existing integration before syncing the new integration.
 
 ## Hardcoded Selector Protection
 
