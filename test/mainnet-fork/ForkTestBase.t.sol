@@ -358,19 +358,19 @@ abstract contract ForkTestBase is DssTest {
 
         // NOTE: Using minimal config for test base setup
         rateLimits.setRateLimitData(
-            mainnetController.usdsMintRateLimitKey(),
+            mainnetController.usds_mintRateLimitKey(),
             5_000_000e18,
             uint256(1_000_000e18) / 4 hours
         );
 
         rateLimits.setRateLimitData(
-            mainnetController.psmUSDCToUSDSSwapRateLimitKey(),
+            mainnetController.psm_usdcToUSDSSwapRateLimitKey(),
             5_000_000e6,
             uint256(1_000_000e6) / 4 hours
         );
 
         rateLimits.setRateLimitData(
-            mainnetController.psmUSDSToUSDCSwapRateLimitKey(),
+            mainnetController.psm_usdsToUSDCSwapRateLimitKey(),
             5_000_000e6,
             uint256(1_000_000e6) / 4 hours
         );
@@ -435,32 +435,32 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setAaveMaxSlippage.selector,
+            IMainnetControllerFull.aave_setMaxSlippage.selector,
             IAaveFacet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getAaveMaxSlippage.selector,
+            IMainnetControllerFull.aave_getMaxSlippage.selector,
             IAaveFacet.getMaxSlippage.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositAave.selector,
+            IMainnetControllerFull.aave_deposit.selector,
             IAaveFacet.deposit.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.withdrawAave.selector,
+            IMainnetControllerFull.aave_withdraw.selector,
             IAaveFacet.withdraw.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getAaveDepositRateLimitKey.selector,
+            IMainnetControllerFull.aave_getDepositRateLimitKey.selector,
             IAaveFacet.getDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getAaveWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.aave_getWithdrawRateLimitKey.selector,
             IAaveFacet.getWithdrawRateLimitKey.selector
         );
 
@@ -480,22 +480,22 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositBasin.selector,
+            IMainnetControllerFull.basin_deposit.selector,
             IBasinFacet.deposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.withdrawBasin.selector,
+            IMainnetControllerFull.basin_withdraw.selector,
             IBasinFacet.withdraw.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getBasinDepositRateLimitKey.selector,
+            IMainnetControllerFull.basin_getDepositRateLimitKey.selector,
             IBasinFacet.getDepositRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getBasinWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.basin_getWithdrawRateLimitKey.selector,
             IBasinFacet.getWithdrawRateLimitKey.selector
         );
 
@@ -517,62 +517,62 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setCentrifugeRecipient.selector,
+            IMainnetControllerFull.centrifuge_setRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cancelCentrifugeDepositRequest.selector,
+            IMainnetControllerFull.centrifuge_cancelDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimCentrifugeCancelDepositRequest.selector,
+            IMainnetControllerFull.centrifuge_claimCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cancelCentrifugeRedeemRequest.selector,
+            IMainnetControllerFull.centrifuge_cancelRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimCentrifugeCancelRedeemRequest.selector,
+            IMainnetControllerFull.centrifuge_claimCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferSharesCentrifuge.selector,
+            IMainnetControllerFull.centrifuge_transferShares.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeRecipient.selector,
+            IMainnetControllerFull.centrifuge_getRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeCancelDepositRateLimitKey.selector,
+            IMainnetControllerFull.centrifuge_getCancelDepositRateLimitKey.selector,
             ICentrifugeFacet.getCancelDepositRateLimitKey.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeClaimCancelDepositRateLimitKey.selector,
+            IMainnetControllerFull.centrifuge_getClaimCancelDepositRateLimitKey.selector,
             ICentrifugeFacet.getClaimCancelDepositRateLimitKey.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeCancelRedeemRateLimitKey.selector,
+            IMainnetControllerFull.centrifuge_getCancelRedeemRateLimitKey.selector,
             ICentrifugeFacet.getCancelRedeemRateLimitKey.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeClaimCancelRedeemRateLimitKey.selector,
+            IMainnetControllerFull.centrifuge_getClaimCancelRedeemRateLimitKey.selector,
             ICentrifugeFacet.getClaimCancelRedeemRateLimitKey.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCentrifugeTransferRateLimitKey.selector,
+            IMainnetControllerFull.centrifuge_getTransferRateLimitKey.selector,
             ICentrifugeFacet.getTransferRateLimitKey.selector
         );
 
@@ -592,52 +592,52 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setCurveMaxSlippage.selector,
+            IMainnetControllerFull.curve_setMaxSlippage.selector,
             ICurveFacet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveMaxSlippage.selector,
+            IMainnetControllerFull.curve_getMaxSlippage.selector,
             ICurveFacet.getMaxSlippage.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapCurve.selector,
+            IMainnetControllerFull.curve_swap.selector,
             ICurveFacet.swap.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.addLiquidityCurve.selector,
+            IMainnetControllerFull.curve_addLiquidity.selector,
             ICurveFacet.addLiquidity.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.removeLiquidityCurve.selector,
+            IMainnetControllerFull.curve_removeLiquidity.selector,
             ICurveFacet.removeLiquidity.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveAggregateDepositRateLimitKey.selector,
+            IMainnetControllerFull.curve_getAggregateDepositRateLimitKey.selector,
             ICurveFacet.getAggregateDepositRateLimitKey.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveAssetDepositRateLimitKey.selector,
+            IMainnetControllerFull.curve_getAssetDepositRateLimitKey.selector,
             ICurveFacet.getAssetDepositRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveSwapRateLimitKey.selector,
+            IMainnetControllerFull.curve_getSwapRateLimitKey.selector,
             ICurveFacet.getSwapRateLimitKey.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveAggregateWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.curve_getAggregateWithdrawRateLimitKey.selector,
             ICurveFacet.getAggregateWithdrawRateLimitKey.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCurveAssetWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.curve_getAssetWithdrawRateLimitKey.selector,
             ICurveFacet.getAssetWithdrawRateLimitKey.selector
         );
 
@@ -657,27 +657,27 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setCCTPDomainParameters.selector,
+            IMainnetControllerFull.cctp_setDomainParameters.selector,
             ICCTPFacet.setDomainParameters.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferUSDCToCCTP.selector,
+            IMainnetControllerFull.cctp_transfer.selector,
             ICCTPFacet.transfer.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.toCCTPRateLimitKey.selector,
+            IMainnetControllerFull.cctp_toCCTPRateLimitKey.selector,
             ICCTPFacet.toCCTPRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCCTPDomainParameters.selector,
+            IMainnetControllerFull.cctp_getDomainParameters.selector,
             ICCTPFacet.getDomainParameters.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getCCTPToDomainRateLimitKey.selector,
+            IMainnetControllerFull.cctp_getToDomainRateLimitKey.selector,
             ICCTPFacet.getToDomainRateLimitKey.selector
         );
 
@@ -701,22 +701,22 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapUSDSToDAI.selector,
+            IMainnetControllerFull.daiUSDS_swapUSDSToDAI.selector,
             IDAIUSDSFacet.swapUSDSToDAI.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapDAIToUSDS.selector,
+            IMainnetControllerFull.daiUSDS_swapDAIToUSDS.selector,
             IDAIUSDSFacet.swapDAIToUSDS.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.daiToUSDSSwapRateLimitKey.selector,
+            IMainnetControllerFull.daiUSDS_daiToUSDSSwapRateLimitKey.selector,
             IDAIUSDSFacet.daiToUSDSSwapRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdsToDAISwapRateLimitKey.selector,
+            IMainnetControllerFull.daiUSDS_usdsToDAISwapRateLimitKey.selector,
             IDAIUSDSFacet.usdsToDAISwapRateLimitKey.selector
         );
 
@@ -736,42 +736,42 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setMaxExchangeRate.selector,
+            IMainnetControllerFull.erc4626_setMaxExchangeRate.selector,
             IERC4626Facet.setMaxExchangeRate.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositERC4626.selector,
+            IMainnetControllerFull.erc4626_deposit.selector,
             IERC4626Facet.deposit.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.withdrawERC4626.selector,
+            IMainnetControllerFull.erc4626_withdraw.selector,
             IERC4626Facet.withdraw.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.redeemERC4626.selector,
+            IMainnetControllerFull.erc4626_redeem.selector,
             IERC4626Facet.redeem.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.EXCHANGE_RATE_PRECISION.selector,
+            IMainnetControllerFull.erc4626_EXCHANGE_RATE_PRECISION.selector,
             IERC4626Facet.EXCHANGE_RATE_PRECISION.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.maxExchangeRates.selector,
+            IMainnetControllerFull.erc4626_getMaxExchangeRate.selector,
             IERC4626Facet.getMaxExchangeRate.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC4626DepositRateLimitKey.selector,
+            IMainnetControllerFull.erc4626_getDepositRateLimitKey.selector,
             IERC4626Facet.getDepositRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC4626WithdrawRateLimitKey.selector,
+            IMainnetControllerFull.erc4626_getWithdrawRateLimitKey.selector,
             IERC4626Facet.getWithdrawRateLimitKey.selector
         );
 
@@ -791,42 +791,42 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.requestDepositERC7540.selector,
+            IMainnetControllerFull.erc7540_requestDeposit.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimDepositERC7540.selector,
+            IMainnetControllerFull.erc7540_claimDeposit.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.requestRedeemERC7540.selector,
+            IMainnetControllerFull.erc7540_requestRedeem.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimRedeemERC7540.selector,
+            IMainnetControllerFull.erc7540_claimRedeem.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC7540RequestDepositRateLimitKey.selector,
+            IMainnetControllerFull.erc7540_getRequestDepositRateLimitKey.selector,
             IERC7540Facet.getRequestDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC7540ClaimDepositRateLimitKey.selector,
+            IMainnetControllerFull.erc7540_getClaimDepositRateLimitKey.selector,
             IERC7540Facet.getClaimDepositRateLimitKey.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC7540RequestRedeemRateLimitKey.selector,
+            IMainnetControllerFull.erc7540_getRequestRedeemRateLimitKey.selector,
             IERC7540Facet.getRequestRedeemRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getERC7540ClaimRedeemRateLimitKey.selector,
+            IMainnetControllerFull.erc7540_getClaimRedeemRateLimitKey.selector,
             IERC7540Facet.getClaimRedeemRateLimitKey.selector
         );
 
@@ -851,67 +851,67 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setEthenaDelegatedSigner.selector,
+            IMainnetControllerFull.ethena_setDelegatedSigner.selector,
             IEthenaFacet.setDelegatedSigner.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.removeEthenaDelegatedSigner.selector,
+            IMainnetControllerFull.ethena_removeDelegatedSigner.selector,
             IEthenaFacet.removeDelegatedSigner.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.prepareUSDeMint.selector,
+            IMainnetControllerFull.ethena_prepareMint.selector,
             IEthenaFacet.prepareMint.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.prepareUSDeBurn.selector,
+            IMainnetControllerFull.ethena_prepareBurn.selector,
             IEthenaFacet.prepareBurn.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cooldownAssetsSUSDe.selector,
+            IMainnetControllerFull.ethena_cooldownAssets.selector,
             IEthenaFacet.cooldownAssets.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cooldownSharesSUSDe.selector,
+            IMainnetControllerFull.ethena_cooldownShares.selector,
             IEthenaFacet.cooldownShares.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.unstakeSUSDe.selector,
+            IMainnetControllerFull.ethena_unstake.selector,
             IEthenaFacet.unstake.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setEthenaDelegatedSignerRateLimitKey.selector,
+            IMainnetControllerFull.ethena_setDelegatedSignerRateLimitKey.selector,
             IEthenaFacet.setDelegatedSignerRateLimitKey.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.removeEthenaDelegatedSignerRateLimitKey.selector,
+            IMainnetControllerFull.ethena_removeDelegatedSignerRateLimitKey.selector,
             IEthenaFacet.removeDelegatedSignerRateLimitKey.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdeMintRateLimitKey.selector,
+            IMainnetControllerFull.ethena_mintRateLimitKey.selector,
             IEthenaFacet.mintRateLimitKey.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdeBurnRateLimitKey.selector,
+            IMainnetControllerFull.ethena_burnRateLimitKey.selector,
             IEthenaFacet.burnRateLimitKey.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdeCooldownRateLimitKey.selector,
+            IMainnetControllerFull.ethena_cooldownRateLimitKey.selector,
             IEthenaFacet.cooldownRateLimitKey.selector
         );
 
         wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdeUnstakeRateLimitKey.selector,
+            IMainnetControllerFull.ethena_unstakeRateLimitKey.selector,
             IEthenaFacet.unstakeRateLimitKey.selector
         );
 
@@ -931,32 +931,32 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositToFarm.selector,
+            IMainnetControllerFull.farm_deposit.selector,
             IFarmFacet.deposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimRewardFromFarm.selector,
+            IMainnetControllerFull.farm_claimReward.selector,
             IFarmFacet.claimReward.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.withdrawFromFarm.selector,
+            IMainnetControllerFull.farm_withdraw.selector,
             IFarmFacet.withdraw.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getFarmClaimRewardRateLimitKey.selector,
+            IMainnetControllerFull.farm_getClaimRewardRateLimitKey.selector,
             IFarmFacet.getClaimRewardRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getFarmDepositRateLimitKey.selector,
+            IMainnetControllerFull.farm_getDepositRateLimitKey.selector,
             IFarmFacet.getDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getFarmWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.farm_getWithdrawRateLimitKey.selector,
             IFarmFacet.getWithdrawRateLimitKey.selector
         );
 
@@ -976,27 +976,27 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setLayerZeroRecipient.selector,
+            IMainnetControllerFull.layerZero_setRecipient.selector,
             ILayerZeroFacet.setRecipient.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferTokenLayerZero.selector,
+            IMainnetControllerFull.layerZero_transfer.selector,
             ILayerZeroFacet.transfer.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.layerZeroRecipients.selector,
+            IMainnetControllerFull.layerZero_getRecipient.selector,
             ILayerZeroFacet.getRecipient.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getLayerZeroTransferRateLimitKey.selector,
+            IMainnetControllerFull.layerZero_getTransferRateLimitKey.selector,
             ILayerZeroFacet.getTransferRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.quoteTransferLayerZero.selector,
+            IMainnetControllerFull.layerZero_quoteTransfer.selector,
             ILayerZeroFacet.quoteTransfer.selector
         );
 
@@ -1016,22 +1016,22 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.requestMapleRedemption.selector,
+            IMainnetControllerFull.maple_requestRedemption.selector,
             IMapleFacet.requestRedemption.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cancelMapleRedemption.selector,
+            IMainnetControllerFull.maple_cancelRedemption.selector,
             IMapleFacet.cancelRedemption.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getMapleCancelRedeemRateLimitKey.selector,
+            IMainnetControllerFull.maple_getCancelRedeemRateLimitKey.selector,
             IMapleFacet.getCancelRedeemRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getMapleRequestRedeemRateLimitKey.selector,
+            IMainnetControllerFull.maple_getRequestRedeemRateLimitKey.selector,
             IMapleFacet.getRequestRedeemRateLimitKey.selector
         );
 
@@ -1051,12 +1051,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](2);
 
         merklWires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.toggleOperatorMerkl.selector,
+            IMainnetControllerFull.merkl_toggleOperator.selector,
             IMerklFacet.toggleOperator.selector
         );
 
         merklWires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getMerklToggleOperatorRateLimitKey.selector,
+            IMainnetControllerFull.merkl_getToggleOperatorRateLimitKey.selector,
             IMerklFacet.getToggleOperatorRateLimitKey.selector
         );
 
@@ -1076,67 +1076,67 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setOTCMaxSlippage.selector,
+            IMainnetControllerFull.otc_setMaxSlippage.selector,
             IOTCFacet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setOTCBuffer.selector,
+            IMainnetControllerFull.otc_setBuffer.selector,
             IOTCFacet.setBuffer.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setOTCRechargeRate.selector,
+            IMainnetControllerFull.otc_setRechargeRate.selector,
             IOTCFacet.setRechargeRate.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.otcSend.selector,
+            IMainnetControllerFull.otc_send.selector,
             IOTCFacet.send.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.otcClaim.selector,
+            IMainnetControllerFull.otc_claim.selector,
             IOTCFacet.claim.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOTCBuffer.selector,
+            IMainnetControllerFull.otc_getBuffer.selector,
             IOTCFacet.getBuffer.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOTCMaxSlippage.selector,
+            IMainnetControllerFull.otc_getMaxSlippage.selector,
             IOTCFacet.getMaxSlippage.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOTCRechargeRate.selector,
+            IMainnetControllerFull.otc_getRechargeRate.selector,
             IOTCFacet.getRechargeRate.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.otcs.selector,
+            IMainnetControllerFull.otc_getState.selector,
             IOTCFacet.getState.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOtcClaimWithRecharge.selector,
+            IMainnetControllerFull.otc_getClaimWithRecharge.selector,
             IOTCFacet.getClaimWithRecharge.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.isOtcSwapReady.selector,
+            IMainnetControllerFull.otc_getIsSwapReady.selector,
             IOTCFacet.getIsSwapReady.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOTCSendRateLimitKey.selector,
+            IMainnetControllerFull.otc_getSendRateLimitKey.selector,
             IOTCFacet.getSendRateLimitKey.selector
         );
 
         wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getOTCClaimRateLimitKey.selector,
+            IMainnetControllerFull.otc_getClaimRateLimitKey.selector,
             IOTCFacet.getClaimRateLimitKey.selector
         );
 
@@ -1156,12 +1156,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.redeemPendlePT.selector,
+            IMainnetControllerFull.pendle_redeem.selector,
             IPendleFacet.redeem.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getPendleRedeemRateLimitKey.selector,
+            IMainnetControllerFull.pendle_getRedeemRateLimitKey.selector,
             IPendleFacet.getRedeemRateLimitKey.selector
         );
 
@@ -1187,27 +1187,27 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapUSDSToUSDC.selector,
+            IMainnetControllerFull.psm_swapUSDSToUSDC.selector,
             IPSMFacet.swapUSDSToUSDC.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapUSDCToUSDS.selector,
+            IMainnetControllerFull.psm_swapUSDCToUSDS.selector,
             IPSMFacet.swapUSDCToUSDS.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.psmTo18ConversionFactor.selector,
+            IMainnetControllerFull.psm_to18ConversionFactor.selector,
             IPSMFacet.to18ConversionFactor.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.psmUSDCToUSDSSwapRateLimitKey.selector,
+            IMainnetControllerFull.psm_usdcToUSDSSwapRateLimitKey.selector,
             IPSMFacet.usdcToUSDSSwapRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.psmUSDSToUSDCSwapRateLimitKey.selector,
+            IMainnetControllerFull.psm_usdsToUSDCSwapRateLimitKey.selector,
             IPSMFacet.usdsToUSDCSwapRateLimitKey.selector
         );
 
@@ -1227,12 +1227,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.takeFromSparkVault.selector,
+            IMainnetControllerFull.sparkVault_take.selector,
             ISparkVaultFacet.take.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getSparkVaultTakeRateLimitKey.selector,
+            IMainnetControllerFull.sparkVault_getTakeRateLimitKey.selector,
             ISparkVaultFacet.getTakeRateLimitKey.selector
         );
 
@@ -1252,12 +1252,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.subscribeSuperstate.selector,
+            IMainnetControllerFull.superstate_subscribe.selector,
             ISuperstateFacet.subscribe.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.superstateSubscribeRateLimitKey.selector,
+            IMainnetControllerFull.superstate_subscribeRateLimitKey.selector,
             ISuperstateFacet.subscribeRateLimitKey.selector
         );
 
@@ -1277,12 +1277,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.transferAsset.selector,
+            IMainnetControllerFull.transferAsset_transfer.selector,
             ITransferAssetFacet.transfer.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getTransferAssetTransferRateLimitKey.selector,
+            IMainnetControllerFull.transferAsset_getTransferRateLimitKey.selector,
             ITransferAssetFacet.getTransferRateLimitKey.selector
         );
 
@@ -1302,87 +1302,87 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](17);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV3MaxSlippage.selector,
+            IMainnetControllerFull.uniswapV3_setMaxSlippage.selector,
             IUniswapV3Facet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV3PoolMaxTickDelta.selector,
+            IMainnetControllerFull.uniswapV3_setMaxTickDelta.selector,
             IUniswapV3Facet.setMaxTickDelta.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV3AddLiquidityLowerTickBound.selector,
+            IMainnetControllerFull.uniswapV3_setLiquidityLowerTickBound.selector,
             IUniswapV3Facet.setLiquidityLowerTickBound.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV3AddLiquidityUpperTickBound.selector,
+            IMainnetControllerFull.uniswapV3_setLiquidityUpperTickBound.selector,
             IUniswapV3Facet.setLiquidityUpperTickBound.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV3TWAPSecondsAgo.selector,
+            IMainnetControllerFull.uniswapV3_setTWAPSecondsAgo.selector,
             IUniswapV3Facet.setTWAPSecondsAgo.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapUniswapV3.selector,
+            IMainnetControllerFull.uniswapV3_swap.selector,
             IUniswapV3Facet.swap.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.addLiquidityUniswapV3.selector,
+            IMainnetControllerFull.uniswapV3_addLiquidity.selector,
             IUniswapV3Facet.addLiquidity.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.removeLiquidityUniswapV3.selector,
+            IMainnetControllerFull.uniswapV3_removeLiquidity.selector,
             IUniswapV3Facet.removeLiquidity.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3AggregateDepositRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV3_getAggregateDepositRateLimitKey.selector,
             IUniswapV3Facet.getAggregateDepositRateLimitKey.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3AssetDepositRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV3_getAssetDepositRateLimitKey.selector,
             IUniswapV3Facet.getAssetDepositRateLimitKey.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3AddLiquidityTickBounds.selector,
+            IMainnetControllerFull.uniswapV3_getLiquidityTickBounds.selector,
             IUniswapV3Facet.getLiquidityTickBounds.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3MaxSlippage.selector,
+            IMainnetControllerFull.uniswapV3_getMaxSlippage.selector,
             IUniswapV3Facet.getMaxSlippage.selector
         );
 
         wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3PoolMaxTickDelta.selector,
+            IMainnetControllerFull.uniswapV3_getMaxTickDelta.selector,
             IUniswapV3Facet.getMaxTickDelta.selector
         );
 
         wires[13] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3SwapRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV3_getSwapRateLimitKey.selector,
             IUniswapV3Facet.getSwapRateLimitKey.selector
         );
 
         wires[14] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3TWAPSecondsAgo.selector,
+            IMainnetControllerFull.uniswapV3_getTWAPSecondsAgo.selector,
             IUniswapV3Facet.getTWAPSecondsAgo.selector
         );
 
         wires[15] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3AggregateWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV3_getAggregateWithdrawRateLimitKey.selector,
             IUniswapV3Facet.getAggregateWithdrawRateLimitKey.selector
         );
 
         wires[16] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV3AssetWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV3_getAssetWithdrawRateLimitKey.selector,
             IUniswapV3Facet.getAssetWithdrawRateLimitKey.selector
         );
 
@@ -1406,67 +1406,67 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV4MaxSlippage.selector,
+            IMainnetControllerFull.uniswapV4_setMaxSlippage.selector,
             IUniswapV4Facet.setMaxSlippage.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUniswapV4TickLimits.selector,
+            IMainnetControllerFull.uniswapV4_setTickLimits.selector,
             IUniswapV4Facet.setTickLimits.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.mintPositionUniswapV4.selector,
+            IMainnetControllerFull.uniswapV4_mintPosition.selector,
             IUniswapV4Facet.mintPosition.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.increaseLiquidityUniswapV4.selector,
+            IMainnetControllerFull.uniswapV4_increasePosition.selector,
             IUniswapV4Facet.increasePosition.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.decreaseLiquidityUniswapV4.selector,
+            IMainnetControllerFull.uniswapV4_decreasePosition.selector,
             IUniswapV4Facet.decreasePosition.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.swapUniswapV4.selector,
+            IMainnetControllerFull.uniswapV4_swap.selector,
             IUniswapV4Facet.swap.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4AggregateDepositRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV4_getAggregateDepositRateLimitKey.selector,
             IUniswapV4Facet.getAggregateDepositRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4AssetDepositRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV4_getAssetDepositRateLimitKey.selector,
             IUniswapV4Facet.getAssetDepositRateLimitKey.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.uniswapV4MaxSlippages.selector,
+            IMainnetControllerFull.uniswapV4_getMaxSlippage.selector,
             IUniswapV4Facet.getMaxSlippage.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4SwapRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV4_getSwapRateLimitKey.selector,
             IUniswapV4Facet.getSwapRateLimitKey.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.uniswapV4TickLimits.selector,
+            IMainnetControllerFull.uniswapV4_getTickLimits.selector,
             IUniswapV4Facet.getTickLimits.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4AggregateWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV4_getAggregateWithdrawRateLimitKey.selector,
             IUniswapV4Facet.getAggregateWithdrawRateLimitKey.selector
         );
 
         wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getUniswapV4AssetWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.uniswapV4_getAssetWithdrawRateLimitKey.selector,
             IUniswapV4Facet.getAssetWithdrawRateLimitKey.selector
         );
 
@@ -1486,32 +1486,32 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.setUSDSVault.selector,
+            IMainnetControllerFull.usds_setVault.selector,
             IUSDSFacet.setVault.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.mintUSDS.selector,
+            IMainnetControllerFull.usds_mint.selector,
             IUSDSFacet.mint.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.burnUSDS.selector,
+            IMainnetControllerFull.usds_burn.selector,
             IUSDSFacet.burn.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdsVault.selector,
+            IMainnetControllerFull.usds_vault.selector,
             IUSDSFacet.vault.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdsMintRateLimitKey.selector,
+            IMainnetControllerFull.usds_mintRateLimitKey.selector,
             IUSDSFacet.mintRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.usdsBurnRateLimitKey.selector,
+            IMainnetControllerFull.usds_burnRateLimitKey.selector,
             IUSDSFacet.burnRateLimitKey.selector
         );
 
@@ -1531,32 +1531,32 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositToWeETH.selector,
+            IMainnetControllerFull.weeth_deposit.selector,
             IWEETHFacet.deposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.requestWithdrawFromWeETH.selector,
+            IMainnetControllerFull.weeth_requestWithdraw.selector,
             IWEETHFacet.requestWithdraw.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimWithdrawalFromWeETH.selector,
+            IMainnetControllerFull.weeth_claimWithdrawal.selector,
             IWEETHFacet.claimWithdrawal.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getWEETHDepositRateLimitKey.selector,
+            IMainnetControllerFull.weeth_getDepositRateLimitKey.selector,
             IWEETHFacet.getDepositRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getWEETHRequestWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.weeth_getRequestWithdrawRateLimitKey.selector,
             IWEETHFacet.getRequestWithdrawRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.getWEETHClaimWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.weeth_getClaimWithdrawRateLimitKey.selector,
             IWEETHFacet.getClaimWithdrawRateLimitKey.selector
         );
 
@@ -1576,12 +1576,12 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wrapWires = new IEnumerableIntegrations.Wire[](2);
 
         wrapWires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.wrapAllProxyETH.selector,
+            IMainnetControllerFull.wrapProxyETH_wrapAll.selector,
             IWrapProxyETHFacet.wrapAll.selector
         );
 
         wrapWires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.wrapAllProxyETHRateLimitKey.selector,
+            IMainnetControllerFull.wrapProxyETH_wrapRateLimitKey.selector,
             IWrapProxyETHFacet.wrapRateLimitKey.selector
         );
 
@@ -1605,32 +1605,32 @@ abstract contract ForkTestBase is DssTest {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.depositToWstETH.selector,
+            IMainnetControllerFull.wsteth_deposit.selector,
             IWSTETHFacet.deposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.requestWithdrawFromWstETH.selector,
+            IMainnetControllerFull.wsteth_requestWithdraw.selector,
             IWSTETHFacet.requestWithdraw.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.claimWithdrawalFromWstETH.selector,
+            IMainnetControllerFull.wsteth_claimWithdrawal.selector,
             IWSTETHFacet.claimWithdrawal.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.wstethDepositRateLimitKey.selector,
+            IMainnetControllerFull.wsteth_depositRateLimitKey.selector,
             IWSTETHFacet.depositRateLimitKey.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.wstethRequestWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.wsteth_requestWithdrawRateLimitKey.selector,
             IWSTETHFacet.requestWithdrawRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.wstethClaimWithdrawRateLimitKey.selector,
+            IMainnetControllerFull.wsteth_claimWithdrawRateLimitKey.selector,
             IWSTETHFacet.claimWithdrawRateLimitKey.selector
         );
 

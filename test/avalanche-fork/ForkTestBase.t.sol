@@ -172,62 +172,62 @@ contract ForkTestBase is Test {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.setCentrifugeRecipient.selector,
+            IForeignControllerFull.centrifuge_setRecipient.selector,
             ICentrifugeFacet.setRecipient.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cancelCentrifugeDepositRequest.selector,
+            IForeignControllerFull.centrifuge_cancelDepositRequest.selector,
             ICentrifugeFacet.cancelDepositRequest.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.claimCentrifugeCancelDepositRequest.selector,
+            IForeignControllerFull.centrifuge_claimCancelDepositRequest.selector,
             ICentrifugeFacet.claimCancelDepositRequest.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cancelCentrifugeRedeemRequest.selector,
+            IForeignControllerFull.centrifuge_cancelRedeemRequest.selector,
             ICentrifugeFacet.cancelRedeemRequest.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.claimCentrifugeCancelRedeemRequest.selector,
+            IForeignControllerFull.centrifuge_claimCancelRedeemRequest.selector,
             ICentrifugeFacet.claimCancelRedeemRequest.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.transferSharesCentrifuge.selector,
+            IForeignControllerFull.centrifuge_transferShares.selector,
             ICentrifugeFacet.transferShares.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeRecipient.selector,
+            IForeignControllerFull.centrifuge_getRecipient.selector,
             ICentrifugeFacet.getRecipient.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeCancelDepositRateLimitKey.selector,
+            IForeignControllerFull.centrifuge_getCancelDepositRateLimitKey.selector,
             ICentrifugeFacet.getCancelDepositRateLimitKey.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeClaimCancelDepositRateLimitKey.selector,
+            IForeignControllerFull.centrifuge_getClaimCancelDepositRateLimitKey.selector,
             ICentrifugeFacet.getClaimCancelDepositRateLimitKey.selector
         );
 
         wires[9] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeCancelRedeemRateLimitKey.selector,
+            IForeignControllerFull.centrifuge_getCancelRedeemRateLimitKey.selector,
             ICentrifugeFacet.getCancelRedeemRateLimitKey.selector
         );
 
         wires[10] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeClaimCancelRedeemRateLimitKey.selector,
+            IForeignControllerFull.centrifuge_getClaimCancelRedeemRateLimitKey.selector,
             ICentrifugeFacet.getClaimCancelRedeemRateLimitKey.selector
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getCentrifugeTransferRateLimitKey.selector,
+            IForeignControllerFull.centrifuge_getTransferRateLimitKey.selector,
             ICentrifugeFacet.getTransferRateLimitKey.selector
         );
 
@@ -247,42 +247,42 @@ contract ForkTestBase is Test {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.requestDepositERC7540.selector,
+            IForeignControllerFull.erc7540_requestDeposit.selector,
             IERC7540Facet.requestDeposit.selector
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.claimDepositERC7540.selector,
+            IForeignControllerFull.erc7540_claimDeposit.selector,
             IERC7540Facet.claimDeposit.selector
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.requestRedeemERC7540.selector,
+            IForeignControllerFull.erc7540_requestRedeem.selector,
             IERC7540Facet.requestRedeem.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.claimRedeemERC7540.selector,
+            IForeignControllerFull.erc7540_claimRedeem.selector,
             IERC7540Facet.claimRedeem.selector
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540RequestDepositRateLimitKey.selector,
+            IForeignControllerFull.erc7540_getRequestDepositRateLimitKey.selector,
             IERC7540Facet.getRequestDepositRateLimitKey.selector
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540ClaimDepositRateLimitKey.selector,
+            IForeignControllerFull.erc7540_getClaimDepositRateLimitKey.selector,
             IERC7540Facet.getClaimDepositRateLimitKey.selector
         );
 
         wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540RequestRedeemRateLimitKey.selector,
+            IForeignControllerFull.erc7540_getRequestRedeemRateLimitKey.selector,
             IERC7540Facet.getRequestRedeemRateLimitKey.selector
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.getERC7540ClaimRedeemRateLimitKey.selector,
+            IForeignControllerFull.erc7540_getClaimRedeemRateLimitKey.selector,
             IERC7540Facet.getClaimRedeemRateLimitKey.selector
         );
 
