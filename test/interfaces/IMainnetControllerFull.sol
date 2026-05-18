@@ -11,6 +11,8 @@ interface IMainnetControllerFull is IController {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
+    function aave_VERSION() external pure returns (string memory);
+
     function aave_setMaxSlippage(address aToken, uint256 maxSlippage) external;
 
     function aave_deposit(address aToken, uint256 amount) external;
@@ -35,6 +37,8 @@ interface IMainnetControllerFull is IController {
     /*** BasinFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function basin_VERSION() external pure returns (string memory);
+
     function basin_deposit(address basin, address asset, uint256 amount, uint256 minSharesOut)
         external returns (uint256 shares);
 
@@ -58,6 +62,16 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** CCTPFacet actions                                                                      ***/
     /**********************************************************************************************/
+
+    function cctp_VERSION() external pure returns (string memory);
+
+    function cctp_DESTINATION_CALLER() external pure returns (bytes32);
+
+    function cctp_MAX_FINALITY_THRESHOLD() external pure returns (uint32);
+
+    function cctp_cctp() external view returns (address);
+
+    function cctp_usdc() external view returns (address);
 
     function cctp_setDomainParameters(
         uint32  destinationDomain,
@@ -84,6 +98,10 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** CentrifugeFacet actions                                                                ***/
     /**********************************************************************************************/
+
+    function centrifuge_VERSION() external pure returns (string memory);
+
+    function centrifuge_REQUEST_ID() external pure returns (uint256);
 
     function centrifuge_setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
@@ -117,6 +135,8 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** CurveFacet actions                                                                     ***/
     /**********************************************************************************************/
+
+    function curve_VERSION() external pure returns (string memory);
 
     function curve_setMaxSlippage(address pool, uint256 maxSlippage) external;
 
@@ -170,6 +190,14 @@ interface IMainnetControllerFull is IController {
     /*** DaiUsdsFacet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function daiUSDS_VERSION() external pure returns (string memory);
+
+    function daiUSDS_dai() external view returns (address);
+
+    function daiUSDS_daiUSDS() external view returns (address);
+
+    function daiUSDS_usds() external view returns (address);
+
     function daiUSDS_swapUSDSToDAI(uint256 usdsAmount) external;
 
     function daiUSDS_swapDAIToUSDS(uint256 daiAmount) external;
@@ -181,6 +209,8 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
+
+    function erc4626_VERSION() external pure returns (string memory);
 
     function erc4626_setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
 
@@ -211,6 +241,8 @@ interface IMainnetControllerFull is IController {
     /*** ERC7540Facet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function erc7540_VERSION() external pure returns (string memory);
+
     function erc7540_requestDeposit(address token, uint256 amount) external;
 
     function erc7540_claimDeposit(address token) external;
@@ -233,6 +265,16 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** EthenaFacet actions                                                                    ***/
     /**********************************************************************************************/
+
+    function ethena_VERSION() external pure returns (string memory);
+
+    function ethena_minter() external view returns (address);
+
+    function ethena_susde() external view returns (address);
+
+    function ethena_usdc() external view returns (address);
+
+    function ethena_usde() external view returns (address);
 
     function ethena_setDelegatedSigner(address delegatedSigner) external;
 
@@ -264,6 +306,8 @@ interface IMainnetControllerFull is IController {
     /*** FarmFacet actions                                                                      ***/
     /**********************************************************************************************/
 
+    function farm_VERSION() external pure returns (string memory);
+
     function farm_deposit(address farm, uint256 amount) external;
 
     function farm_claimReward(address farm) external returns (uint256 reward);
@@ -282,6 +326,8 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
+
+    function layerZero_VERSION() external pure returns (string memory);
 
     function layerZero_setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
@@ -312,6 +358,8 @@ interface IMainnetControllerFull is IController {
     /*** MapleFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function maple_VERSION() external pure returns (string memory);
+
     function maple_requestRedemption(address mapleToken, uint256 shares) external;
 
     function maple_cancelRedemption(address mapleToken, uint256 shares) external;
@@ -327,6 +375,8 @@ interface IMainnetControllerFull is IController {
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function merkl_VERSION() external pure returns (string memory);
+
     function merkl_toggleOperator(address distributor, address operator) external;
 
     function merkl_getToggleOperatorRateLimitKey(address distributor, address operator)
@@ -337,6 +387,8 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
     /**********************************************************************************************/
+
+    function otc_VERSION() external pure returns (string memory);
 
     function otc_setMaxSlippage(address exchange, uint256 maxSlippage) external;
 
@@ -377,6 +429,10 @@ interface IMainnetControllerFull is IController {
     /*** PendleFacet actions                                                                    ***/
     /**********************************************************************************************/
 
+    function pendle_VERSION() external pure returns (string memory);
+
+    function pendle_router() external view returns (address);
+
     function pendle_redeem(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
         external;
 
@@ -388,6 +444,18 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** PSMFacet actions                                                                       ***/
     /**********************************************************************************************/
+
+    function psm_VERSION() external pure returns (string memory);
+
+    function psm_dai() external view returns (address);
+
+    function psm_daiUSDS() external view returns (address);
+
+    function psm_psm() external view returns (address);
+
+    function psm_usdc() external view returns (address);
+
+    function psm_usds() external view returns (address);
 
     function psm_swapUSDSToUSDC(uint256 usdcAmount) external;
 
@@ -403,6 +471,8 @@ interface IMainnetControllerFull is IController {
     /*** SparkVaultFacet actions                                                                ***/
     /**********************************************************************************************/
 
+    function sparkVault_VERSION() external pure returns (string memory);
+
     function sparkVault_take(address sparkVault, uint256 assetAmount) external;
 
     function sparkVault_getTakeRateLimitKey(address sparkVault) external pure returns (bytes32 key);
@@ -411,6 +481,12 @@ interface IMainnetControllerFull is IController {
     /*** SuperstateFacet actions                                                                ***/
     /**********************************************************************************************/
 
+    function superstate_VERSION() external pure returns (string memory);
+
+    function superstate_usdc() external view returns (address);
+
+    function superstate_ustb() external view returns (address);
+
     function superstate_subscribe(uint256 usdcAmount) external;
 
     function superstate_subscribeRateLimitKey() external pure returns (bytes32 key);
@@ -418,6 +494,8 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
+
+    function transferAsset_VERSION() external pure returns (string memory);
 
     function transferAsset_transfer(address asset, address destination, uint256 amount) external;
 
@@ -429,6 +507,18 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** UniswapV3Facet actions                                                                 ***/
     /**********************************************************************************************/
+
+    function uniswapV3_VERSION() external pure returns (string memory);
+
+    function uniswapV3_MAX_TICK_DELTA() external pure returns (uint24);
+
+    function uniswapV3_MIN_TICK() external pure returns (int24);
+
+    function uniswapV3_MAX_TICK() external pure returns (int24);
+
+    function uniswapV3_positionManager() external view returns (address);
+
+    function uniswapV3_router() external view returns (address);
 
     function uniswapV3_setMaxSlippage(address pool, uint256 maxSlippage) external;
 
@@ -511,6 +601,14 @@ interface IMainnetControllerFull is IController {
     /*** UniswapV4Facet actions                                                                 ***/
     /**********************************************************************************************/
 
+    function uniswapV4_VERSION() external pure returns (string memory);
+
+    function uniswapV4_permit2() external view returns (address);
+
+    function uniswapV4_positionManager() external view returns (address);
+
+    function uniswapV4_router() external view returns (address);
+
     function uniswapV4_setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     function uniswapV4_setTickLimits(
@@ -588,6 +686,10 @@ interface IMainnetControllerFull is IController {
     /*** USDSFacet actions                                                                      ***/
     /**********************************************************************************************/
 
+    function usds_VERSION() external pure returns (string memory);
+
+    function usds_usds() external view returns (address);
+
     function usds_setVault(address vault) external;
 
     function usds_mint(uint256 usdsAmount) external;
@@ -603,6 +705,12 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** WEETHFacet actions                                                                     ***/
     /**********************************************************************************************/
+
+    function weeth_VERSION() external pure returns (string memory);
+
+    function weeth_weeth() external view returns (address);
+
+    function weeth_weth() external view returns (address);
 
     function weeth_deposit(uint256 amount, uint256 minSharesOut) external returns (uint256 shares);
 
@@ -641,6 +749,10 @@ interface IMainnetControllerFull is IController {
     /*** WrapProxyETHFacet actions                                                              ***/
     /**********************************************************************************************/
 
+    function wrapProxyETH_VERSION() external pure returns (string memory);
+
+    function wrapProxyETH_weth() external view returns (address);
+
     function wrapProxyETH_wrapAll() external;
 
     function wrapProxyETH_wrapRateLimitKey() external pure returns (bytes32 key);
@@ -648,6 +760,14 @@ interface IMainnetControllerFull is IController {
     /**********************************************************************************************/
     /*** WSTETHFacet actions                                                                    ***/
     /**********************************************************************************************/
+
+    function wsteth_VERSION() external pure returns (string memory);
+
+    function wsteth_weth() external view returns (address);
+
+    function wsteth_withdrawQueue() external view returns (address);
+
+    function wsteth_wsteth() external view returns (address);
 
     function wsteth_deposit(uint256 amount) external;
 

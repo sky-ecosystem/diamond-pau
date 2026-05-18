@@ -14,6 +14,8 @@ import { Base as GroveBase } from "../../lib/grove-address-registry/src/Base.sol
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
+import { IFacet } from "../../src/facets/IFacet.sol";
+
 import { IAaveFacet }          from "../../src/facets/aave/IAaveFacet.sol";
 import { IERC4626Facet }       from "../../src/facets/erc4626/IERC4626Facet.sol";
 import { IMerklFacet }         from "../../src/facets/merkl/IMerklFacet.sol";
@@ -253,7 +255,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(aaveFacet, "AaveFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.aave_setMaxSlippage.selector,
@@ -285,6 +287,11 @@ abstract contract ForkTestBase is Test {
             IAaveFacet.getWithdrawRateLimitKey.selector
         );
 
+        wires[6] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.aave_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
             facet : aaveFacet,
             wires : wires
@@ -298,7 +305,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(erc4626Facet, "ERC4626Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.erc4626_setMaxExchangeRate.selector,
@@ -340,6 +347,11 @@ abstract contract ForkTestBase is Test {
             IERC4626Facet.getWithdrawRateLimitKey.selector
         );
 
+        wires[8] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.erc4626_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
             facet : erc4626Facet,
             wires : wires
@@ -353,7 +365,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(merklFacet, "MerklFacet");
 
-        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory merklWires = new IEnumerableIntegrations.Wire[](3);
 
         merklWires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.merkl_toggleOperator.selector,
@@ -363,6 +375,11 @@ abstract contract ForkTestBase is Test {
         merklWires[1] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.merkl_getToggleOperatorRateLimitKey.selector,
             IMerklFacet.getToggleOperatorRateLimitKey.selector
+        );
+
+        merklWires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.merkl_VERSION.selector,
+            IFacet.VERSION.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -378,7 +395,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(pendleFacet, "PendleFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.pendle_redeem.selector,
@@ -388,6 +405,16 @@ abstract contract ForkTestBase is Test {
         wires[1] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.pendle_getRedeemRateLimitKey.selector,
             IPendleFacet.getRedeemRateLimitKey.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.pendle_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.pendle_router.selector,
+            IPendleFacet.router.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -403,7 +430,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(psm3Facet, "PSM3Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.psm3_deposit.selector,
@@ -425,6 +452,16 @@ abstract contract ForkTestBase is Test {
             IPSM3Facet.getWithdrawRateLimitKey.selector
         );
 
+        wires[4] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.psm3_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.psm3_psm.selector,
+            IPSM3Facet.psm.selector
+        );
+
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
             facet : psm3Facet,
             wires : wires
@@ -438,7 +475,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(sparkVaultFacet, "SparkVaultFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.sparkVault_take.selector,
@@ -448,6 +485,11 @@ abstract contract ForkTestBase is Test {
         wires[1] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.sparkVault_getTakeRateLimitKey.selector,
             ISparkVaultFacet.getTakeRateLimitKey.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.sparkVault_VERSION.selector,
+            IFacet.VERSION.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -463,7 +505,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(transferAssetFacet, "TransferAssetFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.transferAsset_transfer.selector,
@@ -473,6 +515,11 @@ abstract contract ForkTestBase is Test {
         wires[1] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.transferAsset_getTransferRateLimitKey.selector,
             ITransferAssetFacet.getTransferRateLimitKey.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.transferAsset_VERSION.selector,
+            IFacet.VERSION.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
@@ -488,7 +535,7 @@ abstract contract ForkTestBase is Test {
 
         vm.label(uniswapV3Facet, "UniswapV3Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](17);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](23);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.uniswapV3_setMaxSlippage.selector,
@@ -573,6 +620,36 @@ abstract contract ForkTestBase is Test {
         wires[16] = IEnumerableIntegrations.Wire(
             IForeignControllerFull.uniswapV3_getAssetWithdrawRateLimitKey.selector,
             IUniswapV3Facet.getAssetWithdrawRateLimitKey.selector
+        );
+
+        wires[17] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        wires[18] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_MAX_TICK_DELTA.selector,
+            IUniswapV3Facet.MAX_TICK_DELTA.selector
+        );
+
+        wires[19] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_MIN_TICK.selector,
+            IUniswapV3Facet.MIN_TICK.selector
+        );
+
+        wires[20] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_MAX_TICK.selector,
+            IUniswapV3Facet.MAX_TICK.selector
+        );
+
+        wires[21] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_positionManager.selector,
+            IUniswapV3Facet.positionManager.selector
+        );
+
+        wires[22] = IEnumerableIntegrations.Wire(
+            IForeignControllerFull.uniswapV3_router.selector,
+            IUniswapV3Facet.router.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
