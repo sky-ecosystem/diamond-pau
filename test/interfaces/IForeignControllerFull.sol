@@ -11,6 +11,8 @@ interface IForeignControllerFull is IController {
     /*** AaveFacet actions                                                                      ***/
     /**********************************************************************************************/
 
+    function aave_VERSION() external pure returns (string memory);
+
     function aave_setMaxSlippage(address aToken, uint256 maxSlippage) external;
 
     function aave_deposit(address aToken, uint256 amount) external;
@@ -34,6 +36,16 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** CCTPFacet actions                                                                      ***/
     /**********************************************************************************************/
+
+    function cctp_VERSION() external pure returns (string memory);
+
+    function cctp_DESTINATION_CALLER() external pure returns (bytes32);
+
+    function cctp_MAX_FINALITY_THRESHOLD() external pure returns (uint32);
+
+    function cctp_cctp() external view returns (address);
+
+    function cctp_usdc() external view returns (address);
 
     function cctp_setDomainParameters(
         uint32  destinationDomain,
@@ -60,6 +72,10 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** CentrifugeFacet actions                                                                ***/
     /**********************************************************************************************/
+
+    function centrifuge_VERSION() external pure returns (string memory);
+
+    function centrifuge_REQUEST_ID() external pure returns (uint256);
 
     function centrifuge_setRecipient(uint16 centrifugeId, bytes32 recipient) external;
 
@@ -94,6 +110,8 @@ interface IForeignControllerFull is IController {
     /*** ERC4626Facet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function erc4626_VERSION() external pure returns (string memory);
+
     function erc4626_setMaxExchangeRate(address token, uint256 shares, uint256 maxExpectedAssets) external;
 
     function erc4626_deposit(address token, uint256 amount, uint256 minSharesOut)
@@ -123,6 +141,8 @@ interface IForeignControllerFull is IController {
     /*** ERC7540Facet actions                                                                   ***/
     /**********************************************************************************************/
 
+    function erc7540_VERSION() external pure returns (string memory);
+
     function erc7540_requestDeposit(address token, uint256 amount) external;
 
     function erc7540_claimDeposit(address token) external;
@@ -145,6 +165,8 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** LayerZeroFacet actions                                                                 ***/
     /**********************************************************************************************/
+
+    function layerZero_VERSION() external pure returns (string memory);
 
     function layerZero_setRecipient(uint32 destinationEndpointId, bytes32 recipient) external;
 
@@ -175,6 +197,8 @@ interface IForeignControllerFull is IController {
     /*** MerklFacet actions                                                                     ***/
     /**********************************************************************************************/
 
+    function merkl_VERSION() external pure returns (string memory);
+
     function merkl_toggleOperator(address distributor, address operator) external;
 
     function merkl_getToggleOperatorRateLimitKey(address distributor, address operator)
@@ -185,6 +209,10 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** PendleFacet actions                                                                    ***/
     /**********************************************************************************************/
+
+    function pendle_VERSION() external pure returns (string memory);
+
+    function pendle_router() external view returns (address);
 
     function pendle_redeem(address pendleMarket, uint256 pyAmountIn, uint256 minAmountOut)
         external;
@@ -197,6 +225,10 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** PSM3Facet actions                                                                      ***/
     /**********************************************************************************************/
+
+    function psm3_VERSION() external pure returns (string memory);
+
+    function psm3_psm() external view returns (address);
 
     function psm3_deposit(address asset, uint256 amount) external returns (uint256 shares);
 
@@ -212,6 +244,8 @@ interface IForeignControllerFull is IController {
     /*** SparkVaultFacet actions                                                                ***/
     /**********************************************************************************************/
 
+    function sparkVault_VERSION() external pure returns (string memory);
+
     function sparkVault_take(address sparkVault, uint256 assetAmount) external;
 
     function sparkVault_getTakeRateLimitKey(address sparkVault) external pure returns (bytes32 key);
@@ -219,6 +253,8 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** TransferAssetFacet actions                                                             ***/
     /**********************************************************************************************/
+
+    function transferAsset_VERSION() external pure returns (string memory);
 
     function transferAsset_transfer(address asset, address destination, uint256 amount) external;
 
@@ -230,6 +266,18 @@ interface IForeignControllerFull is IController {
     /**********************************************************************************************/
     /*** UniswapV3Facet actions                                                                 ***/
     /**********************************************************************************************/
+
+    function uniswapV3_VERSION() external pure returns (string memory);
+
+    function uniswapV3_MAX_TICK_DELTA() external pure returns (uint24);
+
+    function uniswapV3_MIN_TICK() external pure returns (int24);
+
+    function uniswapV3_MAX_TICK() external pure returns (int24);
+
+    function uniswapV3_positionManager() external view returns (address);
+
+    function uniswapV3_router() external view returns (address);
 
     function uniswapV3_setMaxSlippage(address pool, uint256 maxSlippage) external;
 
