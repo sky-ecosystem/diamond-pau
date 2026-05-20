@@ -80,6 +80,24 @@ interface IPSM3Like {
 
 }
 
+contract MockOFT {
+
+    uint256 public counter;
+
+    function quoteSend(ILayerZeroFacet.SendParam calldata sendParam, bool useQuote)
+        external
+        returns (ILayerZeroFacet.MessagingFee memory fee)
+    {
+        counter++;
+
+        return ILayerZeroFacet.MessagingFee({
+            nativeFee: 11,
+            lzTokenFee: 22
+        });
+    }
+
+}
+
 abstract contract LayerZero_TestBase is ForkTestBase {
 
     address internal constant USDT_OFT = 0x6C96dE32CEa08842dcc4058c14d3aaAD7Fa41dee;
@@ -325,6 +343,18 @@ contract MainnetController_LayerZero_TransferToken_Tests is LayerZero_TestBase {
         assertEq(USDT.balanceOf(USDT_OFT),            oftStartingUSDT + 10_000_000e6);
         assertEq(USDT.balanceOf(address(almProxy)),   0);
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
+    }
+
+    function test_quoteTransferLayerZero_revertsIfOFTQuoteWritesStorage() external {
+        address oft = address(new MockOFT());
+
+        bytes32 recipient = bytes32(type(uint256).max);
+
+        vm.prank(SPARK_PROXY);
+        mainnetController.setLayerZeroRecipient(DESTINATION_ENDPOINT_ID, recipient);
+
+        vm.expectRevert();
+        mainnetController.quoteTransferLayerZero(oft, 4444, DESTINATION_ENDPOINT_ID);
     }
 
 }

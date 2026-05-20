@@ -146,10 +146,10 @@ contract Controller_CCTPFacet_Tests is Integration_TestBase {
     function test_setDomainParameters_maxFeeCapRateBoundary() external {
         vm.expectRevert("CCTPFacet/max-fee-cap-rate-too-high");
         vm.prank(admin);
-        controller.setDomainParameters(1, mintRecipient1, 0, 10_001);
+        controller.setDomainParameters(1, mintRecipient1, 0, 10_000);
 
         vm.prank(admin);
-        controller.setDomainParameters(1, mintRecipient1, 0, 10_000);
+        controller.setDomainParameters(1, mintRecipient1, 0, 9_999);
     }
 
     function test_setDomainParameters() external {

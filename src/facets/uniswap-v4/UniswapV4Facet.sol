@@ -499,8 +499,13 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         amount0 = uint128(_clampedSub(startingBalance0, endingBalance0));
         amount1 = uint128(_clampedSub(startingBalance1, endingBalance1));
 
-        _decreaseRateLimit(getAssetDepositRateLimitKey(poolId, token0), amount0);
-        _decreaseRateLimit(getAssetDepositRateLimitKey(poolId, token1), amount1);
+        if (amount0 > 0) {
+            _decreaseRateLimit(getAssetDepositRateLimitKey(poolId, token0), amount0);
+        }
+
+        if (amount1 > 0) {
+            _decreaseRateLimit(getAssetDepositRateLimitKey(poolId, token1), amount1);
+        }
 
         // Reset approvals for token0 and token1.
         _approveWithPermit2(token0, positionManager, 0);
@@ -536,9 +541,15 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             _getNormalizedBalance(token1, amount1);
 
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
-        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(poolId),     aggregateAmount);
-        _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token0), amount0);
-        _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token1), amount1);
+        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(poolId), aggregateAmount);
+
+        if (amount0 > 0) {
+            _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token0), amount0);
+        }
+
+        if (amount1 > 0) {
+            _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token1), amount1);
+        }
     }
 
     function _swap(
