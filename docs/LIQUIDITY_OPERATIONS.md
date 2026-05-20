@@ -13,8 +13,6 @@ PAU performs liquidity operations across multiple venues:
 | **Uniswap V4** | Swaps, positions            | On-chain stablecoin swaps                      |
 | **OTC Desks**  | Offchain swaps              | High-volume institutional liquidity            |
 
-**Asset Assumption:** All assets in these operations are treated as 1:1 (USD stablecoins). See [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity) for details.
-
 ---
 
 ## Curve Integration
@@ -41,7 +39,7 @@ All Curve operations require `maxSlippage` to be configured (cannot be zero). Th
 
 ### Requirements
 
-- While designed for 1:1 stablecoin pools, Curve pools with different underlying assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
+- While designed for 1:1 stablecoin pools, Curve pools with unpegged underlying assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
 
 ### Seeding Requirement
 
@@ -53,7 +51,7 @@ Curve pools must be seeded with initial liquidity before use. Seeding must be do
 
 ### Supported Operations
 
-- **Swaps:** Exchange between stablecoins via Uniswap V3 pools
+- **Swaps:** Exchange between assets via Uniswap V3 pools
 - **Add Liquidity:** Mint a new position or increase an existing one
 - **Remove Liquidity:** Decrease liquidity from an existing position and collect tokens
 
@@ -76,7 +74,8 @@ Uniswap V3 operations use different slippage models depending on the operation:
 
 ### Requirements
 
-- Uniswap V3 pools with 1:1 stablecoin or different/unpegged underlying assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
+- Pools with 1:1 stablecoin can be onboarded with finite aggregate rate limits.
+- Pools with unpegged assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
 - Tick bounds and TWAP seconds must be configured before operations
 - The ALMProxy must own the NFT position for increase/decrease operations
 - Uses the pool's built-in TWAP oracle for price validation on swaps and liquidity additions, unlike V4 which does not rely on TWAP
@@ -108,12 +107,13 @@ Uniswap V4 operations use several rate limit keys per pool:
 
 Uniswap V4 operations use different slippage models depending on the operation:
 
-- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens.
+- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens. If the pool's tokens are unpegged, the swap functionality is unlikely to function without a very low `maxSlippage` value (i.e. 0.1).
 - **`mintPosition`, `increasePosition`, `decreasePosition`:** Do not check `maxSlippage`. They rely on caller-supplied `amount0Max` / `amount1Max` (mint and increase) or `amount0Min` / `amount1Min` (decrease) as boundaries enforced by the position manager, together with the per-pool tick limits (`tickLowerMin`, `tickUpperMax`, `maxTickSpacing`) on `mintPosition` and `increasePosition`.
 
 ### Requirements
 
-- Uniswap V4 pools with 1:1 stablecoin or different/unpegged underlying assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
+- Pools with 1:1 stablecoin can be onboarded with finite aggregate rate limits and tight `maxSlippage` values (i.e. 0.998e18).
+- Pools with unpegged assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`) and `maxSlippage` is set to a very low value (i.e. 0.1).
 - Tick limits must be configured for `mintPosition` and `increasePosition`
 - `maxSlippage` must be configured per pool for `swap`
 - Only hookless pools can be onboarded. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.

@@ -62,16 +62,6 @@ The `ERC4626Facet` does not check that `unrealizedLosses()` is zero on a Maple p
 
 Governance (via a spell to set rate limits for deposits to such Maple Pools) should mitigate this risk as soon as unrealized losses are posted to a Maple pool.
 
-### Withdrawal Dependencies
-
-| Withdrawal Function           | Required                                                  |
-| ----------------------------- | ------------------------------------------------------- |
-| `withdrawERC4626`             | Non-zero deposit rate limit for same vault              |
-| `redeemERC4626`               | Non-zero deposit rate limit for same vault              |
-| `withdrawAave`                | Non-zero deposit rate limit for same aToken             |
-| `WSTETHFacet.claimWithdrawal` | Non-zero claim-withdraw rate limit                      |
-| `WEETHFacet.claimWithdrawal`  | Non-zero claim-withdraw rate limit for same weETHModule |
-
 ---
 
 ## OTC Buffer Deployment
@@ -87,24 +77,21 @@ When deploying a new OTC buffer:
 
 ---
 
-## Uniswap V4 Pool Onboarding
-
-### Asset Restrictions
-
-Only pools with 1:1 assets can be onboarded:
-
-- USDC/USDT ✓
-- USDC/DAI ✓
-- USDC/USDS ✓
-- USDC/ETH ✗ (different underlying)
-- USDC/WBTC ✗ (different underlying)
+## Uniswap V3/V4 Pool Onboarding
 
 ### Onboarding Process
 
-1. Verify pool contains only whitelisted 1:1 stablecoins
+1. Verify if pool contains pegged (i.e. 1:1) assets
 2. Verify pool does not have dangerous hooks
 3. Configure rate limits for the specific pool
-4. Configure tick limits for the specific pool
+    - For pools with pegged assets:
+        - aggregate rate limits can be finite or infinite (i.e. `type(uint256).max`)
+        - asset rate limits can be finite or infinite (i.e. `type(uint256).max`) for each asset
+        - at least one of aggregate rate limits or asset rate limits should be finite
+    - For pools with unpegged assets:
+        - aggregate rate limits should be infinite (i.e. `type(uint256).max`)
+        - asset rate limits should be finite for each asset
+4. Configure pool parameters (e.g. tick limits, TWAP seconds, etc.) for the specific pool
 5. Set appropriate slippage parameters
 
 ---

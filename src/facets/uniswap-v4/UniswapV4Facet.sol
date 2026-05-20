@@ -483,9 +483,9 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         // Account for the theoretical possibility of receiving tokens when adding liquidity by
         // using a clamped subtraction.
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
-        //       the assumption that the tokens are valued equally
+        //       the assumption that the tokens are pegged and valued equally.
         //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
-        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
+        //       set to "infinity" (`type(uint256).max`) for pools with unpegged tokens.
         uint256 aggregateAmount = _clampedSub(
             _getNormalizedBalance(token0, startingBalance0) +
             _getNormalizedBalance(token1, startingBalance1),
@@ -528,15 +528,15 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         amount1 = uint128(_getProxyBalance(token1) - startingBalance1);
 
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
-        //       makes the assumption that the tokens are valued equally
+        //       makes the assumption that the tokens are pegged and valued equally.
         //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
-        //       set to "infinity" (`type(uint256).max`) for pools with tokens of different values.
+        //       set to "infinity" (`type(uint256).max`) for pools with unpegged tokens.
         uint256 aggregateAmount =
             _getNormalizedBalance(token0, amount0) +
             _getNormalizedBalance(token1, amount1);
 
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
-        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(poolId),     aggregateAmount);
+        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(poolId), aggregateAmount);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token0), amount0);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(poolId, token1), amount1);
     }
