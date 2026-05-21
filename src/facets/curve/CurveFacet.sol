@@ -323,11 +323,7 @@ contract CurveFacet is ICurveFacet, Facet {
         internal
     {
         for (uint256 i = 0; i < tokens.length; ++i) {
-            int256 amount = amounts[i];
-
-            if (amount <= 0) continue;
-
-            _decreaseRateLimit(getSwapRateLimitKey(pool, tokens[i]), uint256(amount));
+            _decreaseRateLimit(getSwapRateLimitKey(pool, tokens[i]), _clampUint256(amounts[i]));
         }
     }
 
@@ -386,6 +382,10 @@ contract CurveFacet is ICurveFacet, Facet {
     /**********************************************************************************************/
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
+
+    function _clampUint256(int256 value) internal pure returns (uint256) {
+        return value >= 0 ? uint256(value) : 0;
+    }
 
     function _getSwappedInAmounts(
         address            pool,

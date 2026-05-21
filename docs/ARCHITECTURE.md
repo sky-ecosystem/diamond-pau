@@ -127,20 +127,20 @@ The system uses a facet-based architecture where each protocol integration is en
 | `DAIUSDSFacet`       | DAI to USDS conversion                         |
 | `ERC4626Facet`       | ERC-4626 vault deposit/withdraw                |
 | `ERC7540Facet`       | ERC-7540 async vault interactions              |
+| `EthenaFacet`        | Ethena USDe/sUSDe operations                   |
 | `FarmFacet`          | SPK farming deposit/withdraw                   |
 | `LayerZeroFacet`     | LayerZero v2 cross-chain messaging             |
 | `MapleFacet`         | Maple token redemptions                        |
 | `MerklFacet`         | Merkl operator toggles                         |
 | `OTCFacet`           | Over-the-counter swap buffering                |
 | `PendleFacet`        | Pendle PT redemptions                          |
-| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
 | `PSM3Facet`          | PSM3 deposit/withdraw                          |
+| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
 | `SparkVaultFacet`    | Spark Vault asset withdrawals                  |
 | `SuperstateFacet`    | Superstate USTB subscriptions                  |
 | `TransferAssetFacet` | Generic ERC-20 transfers                       |
 | `UniswapV3Facet`     | Uniswap V3 positions and swaps                 |
 | `UniswapV4Facet`     | Uniswap V4 positions and swaps                 |
-| `EthenaFacet`        | Ethena USDe/sUSDe operations                   |
 | `USDSFacet`          | USDS minting/burning via vault                 |
 | `WEETHFacet`         | EtherFi weETH/eETH operations                  |
 | `WrapProxyETHFacet`  | WETH wrapping utility                          |

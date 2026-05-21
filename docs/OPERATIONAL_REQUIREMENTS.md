@@ -79,18 +79,21 @@ When deploying a new OTC buffer:
 
 ## Uniswap V3/V4 Pool Onboarding
 
+### Asset Restrictions
+
+Only pools with 1:1 assets should be onboarded:
+
+- USDC/USDT ✓
+- USDC/DAI ✓
+- USDC/USDS ✓
+- USDC/ETH ✗ (different underlying)
+- USDC/WBTC ✗ (different underlying)
+
 ### Onboarding Process
 
-1. Verify if pool contains pegged (i.e. 1:1) assets
+1. Verify pool contains only whitelisted 1:1 stablecoins
 2. Verify pool does not have dangerous hooks
 3. Configure rate limits for the specific pool
-    - For pools with pegged assets:
-        - aggregate rate limits can be finite or infinite (i.e. `type(uint256).max`)
-        - asset rate limits can be finite or infinite (i.e. `type(uint256).max`) for each asset
-        - at least one of aggregate rate limits or asset rate limits should be finite
-    - For pools with unpegged assets:
-        - aggregate rate limits should be infinite (i.e. `type(uint256).max`)
-        - asset rate limits should be finite for each asset
 4. Configure pool parameters (e.g. tick limits, TWAP seconds, etc.) for the specific pool
 5. Set appropriate slippage parameters
 

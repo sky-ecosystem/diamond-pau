@@ -33,13 +33,15 @@ Curve operations use several rate limit keys per pool:
 - **Aggregate withdraw rate limit:** Controls the value withdrawn from pools
 - **Asset withdraw rate limits:** Controls the value withdrawn from pools for a specific token
 
+Since adding liquidity in Curve handles input asset rebalancing with "virtual swaps" to keep the pool's ratio of assets constant, the asset swap rate limits for each token must also be set in order for the add liquidity operation to succeed, regardless if any assets were actually "swapped" in or out.
+
 ### Slippage Protection
 
 All Curve operations require `maxSlippage` to be configured (cannot be zero). The slippage check uses the pool's virtual price to ensure minimum acceptable returns.
 
 ### Requirements
 
-- While designed for 1:1 stablecoin pools, Curve pools with unpegged underlying assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
+- While designed for 1:1 stablecoin pools, almost any Curve pool can be onboarded as asset normalization is handled via the pool's `stored_rates`.
 
 ### Seeding Requirement
 
@@ -74,8 +76,7 @@ Uniswap V3 operations use different slippage models depending on the operation:
 
 ### Requirements
 
-- Pools with 1:1 stablecoin can be onboarded with finite aggregate rate limits.
-- Pools with unpegged assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`).
+- Onboarded pools should be limited to those with 1:1 stablecoin pairs.
 - Tick bounds and TWAP seconds must be configured before operations
 - The ALMProxy must own the NFT position for increase/decrease operations
 - Uses the pool's built-in TWAP oracle for price validation on swaps and liquidity additions, unlike V4 which does not rely on TWAP
@@ -107,13 +108,12 @@ Uniswap V4 operations use several rate limit keys per pool:
 
 Uniswap V4 operations use different slippage models depending on the operation:
 
-- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens. If the pool's tokens are unpegged, the swap functionality is unlikely to function without a very low `maxSlippage` value (i.e. 0.1).
+- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens.
 - **`mintPosition`, `increasePosition`, `decreasePosition`:** Do not check `maxSlippage`. They rely on caller-supplied `amount0Max` / `amount1Max` (mint and increase) or `amount0Min` / `amount1Min` (decrease) as boundaries enforced by the position manager, together with the per-pool tick limits (`tickLowerMin`, `tickUpperMax`, `maxTickSpacing`) on `mintPosition` and `increasePosition`.
 
 ### Requirements
 
-- Pools with 1:1 stablecoin can be onboarded with finite aggregate rate limits and tight `maxSlippage` values (i.e. 0.998e18).
-- Pools with unpegged assets can be onboarded if aggregate rate limits are set to infinity (`type(uint256).max`) and `maxSlippage` is set to a very low value (i.e. 0.1).
+- Onboarded pools should be limited to those with 1:1 stablecoin pairs.
 - Tick limits must be configured for `mintPosition` and `increasePosition`
 - `maxSlippage` must be configured per pool for `swap`
 - Only hookless pools can be onboarded. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.
