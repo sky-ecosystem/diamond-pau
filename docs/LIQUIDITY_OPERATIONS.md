@@ -41,7 +41,7 @@ All Curve operations require `maxSlippage` to be configured (cannot be zero). Th
 
 ### Requirements
 
-- While designed for 1:1 stablecoin pools, almost any Curve pool can be onboarded as asset normalization is handled via the pool's `stored_rates`.
+- Even though it relies on `stored_rates` for asset normalization, it is designed for 1:1 stablecoin pools of correlated assets (e.g. sUSDS/USDC or wstETH/WETH).
 
 ### Seeding Requirement
 
