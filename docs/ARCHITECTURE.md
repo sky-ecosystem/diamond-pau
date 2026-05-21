@@ -68,7 +68,7 @@ A variant of the `ALMProxy` that is not intended to hold funds or have critical 
 **Architectural differences from standard ALMProxy:**
 
 - **Controller role usage:** In the standard `ALMProxy`, the `CONTROLLER` role is held by the `Controller` contract that acts when approved allocators interact with it. In `ALMProxyFreezable`, the allocators are granted the `ALLOCATOR_ROLE` role directly (there is no intermediary Controller contract), so they can call `doCall` and `doCallWithValue` without a Controller.
-- **Additional safety mechanism:** In `ALMProxyFreezable`, the `FREEZER_ROLE` role can remove allocators via `removeAllocator`, providing quick revocation of access from compromised or malicious allocators without slower governance processes. In the standard `ALMProxy`, a role can be created as a role admin of `CONTROLLER` to grant and revoke `CONTROLLER` roles, and an optional allocator administration contract can be configured as the role admin to provide more granular grant/revoke functionality.
+- **Additional safety mechanism:** In `ALMProxyFreezable`, the `FREEZER_ROLE` role can remove allocators via `removeAllocator`, providing quick revocation of access from compromised or malicious allocators without slower governance processes. In the standard `ALMProxy`, a role can be created as a role admin of `CONTROLLER` to grant and revoke `CONTROLLER` roles.
 
 ### OTCBuffer
 

@@ -407,7 +407,6 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token1), amounts.amount1);
 
-
         emit UniswapV3AddLiquidity(
             pool,
             resultingTokenId,
