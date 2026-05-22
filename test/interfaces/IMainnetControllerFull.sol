@@ -3,6 +3,7 @@ pragma solidity ^0.8.34;
 
 import { IController }     from "../../src/interfaces/IController.sol";
 import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
+import { INFATHaloFacet }  from "../../src/facets/nfat-halo/INFATHaloFacet.sol";
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
 interface IMainnetControllerFull is IController {
@@ -784,34 +785,64 @@ interface IMainnetControllerFull is IController {
     function wsteth_claimWithdrawRateLimitKey() external pure returns (bytes32 key);
 
     /**********************************************************************************************/
-    /*** NFATPrimeFacet actions                                                                 ***/
-    /**********************************************************************************************/
-
-    function subscribeNFAT(address facility, uint256 amount, bytes calldata data) external virtual;
-
-    function withdrawNFAT(address facility, uint256 amount) external virtual;
-
-    function collectNFAT(address facility, uint256 tokenId, uint256 amount) external virtual;
-
-    function LIMIT_NFAT_PRIME_SUBSCRIBE() external pure virtual returns (bytes32);
-
-    function LIMIT_NFAT_PRIME_COLLECT() external pure virtual returns (bytes32);
-
-    /**********************************************************************************************/
     /*** NFATHaloFacet actions                                                                  ***/
     /**********************************************************************************************/
 
-    function issueNFAT(address facility, address to, uint256 tokenId, uint256 amount)
-        external virtual;
+    function nfatHalo_VERSION() external pure returns (string memory);
 
-    function repayPrincipalNFAT(address facility, uint256 tokenId, uint256 amount) external virtual;
+    function nfatHalo_NFAT_BEACON_ROLE() external pure returns (bytes32);
 
-    function repayInterestNFAT(address facility, uint256 tokenId, uint256 amount) external virtual;
+    function nfatHalo_setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
 
-    function LIMIT_NFAT_HALO_REPAY_INTEREST() external pure virtual returns (bytes32);
+    function nfatHalo_issue(address facility, address to, uint256 tokenId, uint256 amount) external;
 
-    function getNFATPrincipal(uint256 tokenId) external view virtual returns (uint256);
+    function nfatHalo_repayPrincipal(address facility, uint256 tokenId, uint256 amount) external;
 
-    function getNFATPrincipalRepaid(uint256 tokenId) external view virtual returns (uint256);
+    function nfatHalo_repayInterest(address facility, uint256 tokenId, uint256 amount) external;
+
+    function nfatHalo_getAnnualGrowthRate(address facility) external view returns (uint256);
+
+    function nfatHalo_getInterestAvailable(address facility, uint256 tokenId)
+        external
+        view
+        returns (uint256);
+
+    function nfatHalo_getInterestIndex(address facility) external view returns (uint256);
+
+    function nfatHalo_getPosition(address facility, uint256 tokenId)
+        external
+        view
+        returns (INFATHaloFacet.Position memory);
+
+    function nfatHalo_getPrincipal(address facility, uint256 tokenId)
+        external
+        view
+        returns (uint256);
+
+    function nfatHalo_getPrincipalOutstanding(address facility, uint256 tokenId)
+        external
+        view
+        returns (uint256);
+
+    function nfatHalo_getPrincipalRepaid(address facility, uint256 tokenId)
+        external
+        view
+        returns (uint256);
+
+    /**********************************************************************************************/
+    /*** NFATPrimeFacet actions                                                                 ***/
+    /**********************************************************************************************/
+
+    function nfatPrime_VERSION() external pure returns (string memory);
+
+    function nfatPrime_subscribe(address facility, uint256 amount, bytes calldata data) external;
+
+    function nfatPrime_withdraw(address facility, uint256 amount) external;
+
+    function nfatPrime_collect(address facility, uint256 tokenId, uint256 amount) external;
+
+    function nfatPrime_getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
+
+    function nfatPrime_getSubscribeRateLimitKey(address facility) external pure returns (bytes32 key);
 
 }
