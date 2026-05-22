@@ -41,7 +41,7 @@ All Curve operations require `maxSlippage` to be configured (cannot be zero). Th
 
 ### Requirements
 
-- Even though it relies on `stored_rates` for asset normalization, it is designed for 1:1 stablecoin pools of correlated assets (e.g. sUSDS/USDC or wstETH/WETH).
+- Even though it relies on `stored_rates` for asset normalization, it is designed for 1:1 stablecoin or correlated asset pools of correlated assets (e.g. sUSDS/USDC or wstETH/WETH).
 
 ### Seeding Requirement
 

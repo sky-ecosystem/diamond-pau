@@ -84,10 +84,10 @@ Note that setting the rate limit data creates a boundary where the remaining rat
 
 **Decision:** Rate limits **are** cancelled in the Mainnet PSM integration.
 
-| Operation        | Rate Limit Behavior                                                                          |
-| ---------------- | -------------------------------------------------------------------------------------------- |
-| `swapUSDSToUSDC` | Decreases `usdsToUSDCSwapRateLimit`                                                          |
-| `swapUSDCToUSDS` | **Cancels** (increases) `usdsToUSDCSwapRateLimit` and decreases `usdcToUSDSSwapRateLimitKey` |
+| Operation        | Rate Limit Behavior                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| `swapUSDSToUSDC` | Decreases `usdsToUSDCSwapRateLimit`                                                       |
+| `swapUSDCToUSDS` | **Cancels** (increases) `usdsToUSDCSwapRateLimit` and decreases `usdcToUSDSSwapRateLimit` |
 
 **Rationale:** Swapping USDC back to USDS effectively returns value to the system, so the `usdsToUSDCSwapRateLimit` is restored.
 
