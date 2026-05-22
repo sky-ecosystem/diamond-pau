@@ -55,19 +55,19 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.subscribeNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
     function test_subscribeNFAT_zeroMaxAmount() external {
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(makeAddr("fake-facility"), SUBSCRIBE_AMOUNT, "");
     }
 
     function test_subscribeNFAT_rateLimitBoundary() external {
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         mainnetController.subscribeNFAT(address(nfatFacility), 5_000_000e18 + 1, "");
@@ -85,7 +85,7 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
 
         _assertReentrancyGuardWrittenToTwice();
@@ -102,7 +102,7 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         vm.expectEmit(address(nfatFacility));
         emit NFATFacility.Subscribe(address(almProxy), SUBSCRIBE_AMOUNT, data);
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT, data);
 
         assertEq(nfatFacility.deposits(address(almProxy)), SUBSCRIBE_AMOUNT);
@@ -115,7 +115,7 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
     function setUp() public override {
         super.setUp();
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
@@ -129,14 +129,14 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.withdrawNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT);
     }
 
     function test_withdrawNFAT_noCode() external {
         vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", makeAddr("fake-facility")));
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.withdrawNFAT(makeAddr("fake-facility"), SUBSCRIBE_AMOUNT);
     }
 
@@ -152,7 +152,7 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
         vm.stopPrank();
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.withdrawNFAT(address(nfatFacility2), SUBSCRIBE_AMOUNT);
     }
 
@@ -163,7 +163,7 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.withdrawNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT);
 
         _assertReentrancyGuardWrittenToTwice();
@@ -184,7 +184,7 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
         super.setUp();
 
         // Subscribe and issue so the proxy holds an NFT
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
 
         nfatFacility.issue(address(almProxy), TOKEN_ID, SUBSCRIBE_AMOUNT);
@@ -209,19 +209,19 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.collectNFAT(address(nfatFacility), TOKEN_ID, 1_000_000e18);
     }
 
     function test_collectNFAT_zeroMaxAmount() external {
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.collectNFAT(makeAddr("fake-facility"), TOKEN_ID, 1_000_000e18);
     }
 
     function test_collectNFAT_rateLimitBoundary() external {
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         mainnetController.collectNFAT(address(nfatFacility), TOKEN_ID, 1_000_000e18 + 1);
@@ -241,7 +241,7 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
 
         vm.record();
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.collectNFAT(address(nfatFacility), TOKEN_ID, collectAmount);
 
         _assertReentrancyGuardWrittenToTwice();

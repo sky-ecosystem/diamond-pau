@@ -49,7 +49,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
@@ -79,7 +79,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 
@@ -106,7 +106,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         SharedControllerStorage storage $ = _getSharedControllerStorage();
 

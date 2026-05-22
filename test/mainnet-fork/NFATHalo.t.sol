@@ -67,7 +67,7 @@ abstract contract NFATHalo_IssuedPosition_TestBase is NFATHalo_TestBase {
         super.setUp();
 
         // Subscribe + issue so a TOKEN_ID position exists with full principal recorded.
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), ISSUE_AMOUNT, "");
         mainnetController.issueNFAT(
             address(nfatFacility),
@@ -86,7 +86,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         super.setUp();
 
         // Pre-fund the facility with a deposit so issue() satisfies deposits[to] >= amount.
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), ISSUE_AMOUNT, "");
     }
 
@@ -105,7 +105,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.issueNFAT(
             address(nfatFacility),
@@ -132,7 +132,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         );
 
         vm.record();
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.issueNFAT(
             address(nfatFacility),
             address(almProxy),
@@ -155,7 +155,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         uint256 firstAmount  = ISSUE_AMOUNT / 4;
         uint256 secondAmount = ISSUE_AMOUNT - firstAmount;
 
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
         mainnetController.issueNFAT(address(nfatFacility), address(almProxy), 1, firstAmount);
         mainnetController.issueNFAT(address(nfatFacility), address(almProxy), 2, secondAmount);
         vm.stopPrank();
@@ -178,18 +178,18 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, 1);
     }
 
     function test_repayPrincipalNFAT_principalExceededBoundary() external {
         vm.expectRevert("NFATHaloFacet/principal-exceeded");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT + 1);
 
         // Boundary: exactly equal to remaining principal succeeds.
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT);
     }
 
@@ -197,7 +197,7 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         uint256 chunk = ISSUE_AMOUNT / 4;
 
         for (uint256 i = 0; i < 4; ++i) {
-            vm.prank(relayer);
+            vm.prank(allocator);
             mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, chunk);
 
             assertEq(mainnetController.getNFATPrincipalRepaid(TOKEN_ID), chunk * (i + 1));
@@ -207,7 +207,7 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
 
         // Any further principal payment reverts now that the cap is exhausted.
         vm.expectRevert("NFATHaloFacet/principal-exceeded");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, 1);
     }
 
@@ -215,7 +215,7 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         // No issue() was called for tokenId 99, so principal[99] = 0; any positive amount
         // exceeds the cap immediately.
         vm.expectRevert("NFATHaloFacet/principal-exceeded");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), 99, 1);
     }
 
@@ -232,7 +232,7 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         emit INFATHaloFacet.NFATRepayPrincipal(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT);
 
         vm.record();
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT);
 
         _assertReentrancyGuardWrittenToTwice();
@@ -260,7 +260,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            RELAYER_ROLE
+            ALLOCATOR_ROLE
         ));
         mainnetController.repayInterestNFAT(address(nfatFacility), TOKEN_ID, 1);
     }
@@ -268,19 +268,19 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
     function test_repayInterestNFAT_zeroMaxAmount_unconfiguredTokenId() external {
         // The interest rate-limit key is (facility, owner, tokenId). Issuing+owning a token
         // with a different tokenId does not implicitly authorise interest payments against it.
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.subscribeNFAT(address(nfatFacility), ISSUE_AMOUNT, "");
 
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.issueNFAT(address(nfatFacility), address(almProxy), 2, ISSUE_AMOUNT);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayInterestNFAT(address(nfatFacility), 2, 1);
     }
 
     function test_repayInterestNFAT_rateLimitBoundary() external {
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         mainnetController.repayInterestNFAT(address(nfatFacility), TOKEN_ID, INTEREST_BUDGET + 1);
@@ -291,7 +291,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
     }
 
     function test_repayInterestNFAT_doesNotChangePrincipalCounters() external {
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayInterestNFAT(address(nfatFacility), TOKEN_ID, INTEREST_BUDGET);
 
         assertEq(mainnetController.getNFATPrincipal(TOKEN_ID),       ISSUE_AMOUNT);
@@ -300,7 +300,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
 
     function test_repayInterestNFAT_independentOfPrincipalState() external {
         // Interest can be paid even after principal is fully repaid (and vice versa).
-        vm.startPrank(relayer);
+        vm.startPrank(allocator);
         mainnetController.repayPrincipalNFAT(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT);
         mainnetController.repayInterestNFAT(address(nfatFacility), TOKEN_ID, INTEREST_BUDGET);
         vm.stopPrank();
@@ -321,7 +321,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         emit INFATHaloFacet.NFATRepayInterest(address(nfatFacility), TOKEN_ID, INTEREST_BUDGET);
 
         vm.record();
-        vm.prank(relayer);
+        vm.prank(allocator);
         mainnetController.repayInterestNFAT(address(nfatFacility), TOKEN_ID, INTEREST_BUDGET);
 
         _assertReentrancyGuardWrittenToTwice();

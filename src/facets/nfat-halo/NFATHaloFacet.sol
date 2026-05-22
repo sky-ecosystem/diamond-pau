@@ -67,7 +67,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         _getFacetStorage().positions[tokenId].principal = amount;
 
@@ -85,7 +85,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         Position storage position = _getFacetStorage().positions[tokenId];
 
@@ -107,7 +107,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(RELAYER_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
             makeAddressAddressUint256Key(
