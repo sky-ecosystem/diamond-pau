@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }                   from "../../libraries/ApproveLib.sol";
-import { makeAddressAddressUint256Key } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib } from "../../libraries/ApproveLib.sol";
 
-import { IALMProxy }   from "../../interfaces/IALMProxy.sol";
-import { IRateLimits } from "../../interfaces/IRateLimits.sol";
+import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
 import { IFacet } from "../IFacet.sol";
 
@@ -16,8 +14,6 @@ import { INFATHaloFacet } from "./INFATHaloFacet.sol";
 interface IFacilityLike {
 
     function gem() external view returns (address);
-
-    function ownerOf(uint256 tokenId) external view returns (address);
 
     function issue(address to, uint256 tokenId, uint256 amount) external;
 
@@ -33,7 +29,18 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
 
     /// @custom:storage-location erc7201:sky.pau.storage.NFATHaloFacet.v1
     struct FacetStorage {
-        mapping(uint256 tokenId => Position position) positions;
+        mapping (address facility => Parameters params)                          parameters;
+        mapping (address facility => FacilityState state)                        states;
+        mapping (address facility => mapping (uint256 tokenId => Position pos)) positions;
+    }
+
+    struct Parameters {
+        uint256 annualGrowthRate; // 1e18 = 100% APR
+    }
+
+    struct FacilityState {
+        uint256 interestIndex; // Cumulative 1e18-scaled interest per unit of principal
+        uint256 lastUpdated;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.NFATHaloFacet.v1")) - 1)) & ~bytes32(uint256(0xff))
@@ -50,107 +57,245 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    /// @inheritdoc INFATHaloFacet
-    bytes32 public constant override LIMIT_REPAY_INTEREST =
-        keccak256("LIMIT_NFAT_HALO_REPAY_INTEREST");
+    uint256 internal constant _INTEREST_RATE_PRECISION = 1e18;
+    uint256 internal constant _YEAR                    = 365 days;
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
 
+    /// @inheritdoc INFATHaloFacet
+    bytes32 public constant override NFAT_BEACON_ROLE = keccak256("NFAT_BEACON_ROLE");
+
     /**********************************************************************************************/
-    /*** External Interactive Relayer Functions                                                 ***/
+    /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
-    /// TODO: discuss its own dedicated role.
+    /// @inheritdoc INFATHaloFacet
+    function setAnnualGrowthRate(address facility, uint256 annualGrowthRate)
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(facility != address(0), "NFATHaloFacet/facility-zero-address");
+
+        _checkpointFacility(facility);
+
+        _getFacetStorage().parameters[facility].annualGrowthRate = annualGrowthRate;
+
+        emit NFATHaloAnnualGrowthRateSet(facility, annualGrowthRate);
+    }
+
+    /**********************************************************************************************/
+    /*** External Interactive NFAT Beacon Functions                                             ***/
+    /**********************************************************************************************/
+
     /// @inheritdoc INFATHaloFacet
     function issue(address facility, address to, uint256 tokenId, uint256 amount)
         external
         override
         nonReentrant
-        onlyRole(ALLOCATOR_ROLE)
+        onlyRole(NFAT_BEACON_ROLE)
     {
-        _getFacetStorage().positions[tokenId].principal = amount;
+        require(facility != address(0), "NFATHaloFacet/facility-zero-address");
+
+        FacetStorage storage $ = _getFacetStorage();
+
+        Position storage position = $.positions[facility][tokenId];
+
+        require(!position.issued, "NFATHaloFacet/position-exists");
+
+        _checkpointFacility(facility);
+
+        position.issued        = true;
+        position.principal     = amount;
+        position.interestIndex = $.states[facility].interestIndex;
 
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
             facility,
             abi.encodeCall(IFacilityLike.issue, (to, tokenId, amount))
         );
 
-        emit NFATIssue(facility, to, tokenId, amount);
+        emit NFATHaloIssue(facility, to, tokenId, amount);
     }
 
-    /// TODO: discuss its own dedicated role.
     /// @inheritdoc INFATHaloFacet
     function repayPrincipal(address facility, uint256 tokenId, uint256 amount)
         external
         override
         nonReentrant
-        onlyRole(ALLOCATOR_ROLE)
+        onlyRole(NFAT_BEACON_ROLE)
     {
-        Position storage position = _getFacetStorage().positions[tokenId];
+        require(facility != address(0), "NFATHaloFacet/facility-zero-address");
+        require(amount > 0,              "NFATHaloFacet/zero-amount");
 
-        // Hard cap: cumulative repaid can never exceed the issued principal. No rate limit
-        // here — the principal itself is the bound.
-        uint256 newRepaid = position.principalRepaid + amount;
-        require(newRepaid <= position.principal, "NFATHaloFacet/principal-exceeded");
+        Position storage position = _checkpointPosition(facility, tokenId);
 
-        position.principalRepaid = newRepaid;
+        uint256 principalOutstanding = position.principal - position.principalRepaid;
+        require(amount <= principalOutstanding, "NFATHaloFacet/principal-exceeded");
+
+        position.principalRepaid += amount;
 
         _doFacilityRepay(facility, tokenId, amount);
 
-        emit NFATRepayPrincipal(facility, tokenId, amount);
+        emit NFATHaloRepayPrincipal(facility, tokenId, amount);
     }
 
-    /// TODO: discuss its own dedicated role.
     /// @inheritdoc INFATHaloFacet
     function repayInterest(address facility, uint256 tokenId, uint256 amount)
         external
         override
         nonReentrant
-        onlyRole(ALLOCATOR_ROLE)
+        onlyRole(NFAT_BEACON_ROLE)
     {
-        IRateLimits(_getSharedControllerStorage().rateLimits).triggerRateLimitDecrease(
-            makeAddressAddressUint256Key(
-                LIMIT_REPAY_INTEREST,
-                facility,
-                IFacilityLike(facility).ownerOf(tokenId),
-                tokenId
-            ),
-            amount
-        );
+        require(facility != address(0), "NFATHaloFacet/facility-zero-address");
+        require(amount > 0,              "NFATHaloFacet/zero-amount");
+
+        Position storage position = _checkpointPosition(facility, tokenId);
+
+        require(amount <= position.accruedInterest, "NFATHaloFacet/interest-exceeded");
+
+        position.accruedInterest -= amount;
 
         _doFacilityRepay(facility, tokenId, amount);
 
-        emit NFATRepayInterest(facility, tokenId, amount);
+        emit NFATHaloRepayInterest(facility, tokenId, amount);
     }
 
     /**********************************************************************************************/
-    /*** External View Functions                                                                ***/
+    /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
     /// @inheritdoc INFATHaloFacet
-    function getPrincipal(uint256 tokenId) external view override returns (uint256) {
-        return _getFacetStorage().positions[tokenId].principal;
+    function getAnnualGrowthRate(address facility) external view override returns (uint256) {
+        return _getFacetStorage().parameters[facility].annualGrowthRate;
     }
 
     /// @inheritdoc INFATHaloFacet
-    function getPrincipalRepaid(uint256 tokenId) external view override returns (uint256) {
-        return _getFacetStorage().positions[tokenId].principalRepaid;
+    function getInterestIndex(address facility) external view override returns (uint256) {
+        return _getCurrentInterestIndex(facility);
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getPosition(address facility, uint256 tokenId)
+        external
+        view
+        override
+        returns (Position memory)
+    {
+        return _getFacetStorage().positions[facility][tokenId];
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getPrincipal(address facility, uint256 tokenId) external view override returns (uint256) {
+        return _getFacetStorage().positions[facility][tokenId].principal;
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getPrincipalRepaid(address facility, uint256 tokenId)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return _getFacetStorage().positions[facility][tokenId].principalRepaid;
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getPrincipalOutstanding(address facility, uint256 tokenId)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        Position storage position = _getFacetStorage().positions[facility][tokenId];
+        return position.principal - position.principalRepaid;
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getInterestAvailable(address facility, uint256 tokenId)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        Position storage position = _getFacetStorage().positions[facility][tokenId];
+        if (!position.issued) return 0;
+
+        uint256 principalOutstanding = position.principal - position.principalRepaid;
+        uint256 deltaIndex           = _getCurrentInterestIndex(facility) - position.interestIndex;
+
+        return position.accruedInterest + principalOutstanding * deltaIndex / _INTEREST_RATE_PRECISION;
     }
 
     /**********************************************************************************************/
-    /*** Internal Helpers                                                                       ***/
+    /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
+
+    function _checkpointFacility(address facility) internal {
+        FacetStorage  storage $     = _getFacetStorage();
+        FacilityState storage state = $.states[facility];
+
+        uint256 lastUpdated = state.lastUpdated;
+        if (lastUpdated == block.timestamp) return;
+
+        if (lastUpdated != 0) {
+            state.interestIndex = _getCurrentInterestIndex(facility);
+        }
+
+        state.lastUpdated = block.timestamp;
+    }
+
+    function _checkpointPosition(address facility, uint256 tokenId)
+        internal
+        returns (Position storage position)
+    {
+        _checkpointFacility(facility);
+
+        FacetStorage storage $ = _getFacetStorage();
+
+        position = $.positions[facility][tokenId];
+        require(position.issued, "NFATHaloFacet/position-not-found");
+
+        uint256 currentIndex = $.states[facility].interestIndex;
+        uint256 deltaIndex   = currentIndex - position.interestIndex;
+
+        if (deltaIndex > 0) {
+            uint256 principalOutstanding = position.principal - position.principalRepaid;
+            position.interestIndex       = currentIndex;
+            position.accruedInterest     += principalOutstanding * deltaIndex / _INTEREST_RATE_PRECISION;
+        }
+    }
 
     function _doFacilityRepay(address facility, uint256 tokenId, uint256 amount) internal {
         address proxy = _getSharedControllerStorage().proxy;
+        address gem   = IFacilityLike(facility).gem();
 
-        ApproveLib.approve(IFacilityLike(facility).gem(), proxy, facility, amount);
+        ApproveLib.approve(gem, proxy, facility, amount);
 
         IALMProxy(proxy).doCall(
             facility,
             abi.encodeCall(IFacilityLike.repay, (tokenId, amount))
         );
+
+        ApproveLib.approve(gem, proxy, facility, 0);
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    function _getCurrentInterestIndex(address facility) internal view returns (uint256) {
+        FacetStorage storage $     = _getFacetStorage();
+
+        FacilityState storage state = $.states[facility];
+
+        uint256 lastUpdated = state.lastUpdated;
+        if (lastUpdated == 0) return state.interestIndex;
+
+        return
+            state.interestIndex +
+            $.parameters[facility].annualGrowthRate * (block.timestamp - lastUpdated) / _YEAR;
     }
 
 }

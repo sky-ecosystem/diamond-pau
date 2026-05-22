@@ -6,7 +6,8 @@ import { IFacet } from "../IFacet.sol";
 /**
  * @title  INFATPrimeFacet
  * @notice PAU facet for interacting with NFAT facilities on the originating (subscription) side.
- *         Exposes subscribe, withdraw, and collect flows. Rate limited per facility.
+ *         Exposes subscribe, withdraw, and collect flows with per-facility rate limiting on
+ *         subscriptions and collections.
  */
 interface INFATPrimeFacet is IFacet {
 
@@ -15,33 +16,47 @@ interface INFATPrimeFacet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Emitted when repaid capital is collected from an issued NFAT position.
+     * @param  facility Address of the NFAT facility.
+     * @param  tokenId  Identifier of the NFAT token being collected against.
+     * @param  amount   Amount of the facility's gem token collected (gem-native decimals).
+     */
+    event NFATPrimeCollect(
+        address indexed facility,
+        uint256 indexed tokenId,
+        uint256         amount
+    );
+
+    /**
      * @notice Emitted when capital is subscribed into an NFAT facility.
      * @param  facility Address of the NFAT facility.
-     * @param  amount   Amount of the facility's gem token subscribed (native token decimals).
+     * @param  amount   Amount of the facility's gem token subscribed (gem-native decimals).
+     * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
-    event NFATSubscribe(address indexed facility, uint256 amount);
+    event NFATPrimeSubscribe(address indexed facility, uint256 amount, bytes data);
 
     /**
      * @notice Emitted when queued (unissued) subscribed capital is withdrawn from a facility.
      * @param  facility Address of the NFAT facility.
-     * @param  amount   Amount of the facility's gem token withdrawn (native token decimals).
+     * @param  amount   Amount of the facility's gem token withdrawn (gem-native decimals).
      */
-    event NFATWithdraw(address indexed facility, uint256 amount);
-
-    /**
-     * @notice Emitted when repaid capital is collected from an issued NFAT position.
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token the collection is made against.
-     * @param  amount   Amount of the facility's gem token collected (native token decimals).
-     */
-    event NFATCollect(address indexed facility, uint256 indexed tokenId, uint256 amount);
+    event NFATPrimeWithdraw(address indexed facility, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
     /**
-     * @notice Subscribes capital into an NFAT facility.
+     * @notice Collects repaid capital from an issued NFAT position, consuming the collect rate
+     *         limit and refilling the subscribe rate limit by the collected amount.
+     * @param  facility Address of the NFAT facility.
+     * @param  tokenId  Identifier of the NFAT token to collect against.
+     * @param  amount   Amount of the facility's gem token to collect.
+     */
+    function collect(address facility, uint256 tokenId, uint256 amount) external;
+
+    /**
+     * @notice Subscribes capital into an NFAT facility, consuming the subscribe rate limit.
      * @param  facility Address of the NFAT facility.
      * @param  amount   Amount of the facility's gem token to subscribe.
      * @param  data     Arbitrary subscribe payload forwarded to the facility.
@@ -50,35 +65,28 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Cancels queued (unissued) subscribed capital from an NFAT facility and refills
-     *         LIMIT_SUBSCRIBE by the returned amount.
+     *         the subscribe rate limit by the returned amount.
      * @param  facility Address of the NFAT facility.
      * @param  amount   Amount of the facility's gem token to withdraw.
      */
     function withdraw(address facility, uint256 amount) external;
 
+    /**********************************************************************************************/
+    /*** View/Pure Functions                                                                    ***/
+    /**********************************************************************************************/
+
     /**
-     * @notice Collects repaid capital from an issued NFAT position, consuming LIMIT_COLLECT and
-     *         refilling LIMIT_SUBSCRIBE by the collected amount.
+     * @notice Returns the derived collect rate limit key for an NFAT facility.
      * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token to collect against.
-     * @param  amount   Amount of the facility's gem token to collect.
+     * @return key      Derived rate limit key.
      */
-    function collect(address facility, uint256 tokenId, uint256 amount) external;
-
-    /**********************************************************************************************/
-    /*** Variables                                                                              ***/
-    /**********************************************************************************************/
+    function getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
 
     /**
-     * @notice Rate limit key for NFAT subscribe operations, combined with the facility address to
-     *         form the per-facility keys.
+     * @notice Returns the derived subscribe rate limit key for an NFAT facility.
+     * @param  facility Address of the NFAT facility.
+     * @return key      Derived rate limit key.
      */
-    function LIMIT_SUBSCRIBE() external pure returns (bytes32);
-
-    /**
-     * @notice Rate limit key for NFAT collect operations, combined with the facility address to
-     *         form the per-facility keys.
-     */
-    function LIMIT_COLLECT() external pure returns (bytes32);
+    function getSubscribeRateLimitKey(address facility) external pure returns (bytes32 key);
 
 }
