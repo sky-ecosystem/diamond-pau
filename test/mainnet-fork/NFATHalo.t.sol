@@ -111,6 +111,51 @@ contract MainnetController_NFATHalo_SetAnnualGrowthRate_Tests is NFATHalo_TestBa
         assertEq(mainnetController.nfatHalo_getAnnualGrowthRate(address(nfatFacility)), newRate);
     }
 
+    function test_setAnnualGrowthRateNFAT_sameBlockUpdate() external {
+        // First call in setUp checkpointed the facility at the current timestamp; a second
+        // call in the same block should hit the lastUpdated == block.timestamp early return
+        // in _checkpointFacility and leave the interest index unchanged.
+        uint256 indexBefore = mainnetController.nfatHalo_getInterestIndex(address(nfatFacility));
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.nfatHalo_setAnnualGrowthRate(address(nfatFacility), 0.50e18);
+
+        assertEq(mainnetController.nfatHalo_getAnnualGrowthRate(address(nfatFacility)), 0.50e18);
+        assertEq(mainnetController.nfatHalo_getInterestIndex(address(nfatFacility)), indexBefore);
+    }
+
+}
+
+contract MainnetController_NFATHalo_Views_Tests is NFATHalo_TestBase {
+
+    function test_getInterestIndexNFAT_initial() external view {
+        // setUp called setAnnualGrowthRate, which checkpoints at lastUpdated=now with
+        // interestIndex=0. No time elapsed → still 0.
+        assertEq(mainnetController.nfatHalo_getInterestIndex(address(nfatFacility)), 0);
+    }
+
+    function test_getInterestIndexNFAT_accruesOverTime() external {
+        vm.warp(block.timestamp + 365 days);
+
+        // After a full year at 20% APR, the cumulative index is 0.20e18.
+        assertEq(
+            mainnetController.nfatHalo_getInterestIndex(address(nfatFacility)),
+            ANNUAL_GROWTH_RATE
+        );
+    }
+
+    function test_getInterestIndexNFAT_unconfiguredFacility() external {
+        // A facility with no setAnnualGrowthRate call has lastUpdated == 0; the early return
+        // in _getCurrentInterestIndex hands back the stored interestIndex of 0.
+        address otherFacility = makeAddr("otherFacility");
+        assertEq(mainnetController.nfatHalo_getInterestIndex(otherFacility), 0);
+    }
+
+    function test_getInterestAvailableNFAT_unissued() external view {
+        // !position.issued early return in getInterestAvailable yields 0.
+        assertEq(mainnetController.nfatHalo_getInterestAvailable(address(nfatFacility), TOKEN_ID), 0);
+    }
+
 }
 
 contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
