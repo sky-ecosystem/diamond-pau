@@ -29,18 +29,9 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
 
     /// @custom:storage-location erc7201:sky.pau.storage.NFATHaloFacet.v1
     struct FacetStorage {
-        mapping (address facility => Parameters params)                          parameters;
-        mapping (address facility => FacilityState state)                        states;
+        mapping (address facility => Parameters params)                         parameters;
+        mapping (address facility => FacilityState state)                       states;
         mapping (address facility => mapping (uint256 tokenId => Position pos)) positions;
-    }
-
-    struct Parameters {
-        uint256 annualGrowthRate; // 1e18 = 100% APR
-    }
-
-    struct FacilityState {
-        uint256 interestIndex; // Cumulative 1e18-scaled interest per unit of principal
-        uint256 lastUpdated;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.NFATHaloFacet.v1")) - 1)) & ~bytes32(uint256(0xff))

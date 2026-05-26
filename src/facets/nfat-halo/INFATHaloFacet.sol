@@ -17,6 +17,28 @@ interface INFATHaloFacet is IFacet {
     /**********************************************************************************************/
 
     /**
+     * @notice Per-facility tunable parameters.
+     * @param  annualGrowthRate Annual growth rate (1e18-scaled APR; 1e18 == 100%/year) used to
+     *                          drive interest accrual on issued positions.
+     */
+    struct Parameters {
+        uint256 annualGrowthRate;
+    }
+
+    /**
+     * @notice Per-facility checkpoint state used to compute the cumulative interest index.
+     * @param  interestIndex Cumulative 1e18-scaled interest accrued per unit of principal as of
+     *                       `lastUpdated`. Combine with elapsed time and the current annual
+     *                       growth rate to derive the live index.
+     * @param  lastUpdated   Timestamp of the last checkpoint. Zero means the facility has never
+     *                       been configured via `setAnnualGrowthRate`.
+     */
+    struct FacilityState {
+        uint256 interestIndex;
+        uint256 lastUpdated;
+    }
+
+    /**
      * @notice Per-NFAT bookkeeping recorded by this facet.
      * @param  issued          True once `issue` has been called for this position; subsequent
      *                         issues for the same (facility, tokenId) revert.
