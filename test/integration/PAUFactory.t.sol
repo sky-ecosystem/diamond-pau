@@ -47,7 +47,96 @@ contract PAUFactory_IntegrationTests is Test {
     }
 
     /**********************************************************************************************/
-    /*** deploy Tests                                                                           ***/
+    /*** deployAccessControls Tests                                                             ***/
+    /**********************************************************************************************/
+
+    function test_deployAccessControls() external {
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedAccessControls = vm.computeCreateAddress(address(factory), nonce);
+
+        vm.expectEmit(address(factory));
+        emit IPAUFactory.AccessControlsDeployed(expectedAccessControls);
+
+        address accessControls = factory.deployAccessControls(admin);
+
+        assertEq(accessControls, expectedAccessControls);
+    }
+
+    /**********************************************************************************************/
+    /*** deployController Tests                                                                 ***/
+    /**********************************************************************************************/
+
+    function test_deployController() external {
+        address accessControls = makeAddr("accessControls");
+        address almProxy       = makeAddr("almProxy");
+        address rateLimits     = makeAddr("rateLimits");
+
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedController = vm.computeCreateAddress(address(factory), nonce);
+
+        vm.expectEmit(address(factory));
+        emit IPAUFactory.ControllerDeployed(expectedController, accessControls, almProxy, rateLimits);
+
+        address controller = factory.deployController(accessControls, almProxy, rateLimits);
+
+        assertEq(controller, expectedController);
+    }
+
+    /**********************************************************************************************/
+    /*** deployProxy Tests                                                                      ***/
+    /**********************************************************************************************/
+
+    function test_deployProxy() external {
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedProxy = vm.computeCreateAddress(address(factory), nonce);
+
+        vm.expectEmit(address(factory));
+        emit IPAUFactory.ProxyDeployed(expectedProxy);
+
+        address proxy = factory.deployProxy(admin);
+
+        assertEq(proxy, expectedProxy);
+    }
+
+    /**********************************************************************************************/
+    /*** deployProxyFreezable Tests                                                             ***/
+    /**********************************************************************************************/
+
+    function test_deployProxyFreezable() external {
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedProxyFreezable = vm.computeCreateAddress(address(factory), nonce);
+
+        vm.expectEmit(address(factory));
+        emit IPAUFactory.ProxyFreezableDeployed(expectedProxyFreezable);
+
+        address proxyFreezable = factory.deployProxyFreezable(admin);
+
+        assertEq(proxyFreezable, expectedProxyFreezable);
+    }
+
+    /**********************************************************************************************/
+    /*** deployRateLimits Tests                                                                 ***/
+    /**********************************************************************************************/
+
+    function test_deployRateLimits() external {
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedRateLimits = vm.computeCreateAddress(address(factory), nonce);
+
+        vm.expectEmit(address(factory));
+        emit IPAUFactory.RateLimitsDeployed(expectedRateLimits);
+
+        address rateLimits = factory.deployRateLimits(admin);
+
+        assertEq(rateLimits, expectedRateLimits);
+    }
+
+    /**********************************************************************************************/
+    /*** full deploy Tests                                                                      ***/
     /**********************************************************************************************/
 
     function test_deploy() external {
@@ -58,32 +147,16 @@ contract PAUFactory_IntegrationTests is Test {
         address expectedAccessControls = vm.computeCreateAddress(address(factory), nonce + 2);
         address expectedController     = vm.computeCreateAddress(address(factory), nonce + 3);
 
-        vm.expectEmit(address(factory));
-        emit IPAUFactory.PAUDeployed(
-            admin,
-            expectedController,
-            expectedAccessControls,
-            expectedAlmProxy,
-            expectedRateLimits
-        );
+        IALMProxy       almProxy       = IALMProxy(factory.deployProxy(admin));
+        IRateLimits     rateLimits     = IRateLimits(factory.deployRateLimits(admin));
+        IAccessControls accessControls = IAccessControls(factory.deployAccessControls(admin));
 
-        vm.prank(admin);
-        IController controller = IController(payable(factory.deploy(admin)));
+        address controller = factory.deployController(address(accessControls), address(almProxy), address(rateLimits));
 
-        IAccessControls accessControls = IAccessControls(controller.accessControls());
-        IALMProxy       almProxy       = IALMProxy(payable(controller.proxy()));
-        IRateLimits     rateLimits     = IRateLimits(controller.rateLimits());
-
-        // Controller references are wired correctly.
-
-        assertEq(address(accessControls), expectedAccessControls);
         assertEq(address(almProxy),       expectedAlmProxy);
         assertEq(address(rateLimits),     expectedRateLimits);
-
-        // CONTROLLER role granted on ALMProxy and RateLimits to the Controller.
-
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     address(controller)), true);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(controller)), true);
+        assertEq(address(accessControls), expectedAccessControls);
+        assertEq(controller,              expectedController);
 
         // DEFAULT_ADMIN_ROLE granted to admin on all three.
 
@@ -108,14 +181,17 @@ contract PAUFactory_IntegrationTests is Test {
         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     address(factory)), false);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(factory)), false);
 
-        // Admin can grant roles on IAccessControls.
+        // Admin can grant roles.
 
         vm.startPrank(admin);
+
+        IALMProxy(almProxy).grantRole(IALMProxy(almProxy).CONTROLLER(),         controller);
+        IRateLimits(rateLimits).grantRole(IRateLimits(rateLimits).CONTROLLER(), controller);
 
         accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
         accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
 
-        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role 
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
@@ -133,19 +209,6 @@ contract PAUFactory_IntegrationTests is Test {
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
 
         vm.stopPrank();
-    }
-
-    function test_deploy_multipleDeployments() external {
-        IController controller1 = IController(payable(factory.deploy(admin)));
-        IController controller2 = IController(payable(factory.deploy(admin)));
-
-        // Each deployment produces distinct controller addresses.
-        assertNotEq(address(controller1), address(controller2));
-
-        // Each deployment produces distinct sub-contract addresses.
-        assertNotEq(controller1.accessControls(), controller2.accessControls());
-        assertNotEq(controller1.proxy(),          controller2.proxy());
-        assertNotEq(controller1.rateLimits(),     controller2.rateLimits());
     }
 
 }
