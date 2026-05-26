@@ -8,7 +8,7 @@ import { IFacet } from "../IFacet.sol";
  * @notice PAU facet for the Halo (recipient) side of an NFAT facility. Issues NFT positions
  *         against prior subscriptions, accrues per-facility interest via a configurable annual
  *         growth rate, and exposes split repayment flows for principal and interest. Operational
- *         entry points are gated on NFAT_BEACON_ROLE.
+ *         entry points are gated on ALLOCATOR_ROLE.
  */
 interface INFATHaloFacet is IFacet {
 
@@ -115,16 +115,6 @@ interface INFATHaloFacet is IFacet {
      * @param  annualGrowthRate New annual growth rate, 1e18 = 100% APR.
      */
     function setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
-
-    /**********************************************************************************************/
-    /*** Variables                                                                              ***/
-    /**********************************************************************************************/
-
-    /**
-     * @notice Role required to call `issue`, `repayPrincipal`, and `repayInterest`. Granted to
-     *         the off-chain NFAT beacon component that drives issuance and repayment flows.
-     */
-    function NFAT_BEACON_ROLE() external pure returns (bytes32);
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/

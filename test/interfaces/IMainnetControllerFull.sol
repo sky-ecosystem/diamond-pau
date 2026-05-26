@@ -790,8 +790,6 @@ interface IMainnetControllerFull is IController {
 
     function nfatHalo_VERSION() external pure returns (string memory);
 
-    function nfatHalo_NFAT_BEACON_ROLE() external pure returns (bytes32);
-
     function nfatHalo_setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
 
     function nfatHalo_issue(address facility, address to, uint256 tokenId, uint256 amount) external;

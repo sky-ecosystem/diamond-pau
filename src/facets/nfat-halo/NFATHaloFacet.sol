@@ -63,9 +63,6 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
 
-    /// @inheritdoc INFATHaloFacet
-    bytes32 public constant override NFAT_BEACON_ROLE = keccak256("NFAT_BEACON_ROLE");
-
     /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
@@ -87,7 +84,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** External Interactive NFAT Beacon Functions                                             ***/
+    /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
     /// @inheritdoc INFATHaloFacet
@@ -95,7 +92,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(NFAT_BEACON_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
 
@@ -124,7 +121,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(NFAT_BEACON_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
         require(amount > 0,              "NFATHaloFacet/zero-amount");
@@ -146,7 +143,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         external
         override
         nonReentrant
-        onlyRole(NFAT_BEACON_ROLE)
+        onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
         require(amount > 0,              "NFATHaloFacet/zero-amount");

@@ -813,7 +813,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(nfatHaloFacet, "NFATHaloFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_setAnnualGrowthRate.selector,
@@ -871,11 +871,6 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.nfatHalo_NFAT_BEACON_ROLE.selector,
-            INFATHaloFacet.NFAT_BEACON_ROLE.selector
-        );
-
-        wires[12] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_VERSION.selector,
             IFacet.VERSION.selector
         );
