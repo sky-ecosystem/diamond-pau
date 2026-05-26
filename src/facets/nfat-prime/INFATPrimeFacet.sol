@@ -76,17 +76,25 @@ interface INFATPrimeFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Returns the derived collect rate limit key for an NFAT facility.
+     * @notice Returns the derived collect rate limit key for an NFAT facility and gem token.
+     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
+     *         change its gem under a configured rate limit; switching the gem invalidates the key.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
      * @return key      Derived rate limit key.
      */
-    function getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
+    function getCollectRateLimitKey(address facility, address gem)
+        external pure returns (bytes32 key);
 
     /**
-     * @notice Returns the derived subscribe rate limit key for an NFAT facility.
+     * @notice Returns the derived subscribe rate limit key for an NFAT facility and gem token.
+     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
+     *         change its gem under a configured rate limit; switching the gem invalidates the key.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
      * @return key      Derived rate limit key.
      */
-    function getSubscribeRateLimitKey(address facility) external pure returns (bytes32 key);
+    function getSubscribeRateLimitKey(address facility, address gem)
+        external pure returns (bytes32 key);
 
 }

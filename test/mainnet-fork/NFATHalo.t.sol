@@ -36,7 +36,8 @@ abstract contract NFATHalo_TestBase is ForkTestBase {
         // facility.issue / facility.repay via almProxy.doCall.
         nfatFacility.kiss(address(almProxy));
 
-        subscribeKey = mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility));
+        subscribeKey =
+            mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);

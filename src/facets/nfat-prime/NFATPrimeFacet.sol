@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }     from "../../libraries/ApproveLib.sol";
-import { makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -49,14 +49,12 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
 
-        if (amount > 0) {
-            _decreaseRateLimit(getSubscribeRateLimitKey(facility), amount);
-        }
-
         address proxy = _getSharedControllerStorage().proxy;
+        address gem   = IFacilityLike(facility).gem();
 
         if (amount > 0) {
-            ApproveLib.approve(IFacilityLike(facility).gem(), proxy, facility, amount);
+            _decreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
+            ApproveLib.approve(gem, proxy, facility, amount);
         }
 
         IALMProxy(proxy).doCall(
@@ -65,7 +63,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         );
 
         if (amount > 0) {
-            ApproveLib.approve(IFacilityLike(facility).gem(), proxy, facility, 0);
+            ApproveLib.approve(gem, proxy, facility, 0);
         }
 
         emit NFATPrimeSubscribe(facility, amount, data);
@@ -80,12 +78,15 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
 
-        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+        address proxy = _getSharedControllerStorage().proxy;
+        address gem   = IFacilityLike(facility).gem();
+
+        IALMProxy(proxy).doCall(
             facility,
             abi.encodeCall(IFacilityLike.withdraw, (amount))
         );
 
-        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility), amount);
+        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
 
         emit NFATPrimeWithdraw(facility, amount);
     }
@@ -99,14 +100,17 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
 
-        _decreaseRateLimit(getCollectRateLimitKey(facility), amount);
+        address proxy = _getSharedControllerStorage().proxy;
+        address gem   = IFacilityLike(facility).gem();
 
-        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+        _decreaseRateLimit(getCollectRateLimitKey(facility, gem), amount);
+
+        IALMProxy(proxy).doCall(
             facility,
             abi.encodeCall(IFacilityLike.collect, (tokenId, amount))
         );
 
-        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility), amount);
+        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
 
         emit NFATPrimeCollect(facility, tokenId, amount);
     }
@@ -116,13 +120,17 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATPrimeFacet
-    function getSubscribeRateLimitKey(address facility) public pure override returns (bytes32) {
-        return makeAddressKey(_LIMIT_SUBSCRIBE, facility);
+    function getSubscribeRateLimitKey(address facility, address gem)
+        public pure override returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_SUBSCRIBE, facility, gem);
     }
 
     /// @inheritdoc INFATPrimeFacet
-    function getCollectRateLimitKey(address facility) public pure override returns (bytes32) {
-        return makeAddressKey(_LIMIT_COLLECT, facility);
+    function getCollectRateLimitKey(address facility, address gem)
+        public pure override returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_COLLECT, facility, gem);
     }
 
 }

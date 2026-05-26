@@ -841,8 +841,10 @@ interface IMainnetControllerFull is IController {
 
     function nfatPrime_collect(address facility, uint256 tokenId, uint256 amount) external;
 
-    function nfatPrime_getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
+    function nfatPrime_getCollectRateLimitKey(address facility, address gem)
+        external pure returns (bytes32 key);
 
-    function nfatPrime_getSubscribeRateLimitKey(address facility) external pure returns (bytes32 key);
+    function nfatPrime_getSubscribeRateLimitKey(address facility, address gem)
+        external pure returns (bytes32 key);
 
 }
