@@ -67,9 +67,11 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
     }
 
     function test_subscribeNFAT_zeroMaxAmount() external {
+        // Real facility (gem() resolves) but no rate limit registered for its (facility, gem) key.
+        NFATFacility unregistered = new NFATFacility(Ethereum.USDS, "Unregistered", "UNREG");
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
-        mainnetController.nfatPrime_subscribe(makeAddr("fake-facility"), SUBSCRIBE_AMOUNT, "");
+        mainnetController.nfatPrime_subscribe(address(unregistered), SUBSCRIBE_AMOUNT, "");
     }
 
     function test_subscribeNFAT_rateLimitBoundary() external {
@@ -159,7 +161,9 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
     }
 
     function test_withdrawNFAT_noCode() external {
-        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", makeAddr("fake-facility")));
+        // The gem() staticcall is the first thing that touches `facility`; against an EOA the
+        // compiler-inserted extcodesize check reverts with empty data before doCall ever runs.
+        vm.expectRevert();
         vm.prank(allocator);
         mainnetController.nfatPrime_withdraw(makeAddr("fake-facility"), SUBSCRIBE_AMOUNT);
     }
@@ -253,9 +257,11 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
     }
 
     function test_collectNFAT_zeroMaxAmount() external {
+        // Real facility (gem() resolves) but no collect rate limit registered for its key.
+        NFATFacility unregistered = new NFATFacility(Ethereum.USDS, "Unregistered", "UNREG");
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
-        mainnetController.nfatPrime_collect(makeAddr("fake-facility"), TOKEN_ID, 1_000_000e18);
+        mainnetController.nfatPrime_collect(address(unregistered), TOKEN_ID, 1_000_000e18);
     }
 
     function test_collectNFAT_rateLimitBoundary() external {
