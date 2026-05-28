@@ -5,10 +5,11 @@ import { Test } from "../../lib/forge-std/src/Test.sol";
 
 import { IPAUFactory } from "../../src/interfaces/IPAUFactory.sol";
 
-import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
-import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
-import { IController }     from "../../src/interfaces/IController.sol";
-import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
+import { IAccessControls }    from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }          from "../../src/interfaces/IALMProxy.sol";
+import { IALMProxyFreezable } from "../../src/interfaces/IALMProxyFreezable.sol";
+import { IController }        from "../../src/interfaces/IController.sol";
+import { IRateLimits }        from "../../src/interfaces/IRateLimits.sol";
 
 import { PAUFactory } from "../../src/PAUFactory.sol";
 
@@ -61,6 +62,8 @@ contract PAUFactory_IntegrationTests is Test {
         address accessControls = factory.deployAccessControls(admin);
 
         assertEq(accessControls, expectedAccessControls);
+
+        assertEq(IAccessControls(accessControls).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
@@ -82,6 +85,11 @@ contract PAUFactory_IntegrationTests is Test {
         address controller = factory.deployController(accessControls, almProxy, rateLimits);
 
         assertEq(controller, expectedController);
+
+        assertEq(IController(controller).accessControls(), accessControls);
+        assertEq(IController(controller).beacon(),         beacon);
+        assertEq(IController(controller).proxy(),          almProxy);
+        assertEq(IController(controller).rateLimits(),     rateLimits);
     }
 
     /**********************************************************************************************/
@@ -99,6 +107,8 @@ contract PAUFactory_IntegrationTests is Test {
         address proxy = factory.deployProxy(admin);
 
         assertEq(proxy, expectedProxy);
+
+        assertEq(IALMProxy(proxy).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
@@ -116,6 +126,8 @@ contract PAUFactory_IntegrationTests is Test {
         address proxyFreezable = factory.deployProxyFreezable(admin);
 
         assertEq(proxyFreezable, expectedProxyFreezable);
+
+        assertEq(IALMProxyFreezable(proxyFreezable).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
@@ -133,6 +145,8 @@ contract PAUFactory_IntegrationTests is Test {
         address rateLimits = factory.deployRateLimits(admin);
 
         assertEq(rateLimits, expectedRateLimits);
+
+        assertEq(IRateLimits(rateLimits).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
@@ -185,8 +199,8 @@ contract PAUFactory_IntegrationTests is Test {
 
         vm.startPrank(admin);
 
-        IALMProxy(almProxy).grantRole(IALMProxy(almProxy).CONTROLLER(),         controller);
-        IRateLimits(rateLimits).grantRole(IRateLimits(rateLimits).CONTROLLER(), controller);
+        almProxy.grantRole(almProxy.CONTROLLER(),     controller);
+        rateLimits.grantRole(rateLimits.CONTROLLER(), controller);
 
         accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
         accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);

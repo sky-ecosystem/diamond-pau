@@ -29,7 +29,11 @@ contract PAUFactory is IPAUFactory {
     /*** External Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
-    function deployAccessControls(address admin) external override returns (address accessControls) {
+    function deployAccessControls(address admin)
+        external
+        override
+        returns (address accessControls)
+    {
         accessControls = address(new AccessControls(admin));
         emit AccessControlsDeployed(accessControls);
     }

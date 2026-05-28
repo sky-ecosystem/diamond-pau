@@ -124,9 +124,9 @@ contract ForkTestBase is Test {
         beacon  = new Beacon(skyAdmin);
         factory = new PAUFactory(address(beacon));
 
-        rateLimits        = IRateLimits(factory.deployRateLimits(GROVE_EXECUTOR));
-        accessControls    = IAccessControls(factory.deployAccessControls(GROVE_EXECUTOR));
-        almProxy          = IALMProxy(factory.deployProxy(GROVE_EXECUTOR));
+        rateLimits     = IRateLimits(factory.deployRateLimits(GROVE_EXECUTOR));
+        accessControls = IAccessControls(factory.deployAccessControls(GROVE_EXECUTOR));
+        almProxy       = IALMProxy(factory.deployProxy(GROVE_EXECUTOR));
 
         foreignController = IForeignControllerFull(
             payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))
