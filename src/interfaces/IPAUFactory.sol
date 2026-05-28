@@ -3,7 +3,7 @@ pragma solidity ^0.8.34;
 
 /**
  * @title  IPAUFactory
- * @notice Factory for deploying individual ALM system components with expected bytecode.
+ * @notice Factory for deploying individual PAU system components with expected bytecode.
  */
 interface IPAUFactory {
 
@@ -20,9 +20,9 @@ interface IPAUFactory {
     /**
      * @notice Emitted when a Controller contract is deployed.
      * @param  controller     Address of the deployed Controller contract.
-     * @param  accessControls Address controller's AccessControls contract.
-     * @param  proxy          Address controller's ALMProxy contract.
-     * @param  rateLimits     Address controller's RateLimits contract.
+     * @param  accessControls Address of the controller's AccessControls contract.
+     * @param  proxy          Address of the controller's ALMProxy contract.
+     * @param  rateLimits     Address of the controller's RateLimits contract.
      */
     event ControllerDeployed(
         address indexed controller,
@@ -69,9 +69,9 @@ interface IPAUFactory {
 
     /**
      * @notice Deploys a Controller contract.
-     * @param  accessControls Address controller's AccessControls contract.
-     * @param  proxy          Address controller's ALMProxy contract.
-     * @param  rateLimits     Address controller's RateLimits contract.
+     * @param  accessControls Address of the controller's AccessControls contract.
+     * @param  proxy          Address of the controller's ALMProxy contract.
+     * @param  rateLimits     Address of the controller's RateLimits contract.
      * @return controller     Address of the deployed Controller contract.
      */
     function deployController(address accessControls, address proxy, address rateLimits)
