@@ -813,7 +813,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(nfatHaloFacet, "NFATHaloFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](15);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_setAnnualGrowthRate.selector,
@@ -851,26 +851,41 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.nfatHalo_getIssueRateLimitKey.selector,
+            INFATHaloFacet.getIssueRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_getPosition.selector,
             INFATHaloFacet.getPosition.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[9] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_getPrincipal.selector,
             INFATHaloFacet.getPrincipal.selector
         );
 
-        wires[9] = IEnumerableIntegrations.Wire(
+        wires[10] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_getPrincipalOutstanding.selector,
             INFATHaloFacet.getPrincipalOutstanding.selector
         );
 
-        wires[10] = IEnumerableIntegrations.Wire(
+        wires[11] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_getPrincipalRepaid.selector,
             INFATHaloFacet.getPrincipalRepaid.selector
         );
 
-        wires[11] = IEnumerableIntegrations.Wire(
+        wires[12] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.nfatHalo_getRepayInterestRateLimitKey.selector,
+            INFATHaloFacet.getRepayInterestRateLimitKey.selector
+        );
+
+        wires[13] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.nfatHalo_getRepayPrincipalRateLimitKey.selector,
+            INFATHaloFacet.getRepayPrincipalRateLimitKey.selector
+        );
+
+        wires[14] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatHalo_VERSION.selector,
             IFacet.VERSION.selector
         );
@@ -888,7 +903,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(nfatPrimeFacet, "NFATPrimeFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatPrime_subscribe.selector,
@@ -916,6 +931,11 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[5] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.nfatPrime_getWithdrawRateLimitKey.selector,
+            INFATPrimeFacet.getWithdrawRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.nfatPrime_VERSION.selector,
             IFacet.VERSION.selector
         );

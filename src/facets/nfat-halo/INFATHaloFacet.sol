@@ -8,7 +8,8 @@ import { IFacet } from "../IFacet.sol";
  * @notice PAU facet for the Halo (recipient) side of an NFAT facility. Issues NFT positions
  *         against prior subscriptions, accrues per-facility interest via a configurable annual
  *         growth rate, and exposes split repayment flows for principal and interest. Operational
- *         entry points are gated on ALLOCATOR_ROLE.
+ *         entry points are gated on ALLOCATOR_ROLE and rate-limited per (facility, recipient or
+ *         gem) tuple.
  */
 interface INFATHaloFacet is IFacet {
 
@@ -71,61 +72,78 @@ interface INFATHaloFacet is IFacet {
      * @param  facility Address of the NFAT facility.
      * @param  to       Recipient of the minted NFT (becomes the NFAT owner).
      * @param  tokenId  Identifier of the freshly minted NFAT token.
+     * @param  gem      Address of the facility's gem token at issue time.
      * @param  amount   Principal recorded for this token (gem-native decimals).
      */
     event NFATHaloIssue(
         address indexed facility,
         address indexed to,
         uint256 indexed tokenId,
+        address         gem,
         uint256         amount
     );
 
     /**
      * @notice Emitted when interest is repaid against an issued NFAT position.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at repay time.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
      * @param  amount   Interest amount repaid (gem-native decimals).
      */
-    event NFATHaloRepayInterest(address indexed facility, uint256 indexed tokenId, uint256 amount);
+    event NFATHaloRepayInterest(
+        address indexed facility,
+        address indexed gem,
+        uint256 indexed tokenId,
+        uint256         amount
+    );
 
     /**
      * @notice Emitted when principal is repaid against an issued NFAT position.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at repay time.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
      * @param  amount   Principal amount repaid (gem-native decimals).
      */
-    event NFATHaloRepayPrincipal(address indexed facility, uint256 indexed tokenId, uint256 amount);
+    event NFATHaloRepayPrincipal(
+        address indexed facility,
+        address indexed gem,
+        uint256 indexed tokenId,
+        uint256         amount
+    );
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
     /**********************************************************************************************/
 
     /**
-     * @notice Issues an NFAT NFT against a prior subscribe and records `amount` as the outstanding
-     *         principal for `tokenId`. The facility transfers the gem from itself to its
-     *         configured recipient (the controller's ALMProxy).
-     * @param  facility Address of the NFAT facility.
+     * @notice Issues an NFAT NFT and records the recorded principal for `tokenId`. The facility
+     *         transfers the gem from itself to its configured recipient — which MUST be the
+     *         controller's ALMProxy, so the principal lands back in our custody. Both the
+     *         recorded `principal` and the consumed (facility, to) issue rate limit are sized
+     *         from the actual ALMProxy gem balance delta, not the requested `amount`.
+     * @param  facility Address of the NFAT facility. Its `recipient()` must equal the ALMProxy.
      * @param  to       Address to receive the NFT.
      * @param  tokenId  Token id to mint — must be unused on the facility.
-     * @param  amount   Principal amount; must equal `to`'s outstanding subscribed deposit.
+     * @param  amount   Requested principal to pull from the facility's deposit accounting.
      */
     function issue(address facility, address to, uint256 tokenId, uint256 amount) external;
 
     /**
      * @notice Repays interest against an issued NFAT position. Bounded by `accruedInterest` after
-     *         checkpointing; does not touch the principal counter.
+     *         checkpointing; consumes the (facility, gem) repay-interest rate limit.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
-     * @param  amount   Interest amount to repay; must be <= currently-accrued interest.
+     * @param  amount   Interest amount to repay. Must be non-zero and <= currently-accrued interest.
      */
     function repayInterest(address facility, uint256 tokenId, uint256 amount) external;
 
     /**
      * @notice Repays principal owed on an issued NFAT position. Bounded by remaining principal
-     *         (`principal - principalRepaid`); no rate limit — the principal itself is the bound.
+     *         (`principal - principalRepaid`); consumes the (facility, gem) repay-principal
+     *         rate limit.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
-     * @param  amount   Principal amount to repay; must be <= remaining principal.
+     * @param  amount   Principal amount to repay. Must be non-zero and <= remaining principal.
      */
     function repayPrincipal(address facility, uint256 tokenId, uint256 amount) external;
 
@@ -170,6 +188,22 @@ interface INFATHaloFacet is IFacet {
     function getInterestIndex(address facility) external view returns (uint256 interestIndex);
 
     /**
+     * @notice Returns the derived issue rate limit key for an NFAT facility, gem, and NFT
+     *         recipient.
+     * @dev    Keyed on (facility, gem, to) so the budget is scoped per recipient and a facility
+     *         cannot change its gem under a configured rate limit; switching the gem invalidates
+     *         the key.
+     * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
+     * @param  to       Address that will receive issued NFAT NFTs under the configured budget.
+     * @return key      Derived rate limit key.
+     */
+    function getIssueRateLimitKey(address facility, address gem, address to)
+        external
+        pure
+        returns (bytes32 key);
+
+    /**
      * @notice Returns the full Position record for an NFAT token.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token.
@@ -212,5 +246,31 @@ interface INFATHaloFacet is IFacet {
         external
         view
         returns (uint256 amount);
+
+    /**
+     * @notice Returns the derived repay-interest rate limit key for an NFAT facility and gem.
+     * @dev    Keyed on (facility, gem) so a facility cannot change its gem under a configured
+     *         rate limit; switching the gem invalidates the key.
+     * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
+     * @return key      Derived rate limit key.
+     */
+    function getRepayInterestRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    /**
+     * @notice Returns the derived repay-principal rate limit key for an NFAT facility and gem.
+     * @dev    Keyed on (facility, gem) so a facility cannot change its gem under a configured
+     *         rate limit; switching the gem invalidates the key.
+     * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
+     * @return key      Derived rate limit key.
+     */
+    function getRepayPrincipalRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
 
 }

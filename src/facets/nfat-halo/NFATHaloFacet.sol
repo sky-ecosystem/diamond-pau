@@ -3,6 +3,11 @@ pragma solidity ^0.8.34;
 
 import { ApproveLib } from "../../libraries/ApproveLib.sol";
 
+import {
+    makeAddressAddressAddressKey,
+    makeAddressAddressKey
+} from "../../libraries/RateLimitHelpers.sol";
+
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
 import { IFacet } from "../IFacet.sol";
@@ -11,11 +16,19 @@ import { Facet } from "../Facet.sol";
 
 import { INFATHaloFacet } from "./INFATHaloFacet.sol";
 
+interface IERC20Like {
+
+    function balanceOf(address account) external view returns (uint256);
+
+}
+
 interface IFacilityLike {
 
     function gem() external view returns (address);
 
     function issue(address to, uint256 tokenId, uint256 amount) external;
+
+    function recipient() external view returns (address);
 
     function repay(uint256 tokenId, uint256 amount) external;
 
@@ -48,6 +61,10 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant _LIMIT_ISSUE           = keccak256("LIMIT_NFAT_HALO_ISSUE");
+    bytes32 internal constant _LIMIT_REPAY_PRINCIPAL = keccak256("LIMIT_NFAT_HALO_REPAY_PRINCIPAL");
+    bytes32 internal constant _LIMIT_REPAY_INTEREST  = keccak256("LIMIT_NFAT_HALO_REPAY_INTEREST");
+
     uint256 internal constant _INTEREST_RATE_PRECISION = 1e18;
     uint256 internal constant _YEAR                    = 365 days;
 
@@ -78,6 +95,8 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
+    /// TODO: Should the amount decreased in the rate limit be based on the amount taken out of the facility
+    /// or the amount moved into the subproxy, can also have a require(amount == delta)
     /// @inheritdoc INFATHaloFacet
     function issue(address facility, address to, uint256 tokenId, uint256 amount)
         external
@@ -87,24 +106,33 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
 
-        FacetStorage storage $ = _getFacetStorage();
+        address proxy = _getSharedControllerStorage().proxy;
 
-        Position storage position = $.positions[facility][tokenId];
+        address gem = IFacilityLike(facility).gem();
+
+        FacetStorage storage $        = _getFacetStorage();
+        Position     storage position = $.positions[facility][tokenId];
 
         require(!position.issued, "NFATHaloFacet/position-exists");
 
         _checkpointFacility(facility);
 
-        position.issued        = true;
-        position.principal     = amount;
-        position.interestIndex = $.states[facility].interestIndex;
+        uint256 balanceBefore = IERC20Like(gem).balanceOf(proxy);
 
-        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+        IALMProxy(proxy).doCall(
             facility,
             abi.encodeCall(IFacilityLike.issue, (to, tokenId, amount))
         );
 
-        emit NFATHaloIssue(facility, to, tokenId, amount);
+        uint256 received = IERC20Like(gem).balanceOf(proxy) - balanceBefore;
+
+        position.issued        = true;
+        position.principal     = received;
+        position.interestIndex = $.states[facility].interestIndex;
+
+        _decreaseRateLimit(getIssueRateLimitKey(facility, gem, to), received);
+
+        emit NFATHaloIssue(facility, to, tokenId, gem, received);
     }
 
     /// @inheritdoc INFATHaloFacet
@@ -115,18 +143,23 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
-        require(amount > 0,              "NFATHaloFacet/zero-amount");
+        require(amount > 0,             "NFATHaloFacet/zero-amount");
+
+        address gem = IFacilityLike(facility).gem();
 
         Position storage position = _checkpointPosition(facility, tokenId);
 
         uint256 principalOutstanding = position.principal - position.principalRepaid;
+
         require(amount <= principalOutstanding, "NFATHaloFacet/principal-exceeded");
 
-        position.principalRepaid += amount;
+        uint256 spent = _doFacilityRepay(facility, gem, tokenId, amount);
 
-        _doFacilityRepay(facility, tokenId, amount);
+        position.principalRepaid += spent;
 
-        emit NFATHaloRepayPrincipal(facility, tokenId, amount);
+        _decreaseRateLimit(getRepayPrincipalRateLimitKey(facility, gem), spent);
+
+        emit NFATHaloRepayPrincipal(facility, gem, tokenId, spent);
     }
 
     /// @inheritdoc INFATHaloFacet
@@ -137,17 +170,21 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
-        require(amount > 0,              "NFATHaloFacet/zero-amount");
+        require(amount > 0,             "NFATHaloFacet/zero-amount");
+
+        address gem = IFacilityLike(facility).gem();
 
         Position storage position = _checkpointPosition(facility, tokenId);
 
         require(amount <= position.accruedInterest, "NFATHaloFacet/interest-exceeded");
 
-        position.accruedInterest -= amount;
+        uint256 spent = _doFacilityRepay(facility, gem, tokenId, amount);
 
-        _doFacilityRepay(facility, tokenId, amount);
+        position.accruedInterest -= spent;
 
-        emit NFATHaloRepayInterest(facility, tokenId, amount);
+        _decreaseRateLimit(getRepayInterestRateLimitKey(facility, gem), spent);
+
+        emit NFATHaloRepayInterest(facility, gem, tokenId, spent);
     }
 
     /**********************************************************************************************/
@@ -165,6 +202,16 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     }
 
     /// @inheritdoc INFATHaloFacet
+    function getIssueRateLimitKey(address facility, address gem, address to)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressAddressKey(_LIMIT_ISSUE, facility, gem, to);
+    }
+
+    /// @inheritdoc INFATHaloFacet
     function getPosition(address facility, uint256 tokenId)
         external
         view
@@ -175,7 +222,12 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     }
 
     /// @inheritdoc INFATHaloFacet
-    function getPrincipal(address facility, uint256 tokenId) external view override returns (uint256) {
+    function getPrincipal(address facility, uint256 tokenId)
+        external
+        view
+        override
+        returns (uint256)
+    {
         return _getFacetStorage().positions[facility][tokenId].principal;
     }
 
@@ -201,6 +253,26 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     }
 
     /// @inheritdoc INFATHaloFacet
+    function getRepayInterestRateLimitKey(address facility, address gem)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_REPAY_INTEREST, facility, gem);
+    }
+
+    /// @inheritdoc INFATHaloFacet
+    function getRepayPrincipalRateLimitKey(address facility, address gem)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_REPAY_PRINCIPAL, facility, gem);
+    }
+
+    /// @inheritdoc INFATHaloFacet
     function getInterestAvailable(address facility, uint256 tokenId)
         external
         view
@@ -208,6 +280,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         returns (uint256)
     {
         Position storage position = _getFacetStorage().positions[facility][tokenId];
+
         if (!position.issued) return 0;
 
         uint256 principalOutstanding = position.principal - position.principalRepaid;
@@ -221,10 +294,10 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /**********************************************************************************************/
 
     function _checkpointFacility(address facility) internal {
-        FacetStorage  storage $     = _getFacetStorage();
-        FacilityState storage state = $.states[facility];
+        FacilityState storage state = _getFacetStorage().states[facility];
 
         uint256 lastUpdated = state.lastUpdated;
+
         if (lastUpdated == block.timestamp) return;
 
         if (lastUpdated != 0) {
@@ -243,6 +316,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         FacetStorage storage $ = _getFacetStorage();
 
         position = $.positions[facility][tokenId];
+
         require(position.issued, "NFATHaloFacet/position-not-found");
 
         uint256 currentIndex = $.states[facility].interestIndex;
@@ -250,23 +324,27 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
 
         if (deltaIndex > 0) {
             uint256 principalOutstanding = position.principal - position.principalRepaid;
-            position.interestIndex       = currentIndex;
-            position.accruedInterest     += principalOutstanding * deltaIndex / _INTEREST_RATE_PRECISION;
+
+            position.interestIndex    = currentIndex;
+            position.accruedInterest += principalOutstanding * deltaIndex / _INTEREST_RATE_PRECISION;
         }
     }
 
-    function _doFacilityRepay(address facility, uint256 tokenId, uint256 amount) internal {
+    function _doFacilityRepay(address facility, address gem, uint256 tokenId, uint256 amount)
+        internal
+        returns (uint256 spent)
+    {
         address proxy = _getSharedControllerStorage().proxy;
-        address gem   = IFacilityLike(facility).gem();
 
         ApproveLib.approve(gem, proxy, facility, amount);
 
-        IALMProxy(proxy).doCall(
-            facility,
-            abi.encodeCall(IFacilityLike.repay, (tokenId, amount))
-        );
+        uint256 balanceBefore = IERC20Like(gem).balanceOf(proxy);
+
+        IALMProxy(proxy).doCall(facility, abi.encodeCall(IFacilityLike.repay, (tokenId, amount)));
 
         ApproveLib.approve(gem, proxy, facility, 0);
+
+        spent = balanceBefore - IERC20Like(gem).balanceOf(proxy);
     }
 
     /**********************************************************************************************/
@@ -274,11 +352,11 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /**********************************************************************************************/
 
     function _getCurrentInterestIndex(address facility) internal view returns (uint256) {
-        FacetStorage storage $     = _getFacetStorage();
-
+        FacetStorage  storage $     = _getFacetStorage();
         FacilityState storage state = $.states[facility];
 
         uint256 lastUpdated = state.lastUpdated;
+
         if (lastUpdated == 0) return state.interestIndex;
 
         return

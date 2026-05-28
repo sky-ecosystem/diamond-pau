@@ -14,9 +14,11 @@ import { ForkTestBase } from "./ForkTestBase.t.sol";
 abstract contract NFATHalo_TestBase is ForkTestBase {
 
     NFATFacility internal nfatFacility;
-    address      internal nfatRecipient;
 
     bytes32 internal subscribeKey;
+    bytes32 internal issueKey;
+    bytes32 internal repayPrincipalKey;
+    bytes32 internal repayInterestKey;
 
     uint256 internal constant ISSUE_AMOUNT        = 1_000_000e18;
     uint256 internal constant ANNUAL_GROWTH_RATE  = 0.20e18;  // 20% APR
@@ -25,10 +27,10 @@ abstract contract NFATHalo_TestBase is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        nfatRecipient = makeAddr("nfatRecipient");
-
         nfatFacility = new NFATFacility(Ethereum.USDS, "Test NFAT", "TNFAT");
-        nfatFacility.file("recipient", nfatRecipient);
+        // Halo issue requires recipient == ALMProxy so the principal lands back in our custody
+        // and the rate-limit delta can be measured against the ALMProxy balance.
+        nfatFacility.file("recipient", address(almProxy));
 
         // Halo ALMProxy must be a bud on the facility because the facet calls
         // facility.issue / facility.repay via almProxy.doCall.
@@ -36,9 +38,21 @@ abstract contract NFATHalo_TestBase is ForkTestBase {
 
         subscribeKey =
             mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        issueKey = mainnetController.nfatHalo_getIssueRateLimitKey(
+            address(nfatFacility),
+            Ethereum.USDS,
+            address(almProxy)
+        );
+        repayPrincipalKey =
+            mainnetController.nfatHalo_getRepayPrincipalRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        repayInterestKey =
+            mainnetController.nfatHalo_getRepayInterestRateLimitKey(address(nfatFacility), Ethereum.USDS);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(subscribeKey,      5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(issueKey,          5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(repayPrincipalKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(repayInterestKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
         mainnetController.nfatHalo_setAnnualGrowthRate(address(nfatFacility), ANNUAL_GROWTH_RATE);
         vm.stopPrank();
 
@@ -152,6 +166,36 @@ contract MainnetController_NFATHalo_Views_Tests is NFATHalo_TestBase {
         assertEq(mainnetController.nfatHalo_getInterestAvailable(address(nfatFacility), TOKEN_ID), 0);
     }
 
+    function test_getRateLimitKeys_areDeterministic() external {
+        address otherFacility = makeAddr("otherFacility");
+
+        assertEq(
+            mainnetController.nfatHalo_getIssueRateLimitKey(
+                address(nfatFacility),
+                Ethereum.USDS,
+                address(almProxy)
+            ),
+            issueKey
+        );
+        assertEq(
+            mainnetController.nfatHalo_getRepayPrincipalRateLimitKey(address(nfatFacility), Ethereum.USDS),
+            repayPrincipalKey
+        );
+        assertEq(
+            mainnetController.nfatHalo_getRepayInterestRateLimitKey(address(nfatFacility), Ethereum.USDS),
+            repayInterestKey
+        );
+
+        // Different facility → different key.
+        assertTrue(
+            mainnetController.nfatHalo_getIssueRateLimitKey(
+                otherFacility,
+                Ethereum.USDS,
+                address(almProxy)
+            ) != issueKey
+        );
+    }
+
 }
 
 contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
@@ -195,6 +239,37 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         mainnetController.nfatHalo_issue(address(0), address(almProxy), TOKEN_ID, ISSUE_AMOUNT);
     }
 
+    function test_issueNFAT_recipientMismatch() external {
+        // Point the facility's gem recipient somewhere other than the ALMProxy and verify the
+        // recipient-mismatch guard fires.
+        nfatFacility.file("recipient", makeAddr("notProxy"));
+
+        vm.expectRevert("NFATHaloFacet/recipient-mismatch");
+        vm.prank(allocator);
+        mainnetController.nfatHalo_issue(
+            address(nfatFacility),
+            address(almProxy),
+            TOKEN_ID,
+            ISSUE_AMOUNT
+        );
+    }
+
+    function test_issueNFAT_zeroMaxAmount() external {
+        // The (facility, almProxy) issue limit is consumed by the ALMProxy balance delta after
+        // the facility call lands, so zero out the existing limit to exercise that revert.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(issueKey, 0, 0);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.nfatHalo_issue(
+            address(nfatFacility),
+            address(almProxy),
+            TOKEN_ID,
+            ISSUE_AMOUNT
+        );
+    }
+
     function test_issueNFAT_alreadyIssued() external {
         vm.prank(allocator);
         mainnetController.nfatHalo_issue(
@@ -203,6 +278,11 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
             TOKEN_ID,
             ISSUE_AMOUNT
         );
+
+        // Top up the budget for the second attempt so we exercise the position-exists check
+        // rather than the rate-limit check.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(issueKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
 
         vm.expectRevert("NFATHaloFacet/position-exists");
         vm.prank(allocator);
@@ -215,10 +295,12 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
     }
 
     function test_issueNFAT() external {
-        // Pre-conditions
+        // Pre-conditions: setUp dealt 5M USDS to almProxy and subscribed ISSUE_AMOUNT into the
+        // facility, so the facility holds ISSUE_AMOUNT and almProxy holds 5M - ISSUE_AMOUNT.
         assertEq(usds.balanceOf(address(nfatFacility)),    ISSUE_AMOUNT);
-        assertEq(usds.balanceOf(nfatRecipient),            0);
+        assertEq(usds.balanceOf(address(almProxy)),        5_000_000e18 - ISSUE_AMOUNT);
         assertEq(nfatFacility.deposits(address(almProxy)), ISSUE_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(issueKey), 5_000_000e18);
 
         INFATHaloFacet.Position memory before =
             mainnetController.nfatHalo_getPosition(address(nfatFacility), TOKEN_ID);
@@ -231,6 +313,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
             address(nfatFacility),
             address(almProxy),
             TOKEN_ID,
+            Ethereum.USDS,
             ISSUE_AMOUNT
         );
 
@@ -245,11 +328,13 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        // Post-conditions
+        // Post-conditions: facility transferred its ISSUE_AMOUNT of gem to recipient=almProxy,
+        // bringing almProxy's balance back to the original 5M.
         assertEq(nfatFacility.ownerOf(TOKEN_ID),           address(almProxy));
         assertEq(usds.balanceOf(address(nfatFacility)),    0);
-        assertEq(usds.balanceOf(nfatRecipient),            ISSUE_AMOUNT);
+        assertEq(usds.balanceOf(address(almProxy)),        5_000_000e18);
         assertEq(nfatFacility.deposits(address(almProxy)), 0);
+        assertEq(rateLimits.getCurrentRateLimit(issueKey), 5_000_000e18 - ISSUE_AMOUNT);
 
         INFATHaloFacet.Position memory pos =
             mainnetController.nfatHalo_getPosition(address(nfatFacility), TOKEN_ID);
@@ -308,6 +393,18 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         mainnetController.nfatHalo_repayPrincipal(address(nfatFacility), TOKEN_ID, 0);
     }
 
+    function test_repayPrincipalNFAT_zeroMaxAmount() external {
+        // The repay-principal rate limit is decremented by the actual ALMProxy balance delta
+        // post-call, so the zero-maxAmount revert surfaces only after the facility repay
+        // completes. Zero out the configured limit on the established position to exercise it.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(repayPrincipalKey, 0, 0);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.nfatHalo_repayPrincipal(address(nfatFacility), TOKEN_ID, 1);
+    }
+
     function test_repayPrincipalNFAT_unknownTokenId() external {
         vm.expectRevert("NFATHaloFacet/position-not-found");
         vm.prank(allocator);
@@ -352,8 +449,9 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         uint256 startingProxyBalance = usds.balanceOf(address(almProxy));
 
         // Pre
-        assertEq(usds.balanceOf(address(nfatFacility)), 0);
-        assertEq(nfatFacility.collectable(TOKEN_ID),    0);
+        assertEq(usds.balanceOf(address(nfatFacility)),             0);
+        assertEq(nfatFacility.collectable(TOKEN_ID),                0);
+        assertEq(rateLimits.getCurrentRateLimit(repayPrincipalKey), 5_000_000e18);
         assertEq(
             mainnetController.nfatHalo_getPrincipal(address(nfatFacility), TOKEN_ID),
             ISSUE_AMOUNT
@@ -364,7 +462,12 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         );
 
         vm.expectEmit(address(mainnetController));
-        emit INFATHaloFacet.NFATHaloRepayPrincipal(address(nfatFacility), TOKEN_ID, ISSUE_AMOUNT);
+        emit INFATHaloFacet.NFATHaloRepayPrincipal(
+            address(nfatFacility),
+            Ethereum.USDS,
+            TOKEN_ID,
+            ISSUE_AMOUNT
+        );
 
         vm.record();
         vm.prank(allocator);
@@ -377,6 +480,7 @@ contract MainnetController_NFATHalo_RepayPrincipal_Tests is NFATHalo_IssuedPosit
         assertEq(usds.allowance(address(almProxy), address(nfatFacility)), 0);
         assertEq(usds.balanceOf(address(nfatFacility)),                    ISSUE_AMOUNT);
         assertEq(nfatFacility.collectable(TOKEN_ID),                       ISSUE_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(repayPrincipalKey),        5_000_000e18 - ISSUE_AMOUNT);
         assertEq(
             mainnetController.nfatHalo_getPrincipal(address(nfatFacility), TOKEN_ID),
             ISSUE_AMOUNT
@@ -430,6 +534,18 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         vm.expectRevert("NFATHaloFacet/zero-amount");
         vm.prank(allocator);
         mainnetController.nfatHalo_repayInterest(address(nfatFacility), TOKEN_ID, 0);
+    }
+
+    function test_repayInterestNFAT_zeroMaxAmount() external {
+        // The repay-interest rate limit is decremented by the actual ALMProxy balance delta
+        // post-call, so the zero-maxAmount revert surfaces only after the facility repay
+        // completes. Zero out the configured limit on the established position to exercise it.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(repayInterestKey, 0, 0);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.nfatHalo_repayInterest(address(nfatFacility), TOKEN_ID, 1);
     }
 
     function test_repayInterestNFAT_unknownTokenId() external {
@@ -490,8 +606,9 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         uint256 startingProxyBalance = usds.balanceOf(address(almProxy));
 
         // Pre
-        assertEq(usds.balanceOf(address(nfatFacility)), 0);
-        assertEq(nfatFacility.collectable(TOKEN_ID),    0);
+        assertEq(usds.balanceOf(address(nfatFacility)),               0);
+        assertEq(nfatFacility.collectable(TOKEN_ID),                  0);
+        assertEq(rateLimits.getCurrentRateLimit(repayInterestKey),    5_000_000e18);
         assertEq(
             mainnetController.nfatHalo_getInterestAvailable(address(nfatFacility), TOKEN_ID),
             EXPECTED_ACCRUED
@@ -500,6 +617,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         vm.expectEmit(address(mainnetController));
         emit INFATHaloFacet.NFATHaloRepayInterest(
             address(nfatFacility),
+            Ethereum.USDS,
             TOKEN_ID,
             EXPECTED_ACCRUED
         );
@@ -515,6 +633,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_IssuedPositi
         assertEq(usds.allowance(address(almProxy), address(nfatFacility)), 0);
         assertEq(usds.balanceOf(address(nfatFacility)),                    EXPECTED_ACCRUED);
         assertEq(nfatFacility.collectable(TOKEN_ID),                       EXPECTED_ACCRUED);
+        assertEq(rateLimits.getCurrentRateLimit(repayInterestKey),         5_000_000e18 - EXPECTED_ACCRUED);
         assertEq(
             mainnetController.nfatHalo_getInterestAvailable(address(nfatFacility), TOKEN_ID),
             0

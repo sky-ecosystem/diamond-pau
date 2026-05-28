@@ -12,6 +12,12 @@ import { Facet } from "../Facet.sol";
 
 import { INFATPrimeFacet } from "./INFATPrimeFacet.sol";
 
+interface IERC20Like {
+
+    function balanceOf(address account) external view returns (uint256);
+
+}
+
 interface IFacilityLike {
 
     function gem() external view returns (address);
@@ -31,6 +37,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     bytes32 internal constant _LIMIT_SUBSCRIBE = keccak256("LIMIT_NFAT_PRIME_SUBSCRIBE");
+    bytes32 internal constant _LIMIT_WITHDRAW  = keccak256("LIMIT_NFAT_PRIME_WITHDRAW");
     bytes32 internal constant _LIMIT_COLLECT   = keccak256("LIMIT_NFAT_PRIME_COLLECT");
 
     /// @inheritdoc IFacet
@@ -48,25 +55,24 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
+        require(amount > 0,             "NFATPrimeFacet/zero-amount");
 
         address proxy = _getSharedControllerStorage().proxy;
         address gem   = IFacilityLike(facility).gem();
 
-        if (amount > 0) {
-            _decreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
-            ApproveLib.approve(gem, proxy, facility, amount);
-        }
+        ApproveLib.approve(gem, proxy, facility, amount);
 
-        IALMProxy(proxy).doCall(
-            facility,
-            abi.encodeCall(IFacilityLike.subscribe, (amount, data))
-        );
+        uint256 balanceBefore = IERC20Like(gem).balanceOf(proxy);
 
-        if (amount > 0) {
-            ApproveLib.approve(gem, proxy, facility, 0);
-        }
+        IALMProxy(proxy).doCall(facility, abi.encodeCall(IFacilityLike.subscribe, (amount, data)));
 
-        emit NFATPrimeSubscribe(facility, amount, data);
+        ApproveLib.approve(gem, proxy, facility, 0);
+
+        uint256 spent = balanceBefore - IERC20Like(gem).balanceOf(proxy);
+
+        _decreaseRateLimit(getSubscribeRateLimitKey(facility, gem), spent);
+
+        emit NFATPrimeSubscribe(facility, gem, spent, data);
     }
 
     /// @inheritdoc INFATPrimeFacet
@@ -77,18 +83,21 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
+        require(amount > 0,             "NFATPrimeFacet/zero-amount");
 
         address proxy = _getSharedControllerStorage().proxy;
         address gem   = IFacilityLike(facility).gem();
 
-        IALMProxy(proxy).doCall(
-            facility,
-            abi.encodeCall(IFacilityLike.withdraw, (amount))
-        );
+        uint256 balanceBefore = IERC20Like(gem).balanceOf(proxy);
 
-        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
+        IALMProxy(proxy).doCall(facility, abi.encodeCall(IFacilityLike.withdraw, (amount)));
 
-        emit NFATPrimeWithdraw(facility, amount);
+        uint256 received = IERC20Like(gem).balanceOf(proxy) - balanceBefore;
+
+        _decreaseRateLimit(getWithdrawRateLimitKey(facility, gem),     received);
+        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), received);
+
+        emit NFATPrimeWithdraw(facility, gem, received);
     }
 
     /// @inheritdoc INFATPrimeFacet
@@ -99,20 +108,21 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATPrimeFacet/facility-zero-address");
+        require(amount > 0,             "NFATPrimeFacet/zero-amount");
 
         address proxy = _getSharedControllerStorage().proxy;
         address gem   = IFacilityLike(facility).gem();
 
-        _decreaseRateLimit(getCollectRateLimitKey(facility, gem), amount);
+        uint256 balanceBefore = IERC20Like(gem).balanceOf(proxy);
 
-        IALMProxy(proxy).doCall(
-            facility,
-            abi.encodeCall(IFacilityLike.collect, (tokenId, amount))
-        );
+        IALMProxy(proxy).doCall(facility, abi.encodeCall(IFacilityLike.collect, (tokenId, amount)));
 
-        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), amount);
+        uint256 received = IERC20Like(gem).balanceOf(proxy) - balanceBefore;
 
-        emit NFATPrimeCollect(facility, tokenId, amount);
+        _decreaseRateLimit(getCollectRateLimitKey(facility, gem),      received);
+        _tryIncreaseRateLimit(getSubscribeRateLimitKey(facility, gem), received);
+
+        emit NFATPrimeCollect(facility, gem, tokenId, received);
     }
 
     /**********************************************************************************************/
@@ -120,17 +130,33 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATPrimeFacet
+    function getCollectRateLimitKey(address facility, address gem)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_COLLECT, facility, gem);
+    }
+
+    /// @inheritdoc INFATPrimeFacet
     function getSubscribeRateLimitKey(address facility, address gem)
-        public pure override returns (bytes32)
+        public
+        pure
+        override
+        returns (bytes32)
     {
         return makeAddressAddressKey(_LIMIT_SUBSCRIBE, facility, gem);
     }
 
     /// @inheritdoc INFATPrimeFacet
-    function getCollectRateLimitKey(address facility, address gem)
-        public pure override returns (bytes32)
+    function getWithdrawRateLimitKey(address facility, address gem)
+        public
+        pure
+        override
+        returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_COLLECT, facility, gem);
+        return makeAddressAddressKey(_LIMIT_WITHDRAW, facility, gem);
     }
 
 }

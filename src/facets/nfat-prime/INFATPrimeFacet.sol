@@ -6,8 +6,9 @@ import { IFacet } from "../IFacet.sol";
 /**
  * @title  INFATPrimeFacet
  * @notice PAU facet for interacting with NFAT facilities on the originating (subscription) side.
- *         Exposes subscribe, withdraw, and collect flows with per-facility rate limiting on
- *         subscriptions and collections.
+ *         Exposes subscribe, withdraw, and collect flows with per-facility rate limiting on each
+ *         interaction. Withdraw additionally refills the subscribe limit so cancelled subscriptions
+ *         do not permanently consume the subscribe budget.
  */
 interface INFATPrimeFacet is IFacet {
 
@@ -18,11 +19,13 @@ interface INFATPrimeFacet is IFacet {
     /**
      * @notice Emitted when repaid capital is collected from an issued NFAT position.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at collect time.
      * @param  tokenId  Identifier of the NFAT token being collected against.
      * @param  amount   Amount of the facility's gem token collected (gem-native decimals).
      */
     event NFATPrimeCollect(
         address indexed facility,
+        address indexed gem,
         uint256 indexed tokenId,
         uint256         amount
     );
@@ -30,17 +33,24 @@ interface INFATPrimeFacet is IFacet {
     /**
      * @notice Emitted when capital is subscribed into an NFAT facility.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at subscribe time.
      * @param  amount   Amount of the facility's gem token subscribed (gem-native decimals).
      * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
-    event NFATPrimeSubscribe(address indexed facility, uint256 amount, bytes data);
+    event NFATPrimeSubscribe(
+        address indexed facility,
+        address indexed gem,
+        uint256         amount,
+        bytes           data
+    );
 
     /**
      * @notice Emitted when queued (unissued) subscribed capital is withdrawn from a facility.
      * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at withdraw time.
      * @param  amount   Amount of the facility's gem token withdrawn (gem-native decimals).
      */
-    event NFATPrimeWithdraw(address indexed facility, uint256 amount);
+    event NFATPrimeWithdraw(address indexed facility, address indexed gem, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -51,23 +61,23 @@ interface INFATPrimeFacet is IFacet {
      *         limit and refilling the subscribe rate limit by the collected amount.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token to collect against.
-     * @param  amount   Amount of the facility's gem token to collect.
+     * @param  amount   Amount of the facility's gem token to collect. Must be non-zero.
      */
     function collect(address facility, uint256 tokenId, uint256 amount) external;
 
     /**
      * @notice Subscribes capital into an NFAT facility, consuming the subscribe rate limit.
      * @param  facility Address of the NFAT facility.
-     * @param  amount   Amount of the facility's gem token to subscribe.
+     * @param  amount   Amount of the facility's gem token to subscribe. Must be non-zero.
      * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
     function subscribe(address facility, uint256 amount, bytes calldata data) external;
 
     /**
-     * @notice Cancels queued (unissued) subscribed capital from an NFAT facility and refills
-     *         the subscribe rate limit by the returned amount.
+     * @notice Cancels queued (unissued) subscribed capital from an NFAT facility, consuming the
+     *         withdraw rate limit and refilling the subscribe rate limit by the returned amount.
      * @param  facility Address of the NFAT facility.
-     * @param  amount   Amount of the facility's gem token to withdraw.
+     * @param  amount   Amount of the facility's gem token to withdraw. Must be non-zero.
      */
     function withdraw(address facility, uint256 amount) external;
 
@@ -84,7 +94,9 @@ interface INFATPrimeFacet is IFacet {
      * @return key      Derived rate limit key.
      */
     function getCollectRateLimitKey(address facility, address gem)
-        external pure returns (bytes32 key);
+        external
+        pure
+        returns (bytes32 key);
 
     /**
      * @notice Returns the derived subscribe rate limit key for an NFAT facility and gem token.
@@ -95,6 +107,21 @@ interface INFATPrimeFacet is IFacet {
      * @return key      Derived rate limit key.
      */
     function getSubscribeRateLimitKey(address facility, address gem)
-        external pure returns (bytes32 key);
+        external
+        pure
+        returns (bytes32 key);
+
+    /**
+     * @notice Returns the derived withdraw rate limit key for an NFAT facility and gem token.
+     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
+     *         change its gem under a configured rate limit; switching the gem invalidates the key.
+     * @param  facility Address of the NFAT facility.
+     * @param  gem      Address of the facility's gem token at configuration time.
+     * @return key      Derived rate limit key.
+     */
+    function getWithdrawRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
 
 }
