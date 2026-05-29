@@ -105,6 +105,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         require(facility != address(0), "NFATHaloFacet/facility-zero-address");
+        require(amount > 0,             "NFATHaloFacet/amount-zero");
 
         address proxy = _getSharedControllerStorage().proxy;
 
