@@ -276,7 +276,7 @@ abstract contract ForkTestBase is DssTest {
 
         rateLimits     = IRateLimits(factory.deployRateLimits(Ethereum.SPARK_PROXY));
         accessControls = IAccessControls(factory.deployAccessControls(Ethereum.SPARK_PROXY));
-        almProxy       = IALMProxy(factory.deployProxy(Ethereum.SPARK_PROXY));
+        almProxy       = IALMProxy(factory.deployALMProxy(Ethereum.SPARK_PROXY));
 
         mainnetController = IMainnetControllerFull(
             payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))

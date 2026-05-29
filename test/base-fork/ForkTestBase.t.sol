@@ -137,7 +137,7 @@ abstract contract ForkTestBase is Test {
 
         rateLimits     = IRateLimits(factory.deployRateLimits(SPARK_EXECUTOR));
         accessControls = IAccessControls(factory.deployAccessControls(SPARK_EXECUTOR));
-        almProxy       = IALMProxy(factory.deployProxy(SPARK_EXECUTOR));
+        almProxy       = IALMProxy(factory.deployALMProxy(SPARK_EXECUTOR));
 
         foreignController = IForeignControllerFull(
             payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))

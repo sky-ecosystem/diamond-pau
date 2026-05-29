@@ -126,7 +126,7 @@ contract ForkTestBase is Test {
 
         rateLimits     = IRateLimits(factory.deployRateLimits(GROVE_EXECUTOR));
         accessControls = IAccessControls(factory.deployAccessControls(GROVE_EXECUTOR));
-        almProxy       = IALMProxy(factory.deployProxy(GROVE_EXECUTOR));
+        almProxy       = IALMProxy(factory.deployALMProxy(GROVE_EXECUTOR));
 
         foreignController = IForeignControllerFull(
             payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))

@@ -58,7 +58,7 @@ See [BEACON.md](./BEACON.md) for data structures, integration lifecycle, hardcod
 
 ### PAUFactory
 
-Factory contract for deploying individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode.
+Factory contract for deploying individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode. Note that a deployed `Controller` cannot immediately be used to interact with other PAU system components as it needs to be granted the `CONTROLLER` role on the `ALMProxy` and `RateLimits` contracts.
 
 ### AccessControls
 

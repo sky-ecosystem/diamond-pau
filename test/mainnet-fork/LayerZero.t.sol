@@ -442,7 +442,7 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
         IAccessControls foreignAccessControls = IAccessControls(foreignFactory.deployAccessControls(SPARK_EXECUTOR));
 
         foreignRateLimits = IRateLimits(foreignFactory.deployRateLimits(SPARK_EXECUTOR));
-        foreignAlmProxy   = IALMProxy(foreignFactory.deployProxy(SPARK_EXECUTOR));
+        foreignAlmProxy   = IALMProxy(foreignFactory.deployALMProxy(SPARK_EXECUTOR));
 
         foreignController = IForeignControllerFull(
             payable(foreignFactory.deployController(address(foreignAccessControls), address(foreignAlmProxy), address(foreignRateLimits)))

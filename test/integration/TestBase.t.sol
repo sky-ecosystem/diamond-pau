@@ -46,7 +46,7 @@ abstract contract Integration_TestBase is Test {
 
         IRateLimits     rateLimits     = IRateLimits(factory.deployRateLimits(admin));
         IAccessControls accessControls = IAccessControls(factory.deployAccessControls(admin));
-        IALMProxy       almProxy       = IALMProxy(factory.deployProxy(admin));
+        IALMProxy       almProxy       = IALMProxy(factory.deployALMProxy(admin));
 
         controller = factory.deployController(address(accessControls), address(almProxy), address(rateLimits));
 

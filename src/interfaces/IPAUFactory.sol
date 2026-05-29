@@ -33,15 +33,15 @@ interface IPAUFactory {
 
     /**
      * @notice Emitted when an ALMProxy contract is deployed.
-     * @param  proxy Address of the deployed ALMProxy contract.
+     * @param  almProxy Address of the deployed ALMProxy contract.
      */
-    event ProxyDeployed(address indexed proxy);
+    event ALMProxyDeployed(address indexed almProxy);
 
     /**
      * @notice Emitted when an ALMProxyFreezable contract is deployed.
-     * @param  proxyFreezable Address of the deployed ALMProxyFreezable contract.
+     * @param  almProxyFreezable Address of the deployed ALMProxyFreezable contract.
      */
-    event ProxyFreezableDeployed(address indexed proxyFreezable);
+    event ALMProxyFreezableDeployed(address indexed almProxyFreezable);
 
     /**
      * @notice Emitted when a RateLimits contract is deployed.
@@ -81,16 +81,16 @@ interface IPAUFactory {
     /**
      * @notice Deploys an ALMProxy contract.
      * @param  admin Address that will be granted admin over the deployed contract.
-     * @return proxy Address of the deployed ALMProxy contract.
+     * @return almProxy Address of the deployed ALMProxy contract.
      */
-    function deployProxy(address admin) external returns (address proxy);
+    function deployALMProxy(address admin) external returns (address almProxy);
 
     /**
      * @notice Deploys an ALMProxyFreezable contract.
-     * @param  admin Address that will be granted admin over the deployed contract.
-     * @return proxy Address of the deployed ALMProxyFreezable contract.
+     * @param  admin             Address that will be granted admin over the deployed contract.
+     * @return almProxyFreezable Address of the deployed ALMProxyFreezable contract.
      */
-    function deployProxyFreezable(address admin) external returns (address proxy);
+    function deployALMProxyFreezable(address admin) external returns (address almProxyFreezable);
 
     /**
      * @notice Deploys a RateLimits contract.

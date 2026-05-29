@@ -377,7 +377,7 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
         IAccessControls foreignAccessControls = IAccessControls(foreignFactory.deployAccessControls(Base.SPARK_EXECUTOR));
 
         foreignRateLimits = IRateLimits(foreignFactory.deployRateLimits(Base.SPARK_EXECUTOR));
-        foreignAlmProxy   = IALMProxy(foreignFactory.deployProxy(Base.SPARK_EXECUTOR));
+        foreignAlmProxy   = IALMProxy(foreignFactory.deployALMProxy(Base.SPARK_EXECUTOR));
 
         foreignController = IForeignControllerFull(
             payable(foreignFactory.deployController(address(foreignAccessControls), address(foreignAlmProxy), address(foreignRateLimits)))

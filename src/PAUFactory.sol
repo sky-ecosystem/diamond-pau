@@ -47,18 +47,18 @@ contract PAUFactory is IPAUFactory {
         emit ControllerDeployed(controller, accessControls, proxy, rateLimits);
     }
 
-    function deployProxy(address admin) external override returns (address proxy) {
-        proxy = address(new ALMProxy(admin));
-        emit ProxyDeployed(proxy);
+    function deployALMProxy(address admin) external override returns (address almProxy) {
+        almProxy = address(new ALMProxy(admin));
+        emit ALMProxyDeployed(almProxy);
     }
 
-    function deployProxyFreezable(address admin)
+    function deployALMProxyFreezable(address admin)
         external
         override
-        returns (address proxyFreezable)
+        returns (address almProxyFreezable)
     {
-        proxyFreezable = address(new ALMProxyFreezable(admin));
-        emit ProxyFreezableDeployed(proxyFreezable);
+        almProxyFreezable = address(new ALMProxyFreezable(admin));
+        emit ALMProxyFreezableDeployed(almProxyFreezable);
     }
 
     function deployRateLimits(address admin) external override returns (address rateLimits) {

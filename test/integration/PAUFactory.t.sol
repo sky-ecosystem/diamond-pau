@@ -93,41 +93,41 @@ contract PAUFactory_IntegrationTests is Test {
     }
 
     /**********************************************************************************************/
-    /*** deployProxy Tests                                                                      ***/
+    /*** deployALMProxy Tests                                                                   ***/
     /**********************************************************************************************/
 
-    function test_deployProxy() external {
+    function test_deployALMProxy() external {
         uint256 nonce = vm.getNonce(address(factory));
 
-        address expectedProxy = vm.computeCreateAddress(address(factory), nonce);
+        address expectedALMProxy = vm.computeCreateAddress(address(factory), nonce);
 
         vm.expectEmit(address(factory));
-        emit IPAUFactory.ProxyDeployed(expectedProxy);
+        emit IPAUFactory.ALMProxyDeployed(expectedALMProxy);
 
-        address proxy = factory.deployProxy(admin);
+        address almProxy = factory.deployALMProxy(admin);
 
-        assertEq(proxy, expectedProxy);
+        assertEq(almProxy, expectedALMProxy);
 
-        assertEq(IALMProxy(proxy).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(IALMProxy(almProxy).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
-    /*** deployProxyFreezable Tests                                                             ***/
+    /*** deployALMProxyFreezable Tests                                                          ***/
     /**********************************************************************************************/
 
-    function test_deployProxyFreezable() external {
+    function test_deployALMProxyFreezable() external {
         uint256 nonce = vm.getNonce(address(factory));
 
-        address expectedProxyFreezable = vm.computeCreateAddress(address(factory), nonce);
+        address expectedALMProxyFreezable = vm.computeCreateAddress(address(factory), nonce);
 
         vm.expectEmit(address(factory));
-        emit IPAUFactory.ProxyFreezableDeployed(expectedProxyFreezable);
+        emit IPAUFactory.ALMProxyFreezableDeployed(expectedALMProxyFreezable);
 
-        address proxyFreezable = factory.deployProxyFreezable(admin);
+        address almProxyFreezable = factory.deployALMProxyFreezable(admin);
 
-        assertEq(proxyFreezable, expectedProxyFreezable);
+        assertEq(almProxyFreezable, expectedALMProxyFreezable);
 
-        assertEq(IALMProxyFreezable(proxyFreezable).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(IALMProxyFreezable(almProxyFreezable).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
 
     /**********************************************************************************************/
@@ -161,7 +161,7 @@ contract PAUFactory_IntegrationTests is Test {
         address expectedAccessControls = vm.computeCreateAddress(address(factory), nonce + 2);
         address expectedController     = vm.computeCreateAddress(address(factory), nonce + 3);
 
-        IALMProxy       almProxy       = IALMProxy(factory.deployProxy(admin));
+        IALMProxy       almProxy       = IALMProxy(factory.deployALMProxy(admin));
         IRateLimits     rateLimits     = IRateLimits(factory.deployRateLimits(admin));
         IAccessControls accessControls = IAccessControls(factory.deployAccessControls(admin));
 
@@ -221,6 +221,73 @@ contract PAUFactory_IntegrationTests is Test {
 
         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     newController), true);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+
+        vm.stopPrank();
+    }
+
+    function test_deploy_multiController() external {
+        uint256 nonce = vm.getNonce(address(factory));
+
+        address expectedAlmProxy       = vm.computeCreateAddress(address(factory), nonce);
+        address expectedRateLimits     = vm.computeCreateAddress(address(factory), nonce + 1);
+        address expectedAccessControls = vm.computeCreateAddress(address(factory), nonce + 2);
+        address expectedController1    = vm.computeCreateAddress(address(factory), nonce + 3);
+        address expectedController2    = vm.computeCreateAddress(address(factory), nonce + 4);
+
+        IALMProxy       almProxy       = IALMProxy(factory.deployALMProxy(admin));
+        IRateLimits     rateLimits     = IRateLimits(factory.deployRateLimits(admin));
+        IAccessControls accessControls = IAccessControls(factory.deployAccessControls(admin));
+
+        address controller1 = factory.deployController(address(accessControls), address(almProxy), address(rateLimits));
+        address controller2 = factory.deployController(address(accessControls), address(almProxy), address(rateLimits));
+
+        assertEq(address(almProxy),       expectedAlmProxy);
+        assertEq(address(rateLimits),     expectedRateLimits);
+        assertEq(address(accessControls), expectedAccessControls);
+        assertEq(controller1,             expectedController1);
+        assertEq(controller2,             expectedController2);
+
+        // DEFAULT_ADMIN_ROLE granted to admin on all three.
+
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE,       admin), true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE,     admin), true);
+
+        // Only one admin member on IAccessControls (ALMProxy and RateLimits ACL is not enumerable).
+
+        assertEq(accessControls.getRoleMember(DEFAULT_ADMIN_ROLE, 0), admin);
+
+        assertEq(accessControls.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
+
+        // Factory has NO DEFAULT_ADMIN_ROLE on any contract.
+
+        assertEq(accessControls.hasRole(DEFAULT_ADMIN_ROLE, address(factory)), false);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE,       address(factory)), false);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE,     address(factory)), false);
+
+        // Factory has NO CONTROLLER role on ALMProxy or RateLimits.
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     address(factory)), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(factory)), false);
+
+        // Admin can grant roles.
+
+        vm.startPrank(admin);
+
+        almProxy.grantRole(almProxy.CONTROLLER(),     controller1);
+        almProxy.grantRole(almProxy.CONTROLLER(),     controller2);
+        rateLimits.grantRole(rateLimits.CONTROLLER(), controller1);
+        rateLimits.grantRole(rateLimits.CONTROLLER(), controller2);
+
+        accessControls.grantRole(ALLOCATOR_ROLE,       allocator);
+        accessControls.grantRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin);
+
+        // NOTE: In practice the ALLOCATOR_ADMIN_ROLE will be a wrapper module with custom role
+        //       logic that calls into AccessControls to perform grants and revocations.
+        accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
+
+        assertEq(accessControls.hasRole(ALLOCATOR_ROLE,       allocator),      true);
+        assertEq(accessControls.hasRole(ALLOCATOR_ADMIN_ROLE, allocatorAdmin), true);
 
         vm.stopPrank();
     }
