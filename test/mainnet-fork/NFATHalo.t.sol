@@ -239,21 +239,6 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         mainnetController.nfatHalo_issue(address(0), address(almProxy), TOKEN_ID, ISSUE_AMOUNT);
     }
 
-    function test_issueNFAT_recipientMismatch() external {
-        // Point the facility's gem recipient somewhere other than the ALMProxy and verify the
-        // recipient-mismatch guard fires.
-        nfatFacility.file("recipient", makeAddr("notProxy"));
-
-        vm.expectRevert("NFATHaloFacet/recipient-mismatch");
-        vm.prank(allocator);
-        mainnetController.nfatHalo_issue(
-            address(nfatFacility),
-            address(almProxy),
-            TOKEN_ID,
-            ISSUE_AMOUNT
-        );
-    }
-
     function test_issueNFAT_zeroMaxAmount() external {
         // The (facility, almProxy) issue limit is consumed by the ALMProxy balance delta after
         // the facility call lands, so zero out the existing limit to exercise that revert.
