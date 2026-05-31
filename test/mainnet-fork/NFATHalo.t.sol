@@ -11,6 +11,35 @@ import { INFATHaloFacet } from "../../src/facets/nfat-halo/INFATHaloFacet.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
+interface IERC20TransferLike {
+
+    function transfer(address to, uint256 amount) external returns (bool);
+
+}
+
+// Mock facility that, on issue, moves a different gem amount into the ALMProxy (the recipient) than
+// the requested `amount`. Used to exercise the NFATHaloFacet/amount-mismatch guard, which asserts
+// the recorded principal equals the requested amount.
+contract MismatchedIssueFacility {
+
+    address public gem;
+    address public recipient;
+    uint256 public shortfall;
+
+    constructor(address gem_, address recipient_, uint256 shortfall_) {
+        gem       = gem_;
+        recipient = recipient_;
+        shortfall = shortfall_;
+    }
+
+    function issue(address, uint256, uint256 amount) external {
+        IERC20TransferLike(gem).transfer(recipient, amount - shortfall);
+    }
+
+    function repay(uint256, uint256) external {}
+
+}
+
 abstract contract NFATHalo_TestBase is ForkTestBase {
 
     NFATFacility internal nfatFacility;
@@ -237,6 +266,35 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         vm.expectRevert("NFATHaloFacet/facility-zero-address");
         vm.prank(allocator);
         mainnetController.nfatHalo_issue(address(0), address(almProxy), TOKEN_ID, ISSUE_AMOUNT);
+    }
+
+    function test_issueNFAT_amountMismatch() external {
+        // A facility whose issue() delivers less gem to the ALMProxy than requested must trip the
+        // amount-mismatch guard (recorded principal would otherwise diverge from `amount`).
+        MismatchedIssueFacility badFacility =
+            new MismatchedIssueFacility(Ethereum.USDS, address(almProxy), 1);
+
+        // Fund the facility so it can perform the (short) transfer to the proxy.
+        deal(Ethereum.USDS, address(badFacility), ISSUE_AMOUNT);
+
+        // Configure the issue rate limit for the mock so we reach the mismatch check, not the
+        // rate-limit check (though the guard fires before the decrease regardless).
+        bytes32 badIssueKey = mainnetController.nfatHalo_getIssueRateLimitKey(
+            address(badFacility),
+            Ethereum.USDS,
+            address(almProxy)
+        );
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(badIssueKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+
+        vm.expectRevert("NFATHaloFacet/amount-mismatch");
+        vm.prank(allocator);
+        mainnetController.nfatHalo_issue(
+            address(badFacility),
+            address(almProxy),
+            TOKEN_ID,
+            ISSUE_AMOUNT
+        );
     }
 
     function test_issueNFAT_zeroMaxAmount() external {

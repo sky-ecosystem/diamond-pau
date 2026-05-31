@@ -95,8 +95,6 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     /*** External Interactive Allocator Functions                                               ***/
     /**********************************************************************************************/
 
-    /// TODO: Should the amount decreased in the rate limit be based on the amount taken out of the facility
-    /// or the amount moved into the subproxy, can also have a require(amount == delta)
     /// @inheritdoc INFATHaloFacet
     function issue(address facility, address to, uint256 tokenId, uint256 amount)
         external
@@ -126,6 +124,8 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         );
 
         uint256 received = IERC20Like(gem).balanceOf(proxy) - balanceBefore;
+
+        require(amount == received, "NFATHaloFacet/amount-mismatch");
 
         position.issued        = true;
         position.principal     = received;
