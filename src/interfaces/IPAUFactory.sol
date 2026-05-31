@@ -80,7 +80,7 @@ interface IPAUFactory {
 
     /**
      * @notice Deploys an ALMProxy contract.
-     * @param  admin Address that will be granted admin over the deployed contract.
+     * @param  admin    Address that will be granted admin over the deployed contract.
      * @return almProxy Address of the deployed ALMProxy contract.
      */
     function deployALMProxy(address admin) external returns (address almProxy);
