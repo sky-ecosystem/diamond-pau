@@ -23,7 +23,7 @@ The unified controller contract that serves as the entry point for all allocator
 - Dispatch-based call routing: admin syncs integration configs from the Beacon via `updateIntegrations`, which maps call selectors to (facet address, delegate selector) pairs locally
 - Each facet uses its own ERC-7201 namespaced storage domain, preventing storage collisions
 - Shared state (access controls, proxy, rate limits) is accessible to all facets via `ControllerSharedStorage`
-- Reentrancy protection defined in individual facets
+- Reentrancy protection is left to be implemented at the discretion of individual facet functions
 - Enumerable introspection via `integrations()`, `getConfig()`, `getConfigs()`, `getDispatch()`, and `getDispatches()`
 
 **Capabilities (determined by which facets are wired):**
@@ -35,6 +35,21 @@ The unified controller contract that serves as the entry point for all allocator
 - Bridge USDC via CCTP and OFTs with LayerZero
 - Transfer shares via Centrifuge cross-chain
 
+### Multi-Controller Topology (Single ALMProxy)
+
+A PAU deployment can use a single `ALMProxy` with more than one `Controller`. In this topology, each `Controller` can use its own `AccessControls`, its own set of synced integrations/facets, and either:
+
+- a dedicated `RateLimits` contract, or
+- a shared `RateLimits` contract used by multiple controllers.
+
+This is useful when governance wants allocator groups with intentionally different capabilities. For example, one allocator group may be allowed to operate only Integration A while another allocator group may be allowed to operate only Integration B, even though both ultimately direct the same `ALMProxy` custody account.
+
+In practice, this means:
+
+- allocator memberships can differ across each controller's `AccessControls`;
+- available function selectors can differ based on each controller's synced integration set;
+- risk parameters can be isolated per controller (dedicated `RateLimits`) or coordinated across controllers (shared `RateLimits`).
+
 ### Beacon
 
 The Beacon manages all data related to integrations (facet address + wire mappings) and stores the canonical dispatch lookup. Multiple Controllers can reference the same Beacon, each syncing its local config copy via `updateIntegrations`. The Beacon admin (`DEFAULT_ADMIN_ROLE`) configures integrations, and the Beacon validates facet addresses, prevents duplicate selector wiring, and protects hardcoded Controller selectors. Controllers use this syncing pattern to opt in to upgrades from the Beacon.
@@ -43,11 +58,11 @@ See [BEACON.md](./BEACON.md) for data structures, integration lifecycle, hardcod
 
 ### PAUFactory
 
-Factory contract for deploying complete PAU systems. Takes a Beacon address at construction. The `deploy` function atomically creates an `ALMProxy`, `RateLimits`, `AccessControls`, and `Controller` (pointing to the shared Beacon), wires their roles, and transfers admin ownership to the caller-specified admin. Existing PAU systems that will upgrade to use the new controller do not have to deploy from the factory. This factory is to make PAU deployments more convenient for new systems.
+Factory contract for deploying individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode. Note that a deployed `Controller` cannot immediately be used to interact with other PAU system components as it needs to be granted the `CONTROLLER` role on the `ALMProxy` and `RateLimits` contracts.
 
 ### AccessControls
 
-Wraps OpenZeppelin `AccessControlEnumerable` to define the PAU-specific roles used by facets at runtime. Declares `FREEZER_ROLE` and `ALLOCATOR_ROLE` as constants. Provides a `removeAllocator` function gated by `FREEZER_ROLE` for emergency revocation of a compromised allocator without requiring a slower governance process. A separate contract was used here to make facet development easier (external call to a module vs. maintaining ACL storage across all facets).
+A thin extension of OpenZeppelin `AccessControlEnumerable`. The constructor grants `DEFAULT_ADMIN_ROLE` to the configured admin (reverts on a zero address). Role grants and revocations follow standard OpenZeppelin semantics, each role's admin can grant or revoke it, with `DEFAULT_ADMIN_ROLE` as the admin for every role by default. The only PAU-specific addition is `setRoleAdmin(role, adminRole)`, an external wrapper around OZ's internal `_setRoleAdmin` gated by `DEFAULT_ADMIN_ROLE`, which lets governance delegate the admin of any role (for example, making a custom `ALLOCATOR_ADMIN_ROLE` the admin of `ALLOCATOR_ROLE`). No PAU-specific roles, custom role-revoker logic, or emergency-revocation helpers are baked into this contract. Use cases that need custom role granters or revokers (for example, a freezer that can revoke a compromised allocator outside the governance path) should be implemented as separate modules layered on top of `AccessControls`. The module holds the custom role logic, is granted the relevant admin role, and calls into `AccessControls` to perform grants and revocations. For example, a party that wants asymmetric thresholds (a low-threshold multisig that can only revoke roles for fast incident response, and a high-threshold multisig that can grant roles via slower governance) can implement that policy in a custom module on top of `AccessControls`, granting the module the relevant admin role and exposing only the desired grant/revoke entry points to each multisig. A separate contract was used here to make facet development easier (external call to a module vs. maintaining ACL storage across all facets).
 
 ### RateLimits
 
@@ -67,8 +82,8 @@ A variant of the `ALMProxy` that is not intended to hold funds or have critical 
 
 **Architectural differences from standard ALMProxy:**
 
-- **Controller role usage:** In the standard `ALMProxy`, the controller is the `Controller` contract that acts when approved allocators interact with it. In `ALMProxyFreezable`, the allocators are granted the `ALLOCATOR_ROLE` role directly (there is no intermediary Controller contract), so they can call `doCall` and `doCallWithValue` without a Controller.
-- **Additional safety mechanism:** The `FREEZER_ROLE` role can remove allocators via `removeAllocator`, providing quick revocation of access from compromised or malicious allocators without slower governance processes.
+- **Controller role usage:** In the standard `ALMProxy`, the `CONTROLLER` role is held by the `Controller` contract that acts when approved allocators interact with it. In `ALMProxyFreezable`, the allocators are granted the `ALLOCATOR_ROLE` role directly (there is no intermediary Controller contract), so they can call `doCall` and `doCallWithValue` without a Controller.
+- **Additional safety mechanism:** In `ALMProxyFreezable`, the `FREEZER_ROLE` role can remove allocators via `removeAllocator`, providing quick revocation of access from compromised or malicious allocators without slower governance processes. In the standard `ALMProxy`, a role can be created as a role admin of `CONTROLLER` to grant and revoke `CONTROLLER` roles.
 
 ### OTCBuffer
 
@@ -98,17 +113,16 @@ The diagram below provides an example of calling to mint USDS using the Sky allo
 
 ## Permissions
 
-All Contracts except Controller, PAUFactory, ControllerSharedStorage and the facets (via
-FacetBase) inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. Controller, PAUFactory, ControllerSharedStorage and the facets (via
-FacetBase) do not inherit AccessControl directly, they rely on an external AccessControls
+`AccessControls`, `ALMProxy`, `ALMProxyFreezable`, `Beacon`, and `RateLimits`, inherit and implement the `AccessControl` contract from OpenZeppelin to manage permissions. `Controller` and facets (via
+the abstract `Facet`) do not inherit `AccessControl` directly, and instead rely on an external `AccessControls`
 contract for role checks. The following roles are defined:
 
-| Role                 | Description                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_ADMIN_ROLE` | Admin role that can grant and revoke roles. Also used for general admin functions in all contracts.                                                                              |
-| `ALLOCATOR_ROLE`     | Used for the offchain allocator system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`.                                               |
-| `FREEZER_ROLE`       | Allows removal of a compromised `ALLOCATOR_ROLE`. Intended for use with a backup allocator that the system can fall back to.                                                     |
-| `CONTROLLER`         | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits. |
+| Role                 | Description                                                                                                                                                                                                                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DEFAULT_ADMIN_ROLE` | Admin role that can grant and revoke roles. Also used for general admin functions in all contracts.                                                                                                                                                                                      |
+| `ALLOCATOR_ROLE`     | Used for the offchain allocator system. Can call functions on controller contracts to perform actions on behalf of the `ALMProxy`.                                                                                                                                                       |
+| Allocator role admin | Whichever role governance sets as the admin of `ALLOCATOR_ROLE` via `accessControls.setRoleAdmin`. That role can grant and revoke `ALLOCATOR_ROLE`. Defaults to `DEFAULT_ADMIN_ROLE` and is expected to be delegated to a custom module that implements the desired grant/revoke policy. |
+| `CONTROLLER`         | Used for the `ALMProxy` contract. Only the `Controller` with this role can call the `call` functions on `ALMProxy`. Also used in `RateLimits` contract for updating rate limits.                                                                                                         |
 
 ## Contract Interactions
 
@@ -116,7 +130,7 @@ contract for role checks. The following roles are defined:
 
 ## Facets
 
-The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `FacetBase` that provides the `onlyRole` modifier, and the `FacetBase` inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` which provides reentrancy protection, shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
+The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `Facet` (the abstract base contract), which provides the `onlyRole` modifier and inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` for reentrancy protection and shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
 | Facet                | Purpose                                        |
 | -------------------- | ---------------------------------------------- |
@@ -128,20 +142,20 @@ The system uses a facet-based architecture where each protocol integration is en
 | `DAIUSDSFacet`       | DAI to USDS conversion                         |
 | `ERC4626Facet`       | ERC-4626 vault deposit/withdraw                |
 | `ERC7540Facet`       | ERC-7540 async vault interactions              |
+| `EthenaFacet`        | Ethena USDe/sUSDe operations                   |
 | `FarmFacet`          | SPK farming deposit/withdraw                   |
 | `LayerZeroFacet`     | LayerZero v2 cross-chain messaging             |
 | `MapleFacet`         | Maple token redemptions                        |
 | `MerklFacet`         | Merkl operator toggles                         |
 | `OTCFacet`           | Over-the-counter swap buffering                |
 | `PendleFacet`        | Pendle PT redemptions                          |
-| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
 | `PSM3Facet`          | PSM3 deposit/withdraw                          |
+| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
 | `SparkVaultFacet`    | Spark Vault asset withdrawals                  |
 | `SuperstateFacet`    | Superstate USTB subscriptions                  |
 | `TransferAssetFacet` | Generic ERC-20 transfers                       |
 | `UniswapV3Facet`     | Uniswap V3 positions and swaps                 |
 | `UniswapV4Facet`     | Uniswap V4 positions and swaps                 |
-| `USDEFacet`          | Ethena USDe/sUSDe operations                   |
 | `USDSFacet`          | USDS minting/burning via vault                 |
 | `WEETHFacet`         | EtherFi weETH/eETH operations                  |
 | `WrapProxyETHFacet`  | WETH wrapping utility                          |

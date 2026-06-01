@@ -23,7 +23,7 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         _setControllerEntered();
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.wrapAllProxyETH();
+        mainnetController.wrapProxyETH_wrapAll();
     }
 
     function test_wrapAllProxyETH_notAllocator() external {
@@ -32,17 +32,33 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
             address(this),
             ALLOCATOR_ROLE
         ));
-        mainnetController.wrapAllProxyETH();
+        mainnetController.wrapProxyETH_wrapAll();
+    }
+
+    function test_wrapAllProxyETH_invalidAction() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(mainnetController.wrapProxyETH_wrapRateLimitKey(), 0, 0);
+        vm.stopPrank();
+
+        vm.deal(address(almProxy), 1 ether);
+
+        vm.expectRevert("WrapProxyETHFacet/invalid-action");
+        vm.prank(allocator);
+        mainnetController.wrapProxyETH_wrapAll();
     }
 
     function test_wrapAllProxyETH_zeroBalance() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(mainnetController.wrapProxyETH_wrapRateLimitKey(), type(uint256).max, 0);
+        vm.stopPrank();
+
         assertEq(address(almProxy).balance,         0);
         assertEq(WETH.balanceOf(address(almProxy)), 0);
 
         vm.record();
 
         vm.prank(allocator);
-        mainnetController.wrapAllProxyETH();
+        mainnetController.wrapProxyETH_wrapAll();
 
         _assertReentrancyGuardWrittenToTwice();
 
@@ -50,21 +66,9 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         assertEq(WETH.balanceOf(address(almProxy)), 0);
     }
 
-    function test_wrapAllProxyETH_invalidAction() external {
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.wrapAllProxyETHRateLimitKey(), 0, 0);
-        vm.stopPrank();
-
-        vm.deal(address(almProxy), 1 ether);
-
-        vm.expectRevert("WrapProxyETHFacet/invalid-action");
-        vm.prank(allocator);
-        mainnetController.wrapAllProxyETH();
-    }
-
     function test_wrapAllProxyETH() external {
         vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(mainnetController.wrapAllProxyETHRateLimitKey(), type(uint256).max, 0);
+        rateLimits.setRateLimitData(mainnetController.wrapProxyETH_wrapRateLimitKey(), type(uint256).max, 0);
         vm.stopPrank();
 
         vm.deal(address(almProxy), 1 ether);
@@ -78,7 +82,7 @@ contract MainnetController_WrapAllProxyETH_Tests is ForkTestBase {
         emit IWrapProxyETHFacet.WrapProxyETHWrap(1 ether);
 
         vm.prank(allocator);
-        mainnetController.wrapAllProxyETH();
+        mainnetController.wrapProxyETH_wrapAll();
 
         _assertReentrancyGuardWrittenToTwice();
 

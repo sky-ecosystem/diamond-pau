@@ -65,6 +65,9 @@ contract FarmFacet is IFarmFacet, Facet {
 
         IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.stake, (amount)));
 
+        // Clear approvals
+        ApproveLib.approve(stakingToken, proxy, farm, 0);
+
         emit FarmDeposit(farm, amount);
     }
 
@@ -77,7 +80,17 @@ contract FarmFacet is IFarmFacet, Facet {
         returns (uint256 reward)
     {
         require(_rateLimitExists(getClaimRewardRateLimitKey(farm)), "FarmFacet/invalid-action");
-        return _claimReward(farm);
+
+        address proxy        = _getSharedControllerStorage().proxy;
+        address rewardsToken = IFarmLike(farm).rewardsToken();
+
+        uint256 startingBalance = IERC20Like(rewardsToken).balanceOf(proxy);
+
+        IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
+
+        reward = IERC20Like(rewardsToken).balanceOf(proxy) - startingBalance;
+
+        emit FarmReward(farm, reward);
     }
 
     /// @inheritdoc IFarmFacet
@@ -86,18 +99,22 @@ contract FarmFacet is IFarmFacet, Facet {
         override
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
-        returns (uint256 reward)
     {
-        _decreaseRateLimit(getWithdrawRateLimitKey(farm), amount);
+        address proxy        = _getSharedControllerStorage().proxy;
+        address stakingToken = IFarmLike(farm).stakingToken();
+
+        uint256 startingBalance = IERC20Like(stakingToken).balanceOf(proxy);
 
         IALMProxy(_getSharedControllerStorage().proxy).doCall(
             farm,
             abi.encodeCall(IFarmLike.withdraw, (amount))
         );
 
-        emit FarmWithdraw(farm, amount);
+        uint256 amountWithdrawn = IERC20Like(stakingToken).balanceOf(proxy) - startingBalance;
 
-        return _claimReward(farm);
+        _decreaseRateLimit(getWithdrawRateLimitKey(farm), amountWithdrawn);
+
+        emit FarmWithdraw(farm, amountWithdrawn);
     }
 
     /**********************************************************************************************/
@@ -122,23 +139,6 @@ contract FarmFacet is IFarmFacet, Facet {
     /// @inheritdoc IFarmFacet
     function getWithdrawRateLimitKey(address farm) public pure override returns (bytes32) {
         return makeAddressKey(_LIMIT_WITHDRAW, farm);
-    }
-
-    /**********************************************************************************************/
-    /*** Internal Interactive Functions                                                         ***/
-    /**********************************************************************************************/
-
-    function _claimReward(address farm) internal returns (uint256 reward) {
-        address proxy        = _getSharedControllerStorage().proxy;
-        address rewardsToken = IFarmLike(farm).rewardsToken();
-
-        uint256 startingBalance = IERC20Like(rewardsToken).balanceOf(proxy);
-
-        IALMProxy(proxy).doCall(farm, abi.encodeCall(IFarmLike.getReward, ()));
-
-        reward = IERC20Like(rewardsToken).balanceOf(proxy) - startingBalance;
-
-        emit FarmReward(farm, reward);
     }
 
 }

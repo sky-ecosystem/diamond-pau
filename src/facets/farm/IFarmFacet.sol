@@ -23,7 +23,8 @@ interface IFarmFacet is IFacet {
 
     /**
      * @notice Emitted when rewards are claimed from a farm without unstaking.
-     * @param  farm Address of the farm contract.
+     * @param  farm   Address of the farm contract.
+     * @param  amount Amount of rewards claimed.
      */
     event FarmReward(address indexed farm, uint256 amount);
 
@@ -53,12 +54,11 @@ interface IFarmFacet is IFacet {
     function deposit(address farm, uint256 amount) external;
 
     /**
-     * @notice Unstakes tokens from a farm and claims pending rewards.
+     * @notice Unstakes tokens from a farm.
      * @param  farm   Address of the farm contract.
      * @param  amount Amount of staking tokens to withdraw.
-     * @return reward Amount of rewards claimed.
      */
-    function withdraw(address farm, uint256 amount) external returns (uint256 reward);
+    function withdraw(address farm, uint256 amount) external;
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/

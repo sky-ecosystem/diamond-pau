@@ -6,11 +6,11 @@ This document describes protocol-specific security considerations for PAU.
 
 ### Role Trust Levels
 
-| Role                 | Trust Level               | Description                                                                                                       |
-| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_ADMIN_ROLE` | **Fully trusted**         | Run by governance                                                                                                 |
-| `ALLOCATOR_ROLE`     | **Assumed compromisable** | Logic must prevent unauthorized value movement. This should be a major consideration during auditing engagements. |
-| `FREEZER_ROLE`       | Trusted                   | Can stop compromised allocators via `removeAllocator`                                                             |
+| Role                 | Trust Level               | Description                                                                                                                                                                                    |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DEFAULT_ADMIN_ROLE` | **Fully trusted**         | Run by governance                                                                                                                                                                              |
+| `ALLOCATOR_ROLE`     | **Assumed compromisable** | Logic must prevent unauthorized value movement. This should be a major consideration during auditing engagements.                                                                              |
+| Allocator role admin | Trusted                   | The role (or module holding the role) that governance sets as the admin of `ALLOCATOR_ROLE`. Can grant and revoke `ALLOCATOR_ROLE`, including emergency revocation of a compromised allocator. |
 
 ### Allocator Compromise Mitigations
 
@@ -21,7 +21,7 @@ When assuming a compromised `ALLOCATOR`:
 
 2. **Loss limitations:** Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits
 
-3. **Emergency response:** The `FREEZER_ROLE` must be able to stop harmful actions within max rate limits using `removeAllocator`
+3. **Emergency response:** The allocator role admin must be able to stop harmful actions within max rate limits by revoking `ALLOCATOR_ROLE` from the compromised account
 
 4. **DOS attacks:** A compromised allocator can perform DOS attacks. Recovery procedures are outlined in `Attacks.t.sol` test files.
 
@@ -35,9 +35,9 @@ For comprehensive threat modeling, attack vectors, and trust assumptions, see [T
 
 **Trust Assumption:** Ethena is a trusted counterparty in this system.
 
-**Scenario:** An operation initiated by a allocator can continue after a freeze is performed.
+**Scenario:** An operation initiated by an allocator can continue after the allocator is revoked.
 
-**Implication:** If the `FREEZER_ROLE` role removes a allocator while an Ethena mint/burn operation is pending, that operation will still complete.
+**Implication:** If the allocator role admin revokes `ALLOCATOR_ROLE` from an allocator while an Ethena mint/burn operation is pending, that operation will still complete.
 
 **Rationale:**
 
@@ -66,7 +66,9 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 ### Centrifuge Integration
 
-**Architecture Note:** Cancel/Claim paths will be blocked if deposit rate limit is set to zero. To circumvent this the rate limit would be set to 1 so that cancel and claim can be used.
+**Architecture Note:** Each Centrifuge cancel and claim-cancel path is gated by its own dedicated rate-limit key, each presence-checked via `_requireRateLimitExists`. Every key must be configured by governance before the corresponding path can be used.
+
+**Security Node:** If a cancel key is set but its matching claim-cancel key is not, `cancel*Request` will succeed and `claimCancel*Request` will then revert. Because Centrifuge requests use `REQUEST_ID = 0`, no new deposit or redeem request can be submitted while a cancellation is pending, so the integration stays stuck until governance configures the missing claim-cancel key.
 
 ---
 
@@ -76,10 +78,11 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 **Guarantee:** Any ETH left in the `ALMProxy` can always be removed.
 
-| Method            | Access           | Description                                                  |
-| ----------------- | ---------------- | ------------------------------------------------------------ |
-| `doCallWithValue` | `CONTROLLER`     | Allows arbitrary calls with ETH value attached from ALMProxy |
-| `wrapAll`         | `ALLOCATOR_ROLE` | Wraps all ETH in ALMProxy to WETH (via WrapProxyETHFacet)    |
+| Method                              | Access       | Description                                                              |
+| ----------------------------------- | ------------ | ------------------------------------------------------------------------ |
+| `ALMProxy.doCallWithValue`          | `CONTROLLER` | Allows arbitrary calls with ETH value attached from `ALMProxy`.          |
+| `ALMProxyFreezable.doCallWithValue` | `ALLOCATOR`  | Allows arbitrary calls with ETH value attached from `ALMProxyFreezable`. |
+| `WrapProxyETHFacet.wrapAll`         | `ALLOCATOR`  | Wraps all ETH in `ALMProxy` to WETH.                                     |
 
 **Use Cases:**
 
@@ -88,7 +91,12 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 - Convert ETH to WETH for standard token handling
 - Emergency fund extraction
 
-**Security:** The `doCallWithValue` function is governance-controlled and does not introduce attack vectors for compromised allocators. The `wrapAll` function is allocator-accessible but only converts ETH to WETH within the ALMProxy, keeping funds in the system.
+**Security:**
+
+- `ALMProxy.doCallWithValue` is gated by the `CONTROLLER` role, which is held only by the `Controller` contract. A compromised allocator can therefore only reach this function indirectly through facets wired into the `Controller`, where rate limits and per-facet logic apply.
+- `ALMProxyFreezable.doCallWithValue` is gated by the `RELAYER` role directly and is callable by a compromised relayer. `ALMProxyFreezable` is not intended to hold funds, and the `FREEZER` role can revoke a compromised relayer via `removeRelayer` to halt further calls.
+- Facet functionality gated by the `ALLOCATOR_ROLE` is protected by rate limits and other safeguards.
+- `wrapAll` is accessible to allocators but only converts ETH to WETH within the `ALMProxy`, keeping funds in the system.
 
 ---
 

@@ -13,8 +13,6 @@ PAU performs liquidity operations across multiple venues:
 | **Uniswap V4** | Swaps, positions            | On-chain stablecoin swaps                      |
 | **OTC Desks**  | Offchain swaps              | High-volume institutional liquidity            |
 
-**Asset Assumption:** All assets in these operations are treated as 1:1 (USD stablecoins). See [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity) for details.
-
 ---
 
 ## Curve Integration
@@ -27,11 +25,15 @@ PAU performs liquidity operations across multiple venues:
 
 ### Rate Limiting
 
-Curve operations use three rate limit keys per pool:
+Curve operations use several rate limit keys per pool:
 
-- **Add liquidity rate limit:** Controls the value deposited into pools
-- **Swap rate limit:** Controls the implicit swap value when deposits are imbalanced
-- **Remove liquidity rate limit:** Controls the value withdrawn from pools
+- **Aggregate deposit rate limit:** Controls the value deposited into pools
+- **Asset deposit rate limits:** Controls the value deposited into pools for a specific token
+- **Asset Swap rate limits:** Controls the implicit swap value when deposits are imbalanced for a specific token
+- **Aggregate withdraw rate limit:** Controls the value withdrawn from pools
+- **Asset withdraw rate limits:** Controls the value withdrawn from pools for a specific token
+
+Since adding liquidity in Curve handles input asset rebalancing with "virtual swaps" to keep the pool's ratio of assets constant, the asset swap rate limits for each token must also be set in order for the add liquidity operation to succeed, regardless if any assets were actually "swapped" in or out.
 
 ### Slippage Protection
 
@@ -39,7 +41,7 @@ All Curve operations require `maxSlippage` to be configured (cannot be zero). Th
 
 ### Requirements
 
-- Only 1:1 stablecoin pools can be onboarded
+- Even though it relies on `stored_rates` for asset normalization, it is designed for 1:1 stablecoin or correlated asset pools of correlated assets (e.g. sUSDS/USDC or wstETH/WETH).
 
 ### Seeding Requirement
 
@@ -51,25 +53,30 @@ Curve pools must be seeded with initial liquidity before use. Seeding must be do
 
 ### Supported Operations
 
-- **Swaps:** Exchange between stablecoins via Uniswap V3 pools
+- **Swaps:** Exchange between assets via Uniswap V3 pools
 - **Add Liquidity:** Mint a new position or increase an existing one
 - **Remove Liquidity:** Decrease liquidity from an existing position and collect tokens
 
 ### Rate Limiting
 
-Uniswap V3 operations use three rate limit keys per pool per token:
+Uniswap V3 operations use several rate limit keys per pool:
 
-- **Add liquidity rate limit:** Controls the value deposited into pools
-- **Swap rate limit:** Controls the swap value (amount spent)
-- **Remove liquidity rate limit:** Controls the value withdrawn from pools
+- **Aggregate deposit rate limit:** Controls the value deposited into pools
+- **Asset deposit rate limits:** Controls the value deposited into pools for a specific token
+- **Asset Swap rate limits:** Controls the swap value (amount spent) for a specific token
+- **Aggregate withdraw rate limit:** Controls the value withdrawn from pools
+- **Asset withdraw rate limits:** Controls the value withdrawn from pools for a specific token
 
 ### Slippage Protection
 
-Uniswap V3 operations require `maxSlippage` to be configured per pool (cannot be zero). The TWAP price is used to compute expected amounts and validate slippage thresholds.
+Uniswap V3 operations use different slippage models depending on the operation:
+
+- **`addLiquidity` (mint and increase) and `removeLiquidity`:** Require the per-pool `maxSlippage` to be configured (cannot be zero). For add-liquidity, caller-supplied `min.amount0` / `min.amount1` are validated against TWAP-derived expected amounts before execution. For remove-liquidity, the same minimums are checked against the amounts actually received after execution.
+- **`swap`:** Does not check `maxSlippage`. Requires a nonzero caller-supplied `minAmountOut` and uses a TWAP-derived `sqrtPriceLimitX96` bounded by the per-pool `swapMaxTickDelta` as the on-chain price boundary.
 
 ### Requirements
 
-- Only 1:1 stablecoin pools can be onboarded
+- Onboarded pools should be limited to those with 1:1 stablecoin pairs.
 - Tick bounds and TWAP seconds must be configured before operations
 - The ALMProxy must own the NFT position for increase/decrease operations
 - Uses the pool's built-in TWAP oracle for price validation on swaps and liquidity additions, unlike V4 which does not rely on TWAP
@@ -89,20 +96,26 @@ See [UNIV3_UNIV4_COMPARISON.md](./UNIV3_UNIV4_COMPARISON.md) for a detailed comp
 
 ### Rate Limiting
 
-Uniswap V4 operations use three rate limit keys per pool:
+Uniswap V4 operations use several rate limit keys per pool:
 
-- **Add liquidity rate limit:** Controls the value deposited into pools
-- **Swap rate limit:** Controls the implicit swap value when deposits are imbalanced
-- **Remove liquidity rate limit:** Controls the value withdrawn from pools
+- **Aggregate deposit rate limit:** Controls the value deposited into pools
+- **Asset deposit rate limits:** Controls the value deposited into pools for a specific token
+- **Asset Swap rate limits:** Controls the implicit swap value when deposits are imbalanced for a specific token
+- **Aggregate withdraw rate limit:** Controls the value withdrawn from pools
+- **Asset withdraw rate limits:** Controls the value withdrawn from pools for a specific token
 
 ### Slippage Protection
 
-Uniswap V4 operations require `maxSlippage` to be configured (cannot be zero).
+Uniswap V4 operations use different slippage models depending on the operation:
+
+- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens.
+- **`mintPosition`, `increasePosition`, `decreasePosition`:** Do not check `maxSlippage`. They rely on caller-supplied `amount0Max` / `amount1Max` (mint and increase) or `amount0Min` / `amount1Min` (decrease) as boundaries enforced by the position manager, together with the per-pool tick limits (`tickLowerMin`, `tickUpperMax`, `maxTickSpacing`) on `mintPosition` and `increasePosition`.
 
 ### Requirements
 
-- Only 1:1 stablecoin pools can be onboarded
-- Tick limits must be configured.
+- Onboarded pools should be limited to those with 1:1 stablecoin pairs.
+- Tick limits must be configured for `mintPosition` and `increasePosition`
+- `maxSlippage` must be configured per pool for `swap`
 - Only hookless pools can be onboarded. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.
 
 ### Seeding Requirement
@@ -121,7 +134,7 @@ The OTC swap module allows offchain swaps with OTC desks and exchanges while con
 2. The contract prevents sending more funds until the required balance is returned
 3. Acts as a gating mechanism: maximum `X` funds outside the system per approved exchange
 
-This provides guarantees that at most `X` can be at risk per whitelisted OTC route, while allowing rapid throughput into high-liquidity offchain markets.
+This provides guarantees that at most `X` can be at risk per whitelisted (rate limited) OTC route, while allowing rapid throughput into high-liquidity offchain markets.
 
 ### System Diagram
 
@@ -149,7 +162,7 @@ $$claimedAmount + (blockTimestamp - sentTimestamp) \times rechargeRate \ge sentA
 
 ### OTC Buffer Configuration
 
-OTC buffers require infinite allowance (`type(uint256).max`) to the ALMProxy. This allows atomic fund pulling during swap completion. `otcClaim` always attempts to transfer the entire buffer balance for a whitelisted asset; with finite allowances, an attacker can donate a small amount to push balance above allowance, causing claim reverts and blocking OTC readiness when recharge is zero/low. See [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md#otc-buffer-deployment) for deployment checklist.
+OTC buffers require infinite allowance (`type(uint256).max`) to the ALMProxy. This allows atomic fund pulling during swap completion. `otcClaim` always attempts to transfer the entire buffer balance for a whitelisted (via rate limit) asset; with finite allowances, an attacker can donate a small amount to push balance above allowance, causing claim reverts and blocking OTC readiness when recharge is zero/low. See [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md#otc-buffer-deployment) for deployment checklist.
 
 ---
 
@@ -172,10 +185,10 @@ There are two PSM integrations with different rate limit behaviors:
 
 **Operations:** Deposit/withdraw assets to/from L2 PSM
 
-| Operation     | Rate Limit                        |
-| ------------- | --------------------------------- |
-| `depositPSM`  | Decreases limit                   |
-| `withdrawPSM` | Decreases limit (no cancellation) |
+| Operation  | Rate Limit                        |
+| ---------- | --------------------------------- |
+| `deposit`  | Decreases limit                   |
+| `withdraw` | Decreases limit (no cancellation) |
 
 **Design Decision:** No cancellation, no `minShares`.
 

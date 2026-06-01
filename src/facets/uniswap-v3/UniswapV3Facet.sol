@@ -255,7 +255,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             "UniswapV3Facet/lower-tick-oob"
         );
 
-        emit UniswapV3LowerTickUpdated(pool, tickBounds.lower = lowerTickBound);
+        emit UniswapV3LowerTickSet(pool, tickBounds.lower = lowerTickBound);
     }
 
     /// @inheritdoc IUniswapV3Facet
@@ -274,7 +274,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             "UniswapV3Facet/upper-tick-oob"
         );
 
-        emit UniswapV3UpperTickUpdated(pool, tickBounds.upper = upperTickBound);
+        emit UniswapV3UpperTickSet(pool, tickBounds.upper = upperTickBound);
     }
 
     /// @inheritdoc IUniswapV3Facet
@@ -292,7 +292,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
 
         _getFacetStorage().poolParams[pool].twapSecondsAgo = twapSecondsAgo;
 
-        emit UniswapV3TWAPSecondsAgoUpdated(pool, twapSecondsAgo);
+        emit UniswapV3TWAPSecondsAgoSet(pool, twapSecondsAgo);
     }
 
     /**********************************************************************************************/
@@ -332,6 +332,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             minAmountOut : minAmountOut,
             tickDelta    : tickDelta
         });
+
+        require(amountOut >= minAmountOut, "UniswapV3Facet/min-amount-out-not-met");
 
         uint256 amountSpent = startingBalance - IERC20Like(tokenIn).balanceOf(proxy);
 
@@ -398,6 +400,9 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             _toNormalizedAmount(token0, amounts.amount0) +
             _toNormalizedAmount(token1, amounts.amount1);
 
+        // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
+        //       the assumption that the tokens are pegged and valued equally.
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
         _decreaseRateLimit(getAggregateDepositRateLimitKey(pool),     aggregateAmount);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token1), amounts.amount1);
@@ -438,6 +443,8 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             liquidity : liquidity
         });
 
+        _callCollect(tokenId); // Collect fees first.
+
         uint256 startingToken0Balance = _getProxyBalance(token0);
         uint256 startingToken1Balance = _getProxyBalance(token1);
 
@@ -457,7 +464,12 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             _toNormalizedAmount(token0, amounts.amount0) +
             _toNormalizedAmount(token1, amounts.amount1);
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(pool), valueWithdrawn);
+        // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease,
+        //       which makes the assumption that the tokens are pegged and valued equally.
+        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        _decreaseRateLimit(getAggregateWithdrawRateLimitKey(pool),     valueWithdrawn);
+        _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token0), amounts.amount0);
+        _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token1), amounts.amount1);
 
         emit UniswapV3RemoveLiquidity(pool, tokenId, liquidity, amounts.amount0, amounts.amount1);
     }
@@ -519,13 +531,23 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV3Facet
-    function getWithdrawRateLimitKey(address pool)
+    function getAggregateWithdrawRateLimitKey(address pool)
         public
         pure
         override
         returns (bytes32)
     {
         return makeAddressKey(_LIMIT_WITHDRAW, pool);
+    }
+
+    /// @inheritdoc IUniswapV3Facet
+    function getAssetWithdrawRateLimitKey(address pool, address token)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressKey(_LIMIT_WITHDRAW, token, pool);
     }
 
     /**********************************************************************************************/
@@ -679,33 +701,33 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
             target.amount1
         );
 
-        if (twapTick <= ticks.lower) {
+        if (twapTick < ticks.lower) {
             expectedAmount0 = UniswapV3Utils.getAmount0Delta(
                 sqrtRatioLowerX96,
                 sqrtRatioUpperX96,
                 expectedLiquidity,
-                false
+                true
             );
         } else if (twapTick >= ticks.upper) {
             expectedAmount1 = UniswapV3Utils.getAmount1Delta(
                 sqrtRatioLowerX96,
                 sqrtRatioUpperX96,
                 expectedLiquidity,
-                false
+                true
             );
         } else {
             expectedAmount0 = UniswapV3Utils.getAmount0Delta(
                 sqrtTWAPPriceX96,
                 sqrtRatioUpperX96,
                 expectedLiquidity,
-                false
+                true
             );
 
             expectedAmount1 = UniswapV3Utils.getAmount1Delta(
                 sqrtRatioLowerX96,
                 sqrtTWAPPriceX96,
                 expectedLiquidity,
-                false
+                true
             );
         }
     }

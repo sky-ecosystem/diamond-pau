@@ -36,7 +36,15 @@ interface IControllerLike {
 
     function getSwapRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
 
-    function getWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32);
+    function getAggregateWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32);
+
+    function getAssetWithdrawRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
+
+    function permit2() external view returns (address);
+
+    function positionManager() external view returns (address);
+
+    function router() external view returns (address);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
@@ -59,7 +67,7 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "UniswapV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setMaxSlippage.selector,
@@ -97,8 +105,28 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IControllerLike.getWithdrawRateLimitKey.selector,
-            IUniswapV4Facet.getWithdrawRateLimitKey.selector
+            IControllerLike.getAggregateWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IControllerLike.getAssetWithdrawRateLimitKey.selector,
+            IUniswapV4Facet.getAssetWithdrawRateLimitKey.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IControllerLike.permit2.selector,
+            IUniswapV4Facet.permit2.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IControllerLike.positionManager.selector,
+            IUniswapV4Facet.positionManager.selector
+        );
+
+        wires[11] = IEnumerableIntegrations.Wire(
+            IControllerLike.router.selector,
+            IUniswapV4Facet.router.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -142,6 +170,16 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         assertEq(facet.permit2(),         permit2);
         assertEq(facet.positionManager(), positionManager);
         assertEq(facet.router(),          router);
+    }
+
+    /**********************************************************************************************/
+    /*** Immutables Tests                                                                       ***/
+    /**********************************************************************************************/
+
+    function test_immutables() external {
+        assertEq(controller.permit2(),         makeAddr("permit2"));
+        assertEq(controller.positionManager(), makeAddr("positionManager"));
+        assertEq(controller.router(),          makeAddr("router"));
     }
 
     /**********************************************************************************************/
@@ -311,13 +349,30 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** getWithdrawRateLimitKey Tests                                                          ***/
+    /*** getAggregateWithdrawRateLimitKey Tests                                                 ***/
     /**********************************************************************************************/
 
-    function test_getWithdrawRateLimitKey() external {
+    function test_getAggregateWithdrawRateLimitKey() external {
         bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_WITHDRAW");
 
-        assertEq(controller.getWithdrawRateLimitKey(_POOL_ID), makeBytes32Key(keyPrefix, _POOL_ID));
+        assertEq(
+            controller.getAggregateWithdrawRateLimitKey(_POOL_ID),
+            makeBytes32Key(keyPrefix, _POOL_ID)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getAssetWithdrawRateLimitKey Tests                                                     ***/
+    /**********************************************************************************************/
+
+    function test_getAssetWithdrawRateLimitKey() external {
+        bytes32 keyPrefix = keccak256("LIMIT_UNISWAP_V4_WITHDRAW");
+        address token     = makeAddr("token");
+
+        assertEq(
+            controller.getAssetWithdrawRateLimitKey(_POOL_ID, token),
+            makeAddressBytes32Key(keyPrefix, token, _POOL_ID)
+        );
     }
 
 }

@@ -13,26 +13,13 @@ This document captures specific implementation decisions and behaviors that may 
 **Intention:** Prevents adding liquidity to unseeded pools, which could lead to unfavorable exchange rates.
 
 ```solidity
-// Intentionally reverts when get_virtual_price() == 0 to prevent adding liquidity to unseeded pools
-require(
-    params.minLpAmount >= valueDeposited
-        * params.maxSlippage
-        / curvePool.get_virtual_price(),
-    "CurveFacet/min-amount-not-met"
-);
+uint256 virtualPrice = ICurvePoolLike(pool).get_virtual_price();
+
+// Prevent adding liquidity to unseeded pools.
+require(virtualPrice != 0, "CurveFacet/virtual-price-zero");
 ```
 
 See [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md#curve-pool-seeding) for seeding requirements.
-
----
-
-## CCTPFacet.transfer - maxFee Validation with Chunked Transfers
-
-**Location:** `src/facets/cctp/CCTPFacet.sol` - `transfer` function
-
-**Known Issue:** When a transfer exceeds `burnLimit` and is split into chunks, the same `maxFee` is passed to each `depositForBurn` call. The last chunk may be smaller than `maxFee`, causing the `maxFee < amount` check to revert at the CCTP level.
-
-**Practical Impact:** Negligible. In practice, CCTP relay fees are orders of magnitude smaller than `burnLimit`, so the last chunk will almost always exceed `maxFee`.
 
 ---
 
@@ -52,11 +39,11 @@ See [Operational Requirements](./OPERATIONAL_REQUIREMENTS.md#curve-pool-seeding)
 
 ---
 
-## CCTPFacet.transferWithFee - CCTPv2 Fee Handling
+## CCTPFacet.transfer - feeCapRate Configuration
 
-**Location:** `src/facets/cctp/CCTPFacet.sol` - `transferWithFee` function
+**Location:** `src/facets/cctp/CCTPFacet.sol` - `transfer` function
 
-The current CCTPFacet targets CCTPv2, which will enable a non-zero `maxFee` in the future. To handle this, `transferWithFee` allows the allocator to fetch the CCTPv2 fee off-chain and submit it as a parameter. The original `transfer` function (which hardcodes `maxFee = 0`) is kept for backward compatibility. These two functions may be unified into one after CCTPv2 fees are fully enabled.
+`transfer` computes `maxFee = (transferAmount * feeCapRate) / 10_000` per chunk and bounds `feeCapRate` against the per-domain `[minFeeCapRate, maxFeeCapRate]` set by governance via `setDomainParameters`. Until CCTPv2 relay fees are enabled, the per-domain `minFeeCapRate` and `maxFeeCapRate` should be set to `0`.
 
 ---
 
@@ -75,19 +62,22 @@ Error messages follow the pattern `ComponentName/error-description`. Each facet 
 
 Additionally, some core contracts use Solidity custom errors (not string-prefix `require` messages):
 
-| Custom Error                       | Source                   |
-| ---------------------------------- | ------------------------ |
-| `CallSelectorAlreadyWired(bytes4)` | IEnumerableIntegrations  |
-| `CallSelectorHardcoded(bytes4)`    | IBeacon                  |
-| `CallSelectorNotWired(bytes4)`     | IController              |
-| `EmptyArray()`                     | IBeacon, IController     |
-| `EmptyFacet()`                     | IEnumerableIntegrations  |
-| `IntegrationNotFound(bytes32)`     | IEnumerableIntegrations  |
-| `InvalidCallDataLength(uint256)`   | IController              |
-| `NotAdmin(address)`                | IController              |
-| `ZeroAdmin()`                      | IAccessControls, IBeacon |
-| `ZeroBeacon()`                     | IController, IPAUFactory |
-| `ZeroFacet()`                      | IBeacon                  |
+| Custom Error                       | Source                                |
+| ---------------------------------- | ------------------------------------- |
+| `CallSelectorAlreadyWired(bytes4)` | IEnumerableIntegrations               |
+| `CallSelectorHardcoded(bytes4)`    | IBeacon                               |
+| `CallSelectorNotWired(bytes4)`     | IController                           |
+| `EmptyArray()`                     | IBeacon, IController                  |
+| `EmptyFacet()`                     | IEnumerableIntegrations               |
+| `IntegrationNotFound(bytes32)`     | IEnumerableIntegrations               |
+| `InvalidCallDataLength(uint256)`   | IController                           |
+| `NotAdmin(address)`                | IController                           |
+| `ZeroAccessControls()`             | IController                           |
+| `ZeroAdmin()`                      | IAccessControls, IBeacon, IRateLimits |
+| `ZeroBeacon()`                     | IController, IPAUFactory              |
+| `ZeroFacet()`                      | IBeacon                               |
+| `ZeroProxy()`                      | IController                           |
+| `ZeroRateLimits()`                 | IController                           |
 
 ### Facet Prefixes
 
@@ -114,7 +104,7 @@ Additionally, some core contracts use Solidity custom errors (not string-prefix 
 | ------------- | ---------------------- |
 | `ApproveLib/` | Token approval utility |
 
-Facets without custom error messages (use only rate limit reverts): `DAIUSDSFacet`, `ERC7540Facet`, `FarmFacet`, `MerklFacet`, `PSMFacet`, `PSM3Facet`, `SparkVaultFacet`, `SuperstateFacet`, `USDEFacet`, `USDSFacet`, `WrapProxyETHFacet`, `WSTETHFacet`.
+Facets without custom error messages (use only rate limit reverts): `DAIUSDSFacet`, `ERC7540Facet`, `FarmFacet`, `MerklFacet`, `PSMFacet`, `PSM3Facet`, `SparkVaultFacet`, `SuperstateFacet`, `EthenaFacet`, `USDSFacet`, `WrapProxyETHFacet`, `WSTETHFacet`.
 
 ---
 
@@ -142,16 +132,7 @@ Rate limit keys combine a function identifier with contextual data via `keccak25
 
 ### Key Construction Helpers
 
-`RateLimitHelpers.sol` provides multiple helpers for different key patterns:
-
-| Helper                        | Parameters                                  | Used By                                                                                             |
-| ----------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `makeAddressKey`              | `(bytes32 limit, address)`                  | Most facets (ERC4626, Aave, Curve, etc.)                                                            |
-| `makeBytes32Key`              | `(bytes32 limit, bytes32)`                  | UniswapV4Facet (pool ID)                                                                            |
-| `makeUint32Key`               | `(bytes32 limit, uint32)`                   | CCTPFacet (destination domain)                                                                      |
-| `makeAddressAddressUint32Key` | `(bytes32 limit, address, address, uint32)` | LayerZeroFacet (token + OFT + endpoint)                                                             |
-| `makeAddressUint16Key`        | `(bytes32 limit, address, uint16)`          | CentrifugeFacet (vault + region ID)                                                                 |
-| `makeAddressAddressKey`       | `(bytes32 limit, address, address)`         | TransferAssetFacet (asset + destination), UniswapV3Facet (token + pool), BasinFacet (asset + basin) |
+`RateLimitHelpers.sol` provides multiple helpers for different key patterns.
 
 See [Rate Limits](./RATE_LIMITS.md#whitelisting-via-rate-limit-keys) for design rationale.
 
@@ -167,10 +148,10 @@ Function overloading is not recommended in facets. When a facet has overloaded f
 
 Some operations use a "gate-check" pattern where they verify a rate limit is configured (`maxAmount > 0`) without actually decreasing the rate limit. This serves as an implicit whitelist mechanism. Used by:
 
-- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_REQUEST_WITHDRAW.maxAmount > 0`
-- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_REQUEST_WITHDRAW, weethModule).maxAmount > 0`
+- `WSTETHFacet.claimWithdrawal`: checks `LIMIT_WSTETH_CLAIM_WITHDRAW.maxAmount > 0`
+- `WEETHFacet.claimWithdrawal`: checks `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weethModule).maxAmount > 0`
 
-This ensures the corresponding request-withdraw rate limit key was configured by governance before claims are allowed.
+The check is on a dedicated claim-side key. Configuring only the request-withdraw key is not sufficient. The `requestWithdraw` will succeed and queue shares with Lido/EtherFi, but `claimWithdrawal` will later revert with `WSTETHFacet/invalid-action` or `WEETHFacet/invalid-action` until the claim key is added.
 
 ---
 

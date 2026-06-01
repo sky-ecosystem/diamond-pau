@@ -10,6 +10,37 @@ import { IFacet } from "../IFacet.sol";
  */
 interface ILayerZeroFacet is IFacet {
 
+    /**
+     * @notice Struct representing messaging fee details.
+     * @param  nativeFee  Gas amount in native gas token.
+     * @param  lzTokenFee Gas amount in ZRO token.
+     */
+    struct MessagingFee {
+        uint256 nativeFee;
+        uint256 lzTokenFee;
+    }
+
+    /**
+     * @notice Struct representing token parameters for the OFT send() operation.
+     * @param  dstEid       Destination endpoint ID.
+     * @param  to           Recipient address.
+     * @param  amountLD     Amount to send in local decimals.
+     * @param  minAmountLD  Minimum amount to send in local decimals.
+     * @param  extraOptions Additional options supplied by the caller to be used in the LayerZero
+     *                      message.
+     * @param  composeMsg   Composed message for the send() operation.
+     * @param  oftCmd       OFT command to be executed, unused in default OFT implementations.
+     */
+    struct SendParam {
+        uint32  dstEid;
+        bytes32 to;
+        uint256 amountLD;
+        uint256 minAmountLD;
+        bytes   extraOptions;
+        bytes   composeMsg;
+        bytes   oftCmd;
+    }
+
     /**********************************************************************************************/
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
@@ -48,7 +79,7 @@ interface ILayerZeroFacet is IFacet {
 
     /**
      * @notice Transfers tokens cross-chain via a LayerZero OFT contract.
-     * @notice Excess native fee is refunded to the caller.
+     * @notice Excess native fee is refunded to the ALM proxy.
      * @param  oft                   Address of the OFT contract.
      * @param  amount                Amount of tokens to transfer (local decimals).
      * @param  destinationEndpointId LayerZero endpoint ID for the destination chain.
@@ -71,13 +102,37 @@ interface ILayerZeroFacet is IFacet {
     /**
      * @notice Returns the derived transfer rate limit key for an OFT, token, and destination.
      * @param  oft                   Address of the OFT contract.
+     * @param  peer                  Bytes32-encoded peer address on the destination chain.
      * @param  destinationEndpointId LayerZero endpoint ID for the destination chain.
      * @param  token                 Address of token transferred by OFT.
      * @return key                   Derived rate limit key.
      */
-    function getTransferRateLimitKey(address oft, uint32 destinationEndpointId, address token)
+    function getTransferRateLimitKey(
+        address oft,
+        bytes32 peer,
+        uint32  destinationEndpointId,
+        address token
+    )
         external
         pure
         returns (bytes32 key);
+
+    /**
+     * @notice Returns the send parameters and messaging fee for a cross-chain token transfer.
+     *         This function is to be used by allocators to estimate the messaging fee (msg.value)
+     *         required for a transfer.
+     * @param  oft                   Address of the OFT contract.
+     * @param  amount                Amount of tokens to transfer (local decimals).
+     * @param  destinationEndpointId LayerZero endpoint ID for the destination chain.
+     * @return sendParams            Send parameters for the send operation.
+     * @return fee                   Messaging fee for the send operation.
+     */
+    function quoteTransfer(address oft, uint256 amount, uint32 destinationEndpointId)
+        external
+        view
+        returns (
+            SendParam    memory sendParams,
+            MessagingFee memory fee
+        );
 
 }

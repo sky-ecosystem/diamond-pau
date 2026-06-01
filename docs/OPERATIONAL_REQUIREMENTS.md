@@ -54,15 +54,13 @@ All ERC-20 tokens used with PAU must be:
 - Unconfigured integrations will revert on interaction
 - Rate limit keys act as a whitelist (see [Rate Limits](./RATE_LIMITS.md))
 
-### Withdrawal Dependencies
+# Maple Deposits
 
-| Withdrawal Function         | Required                                                  |
-| --------------------------- | --------------------------------------------------------- |
-| `withdrawERC4626`           | Non-zero deposit rate limit for same vault                |
-| `redeemERC4626`             | Non-zero deposit rate limit for same vault                |
-| `withdrawAave`              | Non-zero deposit rate limit for same aToken               |
-| `claimWithdrawalFromWstETH` | Non-zero request-withdraw rate limit                      |
-| `claimWithdrawalFromWeETH`  | Non-zero request-withdraw rate limit for same weETHModule |
+Maple Finance pools have an impairment lifecycle where `unrealizedLosses` can rise while `totalAssets` remains unchanged. Deposits price shares using `convertToShares`, which uses gross `totalAssets`, while redemptions price shares using `convertToExitAssets`, which is decreased during impairment. Therefore, deposits and immediate redemptions will be subject to immediate losses on an impaired pool.
+
+The `ERC4626Facet` does not check that `unrealizedLosses()` is zero on a Maple pool during the deposit flow, which can result in socializing pre-existing losses onto PAU through fresh deposits.
+
+Governance (via a spell to set rate limits for deposits to such Maple Pools) should mitigate this risk as soon as unrealized losses are posted to a Maple pool.
 
 ---
 
@@ -79,11 +77,11 @@ When deploying a new OTC buffer:
 
 ---
 
-## Uniswap V4 Pool Onboarding
+## Uniswap V3/V4 Pool Onboarding
 
 ### Asset Restrictions
 
-Only pools with 1:1 assets can be onboarded:
+Only pools with 1:1 assets should be onboarded:
 
 - USDC/USDT ✓
 - USDC/DAI ✓
@@ -96,7 +94,7 @@ Only pools with 1:1 assets can be onboarded:
 1. Verify pool contains only whitelisted 1:1 stablecoins
 2. Verify pool does not have dangerous hooks
 3. Configure rate limits for the specific pool
-4. Configure tick limits for the specific pool
+4. Configure pool parameters (e.g. tick limits, TWAP seconds, etc.) for the specific pool
 5. Set appropriate slippage parameters
 
 ---

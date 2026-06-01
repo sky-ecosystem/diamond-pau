@@ -96,7 +96,7 @@ Withdraw: weETH → eETH → WithdrawRequestNFT → (wait) → ETH → WETH
 3. Call `LiquidityPool.requestWithdraw()` with WEETHModule as receiver
 4. WEETHModule receives the `WithdrawRequestNFT`
 
-**Rate Limit:** `LIMIT_WEETH_REQUEST_WITHDRAW` (keyed by weETHModule address)
+**Rate Limit:** `LIMIT_WEETH_REQUEST_WITHDRAW` keyed by `(eETH, liquidityPool, weETHModule)` via `makeAddressAddressAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, eETH, liquidityPool, weETHModule)`. The `eETH` address is read from `IWEETHLike(weeth).eETH()` and `liquidityPool` from `IEETHLike(eETH).liquidityPool()`.
 
 **Important:** The withdrawal request is not immediately claimable. EtherFi must finalize the request based on their liquidity and queue position.
 
@@ -113,7 +113,7 @@ Withdraw: weETH → eETH → WithdrawRequestNFT → (wait) → ETH → WETH
 5. WEETHModule wraps ETH to WETH
 6. WEETHModule transfers WETH to ALMProxy
 
-**Rate Limit:** None. Uses the [gate-check pattern](./RATE_LIMITS.md#gate-check-pattern) on `LIMIT_REQUEST_WITHDRAW` for the given `weethModule` address.
+**Rate Limit:** None decremented. Uses the [gate-check pattern](./RATE_LIMITS.md#gate-check-pattern) on `LIMIT_WEETH_CLAIM_WITHDRAW` keyed by `weETHModule` via `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weETHModule)`.
 
 ---
 
@@ -172,11 +172,12 @@ receive() external payable { }
 
 ### Rate Limit Whitelisting
 
-The `weETHModule` address is embedded in the rate limit keys for withdrawal operations:
+The withdrawal rate limit keys embed addresses to lock down the integration:
 
-- `LIMIT_WEETH_REQUEST_WITHDRAW` + weETHModule address
+- Request withdraw: `makeAddressAddressAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, eETH, liquidityPool, weETHModule)`
+- Claim withdraw (gate-check only): `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weETHModule)`
 
-`claimWithdrawal` uses the [gate-check pattern](./RATE_LIMITS.md#gate-check-pattern) on `LIMIT_REQUEST_WITHDRAW` for the given weETHModule address.
+The `eETH` address is sourced from `IWEETHLike(weeth).eETH()` and `liquidityPool` from `IEETHLike(eETH).liquidityPool()` at call time. Embedding these addresses prevents an unauthorized `weETHModule` from being used and locks the request-withdraw key to the configured `eETH` token and liquidity pool. The claim path uses a dedicated key keyed by `weETHModule` only.
 
 ### EtherFi Admin Risk
 
@@ -201,8 +202,9 @@ The WEETHModule:
 1. Deploy `WEETHModule` proxy with implementation
 2. Initialize with admin and ALMProxy address
 3. Configure rate limit keys in the Controller:
-    - `LIMIT_WEETH_DEPOSIT`
-    - `makeAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, weETHModule)`
+   - `makeAddressAddressKey(LIMIT_WEETH_DEPOSIT, eETH, liquidityPool)`
+   - `makeAddressAddressAddressKey(LIMIT_WEETH_REQUEST_WITHDRAW, eETH, liquidityPool, weETHModule)`
+   - `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weETHModule)`
 
 ### Monitoring
 
