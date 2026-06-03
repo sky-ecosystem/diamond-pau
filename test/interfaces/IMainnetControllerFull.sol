@@ -386,6 +386,84 @@ interface IMainnetControllerFull is IController {
         returns (bytes32 key);
 
     /**********************************************************************************************/
+    /*** NFATHaloFacet actions                                                                  ***/
+    /**********************************************************************************************/
+
+    function nfatHalo_VERSION() external pure returns (string memory);
+
+    function nfatHalo_setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
+
+    function nfatHalo_issue(address facility, address to, uint256 tokenId, uint256 amount) external;
+
+    function nfatHalo_repayPrincipal(address facility, uint256 tokenId, uint256 amount) external;
+
+    function nfatHalo_repayInterest(address facility, uint256 tokenId, uint256 amount) external;
+
+    function nfatHalo_getAnnualGrowthRate(address facility) external view returns (uint256);
+
+    function nfatHalo_getFacilityState(address facility)
+        external
+        view
+        returns (uint256 interestIndex, uint256 lastUpdated);
+
+    function nfatHalo_getPosition(address facility, uint256 tokenId)
+        external
+        view
+        returns (
+            bool    issued,
+            uint256 outstandingPrincipal,
+            uint256 outstandingInterest,
+            uint256 interestIndex
+        );
+
+    function nfatHalo_getCurrentOutstandingInterest(address facility, uint256 tokenId)
+        external
+        view
+        returns (uint256);
+
+    function nfatHalo_getIssueRateLimitKey(address facility, address gem, address to)
+        external
+        pure
+        returns (bytes32 key);
+
+    function nfatHalo_getRepayInterestRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    function nfatHalo_getRepayPrincipalRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    /**********************************************************************************************/
+    /*** NFATPrimeFacet actions                                                                 ***/
+    /**********************************************************************************************/
+
+    function nfatPrime_VERSION() external pure returns (string memory);
+
+    function nfatPrime_subscribe(address facility, uint256 amount, bytes calldata data) external;
+
+    function nfatPrime_withdraw(address facility, uint256 amount) external;
+
+    function nfatPrime_collect(address facility, uint256 tokenId, uint256 amount) external;
+
+    function nfatPrime_getCollectRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    function nfatPrime_getSubscribeRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    function nfatPrime_getWithdrawRateLimitKey(address facility, address gem)
+        external
+        pure
+        returns (bytes32 key);
+
+    /**********************************************************************************************/
     /*** OTCFacet actions                                                                       ***/
     /**********************************************************************************************/
 
@@ -783,90 +861,5 @@ interface IMainnetControllerFull is IController {
     function wsteth_requestWithdrawRateLimitKey() external pure returns (bytes32 key);
 
     function wsteth_claimWithdrawRateLimitKey() external pure returns (bytes32 key);
-
-    /**********************************************************************************************/
-    /*** NFATHaloFacet actions                                                                  ***/
-    /**********************************************************************************************/
-
-    function nfatHalo_VERSION() external pure returns (string memory);
-
-    function nfatHalo_setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
-
-    function nfatHalo_issue(address facility, address to, uint256 tokenId, uint256 amount) external;
-
-    function nfatHalo_repayPrincipal(address facility, uint256 tokenId, uint256 amount) external;
-
-    function nfatHalo_repayInterest(address facility, uint256 tokenId, uint256 amount) external;
-
-    function nfatHalo_getAnnualGrowthRate(address facility) external view returns (uint256);
-
-    function nfatHalo_getInterestAvailable(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256);
-
-    function nfatHalo_getInterestIndex(address facility) external view returns (uint256);
-
-    function nfatHalo_getIssueRateLimitKey(address facility, address gem, address to)
-        external
-        pure
-        returns (bytes32 key);
-
-    function nfatHalo_getPosition(address facility, uint256 tokenId)
-        external
-        view
-        returns (INFATHaloFacet.Position memory);
-
-    function nfatHalo_getPrincipal(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256);
-
-    function nfatHalo_getPrincipalOutstanding(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256);
-
-    function nfatHalo_getPrincipalRepaid(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256);
-
-    function nfatHalo_getRepayInterestRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
-
-    function nfatHalo_getRepayPrincipalRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
-
-    /**********************************************************************************************/
-    /*** NFATPrimeFacet actions                                                                 ***/
-    /**********************************************************************************************/
-
-    function nfatPrime_VERSION() external pure returns (string memory);
-
-    function nfatPrime_subscribe(address facility, uint256 amount, bytes calldata data) external;
-
-    function nfatPrime_withdraw(address facility, uint256 amount) external;
-
-    function nfatPrime_collect(address facility, uint256 tokenId, uint256 amount) external;
-
-    function nfatPrime_getCollectRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
-
-    function nfatPrime_getSubscribeRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
-
-    function nfatPrime_getWithdrawRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
 
 }

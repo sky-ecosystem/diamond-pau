@@ -41,18 +41,15 @@ interface INFATHaloFacet is IFacet {
 
     /**
      * @notice Per-NFAT bookkeeping recorded by this facet.
-     * @param  issued          True once `issue` has been called for this position; subsequent
-     *                         issues for the same (facility, tokenId) revert.
-     * @param  principal       Amount pulled from the facility on `issue`. Immutable post-issue.
-     * @param  principalRepaid Cumulative principal repaid via `repayPrincipal`; <= principal.
-     * @param  accruedInterest Interest accrued at the last checkpoint, net of `repayInterest`.
-     * @param  interestIndex   Facility-wide interest index recorded at the last checkpoint.
+     * @param  issued               Whether the NFAT position has been issued.
+     * @param  outstandingPrincipal Outstanding principal.
+     * @param  outstandingInterest  Outstanding interest.
+     * @param  interestIndex        Facility-wide interest index recorded at the last checkpoint.
      */
     struct Position {
         bool    issued;
-        uint256 principal;
-        uint256 principalRepaid;
-        uint256 accruedInterest;
+        uint256 outstandingPrincipal;
+        uint256 outstandingInterest;
         uint256 interestIndex;
     }
 
@@ -72,44 +69,30 @@ interface INFATHaloFacet is IFacet {
      * @param  facility Address of the NFAT facility.
      * @param  to       Recipient of the minted NFT (becomes the NFAT owner).
      * @param  tokenId  Identifier of the freshly minted NFAT token.
-     * @param  gem      Address of the facility's gem token at issue time.
      * @param  amount   Principal recorded for this token (gem-native decimals).
      */
     event NFATHaloIssue(
         address indexed facility,
         address indexed to,
         uint256 indexed tokenId,
-        address         gem,
         uint256         amount
     );
 
     /**
      * @notice Emitted when interest is repaid against an issued NFAT position.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at repay time.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
      * @param  amount   Interest amount repaid (gem-native decimals).
      */
-    event NFATHaloRepayInterest(
-        address indexed facility,
-        address indexed gem,
-        uint256 indexed tokenId,
-        uint256         amount
-    );
+    event NFATHaloRepayInterest(address indexed facility, uint256 indexed tokenId, uint256 amount);
 
     /**
      * @notice Emitted when principal is repaid against an issued NFAT position.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at repay time.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
      * @param  amount   Principal amount repaid (gem-native decimals).
      */
-    event NFATHaloRepayPrincipal(
-        address indexed facility,
-        address indexed gem,
-        uint256 indexed tokenId,
-        uint256         amount
-    );
+    event NFATHaloRepayPrincipal(address indexed facility, uint256 indexed tokenId, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -168,24 +151,17 @@ interface INFATHaloFacet is IFacet {
     function getAnnualGrowthRate(address facility) external view returns (uint256 annualGrowthRate);
 
     /**
-     * @notice Returns the total interest currently available to be repaid against a position,
-     *         including interest accrued since the last checkpoint.
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token.
-     * @return amount   Interest available (gem-native decimals).
-     */
-    function getInterestAvailable(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256 amount);
-
-    /**
      * @notice Returns the current facility-wide interest index, including time-based accrual
      *         since the last checkpoint.
      * @param  facility      Address of the NFAT facility.
      * @return interestIndex Current cumulative 1e18-scaled interest index.
+     * @return lastUpdated   Timestamp of the last checkpoint. Zero means the facility has never
+     *                       been configured.
      */
-    function getInterestIndex(address facility) external view returns (uint256 interestIndex);
+    function getFacilityState(address facility)
+        external
+        view
+        returns (uint256 interestIndex, uint256 lastUpdated);
 
     /**
      * @notice Returns the derived issue rate limit key for an NFAT facility, gem, and NFT
@@ -204,48 +180,35 @@ interface INFATHaloFacet is IFacet {
         returns (bytes32 key);
 
     /**
-     * @notice Returns the full Position record for an NFAT token.
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token.
-     * @return position The Position record. All fields are zero if unissued.
+     * @notice Returns the outstanding principal, outstanding interest, and interest index for a
+     *         given NFAT position.
+     * @param  facility             Address of the NFAT facility.
+     * @param  tokenId              Identifier of the NFAT token.
+     * @return issued               Whether the NFAT position has been issued.
+     * @return outstandingPrincipal Outstanding principal.
+     * @return outstandingInterest  Last checkpointed outstanding interest.
+     * @return interestIndex        Last checkpointed facility-wide interest index.
      */
     function getPosition(address facility, uint256 tokenId)
         external
         view
-        returns (Position memory position);
+        returns (
+            bool    issued,
+            uint256 outstandingPrincipal,
+            uint256 outstandingInterest,
+            uint256 interestIndex
+        );
 
     /**
-     * @notice Original principal recorded on `issue` for an NFAT position. Immutable after issue.
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token.
-     * @return amount   Issued principal in gem-native decimals.
+     * @notice Returns the current outstanding interest for a given NFAT position.
+     * @param  facility            Address of the NFAT facility.
+     * @param  tokenId             Identifier of the NFAT token.
+     * @return outstandingInterest Current outstanding interest.
      */
-    function getPrincipal(address facility, uint256 tokenId)
+    function getCurrentOutstandingInterest(address facility, uint256 tokenId)
         external
         view
-        returns (uint256 amount);
-
-    /**
-     * @notice Outstanding principal remaining for an NFAT position (`principal - principalRepaid`).
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token.
-     * @return amount   Outstanding principal in gem-native decimals.
-     */
-    function getPrincipalOutstanding(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256 amount);
-
-    /**
-     * @notice Cumulative principal repaid for an NFAT position via `repayPrincipal`.
-     * @param  facility Address of the NFAT facility.
-     * @param  tokenId  Identifier of the NFAT token.
-     * @return amount   Cumulative principal repaid in gem-native decimals.
-     */
-    function getPrincipalRepaid(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256 amount);
+        returns (uint256);
 
     /**
      * @notice Returns the derived repay-interest rate limit key for an NFAT facility and gem.

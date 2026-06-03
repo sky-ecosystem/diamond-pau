@@ -19,38 +19,25 @@ interface INFATPrimeFacet is IFacet {
     /**
      * @notice Emitted when repaid capital is collected from an issued NFAT position.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at collect time.
      * @param  tokenId  Identifier of the NFAT token being collected against.
      * @param  amount   Amount of the facility's gem token collected (gem-native decimals).
      */
-    event NFATPrimeCollect(
-        address indexed facility,
-        address indexed gem,
-        uint256 indexed tokenId,
-        uint256         amount
-    );
+    event NFATPrimeCollect(address indexed facility, uint256 indexed tokenId, uint256 amount);
 
     /**
      * @notice Emitted when capital is subscribed into an NFAT facility.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at subscribe time.
      * @param  amount   Amount of the facility's gem token subscribed (gem-native decimals).
      * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
-    event NFATPrimeSubscribe(
-        address indexed facility,
-        address indexed gem,
-        uint256         amount,
-        bytes           data
-    );
+    event NFATPrimeSubscribe(address indexed facility, uint256 amount, bytes data);
 
     /**
      * @notice Emitted when queued (unissued) subscribed capital is withdrawn from a facility.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at withdraw time.
      * @param  amount   Amount of the facility's gem token withdrawn (gem-native decimals).
      */
-    event NFATPrimeWithdraw(address indexed facility, address indexed gem, uint256 amount);
+    event NFATPrimeWithdraw(address indexed facility, uint256 amount);
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/

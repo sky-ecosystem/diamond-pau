@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { NFATFacility } from "../../lib/nfat/src/NFATFacility.sol";
+
 import { ReentrancyGuard } from "../../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 import { Ethereum } from "../../lib/spark-address-registry/src/Ethereum.sol";
 
-import { NFATFacility } from "../../lib/nfat/src/NFATFacility.sol";
+import { INFATPrimeFacet } from "../../src/facets/nfat-prime/INFATPrimeFacet.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -29,17 +31,14 @@ abstract contract NFATPrime_TestBase is ForkTestBase {
         nfatFacility.file("recipient", nfatRecipient);
         nfatFacility.kiss(address(this));  // Make test contract an operator (bud)
 
-        subscribeKey =
-            mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
-        withdrawKey  =
-            mainnetController.nfatPrime_getWithdrawRateLimitKey(address(nfatFacility), Ethereum.USDS);
-        collectKey   =
-            mainnetController.nfatPrime_getCollectRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        subscribeKey = mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        withdrawKey  = mainnetController.nfatPrime_getWithdrawRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        collectKey   = mainnetController.nfatPrime_getCollectRateLimitKey(address(nfatFacility), Ethereum.USDS);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(withdrawKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(collectKey,   1_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setUnlimitedRateLimitData(subscribeKey);
+        rateLimits.setUnlimitedRateLimitData(withdrawKey);
+        rateLimits.setUnlimitedRateLimitData(collectKey);
         vm.stopPrank();
 
         // Deal more than the rate-limit max so the rate-limit boundary tests can exercise the
@@ -51,13 +50,13 @@ abstract contract NFATPrime_TestBase is ForkTestBase {
 
 contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
 
-    function test_subscribeNFAT_reentrancy() external {
+    function test_subscribe_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
-    function test_subscribeNFAT_notAllocator() external {
+    function test_subscribe_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -66,19 +65,13 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
-    function test_subscribeNFAT_zeroFacility() external {
-        vm.expectRevert("NFATPrimeFacet/facility-zero-address");
-        vm.prank(allocator);
-        mainnetController.nfatPrime_subscribe(address(0), SUBSCRIBE_AMOUNT, "");
-    }
-
-    function test_subscribeNFAT_zeroAmount() external {
+    function test_subscribe_zeroAmount() external {
         vm.expectRevert("NFATPrimeFacet/zero-amount");
         vm.prank(allocator);
         mainnetController.nfatPrime_subscribe(address(nfatFacility), 0, "");
     }
 
-    function test_subscribeNFAT_zeroMaxAmount() external {
+    function test_subscribe_zeroMaxAmount() external {
         // Rate limit is consumed by the actual ALMProxy balance delta post-call, so the
         // zero-maxAmount revert surfaces only after the facility call completes. Zero out the
         // configured limit and exercise that path.
@@ -90,24 +83,31 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
-    function test_subscribeNFAT_rateLimitBoundary() external {
-        vm.startPrank(allocator);
+    function test_subscribe_rateLimitBoundary() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(subscribeKey, 1_000_000e18, 0);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.nfatPrime_subscribe(address(nfatFacility), 5_000_000e18 + 1, "");
+        vm.prank(allocator);
+        mainnetController.nfatPrime_subscribe(address(nfatFacility), 1_000_000e18 + 1, "");
 
-        mainnetController.nfatPrime_subscribe(address(nfatFacility), 5_000_000e18, "");
-
-        vm.stopPrank();
+        vm.prank(allocator);
+        mainnetController.nfatPrime_subscribe(address(nfatFacility), 1_000_000e18, "");
     }
 
-    function test_subscribeNFAT() external {
+    function test_subscribe_xxx() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, 0);
+
         assertEq(usds.balanceOf(address(almProxy)),                        10_000_000e18);
         assertEq(usds.allowance(address(almProxy), address(nfatFacility)), 0);
         assertEq(nfatFacility.deposits(address(almProxy)),                 0);
         assertEq(rateLimits.getCurrentRateLimit(subscribeKey),             5_000_000e18);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit INFATPrimeFacet.NFATPrimeSubscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
 
         vm.prank(allocator);
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
@@ -120,16 +120,31 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(subscribeKey),             5_000_000e18 - SUBSCRIBE_AMOUNT);
     }
 
-    function test_subscribeNFAT_withData() external {
+    function test_subscribe_withData() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, 0);
+
         bytes memory data = abi.encode("agreement-id-123");
 
-        vm.expectEmit(address(nfatFacility));
-        emit NFATFacility.Subscribe(address(almProxy), SUBSCRIBE_AMOUNT, data);
+        assertEq(usds.balanceOf(address(almProxy)),                        10_000_000e18);
+        assertEq(usds.allowance(address(almProxy), address(nfatFacility)), 0);
+        assertEq(nfatFacility.deposits(address(almProxy)),                 0);
+        assertEq(rateLimits.getCurrentRateLimit(subscribeKey),             5_000_000e18);
+
+        vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit INFATPrimeFacet.NFATPrimeSubscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, data);
 
         vm.prank(allocator);
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, data);
 
-        assertEq(nfatFacility.deposits(address(almProxy)), SUBSCRIBE_AMOUNT);
+        _assertReentrancyGuardWrittenToTwice();
+
+        assertEq(usds.balanceOf(address(almProxy)),                        10_000_000e18 - SUBSCRIBE_AMOUNT);
+        assertEq(usds.allowance(address(almProxy), address(nfatFacility)), 0);
+        assertEq(nfatFacility.deposits(address(almProxy)),                 SUBSCRIBE_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(subscribeKey),             5_000_000e18 - SUBSCRIBE_AMOUNT);
     }
 
 }
@@ -143,13 +158,13 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_subscribe(address(nfatFacility), SUBSCRIBE_AMOUNT, "");
     }
 
-    function test_withdrawNFAT_reentrancy() external {
+    function test_withdraw_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         mainnetController.nfatPrime_withdraw(address(nfatFacility), SUBSCRIBE_AMOUNT);
     }
 
-    function test_withdrawNFAT_notAllocator() external {
+    function test_withdraw_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -158,29 +173,13 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_withdraw(address(nfatFacility), SUBSCRIBE_AMOUNT);
     }
 
-    function test_withdrawNFAT_zeroFacility() external {
-        vm.expectRevert("NFATPrimeFacet/facility-zero-address");
-        vm.prank(allocator);
-        mainnetController.nfatPrime_withdraw(address(0), SUBSCRIBE_AMOUNT);
-    }
-
-    function test_withdrawNFAT_zeroAmount() external {
+    function test_withdraw_zeroAmount() external {
         vm.expectRevert("NFATPrimeFacet/zero-amount");
         vm.prank(allocator);
         mainnetController.nfatPrime_withdraw(address(nfatFacility), 0);
     }
 
-    function test_withdrawNFAT_noCode() external {
-        // The gem() staticcall is the first thing that touches `facility`; against an EOA the
-        // compiler-inserted extcodesize check reverts with empty data before doCall ever runs.
-        vm.expectRevert();
-        vm.prank(allocator);
-        mainnetController.nfatPrime_withdraw(makeAddr("fake-facility"), SUBSCRIBE_AMOUNT);
-    }
-
-    function test_withdrawNFAT_zeroMaxAmount() external {
-        // Withdraw decrements the rate limit by the actual ALMProxy balance delta post-call;
-        // surface the zero-maxAmount revert by zeroing the configured withdraw limit.
+    function test_withdraw_zeroMaxAmount() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(withdrawKey, 0, 0);
 
@@ -189,41 +188,30 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_withdraw(address(nfatFacility), SUBSCRIBE_AMOUNT);
     }
 
-    function test_withdrawNFAT_subscribeRefillIsTryIncrease() external {
-        // Deploy a facility with a withdraw rate limit but no subscribe key registered. The
-        // _tryIncreaseRateLimit on the subscribe key must silently no-op rather than revert.
-        NFATFacility nfatFacility2 = new NFATFacility(Ethereum.USDS, "Test NFAT 2", "TNFAT2");
-
-        bytes32 withdrawKey2 =
-            mainnetController.nfatPrime_getWithdrawRateLimitKey(address(nfatFacility2), Ethereum.USDS);
-        bytes32 subscribeKey2 =
-            mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility2), Ethereum.USDS);
-
+    function test_withdraw_rateLimitBoundary() external {
         vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(withdrawKey2, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(withdrawKey, 500_000e18, 0);
 
-        // Subscribe directly as almProxy to give it deposits to withdraw against.
-        vm.startPrank(address(almProxy));
-        usds.approve(address(nfatFacility2), SUBSCRIBE_AMOUNT);
-        nfatFacility2.subscribe(SUBSCRIBE_AMOUNT, "");
-        vm.stopPrank();
-
-        assertEq(rateLimits.getRateLimitData(subscribeKey2).maxAmount, 0);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.nfatPrime_withdraw(address(nfatFacility), 500_000e18 + 1);
 
         vm.prank(allocator);
-        mainnetController.nfatPrime_withdraw(address(nfatFacility2), SUBSCRIBE_AMOUNT);
-
-        // No budget was created on the unregistered subscribe key.
-        assertEq(rateLimits.getRateLimitData(subscribeKey2).maxAmount, 0);
+        mainnetController.nfatPrime_withdraw(address(nfatFacility), 500_000e18);
     }
 
-    function test_withdrawNFAT() external {
+    function test_withdraw() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(withdrawKey, 5_000_000e18, 0);
+
         assertEq(usds.balanceOf(address(almProxy)),            10_000_000e18 - SUBSCRIBE_AMOUNT);
         assertEq(nfatFacility.deposits(address(almProxy)),     SUBSCRIBE_AMOUNT);
-        assertEq(rateLimits.getCurrentRateLimit(subscribeKey), 5_000_000e18 - SUBSCRIBE_AMOUNT);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey),  5_000_000e18);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit INFATPrimeFacet.NFATPrimeWithdraw(address(nfatFacility), SUBSCRIBE_AMOUNT);
 
         vm.prank(allocator);
         mainnetController.nfatPrime_withdraw(address(nfatFacility), SUBSCRIBE_AMOUNT);
@@ -232,7 +220,6 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),            10_000_000e18);
         assertEq(nfatFacility.deposits(address(almProxy)),     0);
-        assertEq(rateLimits.getCurrentRateLimit(subscribeKey), 5_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey),  5_000_000e18 - SUBSCRIBE_AMOUNT);
     }
 
@@ -262,13 +249,13 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
         nfatFacility.repay(TOKEN_ID, REPAY_AMOUNT);
     }
 
-    function test_collectNFAT_reentrancy() external {
+    function test_collect_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 1_000_000e18);
     }
 
-    function test_collectNFAT_notAllocator() external {
+    function test_collect_notAllocator() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -277,21 +264,13 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 1_000_000e18);
     }
 
-    function test_collectNFAT_zeroFacility() external {
-        vm.expectRevert("NFATPrimeFacet/facility-zero-address");
-        vm.prank(allocator);
-        mainnetController.nfatPrime_collect(address(0), TOKEN_ID, 1_000_000e18);
-    }
-
-    function test_collectNFAT_zeroAmount() external {
+    function test_collect_zeroAmount() external {
         vm.expectRevert("NFATPrimeFacet/zero-amount");
         vm.prank(allocator);
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 0);
     }
 
-    function test_collectNFAT_zeroMaxAmount() external {
-        // Collect decrements the rate limit by the actual ALMProxy balance delta post-call;
-        // surface the zero-maxAmount revert by zeroing the configured collect limit.
+    function test_collect_zeroMaxAmount() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(collectKey, 0, 0);
 
@@ -300,26 +279,32 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 1_000_000e18);
     }
 
-    function test_collectNFAT_rateLimitBoundary() external {
-        vm.startPrank(allocator);
+    function test_collect_rateLimitBoundary() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(collectKey, 1_000_000e18, 0);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 1_000_000e18 + 1);
 
+        vm.prank(allocator);
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, 1_000_000e18);
-
-        vm.stopPrank();
     }
 
-    function test_collectNFAT() external {
+    function test_collect() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(collectKey, 2_000_000e18, 0);
+
         uint256 collectAmount = 1_000_000e18;
 
         assertEq(usds.balanceOf(address(almProxy)),             10_000_000e18 - SUBSCRIBE_AMOUNT);
         assertEq(nfatFacility.collectable(TOKEN_ID),            REPAY_AMOUNT);
-        assertEq(rateLimits.getCurrentRateLimit(collectKey),    1_000_000e18);
-        assertEq(rateLimits.getCurrentRateLimit(subscribeKey),  5_000_000e18 - SUBSCRIBE_AMOUNT);
+        assertEq(rateLimits.getCurrentRateLimit(collectKey),    2_000_000e18);
 
         vm.record();
+
+        vm.expectEmit(address(mainnetController));
+        emit INFATPrimeFacet.NFATPrimeCollect(address(nfatFacility), TOKEN_ID, collectAmount);
 
         vm.prank(allocator);
         mainnetController.nfatPrime_collect(address(nfatFacility), TOKEN_ID, collectAmount);
@@ -328,8 +313,7 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),             10_000_000e18 - SUBSCRIBE_AMOUNT + collectAmount);
         assertEq(nfatFacility.collectable(TOKEN_ID),            REPAY_AMOUNT - collectAmount);
-        assertEq(rateLimits.getCurrentRateLimit(collectKey),    0);
-        assertEq(rateLimits.getCurrentRateLimit(subscribeKey),  5_000_000e18 - SUBSCRIBE_AMOUNT + collectAmount);
+        assertEq(rateLimits.getCurrentRateLimit(collectKey),    2_000_000e18 - collectAmount);
     }
 
 }
