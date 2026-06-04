@@ -278,10 +278,20 @@ abstract contract ForkTestBase is DssTest {
         beacon  = new Beacon(Ethereum.PAUSE_PROXY);
         factory = new PAUFactory(address(beacon));
 
-        mainnetController = IMainnetControllerFull(payable(factory.deploy(Ethereum.SPARK_PROXY)));
-        accessControls    = IAccessControls(mainnetController.accessControls());
-        almProxy          = IALMProxy(payable(mainnetController.proxy()));
-        rateLimits        = IRateLimits(mainnetController.rateLimits());
+        rateLimits     = IRateLimits(factory.deployRateLimits(Ethereum.SPARK_PROXY));
+        accessControls = IAccessControls(factory.deployAccessControls(Ethereum.SPARK_PROXY));
+        almProxy       = IALMProxy(factory.deployALMProxy(Ethereum.SPARK_PROXY));
+
+        mainnetController = IMainnetControllerFull(
+            payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))
+        );
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        almProxy.grantRole(almProxy.CONTROLLER(),     address(mainnetController));
+        rateLimits.grantRole(rateLimits.CONTROLLER(), address(mainnetController));
+
+        vm.stopPrank();
 
         vm.startPrank(Ethereum.PAUSE_PROXY);
 
@@ -727,8 +737,8 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[7] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.cctp_MAX_FINALITY_THRESHOLD.selector,
-            ICCTPFacet.MAX_FINALITY_THRESHOLD.selector
+            IMainnetControllerFull.cctp_MIN_FINALITY_THRESHOLD.selector,
+            ICCTPFacet.MIN_FINALITY_THRESHOLD.selector
         );
 
         wires[8] = IEnumerableIntegrations.Wire(
