@@ -32,8 +32,8 @@ abstract contract NFATPrime_TestBase is ForkTestBase {
         nfatFacility.kiss(address(this));  // Make test contract an operator (bud)
 
         subscribeKey = mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
-        withdrawKey  = mainnetController.nfatPrime_getWithdrawRateLimitKey(address(nfatFacility), Ethereum.USDS);
-        collectKey   = mainnetController.nfatPrime_getCollectRateLimitKey(address(nfatFacility), Ethereum.USDS);
+        withdrawKey  = mainnetController.nfatPrime_getWithdrawRateLimitKey(address(nfatFacility));
+        collectKey   = mainnetController.nfatPrime_getCollectRateLimitKey(address(nfatFacility));
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setUnlimitedRateLimitData(subscribeKey);
@@ -95,7 +95,7 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_subscribe(address(nfatFacility), 1_000_000e18, "");
     }
 
-    function test_subscribe_xxx() external {
+    function test_subscribe() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(subscribeKey, 5_000_000e18, 0);
 

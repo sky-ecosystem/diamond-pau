@@ -7,8 +7,7 @@ import { IFacet } from "../IFacet.sol";
  * @title  INFATPrimeFacet
  * @notice PAU facet for interacting with NFAT facilities on the originating (subscription) side.
  *         Exposes subscribe, withdraw, and collect flows with per-facility rate limiting on each
- *         interaction. Withdraw additionally refills the subscribe limit so cancelled subscriptions
- *         do not permanently consume the subscribe budget.
+ *         interaction.
  */
 interface INFATPrimeFacet is IFacet {
 
@@ -45,7 +44,7 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Collects repaid capital from an issued NFAT position, consuming the collect rate
-     *         limit and refilling the subscribe rate limit by the collected amount.
+     *         limit by the collected amount.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token to collect against.
      * @param  amount   Amount of the facility's gem token to collect. Must be non-zero.
@@ -62,7 +61,7 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Cancels queued (unissued) subscribed capital from an NFAT facility, consuming the
-     *         withdraw rate limit and refilling the subscribe rate limit by the returned amount.
+     *         withdraw rate limit by the returned amount.
      * @param  facility Address of the NFAT facility.
      * @param  amount   Amount of the facility's gem token to withdraw. Must be non-zero.
      */
@@ -73,22 +72,16 @@ interface INFATPrimeFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Returns the derived collect rate limit key for an NFAT facility and gem token.
-     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
-     *         change its gem under a configured rate limit; switching the gem invalidates the key.
+     * @notice Returns the derived collect rate limit key for an NFAT facility.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at configuration time.
      * @return key      Derived rate limit key.
      */
-    function getCollectRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
+    function getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
 
     /**
      * @notice Returns the derived subscribe rate limit key for an NFAT facility and gem token.
-     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
-     *         change its gem under a configured rate limit; switching the gem invalidates the key.
+     * @dev    Keyed on `(facility, gem)` so a facility cannot change its gem under a configured
+     *         rate limit; switching the gem invalidates the key.
      * @param  facility Address of the NFAT facility.
      * @param  gem      Address of the facility's gem token at configuration time.
      * @return key      Derived rate limit key.
@@ -99,16 +92,10 @@ interface INFATPrimeFacet is IFacet {
         returns (bytes32 key);
 
     /**
-     * @notice Returns the derived withdraw rate limit key for an NFAT facility and gem token.
-     * @dev    The key is namespaced on both the facility and its gem so that a facility cannot
-     *         change its gem under a configured rate limit; switching the gem invalidates the key.
+     * @notice Returns the derived withdraw rate limit key for an NFAT facility.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at configuration time.
      * @return key      Derived rate limit key.
      */
-    function getWithdrawRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
+    function getWithdrawRateLimitKey(address facility) external pure returns (bytes32 key);
 
 }

@@ -38,11 +38,7 @@ abstract contract NFATHalo_TestBase is ForkTestBase {
 
         subscribeKey = mainnetController.nfatPrime_getSubscribeRateLimitKey(address(nfatFacility), Ethereum.USDS);
 
-        issueKey = mainnetController.nfatHalo_getIssueRateLimitKey(
-            address(nfatFacility),
-            Ethereum.USDS,
-            address(almProxy)
-        );
+        issueKey = mainnetController.nfatHalo_getIssueRateLimitKey(address(nfatFacility), address(almProxy));
 
         repayPrincipalKey = mainnetController.nfatHalo_getRepayPrincipalRateLimitKey(address(nfatFacility), Ethereum.USDS);
 
@@ -101,8 +97,8 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
         );
     }
 
-    function test_issue_amountZero() external {
-        vm.expectRevert("NFATHaloFacet/amount-zero");
+    function test_issue_zeroAmount() external {
+        vm.expectRevert("NFATHaloFacet/zero-amount");
         vm.prank(allocator);
         mainnetController.nfatHalo_issue(address(nfatFacility), address(almProxy), TOKEN_ID, 0);
     }
@@ -644,7 +640,7 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_Repay_TestBa
         assertEq(mainnetController.nfatHalo_getCurrentOutstandingInterest(address(nfatFacility), TOKEN_ID), 0);
     }
 
-    function test_repayInterest_multiple_xxx() external {
+    function test_repayInterest_multiple() external {
         uint256 startTimestamp = vm.getBlockTimestamp();
 
         // Make first interest repayment in 180 days so interest has accrued.

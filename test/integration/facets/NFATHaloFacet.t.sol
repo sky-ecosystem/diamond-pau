@@ -32,10 +32,7 @@ interface IControllerLike {
         view
         returns (uint256 interestIndex, uint256 lastUpdated);
 
-    function getIssueRateLimitKey(address facility, address gem, address to)
-        external
-        pure
-        returns (bytes32);
+    function getIssueRateLimitKey(address facility, address to) external pure returns (bytes32);
 
     function getRepayInterestRateLimitKey(address facility, address gem) external pure returns (bytes32);
 
@@ -258,12 +255,11 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
     function test_getIssueRateLimitKey() external {
         bytes32 keyPrefix = keccak256("LIMIT_NFAT_HALO_ISSUE");
         address facility  = makeAddr("facility");
-        address gem       = makeAddr("gem");
         address to        = makeAddr("to");
 
         assertEq(
-            controller.getIssueRateLimitKey(facility, gem, to),
-            makeAddressAddressAddressKey(keyPrefix, facility, gem, to)
+            controller.getIssueRateLimitKey(facility, to),
+            makeAddressAddressKey(keyPrefix, facility, to)
         );
     }
 
@@ -278,7 +274,7 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
 
         assertEq(
             controller.getRepayInterestRateLimitKey(facility, gem),
-            makeAddressAddressKey(keyPrefix, facility, gem)
+            makeAddressAddressKey(keyPrefix, gem, facility)
         );
     }
 
@@ -293,7 +289,7 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
 
         assertEq(
             controller.getRepayPrincipalRateLimitKey(facility, gem),
-            makeAddressAddressKey(keyPrefix, facility, gem)
+            makeAddressAddressKey(keyPrefix, gem, facility)
         );
     }
 

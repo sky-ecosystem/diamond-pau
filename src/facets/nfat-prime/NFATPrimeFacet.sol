@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib }            from "../../libraries/ApproveLib.sol";
-import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }                            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey, makeAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -92,7 +92,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
 
         uint256 received = IERC20Like(gem).balanceOf(proxy) - startingBalance;
 
-        _decreaseRateLimit(getWithdrawRateLimitKey(facility, gem), received);
+        _decreaseRateLimit(getWithdrawRateLimitKey(facility), received);
 
         emit NFATPrimeWithdraw(facility, received);
     }
@@ -115,7 +115,7 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
 
         uint256 received = IERC20Like(gem).balanceOf(proxy) - startingBalance;
 
-        _decreaseRateLimit(getCollectRateLimitKey(facility, gem), received);
+        _decreaseRateLimit(getCollectRateLimitKey(facility), received);
 
         emit NFATPrimeCollect(facility, tokenId, received);
     }
@@ -125,33 +125,23 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc INFATPrimeFacet
-    function getCollectRateLimitKey(address facility, address gem)
-        public
-        pure
-        override
-        returns (bytes32)
-    {
-        return makeAddressAddressKey(_LIMIT_COLLECT, facility, gem);
-    }
-
-    /// @inheritdoc INFATPrimeFacet
     function getSubscribeRateLimitKey(address facility, address gem)
         public
         pure
         override
         returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_SUBSCRIBE, facility, gem);
+        return makeAddressAddressKey(_LIMIT_SUBSCRIBE, gem, facility);
     }
 
     /// @inheritdoc INFATPrimeFacet
-    function getWithdrawRateLimitKey(address facility, address gem)
-        public
-        pure
-        override
-        returns (bytes32)
-    {
-        return makeAddressAddressKey(_LIMIT_WITHDRAW, facility, gem);
+    function getWithdrawRateLimitKey(address facility) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_WITHDRAW, facility);
+    }
+
+    /// @inheritdoc INFATPrimeFacet
+    function getCollectRateLimitKey(address facility) public pure override returns (bytes32) {
+        return makeAddressKey(_LIMIT_COLLECT, facility);
     }
 
 }

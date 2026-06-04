@@ -421,7 +421,7 @@ interface IMainnetControllerFull is IController {
         view
         returns (uint256);
 
-    function nfatHalo_getIssueRateLimitKey(address facility, address gem, address to)
+    function nfatHalo_getIssueRateLimitKey(address facility, address to)
         external
         pure
         returns (bytes32 key);
@@ -448,17 +448,14 @@ interface IMainnetControllerFull is IController {
 
     function nfatPrime_collect(address facility, uint256 tokenId, uint256 amount) external;
 
-    function nfatPrime_getCollectRateLimitKey(address facility, address gem)
-        external
-        pure
-        returns (bytes32 key);
+    function nfatPrime_getCollectRateLimitKey(address facility) external pure returns (bytes32 key);
 
     function nfatPrime_getSubscribeRateLimitKey(address facility, address gem)
         external
         pure
         returns (bytes32 key);
 
-    function nfatPrime_getWithdrawRateLimitKey(address facility, address gem)
+    function nfatPrime_getWithdrawRateLimitKey(address facility)
         external
         pure
         returns (bytes32 key);

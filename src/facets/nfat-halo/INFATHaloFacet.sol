@@ -164,17 +164,12 @@ interface INFATHaloFacet is IFacet {
         returns (uint256 interestIndex, uint256 lastUpdated);
 
     /**
-     * @notice Returns the derived issue rate limit key for an NFAT facility, gem, and NFT
-     *         recipient.
-     * @dev    Keyed on (facility, gem, to) so the budget is scoped per recipient and a facility
-     *         cannot change its gem under a configured rate limit; switching the gem invalidates
-     *         the key.
+     * @notice Returns the derived issue rate limit key for an NFAT facility and NFT recipient.
      * @param  facility Address of the NFAT facility.
-     * @param  gem      Address of the facility's gem token at configuration time.
      * @param  to       Address that will receive issued NFAT NFTs under the configured budget.
      * @return key      Derived rate limit key.
      */
-    function getIssueRateLimitKey(address facility, address gem, address to)
+    function getIssueRateLimitKey(address facility, address to)
         external
         pure
         returns (bytes32 key);

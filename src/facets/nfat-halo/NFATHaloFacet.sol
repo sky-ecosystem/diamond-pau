@@ -100,7 +100,9 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        require(amount != 0, "NFATHaloFacet/amount-zero");
+        require(amount != 0, "NFATHaloFacet/zero-amount");
+
+        _checkpointFacility(facility);
 
         address proxy = _getSharedControllerStorage().proxy;
         address gem   = IFacilityLike(facility).gem();
@@ -109,8 +111,6 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         Position     storage position = $.positions[facility][tokenId];
 
         require(!position.issued, "NFATHaloFacet/position-exists");
-
-        _checkpointFacility(facility);
 
         uint256 startingBalance = IERC20Like(gem).balanceOf(proxy);
 
@@ -125,7 +125,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         position.outstandingPrincipal = received;
         position.interestIndex        = $.states[facility].interestIndex;
 
-        _decreaseRateLimit(getIssueRateLimitKey(facility, gem, to), received);
+        _decreaseRateLimit(getIssueRateLimitKey(facility, to), received);
 
         emit NFATHaloIssue(facility, to, tokenId, received);
     }
@@ -244,13 +244,13 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     }
 
     /// @inheritdoc INFATHaloFacet
-    function getIssueRateLimitKey(address facility, address gem, address to)
+    function getIssueRateLimitKey(address facility, address to)
         public
         pure
         override
         returns (bytes32)
     {
-        return makeAddressAddressAddressKey(_LIMIT_ISSUE, facility, gem, to);
+        return makeAddressAddressKey(_LIMIT_ISSUE, facility, to);
     }
 
     /// @inheritdoc INFATHaloFacet
@@ -260,7 +260,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         override
         returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_REPAY_INTEREST, facility, gem);
+        return makeAddressAddressKey(_LIMIT_REPAY_INTEREST, gem, facility);
     }
 
     /// @inheritdoc INFATHaloFacet
@@ -270,7 +270,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         override
         returns (bytes32)
     {
-        return makeAddressAddressKey(_LIMIT_REPAY_PRINCIPAL, facility, gem);
+        return makeAddressAddressKey(_LIMIT_REPAY_PRINCIPAL, gem, facility);
     }
 
     /**********************************************************************************************/
@@ -284,11 +284,8 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
 
         if (lastUpdated == block.timestamp) return;
 
-        if (lastUpdated != 0) {
-            state.interestIndex = _getCurrentInterestIndex(facility);
-        }
-
-        state.lastUpdated = block.timestamp;
+        state.interestIndex = _getCurrentInterestIndex(facility);
+        state.lastUpdated   = block.timestamp;
     }
 
     function _checkpointPosition(address facility, uint256 tokenId)
