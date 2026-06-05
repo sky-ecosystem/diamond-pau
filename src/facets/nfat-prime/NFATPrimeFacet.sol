@@ -54,8 +54,6 @@ contract NFATPrimeFacet is INFATPrimeFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        require(amount != 0, "NFATPrimeFacet/zero-amount");
-
         address proxy = _getSharedControllerStorage().proxy;
         address gem   = IFacilityLike(facility).gem();
 

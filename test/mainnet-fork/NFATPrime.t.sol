@@ -69,12 +69,6 @@ contract MainnetController_NFATPrime_Subscribe_Tests is NFATPrime_TestBase {
         mainnetController.nfatPrime_subscribe(address(facility), SUBSCRIBE_AMOUNT, "");
     }
 
-    function test_subscribe_zeroAmount() external {
-        vm.expectRevert("NFATPrimeFacet/zero-amount");
-        vm.prank(allocator);
-        mainnetController.nfatPrime_subscribe(address(facility), 0, "");
-    }
-
     function test_subscribe_zeroMaxAmount() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(subscribeKey, 0, 0);
@@ -262,7 +256,6 @@ contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
 
         assertEq(facility.ownerOf(TOKEN_ID), address(almProxy));
 
-        // Fund the collectable balance via an external repayer
         deal(Ethereum.USDS, issuer, REPAY_AMOUNT);
 
         vm.startPrank(issuer);

@@ -61,7 +61,11 @@ This protects against fee-on-transfer, rounding, or partial-fill behaviour: the 
 
 Events and storage updates use the **measured balance delta** (`received` / `spent`), not the caller-supplied `amount`, whenever the two could diverge (fee-on-transfer, rounding, etc.).
 
-> **Note (`amount == 0`).** While `NFATFacility` permits issuing with `amount == 0` (it simply skips the gem transfer), The Halo facet does not support this functionality as the surrounding accounting for it (i.e. a "superseding reissuance") is not fully built out.
+> **Note (`amount == 0`).**
+>
+> - **Halo `issue`:** reverts with `NFATHaloFacet/zero-amount`. While `NFATFacility` may permit issuing with `amount == 0` (it simply skips the gem transfer), the Halo facet does not support this — the surrounding accounting for it (i.e. a "superseding reissuance") is not fully built out.
+> - **Prime `subscribe`:** `amount == 0` is supported. The facet still forwards `data` to `facility.subscribe(0, data)`, which lets the facility record arbitrary payload that may be needed off-chain. No gem moves, so `spent == 0`, the subscribe rate limit is unchanged, and `NFATPrimeSubscribe` emits `amount = 0` with the supplied `data`.
+> - **Prime `withdraw` / `collect`:** revert with `NFATPrimeFacet/zero-amount`.
 
 ---
 
@@ -170,11 +174,11 @@ Principal and interest are serviced through **separate** entry points and **sepa
 
 `NFATPrimeFacet` exposes the lender-side flows; each measures its rate-limit movement from the ALMProxy balance delta as well:
 
-| Function                          | Rate limit                     | Notes                                                               |
-| --------------------------------- | ------------------------------ | ------------------------------------------------------------------- |
-| `subscribe(facility, amount, …)`  | `LIMIT_NFAT_PRIME_SUBSCRIBE` ↓ | Funds the facility deposit; sized by gem leaving custody (`spent`). |
-| `withdraw(facility, amount)`      | `LIMIT_NFAT_PRIME_WITHDRAW` ↓  | Reclaims un-issued deposit; sized by gem returning to custody.      |
-| `collect(facility, tokenId, amt)` | `LIMIT_NFAT_PRIME_COLLECT` ↓   | Pulls collectable repayments; sized by gem returning to custody.    |
+| Function                          | Rate limit                     | Notes                                                                                                                 |
+| --------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `subscribe(facility, amount, …)`  | `LIMIT_NFAT_PRIME_SUBSCRIBE` ↓ | Funds the facility deposit when `amount > 0` (sized by `spent`); `amount == 0` forwards `data` only (see note above). |
+| `withdraw(facility, amount)`      | `LIMIT_NFAT_PRIME_WITHDRAW` ↓  | Reclaims un-issued deposit; sized by gem returning to custody.                                                        |
+| `collect(facility, tokenId, amt)` | `LIMIT_NFAT_PRIME_COLLECT` ↓   | Pulls collectable repayments; sized by gem returning to custody.                                                      |
 
 Prime rate-limit keys:
 
@@ -228,7 +232,8 @@ The two Controllers are split deliberately to **separate NFAT issuance/repayment
 
 ## Known Limitations / Out of Scope
 
-- **`amount == 0` issuance** is allowed by `NFATFacility` but is not a handled/expected flow in the Halo facet (see note above).
+- **Halo `amount == 0` issuance** is allowed by `NFATFacility` but is not supported in `NFATHaloFacet` (see note above).
+- **Prime `amount == 0` subscribe** is supported for facility `data` emission only; it does not move gem or consume subscribe rate limit.
 - The facility's **`identityNetwork`** eligibility mechanism exists but is **not production-ready**; the issue rate limit's `to` keying is the interim allowlist.
 - Routing and balance-delta accounting **assume the facility `recipient` is the ALMProxy**; if it is not, drawn principal will not land back in custody and the measured `received` will be zero.
 
