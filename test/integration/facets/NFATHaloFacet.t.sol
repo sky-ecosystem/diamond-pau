@@ -7,10 +7,7 @@ import { IFacet }                  from "../../../src/facets/IFacet.sol";
 import { INFATHaloFacet }          from "../../../src/facets/nfat-halo/INFATHaloFacet.sol";
 import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
 
-import {
-    makeAddressAddressAddressKey,
-    makeAddressAddressKey
-} from "../../../src/libraries/RateLimitHelpers.sol";
+import { makeAddressAddressKey } from "../../../src/libraries/RateLimitHelpers.sol";
 
 import { NFATHaloFacet } from "../../../src/facets/nfat-halo/NFATHaloFacet.sol";
 
@@ -21,11 +18,6 @@ interface IControllerLike {
     function setAnnualGrowthRate(address facility, uint256 annualGrowthRate) external;
 
     function getAnnualGrowthRate(address facility) external view returns (uint256);
-
-    function getCurrentOutstandingInterest(address facility, uint256 tokenId)
-        external
-        view
-        returns (uint256);
 
     function getFacilityState(address facility)
         external
@@ -56,7 +48,7 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
 
         vm.label(facet, "NFATHaloFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.setAnnualGrowthRate.selector,
@@ -69,26 +61,21 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IControllerLike.getCurrentOutstandingInterest.selector,
-            INFATHaloFacet.getCurrentOutstandingInterest.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
             IControllerLike.getFacilityState.selector,
             INFATHaloFacet.getFacilityState.selector
         );
 
-        wires[4] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IControllerLike.getIssueRateLimitKey.selector,
             INFATHaloFacet.getIssueRateLimitKey.selector
         );
 
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IControllerLike.getRepayInterestRateLimitKey.selector,
             INFATHaloFacet.getRepayInterestRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IControllerLike.getRepayPrincipalRateLimitKey.selector,
             INFATHaloFacet.getRepayPrincipalRateLimitKey.selector
         );
@@ -184,68 +171,6 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
 
         assertEq(interestIndex, 0.098630136986301369e18);
         assertEq(lastUpdated,   vm.getBlockTimestamp());
-    }
-
-    /**********************************************************************************************/
-    /*** getAnnualGrowthRate Tests                                                              ***/
-    /**********************************************************************************************/
-
-    function test_getAnnualGrowthRate() external {
-        address facility = makeAddr("facility");
-
-        assertEq(controller.getAnnualGrowthRate(facility), 0);
-
-        vm.prank(admin);
-        controller.setAnnualGrowthRate(facility, ANNUAL_GROWTH_RATE);
-
-        assertEq(controller.getAnnualGrowthRate(facility), ANNUAL_GROWTH_RATE);
-    }
-
-    /**********************************************************************************************/
-    /*** getFacilityState Tests                                                                 ***/
-    /**********************************************************************************************/
-
-    function test_getFacilityState() external {
-        address facility = makeAddr("facility");
-
-        ( uint256 interestIndex, uint256 lastUpdated ) = controller.getFacilityState(facility);
-
-        assertEq(interestIndex, 0);
-        assertEq(lastUpdated,   0);
-
-        uint256 startTimestamp = vm.getBlockTimestamp();
-
-        vm.prank(admin);
-        controller.setAnnualGrowthRate(facility, ANNUAL_GROWTH_RATE);
-
-        ( interestIndex, lastUpdated ) = controller.getFacilityState(facility);
-
-        assertEq(interestIndex, 0);
-        assertEq(lastUpdated,   startTimestamp);
-
-        vm.warp(startTimestamp + 180 days);
-
-        ( interestIndex, lastUpdated ) = controller.getFacilityState(facility);
-
-        assertEq(interestIndex, 0);
-        assertEq(lastUpdated,   startTimestamp);
-
-        vm.prank(admin);
-        controller.setAnnualGrowthRate(facility, ANNUAL_GROWTH_RATE);
-
-        ( interestIndex, lastUpdated ) = controller.getFacilityState(facility);
-
-        assertEq(interestIndex, 0.098630136986301369e18);
-        assertEq(lastUpdated,   vm.getBlockTimestamp());
-    }
-
-    /**********************************************************************************************/
-    /*** getCurrentOutstandingInterest Tests                                                    ***/
-    /**********************************************************************************************/
-
-    function test_getCurrentOutstandingInterest_positionNotFound() external {
-        vm.expectRevert("NFATHaloFacet/position-not-found");
-        controller.getCurrentOutstandingInterest(makeAddr("facility"), TOKEN_ID);
     }
 
     /**********************************************************************************************/

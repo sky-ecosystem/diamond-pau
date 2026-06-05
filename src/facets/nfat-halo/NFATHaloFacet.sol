@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ApproveLib } from "../../libraries/ApproveLib.sol";
-
-import {
-    makeAddressAddressAddressKey,
-    makeAddressAddressKey
-} from "../../libraries/RateLimitHelpers.sol";
+import { ApproveLib }            from "../../libraries/ApproveLib.sol";
+import { makeAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -139,9 +135,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     {
         require(amount != 0, "NFATHaloFacet/zero-amount");
 
-        _checkpointPosition(facility, tokenId);
-
-        Position storage position = _getFacetStorage().positions[facility][tokenId];
+        Position storage position = _checkpointPosition(facility, tokenId);
 
         require(amount <= position.outstandingPrincipal, "NFATHaloFacet/principal-exceeded");
 
@@ -165,9 +159,7 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
     {
         require(amount != 0, "NFATHaloFacet/zero-amount");
 
-        _checkpointPosition(facility, tokenId);
-
-        Position storage position = _getFacetStorage().positions[facility][tokenId];
+        Position storage position = _checkpointPosition(facility, tokenId);
 
         require(amount <= position.outstandingInterest, "NFATHaloFacet/interest-exceeded");
 
@@ -301,14 +293,12 @@ contract NFATHaloFacet is INFATHaloFacet, Facet {
         require(position.issued, "NFATHaloFacet/position-not-found");
 
         uint256 currentIndex = $.states[facility].interestIndex;
-        uint256 deltaIndex   = currentIndex - position.interestIndex;
 
-        if (deltaIndex > 0) {
-            position.interestIndex = currentIndex;
+        position.outstandingInterest +=
+            position.outstandingPrincipal * (currentIndex - position.interestIndex)
+            / _INTEREST_RATE_PRECISION;
 
-            position.outstandingInterest +=
-                position.outstandingPrincipal * deltaIndex / _INTEREST_RATE_PRECISION;
-        }
+        position.interestIndex = currentIndex;
     }
 
     function _doFacilityRepay(address facility, address gem, uint256 tokenId, uint256 amount)

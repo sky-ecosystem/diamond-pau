@@ -106,7 +106,7 @@ interface INFATHaloFacet is IFacet {
      *         from the actual ALMProxy gem balance delta, not the requested `amount`.
      * @param  facility Address of the NFAT facility. Its `recipient()` must equal the ALMProxy.
      * @param  to       Address to receive the NFT.
-     * @param  tokenId  Token id to mint — must be unused on the facility.
+     * @param  tokenId  Token id to mint.
      * @param  amount   Requested principal to pull from the facility's deposit accounting.
      */
     function issue(address facility, address to, uint256 tokenId, uint256 amount) external;

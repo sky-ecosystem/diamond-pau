@@ -6,7 +6,7 @@ This document describes the NFAT (Non-Fungible Asset Token) integration with the
 
 An **NFAT facility** (`NFATFacility`) is a lending venue where capital is subscribed in a fungible gem (e.g. USDS), then crystallised into a **non-fungible position** (an NFAT NFT) representing a specific tranche of deployed principal. Repayments (principal and interest) accrue against the tokenId and are later collected by the NFT owner.
 
-**There is a one-to-one relationship between a PAU system and an NFAT facility.** Every facility is paired with exactly one PAU stack (ALMProxy, RateLimits, and the Controller(s) wiring the NFAT facets), and that PAU stack serves exactly one facility — neither is shared. This pairing is concretely expressed on-chain by the facility's `recipient` being set to **that PAU's ALMProxy**, so all drawn principal flows into the paired PAU's custody. See [Deployment Topology](#deployment-topology-two-controllers-one-alm) for how that per-facility PAUstack is structured.
+**There is a one-to-one relationship between a PAU system and an NFAT facility.** Every facility is paired with exactly one PAU stack (ALMProxy, RateLimits, and the Controller(s) wiring the NFAT facets), and that PAU stack serves exactly one facility — neither is shared. This pairing is concretely expressed on-chain by the facility's `recipient` being set to **that PAU's ALMProxy**, so all drawn principal flows into the paired PAU's custody. See [Deployment Topology](#deployment-topology-two-controllers-one-alm) for how that per-facility PAU stack is structured.
 
 There are two parties, on opposite sides of the book:
 
@@ -93,7 +93,7 @@ The **issue** limit is keyed on `to` (the NFAT recipient). This is intentional: 
 
 #### Why not a per-tokenId rate limit?
 
-A natural alternative would be to rate-limit each `tokenId` individually. We deliberately do **not** do this. The `ALLOCATOR_ROLE` on the Controller wired to the Halo facet is expected to be **iterated on heavily over time** — the issuance authority (and the off-chain attestation/eligibility logic behind it) is an evolving surface, and it needs the **autonomy to dish out tokenIds** freely without governance having to pre-register or top up a limit for every new tokenId.
+A natural alternative would be to rate-limit each `tokenId` individually. We deliberately do **not** do this. The `ALLOCATOR_ROLE` on the Controller wired to the Halo facet is expected to be **iterated on heavily over time** — the issuance authority (and the off-chain attestation/eligibility logic behind it) is an evolving surface, and it needs the **autonomy to freely create tokenIds** freely without governance having to pre-register or top up a limit for every new tokenId.
 
 Keying the limit on `(facility, to)` instead of per-tokenId gives that autonomy while still bounding risk: the allocator can mint as many tokenIds as it needs to a given Prime, but the **aggregate** principal issued to that `(facility, to)` tuple is still capped by the configured rate limit. Risk is controlled at the actor level (who can receive, and how much in total), not at the per-position level (which would otherwise become a governance bottleneck on every issuance).
 

@@ -53,8 +53,9 @@ interface INFATPrimeFacet is IFacet {
 
     /**
      * @notice Subscribes capital into an NFAT facility, consuming the subscribe rate limit.
+     * @dev    `amount == 0` is supported. as the facet still forwards `data` to the facility.
      * @param  facility Address of the NFAT facility.
-     * @param  amount   Amount of the facility's gem token to subscribe. Must be non-zero.
+     * @param  amount   Amount of the facility's gem token to subscribe.
      * @param  data     Arbitrary subscribe payload forwarded to the facility.
      */
     function subscribe(address facility, uint256 amount, bytes calldata data) external;
