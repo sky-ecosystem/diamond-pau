@@ -228,71 +228,6 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
 
 }
 
-contract MainnetController_NFATHalo_FacilityState_Tests is NFATHalo_TestBase {
-
-    function test_getFacilityState() external {
-        uint256 startTimestamp = vm.getBlockTimestamp();
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0,
-            expectedLastUpdated   : startTimestamp
-        });
-
-        vm.warp(startTimestamp + 180 days);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0,
-            expectedLastUpdated   : startTimestamp
-        });
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), ANNUAL_GROWTH_RATE / 2);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0.098630136986301369e18,
-            expectedLastUpdated   : startTimestamp + 180 days
-        });
-
-        vm.warp(startTimestamp + 360 days);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0.098630136986301369e18,
-            expectedLastUpdated   : startTimestamp + 180 days
-        });
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), 0);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0.147945205479452053e18,
-            expectedLastUpdated   : startTimestamp + 360 days
-        });
-
-        vm.warp(startTimestamp + 540 days);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0.147945205479452053e18,
-            expectedLastUpdated   : startTimestamp + 360 days
-        });
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), 0);
-
-        _assertFacilityState({
-            facility              : address(facility),
-            expectedInterestIndex : 0.147945205479452053e18,
-            expectedLastUpdated   : startTimestamp + 540 days
-        });
-    }
-
-}
-
 abstract contract NFATHalo_PostIssue_TestBase is NFATHalo_TestBase {
 
     uint256 internal constant ISSUE_AMOUNT = 1_000_000e18;
@@ -736,6 +671,71 @@ contract MainnetController_NFATHalo_RepayInterest_Tests is NFATHalo_PostIssue_Te
 
 }
 
+contract MainnetController_NFATHalo_FacilityState_Tests is NFATHalo_TestBase {
+
+    function test_getFacilityState() external {
+        uint256 startTimestamp = vm.getBlockTimestamp();
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0,
+            expectedLastUpdated   : startTimestamp
+        });
+
+        vm.warp(startTimestamp + 180 days);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0,
+            expectedLastUpdated   : startTimestamp
+        });
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), ANNUAL_GROWTH_RATE / 2);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0.098630136986301369e18,
+            expectedLastUpdated   : startTimestamp + 180 days
+        });
+
+        vm.warp(startTimestamp + 360 days);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0.098630136986301369e18,
+            expectedLastUpdated   : startTimestamp + 180 days
+        });
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), 0);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0.147945205479452053e18,
+            expectedLastUpdated   : startTimestamp + 360 days
+        });
+
+        vm.warp(startTimestamp + 540 days);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0.147945205479452053e18,
+            expectedLastUpdated   : startTimestamp + 360 days
+        });
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.nfatHalo_setAnnualGrowthRate(address(facility), 0);
+
+        _assertFacilityState({
+            facility              : address(facility),
+            expectedInterestIndex : 0.147945205479452053e18,
+            expectedLastUpdated   : startTimestamp + 540 days
+        });
+    }
+
+}
+
 contract MainnetController_NFATHalo_GetPosition_Tests is NFATHalo_PostIssue_TestBase {
 
     function test_getPosition() external {
@@ -794,8 +794,12 @@ contract MainnetController_NFATHalo_GetCurrentOutstandingInterest_Tests is NFATH
         mainnetController.nfatHalo_getCurrentOutstandingInterest(address(facility), 99);
     }
 
-    // function test_getCurrentOutstandingInterest() external {
-    //     assertEq(mainnetController.nfatHalo_getCurrentOutstandingInterest(address(facility), TOKEN_ID), 98_630.136986301369e18);
-    // }
+    function test_getCurrentOutstandingInterest() external {
+        assertEq(mainnetController.nfatHalo_getCurrentOutstandingInterest(address(facility), TOKEN_ID), 0);
+
+        vm.warp(vm.getBlockTimestamp() + 180 days);
+
+        assertEq(mainnetController.nfatHalo_getCurrentOutstandingInterest(address(facility), TOKEN_ID), 98_630.136986301369e18);
+    }
 
 }

@@ -25,7 +25,7 @@ abstract contract NFATPrime_TestBase is ForkTestBase {
         super.setUp();
 
         facilityRecipient = makeAddr("facilityRecipient");
-        issuer    = makeAddr("issuer");
+        issuer            = makeAddr("issuer");
 
         facility = new NFATFacility(Ethereum.USDS, "Test NFAT", "TNFAT");
         facility.file("recipient", facilityRecipient);
@@ -238,7 +238,7 @@ contract MainnetController_NFATPrime_Withdraw_Tests is NFATPrime_TestBase {
 
 contract MainnetController_NFATPrime_Collect_Tests is NFATPrime_TestBase {
 
-    uint256 internal constant REPAY_AMOUNT     = 2_000_000e18;
+    uint256 internal constant REPAY_AMOUNT     = 1_050_000e18;
     uint256 internal constant SUBSCRIBE_AMOUNT = 1_000_000e18;
     uint256 internal constant TOKEN_ID         = 1;
 
