@@ -27,3 +27,30 @@ contract MockTarget {
     }
 
 }
+
+// Target that always reverts, used to verify revert propagation through ALMProxy.doCall*.
+contract MockRevertingTarget {
+
+    error MockError();
+
+    function revertWithReason() external payable {
+        revert("MockRevertingTarget/reverted");
+    }
+
+    function revertWithCustomError() external payable {
+        revert MockError();
+    }
+
+}
+
+// Target that writes to an arbitrary storage slot, used to verify delegatecall executes in the
+// caller's (ALMProxy's) storage context.
+contract MockStorageWriter {
+
+    function write(uint256 slot, uint256 value) external {
+        assembly {
+            sstore(slot, value)
+        }
+    }
+
+}

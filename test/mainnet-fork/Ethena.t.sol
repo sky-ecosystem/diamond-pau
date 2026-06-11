@@ -708,6 +708,37 @@ contract MainnetController_Ethena_UnstakeSUSDE_Tests is Ethena_TestBase {
         assertEq(usde.balanceOf(silo),              startingSiloBalance);
     }
 
+    function test_unstakeSUSDE_withPreExistingUSDE() external {
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.ethena_cooldownRateLimitKey(),
+            1000e18,
+            uint256(1000e18) / 1 hours
+        );
+        vm.stopPrank();
+
+        uint256 assets = susde.convertToAssets(100e18);
+
+        deal(address(susde), address(almProxy), 100e18);
+
+        vm.prank(allocator);
+        mainnetController.ethena_cooldownShares(100e18);
+
+        skip(7 days);  // Cooldown period
+
+        // Pre-existing USDe on the proxy must not inflate the emitted unstake amount (net delta).
+        deal(address(usde), address(almProxy), 50e18);
+
+        vm.expectEmit(address(mainnetController));
+        emit IEthenaFacet.EthenaUnstake(assets);
+
+        vm.prank(allocator);
+        mainnetController.ethena_unstake();
+
+        // Event reflects only the newly received USDe; the pre-existing balance is retained on top.
+        assertEq(usde.balanceOf(address(almProxy)), 50e18 + assets);
+    }
+
 }
 
 contract MainnetController_Ethena_E2ETests is Ethena_TestBase {

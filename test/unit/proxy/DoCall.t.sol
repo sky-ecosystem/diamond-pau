@@ -4,7 +4,7 @@ pragma solidity ^0.8.34;
 import { ALMProxy }          from "../../../src/ALMProxy.sol";
 import { ALMProxyFreezable } from "../../../src/ALMProxyFreezable.sol";
 
-import { MockTarget } from "../mocks/MockTarget.sol";
+import { MockTarget, MockRevertingTarget, MockStorageWriter } from "../mocks/MockTarget.sol";
 
 import { UnitTestBase } from "../UnitTestBase.t.sol";
 
@@ -348,6 +348,95 @@ contract ALMProxyFreezable_DoCallWithValue_SuccessTests is ALMProxyFreezable_Cal
         bytes memory returnData = almProxyFreezable.doCallWithValue{value: 1e18}(target, data, 1e18);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
+    }
+
+}
+
+contract ALMProxy_DoCall_RevertPropagationTests is ALMProxy_Call_TestBase {
+
+    function test_doCall_revertsWithReason() public {
+        address revertingTarget = address(new MockRevertingTarget());
+
+        vm.prank(controller);
+        vm.expectRevert("MockRevertingTarget/reverted");
+        almProxy.doCall(revertingTarget, abi.encodeWithSignature("revertWithReason()"));
+    }
+
+    function test_doCall_revertsWithCustomError() public {
+        address revertingTarget = address(new MockRevertingTarget());
+
+        vm.prank(controller);
+        vm.expectRevert(MockRevertingTarget.MockError.selector);
+        almProxy.doCall(revertingTarget, abi.encodeWithSignature("revertWithCustomError()"));
+    }
+
+}
+
+contract ALMProxy_EOATargetTests is ALMProxy_Call_TestBase {
+
+    function test_doCall_eoaTarget() public {
+        address eoa = makeAddr("eoa");
+
+        vm.prank(controller);
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
+        almProxy.doCall(eoa, "");
+    }
+
+    function test_doCallWithValue_eoaTarget() public {
+        address eoa = makeAddr("eoa");
+
+        vm.prank(controller);
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
+        almProxy.doCallWithValue(eoa, "", 0);
+    }
+
+    function test_doDelegateCall_eoaTarget() public {
+        address eoa = makeAddr("eoa");
+
+        vm.prank(controller);
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
+        almProxy.doDelegateCall(eoa, "");
+    }
+
+}
+
+contract ALMProxy_DoDelegateCall_StorageEffectTests is ALMProxy_Call_TestBase {
+
+    function test_doDelegateCall_writesToProxyStorage() public {
+        address writer = address(new MockStorageWriter());
+
+        uint256 slot  = 1000;
+        uint256 value = 42;
+
+        vm.prank(controller);
+        almProxy.doDelegateCall(writer, abi.encodeWithSignature("write(uint256,uint256)", slot, value));
+
+        // delegatecall executes in the proxy's storage context: the slot is written in the proxy,
+        // and the target contract's own storage is untouched.
+        assertEq(uint256(vm.load(address(almProxy), bytes32(slot))), value);
+        assertEq(uint256(vm.load(writer,            bytes32(slot))), 0);
+    }
+
+}
+
+contract ALMProxyFreezable_DoCall_RevertPropagationTests is ALMProxyFreezable_Call_TestBase {
+
+    function test_doCall_revertsWithReason() public {
+        address revertingTarget = address(new MockRevertingTarget());
+
+        vm.prank(allocator);
+        vm.expectRevert("MockRevertingTarget/reverted");
+        almProxyFreezable.doCall(revertingTarget, abi.encodeWithSignature("revertWithReason()"));
+    }
+
+    function test_doCallWithValue_revertsWithReason() public {
+        address revertingTarget = address(new MockRevertingTarget());
+
+        vm.deal(address(almProxyFreezable), 1e18);
+
+        vm.prank(allocator);
+        vm.expectRevert("MockRevertingTarget/reverted");
+        almProxyFreezable.doCallWithValue(revertingTarget, abi.encodeWithSignature("revertWithReason()"), 1e18);
     }
 
 }
