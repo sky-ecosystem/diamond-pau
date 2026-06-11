@@ -118,7 +118,7 @@ abstract contract LayerZero_TestBase is ForkTestBase {
 
     bytes32 internal key;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         key = mainnetController.layerZero_getTransferRateLimitKey(
