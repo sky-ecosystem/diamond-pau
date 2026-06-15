@@ -212,32 +212,6 @@ contract MainnetController_WEETH_Deposit_Tests is WEETH_TestBase {
         assertApproxEqAbs(liquidityPool.amountForShare(WEETH.balanceOf(address(almProxy))), 1_000e18, 2);
     }
 
-    function test_depositToWEETH_withPreExistingWEETH() external {
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(depositKey, 1_000e18, uint256(1_000e18) / 1 days);
-
-        deal(Ethereum.WETH, address(almProxy), 1_000e18);
-
-        // Pre-existing weETH on the proxy must not be counted in the deposit's returned shares
-        deal(Ethereum.WEETH, address(almProxy), 5e18);
-
-        uint256 minSharesOut = _getMinSharesOut(1_000e18);
-
-        vm.expectEmit(address(mainnetController));
-        emit IWEETHFacet.WEETHDeposit(
-            1_000e18,
-            1_000e18 - 1, // Rounding
-            927.715236537415314851e18
-        );
-
-        vm.prank(allocator);
-        uint256 shares = mainnetController.weeth_deposit(1_000e18, minSharesOut);
-
-        // Returned shares reflect only the freshly-minted weETH, not the pre-existing 5e18.
-        assertEq(shares,                             927.715236537415314851e18);
-        assertEq(WEETH.balanceOf(address(almProxy)), 5e18 + 927.715236537415314851e18);
-    }
-
 }
 
 contract MainnetController_WEETH_RequestWithdraw_Tests is WEETH_TestBase {

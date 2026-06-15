@@ -43,14 +43,16 @@ contract MockRevertingTarget {
 
 }
 
-// Target that writes to an arbitrary storage slot, used to verify delegatecall executes in the
-// caller's (ALMProxy's) storage context.
+// Target that writes to an arbitrary storage slot and returns the context address,
+// used to verify delegatecalls.
 contract MockStorageWriter {
 
-    function write(uint256 slot, uint256 value) external {
+    function write(uint256 slot, uint256 value) external returns (address context) {
         assembly {
             sstore(slot, value)
         }
+
+        context = address(this);
     }
 
 }

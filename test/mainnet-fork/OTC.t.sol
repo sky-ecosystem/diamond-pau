@@ -12,7 +12,7 @@ import { OTCFacet }  from "../../src/facets/otc/OTCFacet.sol";
 
 import { OTCBuffer } from "../../src/facets/otc/OTCBuffer.sol";
 
-import { MockTokenReturnFalse } from "../mocks/Mocks.sol";
+import { MockTokenReturnFalse, MockTokenReturn64Bytes } from "../mocks/Mocks.sol";
 
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
@@ -239,6 +239,19 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         vm.stopPrank();
 
         deal(token, address(almProxy), 1_000_000e6);
+
+        vm.expectRevert("OTCFacet/transfer-failed");
+        vm.prank(allocator);
+        mainnetController.otc_send(exchange, token, 1_000_000e6);
+    }
+
+    function test_otcSend_transferFailedOnNonStandardReturnData() external {
+        address token = address(new MockTokenReturn64Bytes());
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        mainnetController.otc_setBuffer(exchange, address(otcBuffer));
+        rateLimits.setRateLimitData(mainnetController.otc_getSendRateLimitKey(exchange, token), 1_000_000e6, 0);
+        vm.stopPrank();
 
         vm.expectRevert("OTCFacet/transfer-failed");
         vm.prank(allocator);
@@ -646,6 +659,19 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
         mainnetController.otc_claim(exchange, token);
     }
 
+    function test_otcClaim_transferFailedOnNonStandardReturnData() external {
+        address token = address(new MockTokenReturn64Bytes());
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        mainnetController.otc_setBuffer(exchange, address(otcBuffer));
+        rateLimits.setRateLimitData(mainnetController.otc_getClaimRateLimitKey(exchange, token), 1_000_000e6, 0);
+        vm.stopPrank();
+
+        vm.expectRevert("OTCFacet/transferFrom-failed");
+        vm.prank(allocator);
+        mainnetController.otc_claim(exchange, token);
+    }
+
     // NOTE: This test covers the case where token returns null for transferFrom
     function test_otcClaim_usdt() external {
         vm.startPrank(Ethereum.SPARK_PROXY);
@@ -741,6 +767,7 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
 
         // First partial claim.
         deal(Ethereum.USDT, address(otcBuffer), 2_000_000e6);
+
         vm.prank(allocator);
         mainnetController.otc_claim(exchange, Ethereum.USDT);
 
@@ -752,6 +779,7 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
 
         // Second partial claim accumulates on top of the first.
         deal(Ethereum.USDT, address(otcBuffer), 1_500_000e6);
+
         vm.prank(allocator);
         mainnetController.otc_claim(exchange, Ethereum.USDT);
 

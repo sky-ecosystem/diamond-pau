@@ -357,45 +357,45 @@ contract ALMProxy_DoCall_RevertPropagationTests is ALMProxy_Call_TestBase {
     function test_doCall_revertsWithReason() public {
         address revertingTarget = address(new MockRevertingTarget());
 
-        vm.prank(controller);
         vm.expectRevert("MockRevertingTarget/reverted");
+        vm.prank(controller);
         almProxy.doCall(revertingTarget, abi.encodeWithSignature("revertWithReason()"));
     }
 
     function test_doCall_revertsWithCustomError() public {
         address revertingTarget = address(new MockRevertingTarget());
 
-        vm.prank(controller);
         vm.expectRevert(MockRevertingTarget.MockError.selector);
+        vm.prank(controller);
         almProxy.doCall(revertingTarget, abi.encodeWithSignature("revertWithCustomError()"));
     }
 
 }
 
-contract ALMProxy_EOATargetTests is ALMProxy_Call_TestBase {
+contract ALMProxy_TargetEmptyCodeTests is ALMProxy_Call_TestBase {
 
-    function test_doCall_eoaTarget() public {
-        address eoa = makeAddr("eoa");
+    function test_doCall_targetEmptyCode() public {
+        address emptyTarget = makeAddr("emptyTarget");
 
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", emptyTarget));
         vm.prank(controller);
-        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
-        almProxy.doCall(eoa, "");
+        almProxy.doCall(emptyTarget, "");
     }
 
-    function test_doCallWithValue_eoaTarget() public {
-        address eoa = makeAddr("eoa");
+    function test_doCallWithValue_targetEmptyCode() public {
+        address emptyTarget = makeAddr("emptyTarget");
 
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", emptyTarget));
         vm.prank(controller);
-        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
-        almProxy.doCallWithValue(eoa, "", 0);
+        almProxy.doCallWithValue(emptyTarget, "", 0);
     }
 
-    function test_doDelegateCall_eoaTarget() public {
-        address eoa = makeAddr("eoa");
+    function test_doDelegateCall_targetEmptyCode() public {
+        address emptyTarget = makeAddr("emptyTarget");
 
+        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", emptyTarget));
         vm.prank(controller);
-        vm.expectRevert(abi.encodeWithSignature("AddressEmptyCode(address)", eoa));
-        almProxy.doDelegateCall(eoa, "");
+        almProxy.doDelegateCall(emptyTarget, "");
     }
 
 }
@@ -409,12 +409,15 @@ contract ALMProxy_DoDelegateCall_StorageEffectTests is ALMProxy_Call_TestBase {
         uint256 value = 42;
 
         vm.prank(controller);
-        almProxy.doDelegateCall(writer, abi.encodeWithSignature("write(uint256,uint256)", slot, value));
+        bytes memory returnData = almProxy.doDelegateCall(writer, abi.encodeWithSignature("write(uint256,uint256)", slot, value));
+
+        address context = abi.decode(returnData, (address));
 
         // delegatecall executes in the proxy's storage context: the slot is written in the proxy,
         // and the target contract's own storage is untouched.
         assertEq(uint256(vm.load(address(almProxy), bytes32(slot))), value);
         assertEq(uint256(vm.load(writer,            bytes32(slot))), 0);
+        assertEq(context,                           address(almProxy));
     }
 
 }

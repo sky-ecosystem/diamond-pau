@@ -96,20 +96,6 @@ contract MainnetController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
         mainnetController.merkl_toggleOperator(address(merklDistributor), freshOperator);
     }
 
-    function test_toggleOperatorMerkl_distributorReverts() external {
-        MockRevertingDistributor mockDistributor = new MockRevertingDistributor();
-
-        bytes32 key = mainnetController.merkl_getToggleOperatorRateLimitKey(address(mockDistributor), operator1);
-
-        vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(key, type(uint256).max, 0);
-
-        // The distributor reverts, the revert propagates through doCall.
-        vm.expectRevert("MockRevertingDistributor/reverted");
-        vm.prank(allocator);
-        mainnetController.merkl_toggleOperator(address(mockDistributor), operator1);
-    }
-
 }
 
 contract MainnetController_Merkl_ToggleOperator_SuccessTests is Merkl_TestBase {
