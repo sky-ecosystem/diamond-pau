@@ -213,7 +213,7 @@ contract MainnetController_NFATHalo_Issue_Tests is NFATHalo_TestBase {
             expectedIssued                 : true,
             expectedOutstandingPrincipal   : firstAmount,
             expectedMaxOutstandingInterest : 0,
-            expectedInterestIndex         : 0
+            expectedInterestIndex          : 0
         });
 
         _assertPosition({

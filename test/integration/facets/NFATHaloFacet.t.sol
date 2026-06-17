@@ -39,7 +39,7 @@ contract Controller_NFATHaloFacet_Tests is Integration_TestBase {
     IControllerLike internal controller;
 
     uint256 internal constant MAX_ANNUAL_GROWTH_RATE = 0.20e18;  // 20% APR
-    uint256 internal constant TOKEN_ID           = 1;
+    uint256 internal constant TOKEN_ID               = 1;
 
     function setUp() external {
         controller = IControllerLike(_deploy());

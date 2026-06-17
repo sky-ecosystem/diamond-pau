@@ -20,7 +20,7 @@ interface INFATHaloFacet is IFacet {
     /**
      * @notice Per-facility tunable parameters.
      * @param  maxAnnualGrowthRate Max annual growth rate (1e18-scaled APR; 1e18 == 100%/year) used
-     *                          to drive interest accrual on issued positions.
+     *                             to drive interest accrual on issued positions.
      */
     struct Parameters {
         uint256 maxAnnualGrowthRate;
