@@ -61,14 +61,6 @@ abstract contract Merkl_TestBase is ForkTestBase {
 
 }
 
-contract MockRevertingDistributor {
-
-    function toggleOperator(address, address) external pure {
-        revert("MockRevertingDistributor/reverted");
-    }
-
-}
-
 contract MainnetController_Merkl_ToggleOperator_FailureTests is Merkl_TestBase {
 
     function test_toggleOperatorMerkl_reentrancy() external {
