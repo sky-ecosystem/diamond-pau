@@ -209,12 +209,12 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
     }
 
     function test_depositAave_usds() external {
-        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
         assertEq(usds.allowance(address(almProxy), POOL), 0);
 
         assertEq(AUSDS.balanceOf(address(almProxy)), 0);
-        assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),  2_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance);
 
         vm.record();
@@ -230,17 +230,17 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         assertEq(usds.allowance(address(almProxy), POOL), 0);
 
         assertEq(AUSDS.balanceOf(address(almProxy)), 1_000_000e18);
-        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
     }
 
     function test_depositAave_usdc() external {
-        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 2_000_000e6);
 
         assertEq(usdc.allowance(address(almProxy), POOL), 0);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), 0);
-        assertEq(usdc.balanceOf(address(almProxy)),  1_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),  2_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance);
 
         vm.record();
@@ -256,7 +256,7 @@ contract MainnetController_AaveV3_Deposit_Tests is AaveV3_TestBase {
         assertEq(usdc.allowance(address(almProxy), POOL), 0);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), 1_000_000e6);
-        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(almProxy)),  1_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6);
     }
 
@@ -333,7 +333,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         bytes32 depositKey  = mainnetController.aave_getDepositRateLimitKey(ATOKEN_USDS, POOL, Ethereum.USDS);
         bytes32 withdrawKey = mainnetController.aave_getWithdrawRateLimitKey(ATOKEN_USDS, POOL);
 
-        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDS, amount: 1_000_000e18 });
@@ -348,7 +348,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(aTokenBalance, 1_000_008.690632523560813345e18);
 
         assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance);
-        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
 
         uint256 startingDepositRateLimit = rateLimits.getCurrentRateLimit(depositKey);
@@ -370,7 +370,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance - 400_000e18);
-        assertEq(usds.balanceOf(address(almProxy)),  400_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),  1_400_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 600_000e18);  // 1m - 400k
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  startingDepositRateLimit + 400_000e18);
@@ -387,7 +387,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), 10_000_000e18 - aTokenBalance);
 
         assertEq(AUSDS.balanceOf(address(almProxy)), 0);
-        assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance);
+        assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance + 1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18 - aTokenBalance);
 
         // Interest accrued was withdrawn, reducing cash balance
@@ -401,7 +401,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setUnlimitedRateLimitData(withdrawKey);
 
-        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDS, amount: 1_000_000e18 });
@@ -423,7 +423,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);
 
         assertEq(AUSDS.balanceOf(address(almProxy)), aTokenBalance);
-        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18);
 
         // Full withdraw
@@ -437,7 +437,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);  // No change
 
         assertEq(AUSDS.balanceOf(address(almProxy)), 0);
-        assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance);
+        assertEq(usds.balanceOf(address(almProxy)),  aTokenBalance + 1_000_000e18);
         assertEq(usds.balanceOf(ATOKEN_USDS),        startingAUSDSBalance + 1_000_000e18 - aTokenBalance);
     }
 
@@ -445,7 +445,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         bytes32 depositKey  = mainnetController.aave_getDepositRateLimitKey(ATOKEN_USDC, POOL, Ethereum.USDC);
         bytes32 withdrawKey = mainnetController.aave_getWithdrawRateLimitKey(ATOKEN_USDC, POOL);
 
-        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 2_000_000e6);
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDC, amount: 1_000_000e6 });
@@ -460,7 +460,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(aTokenBalance, 1_000_013.630187e6);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), aTokenBalance);
-        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(almProxy)),  1_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6);
 
         uint256 startingDepositRateLimit = rateLimits.getCurrentRateLimit(depositKey);
@@ -478,7 +478,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(mainnetController.aave_withdraw(ATOKEN_USDC, 400_000e6), 400_000e6);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), aTokenBalance - 400_000e6);
-        assertEq(usdc.balanceOf(address(almProxy)),  400_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),  1_400_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 600_000e6);  // 1m - 400k
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  startingDepositRateLimit + 400_000e6);
@@ -492,7 +492,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(mainnetController.aave_withdraw(ATOKEN_USDC, type(uint256).max), aTokenBalance - 400_000e6);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), 0);
-        assertEq(usdc.balanceOf(address(almProxy)),  aTokenBalance);
+        assertEq(usdc.balanceOf(address(almProxy)),  aTokenBalance + 1_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6 - aTokenBalance);
 
         assertEq(rateLimits.getCurrentRateLimit(depositKey),  25_000_000e6);
@@ -546,7 +546,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setUnlimitedRateLimitData(withdrawKey);
 
-        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDC, address(almProxy), 2_000_000e6);
 
         vm.expectEmit(address(mainnetController));
         emit IAaveFacet.AaveDeposit({ aToken: ATOKEN_USDC, amount: 1_000_000e6 });
@@ -568,7 +568,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);
 
         assertEq(AUSDC.balanceOf(address(almProxy)), aTokenBalance);
-        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(almProxy)),  1_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6);
 
         // Full withdraw
@@ -582,7 +582,7 @@ contract MainnetController_AaveV3_Withdraw_Tests is AaveV3_TestBase {
         assertEq(rateLimits.getCurrentRateLimit(withdrawKey), type(uint256).max);  // No change
 
         assertEq(AUSDC.balanceOf(address(almProxy)), 0);
-        assertEq(usdc.balanceOf(address(almProxy)),  aTokenBalance);
+        assertEq(usdc.balanceOf(address(almProxy)),  aTokenBalance + 1_000_000e6);
         assertEq(usdc.balanceOf(ATOKEN_USDC),        startingAUSDCBalance + 1_000_000e6 - aTokenBalance);
     }
 
