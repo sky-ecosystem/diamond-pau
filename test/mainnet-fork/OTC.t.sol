@@ -398,9 +398,9 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         rateLimits.setRateLimitData(sendRateLimitKey, 10_000_000e6, 0);
         vm.stopPrank();
 
-        deal(Ethereum.USDT, address(almProxy), 10_000_000e6);
+        deal(Ethereum.USDT, address(almProxy), 11_000_000e6);
 
-        assertEq(USDT.balanceOf(address(almProxy)), 10_000_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)), 11_000_000e6);
         assertEq(USDT.balanceOf(exchange),          0);
 
         assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 10_000_000e6);
@@ -430,7 +430,7 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
             normalizedClaimed: 0
         });
 
-        assertEq(USDT.balanceOf(address(almProxy)), 0);
+        assertEq(USDT.balanceOf(address(almProxy)), 1_000_000e6);
         assertEq(USDT.balanceOf(exchange),          10_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 0);
@@ -446,9 +446,9 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
         rateLimits.setRateLimitData(sendRateLimitKey, 10_000_000e18, 0);
         vm.stopPrank();
 
-        deal(Ethereum.USDS, address(almProxy), 10_000_000e18);
+        deal(Ethereum.USDS, address(almProxy), 11_000_000e18);
 
-        assertEq(USDS.balanceOf(address(almProxy)), 10_000_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)), 11_000_000e18);
         assertEq(USDS.balanceOf(exchange),          0);
 
         assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 10_000_000e18);
@@ -478,7 +478,7 @@ contract MainnetController_OTC_Send_Tests is OTC_TestBase {
             normalizedClaimed: 0
         });
 
-        assertEq(USDS.balanceOf(address(almProxy)), 0);
+        assertEq(USDS.balanceOf(address(almProxy)), 1_000_000e18);
         assertEq(USDS.balanceOf(exchange),          10_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(sendRateLimitKey), 0);
@@ -551,9 +551,10 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
         rateLimits.setRateLimitData(mainnetController.otc_getClaimRateLimitKey(exchange, Ethereum.USDT), type(uint256).max, 0);
         vm.stopPrank();
 
+        deal(Ethereum.USDT, address(almProxy),  1_000_000e6);
         deal(Ethereum.USDT, address(otcBuffer), 10_000_000e6);
 
-        assertEq(USDT.balanceOf(address(almProxy)),  0);
+        assertEq(USDT.balanceOf(address(almProxy)),  1_000_000e6);
         assertEq(USDT.balanceOf(address(otcBuffer)), 10_000_000e6);
 
         _assertOTCState({
@@ -572,7 +573,7 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(USDT.balanceOf(address(almProxy)),  10_000_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)),  11_000_000e6);
         assertEq(USDT.balanceOf(address(otcBuffer)), 0);
 
         _assertOTCState({
@@ -588,9 +589,10 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
         rateLimits.setRateLimitData(mainnetController.otc_getClaimRateLimitKey(exchange, Ethereum.USDS), type(uint256).max, 0);
         vm.stopPrank();
 
+        deal(Ethereum.USDS, address(almProxy),  1_000_000e18);
         deal(Ethereum.USDS, address(otcBuffer), 10_000_000e18);
 
-        assertEq(USDS.balanceOf(address(almProxy)),  0);
+        assertEq(USDS.balanceOf(address(almProxy)),  1_000_000e18);
         assertEq(USDS.balanceOf(address(otcBuffer)), 10_000_000e18);
 
         _assertOTCState({
@@ -609,7 +611,7 @@ contract MainnetController_OTC_Claim_Tests is OTC_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(USDS.balanceOf(address(almProxy)),  10_000_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)),  1_000_000e18 + 10_000_000e18);
         assertEq(USDS.balanceOf(address(otcBuffer)), 0);
 
         _assertOTCState({
@@ -648,11 +650,12 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
     function test_e2e_swapUSDTToUSDS() external {
         uint48 startingTimestamp = uint48(block.timestamp);
 
-        deal(Ethereum.USDT, address(almProxy), 10_000_000e6);
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
+        deal(Ethereum.USDT, address(almProxy), 11_000_000e6);
 
         // Step 1: Send USDT to exchange
 
-        assertEq(USDT.balanceOf(address(almProxy)), 10_000_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)), 11_000_000e6);
         assertEq(USDT.balanceOf(exchange),          0);
 
         assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), 10_000_000e6);
@@ -674,7 +677,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         vm.prank(allocator);
         mainnetController.otc_send(exchange, Ethereum.USDT, 10_000_000e6);
 
-        assertEq(USDT.balanceOf(address(almProxy)),  0);
+        assertEq(USDT.balanceOf(address(almProxy)),  1_000_000e6);
         assertEq(USDT.balanceOf(exchange),           10_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), 0);
@@ -705,7 +708,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         USDS.transfer(address(otcBuffer), 9_980_000e18);
 
         assertEq(USDS.balanceOf(address(otcBuffer)), 9_980_000e18);
-        assertEq(USDS.balanceOf(address(almProxy)),  0);
+        assertEq(USDS.balanceOf(address(almProxy)),  1_000_000e18);
 
         skip(1 minutes); // Simulate realistic passage of time
 
@@ -727,7 +730,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertFalse(mainnetController.otc_getIsSwapReady(exchange));
 
         assertEq(USDS.balanceOf(address(otcBuffer)), 9_980_000e18);
-        assertEq(USDS.balanceOf(address(almProxy)),  0);
+        assertEq(USDS.balanceOf(address(almProxy)),  1_000_000e18);
 
         vm.expectEmit(address(mainnetController));
         emit IOTCFacet.OTCClaimed({
@@ -756,7 +759,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertFalse(mainnetController.otc_getIsSwapReady(exchange));
 
         assertEq(USDS.balanceOf(address(otcBuffer)), 0);
-        assertEq(USDS.balanceOf(address(almProxy)),  9_980_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)),  1_000_000e18 + 9_980_000e18);
 
         // Cannot do another swap
         vm.expectRevert("OTCFacet/last-swap-not-returned");
@@ -784,7 +787,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         assertGt(currentRateLimit, 200_000e18);
 
-        assertEq(USDS.balanceOf(address(almProxy)), 9_980_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)), 1_000_000e18 + 9_980_000e18);
         assertEq(USDS.balanceOf(exchange),          0);
 
         vm.expectEmit(address(mainnetController));
@@ -801,7 +804,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), currentRateLimit - 200_000e18);
 
-        assertEq(USDS.balanceOf(address(almProxy)), 9_780_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)), 1_000_000e18 + 9_780_000e18);
         assertEq(USDS.balanceOf(exchange),          200_000e18);
 
         // OTC state is reset
@@ -815,11 +818,12 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
     function test_e2e_swapUSDSToUSDT() external {
         uint48 startingTimestamp = uint48(block.timestamp);
 
-        deal(Ethereum.USDS, address(almProxy), 10_000_000e18);
+        deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDS, address(almProxy), 11_000_000e18);
 
         // Step 1: Send USDT to exchange
 
-        assertEq(USDS.balanceOf(address(almProxy)), 10_000_000e18);
+        assertEq(USDS.balanceOf(address(almProxy)), 11_000_000e18);
         assertEq(USDS.balanceOf(exchange),          0);
 
         assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), 10_000_000e18);
@@ -841,7 +845,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         vm.prank(allocator);
         mainnetController.otc_send(exchange, Ethereum.USDS, 10_000_000e18);
 
-        assertEq(USDS.balanceOf(address(almProxy)), 0);
+        assertEq(USDS.balanceOf(address(almProxy)), 1_000_000e18);
         assertEq(USDS.balanceOf(exchange),          10_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(usdsSendRateLimitKey), 0);
@@ -872,7 +876,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         IERC20Like(Ethereum.USDT).transfer(address(otcBuffer), 9_980_000e6);
 
         assertEq(USDT.balanceOf(address(otcBuffer)), 9_980_000e6);
-        assertEq(USDT.balanceOf(address(almProxy)),  0);
+        assertEq(USDT.balanceOf(address(almProxy)),  1_000_000e6);
 
         skip(1 minutes); // Simulate realistic passage of time
 
@@ -894,7 +898,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertFalse(mainnetController.otc_getIsSwapReady(exchange));
 
         assertEq(USDT.balanceOf(address(otcBuffer)), 9_980_000e6);
-        assertEq(USDT.balanceOf(address(almProxy)),  0);
+        assertEq(USDT.balanceOf(address(almProxy)),  1_000_000e6);
 
         vm.expectEmit(address(mainnetController));
         emit IOTCFacet.OTCClaimed({
@@ -923,7 +927,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
         assertFalse(mainnetController.otc_getIsSwapReady(exchange));
 
         assertEq(USDT.balanceOf(address(otcBuffer)), 0);
-        assertEq(USDT.balanceOf(address(almProxy)),  9_980_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)),  1_000_000e6 + 9_980_000e6);
 
         // Cannot do another swap
         vm.expectRevert("OTCFacet/last-swap-not-returned");
@@ -951,7 +955,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         assertGt(currentRateLimit, 200_000e6);
 
-        assertEq(USDT.balanceOf(address(almProxy)), 9_980_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)), 1_000_000e6 + 9_980_000e6);
         assertEq(USDT.balanceOf(exchange),          0);
 
         vm.expectEmit(address(mainnetController));
@@ -968,7 +972,7 @@ contract MainnetController_OTC_E2ETests is OTC_TestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(usdtSendRateLimitKey), currentRateLimit - 200_000e6);
 
-        assertEq(USDT.balanceOf(address(almProxy)), 9_780_000e6);
+        assertEq(USDT.balanceOf(address(almProxy)), 1_000_000e6 + 9_780_000e6);
         assertEq(USDT.balanceOf(exchange),          200_000e6);
 
         // OTC state is reset

@@ -449,7 +449,7 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
 
     function test_swapUniswapV3_token0ToToken1() public {
         uint256 amountIn = 250_000e6;
-        _fundProxy(amountIn, 0);
+        _fundProxy(1_000_000e6 + amountIn, 1_000_000e6);
 
         uint256 swapLimitBefore     = rateLimits.getCurrentRateLimit(_getSwapKey(address(token0)));
         uint256 token0BalanceBefore = token0.balanceOf(address(almProxy));
@@ -487,7 +487,7 @@ contract MainnetController_UniswapV3_Swap_Tests is UniswapV3_TestBase {
 
     function test_swapUniswapV3_token1ToToken0() public {
         uint256 amountIn = 300_000e6;
-        _fundProxy(0, amountIn);
+        _fundProxy(1_000_000e6, 1_000_000e6 + amountIn);
 
         uint256 swapLimitBefore     = rateLimits.getCurrentRateLimit(_getSwapKey(address(token1)));
         uint256 token0BalanceBefore = token0.balanceOf(address(almProxy));
