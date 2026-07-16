@@ -112,7 +112,7 @@ interface INFATHaloFacet is IFacet {
     function issue(address facility, address to, uint256 tokenId, uint256 amount) external;
 
     /**
-     * @notice Repays interest against an issued NFAT position. Bounded by `accruedInterest` after
+     * @notice Repays interest against an issued NFAT position. Bounded by `maxOutstandingInterest` after
      *         checkpointing; consumes the (facility, gem) repay-interest rate limit.
      * @param  facility Address of the NFAT facility.
      * @param  tokenId  Identifier of the NFAT token being repaid against.
@@ -154,10 +154,9 @@ interface INFATHaloFacet is IFacet {
         returns (uint256 maxAnnualGrowthRate);
 
     /**
-     * @notice Returns the current facility-wide interest index, including time-based accrual
-     *         since the last checkpoint.
+     * @notice Returns the last facility-wide interest index checkpoint and time of the checkpoint.
      * @param  facility      Address of the NFAT facility.
-     * @return interestIndex Current cumulative 1e18-scaled interest index.
+     * @return interestIndex Last cumulative 1e18-scaled interest index checkpoint.
      * @return lastUpdated   Timestamp of the last checkpoint. Zero means the facility has never
      *                       been configured.
      */
