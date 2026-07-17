@@ -1747,7 +1747,7 @@ contract MainnetController_UniswapV3_AddLiquidity_TWAPProtectionTests is Uniswap
         vm.stopPrank();
 
         assertGt(liquidity, 0, "Should successfully add liquidity");
-        assertGt(tokenId, 0, "Should mint position NFT");
+        assertGt(tokenId,   0, "Should mint position NFT");
     }
 
     // When twapTick == ticks.upper, _getExpectedAmounts must produce the same
