@@ -31,6 +31,7 @@ import { ICCTPFacet }          from "../../src/facets/cctp/ICCTPFacet.sol";
 import { ICentrifugeFacet }    from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
 import { ICurveFacet }         from "../../src/facets/curve/ICurveFacet.sol";
 import { IDAIUSDSFacet }       from "../../src/facets/dai-usds/IDAIUSDSFacet.sol";
+import { IDualPoolFacet }      from "../../src/facets/dual-pool/IDualPoolFacet.sol";
 import { IERC4626Facet }       from "../../src/facets/erc4626/IERC4626Facet.sol";
 import { IERC7540Facet }       from "../../src/facets/erc7540/IERC7540Facet.sol";
 import { IEthenaFacet }        from "../../src/facets/ethena/IEthenaFacet.sol";
@@ -60,6 +61,7 @@ import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
 import { DAIUSDSFacet }       from "../../src/facets/dai-usds/DAIUSDSFacet.sol";
+import { DualPoolFacet }      from "../../src/facets/dual-pool/DualPoolFacet.sol";
 import { ERC4626Facet }       from "../../src/facets/erc4626/ERC4626Facet.sol";
 import { ERC7540Facet }       from "../../src/facets/erc7540/ERC7540Facet.sol";
 import { EthenaFacet }        from "../../src/facets/ethena/EthenaFacet.sol";
@@ -160,8 +162,14 @@ abstract contract ForkTestBase is DssTest {
 
     // NOTE: From https://docs.uniswap.org/contracts/v4/deployments (Ethereum Mainnet).
     address internal constant _PERMIT2                     = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address internal constant _UNISWAP_V4_POOL_MANAGER     = 0x000000000004444c5dc75cB358380D2e3dE08A90;
     address internal constant _UNISWAP_V4_POSITION_MANAGER = 0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e;
     address internal constant _UNISWAP_V4_ROUTER           = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
+
+    // NOTE: The DualPool hook is etched at this address by the DualPool fork tests. The low 14
+    //       bits encode the Uniswap V4 hook permissions BEFORE_ADD_LIQUIDITY,
+    //       BEFORE_REMOVE_LIQUIDITY, BEFORE_SWAP, and BEFORE_SWAP_RETURNS_DELTA (0x0a88).
+    address internal constant _DUAL_POOL_HOOK = 0x4444000000000000000000000000000000000A88;
 
     address allocator      = Ethereum.ALM_RELAYER_MULTISIG;
     address allocatorAdmin = Ethereum.ALM_FREEZER_MULTISIG;
@@ -305,6 +313,7 @@ abstract contract ForkTestBase is DssTest {
         _wireCentrifugeFacet();
         _wireCurveFacet();
         _wireDAIUSDSFacet();
+        _wireDualPoolFacet();
         _wireERC4626Facet();
         _wireERC7540Facet();
         _wireEthenaFacet();
@@ -345,7 +354,7 @@ abstract contract ForkTestBase is DssTest {
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        bytes32[] memory integrationIds = new bytes32[](28);
+        bytes32[] memory integrationIds = new bytes32[](29);
         integrationIds[0]  = "AAVE_FACET";
         integrationIds[1]  = "BASIN_FACET";
         integrationIds[2]  = "CCTP_FACET";
@@ -374,6 +383,7 @@ abstract contract ForkTestBase is DssTest {
         integrationIds[25] = "NFAT_HALO_FACET";
         integrationIds[26] = "NFAT_PRIME_FACET";
         integrationIds[27] = "AAVE_V4_FACET";
+        integrationIds[28] = "DUAL_POOL_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -870,6 +880,172 @@ abstract contract ForkTestBase is DssTest {
         });
 
         beacon.setIntegration("DAIUSDS_FACET", config);
+    }
+
+    /// @dev The hook the DualPoolFacet is constructed against. Suites that exercise the real
+    ///      deployed hook override this to return its mainnet address; the default is the
+    ///      flag-encoded address the mock is etched at.
+    function _dualPoolHook() internal view virtual returns (address) {
+        return _DUAL_POOL_HOOK;
+    }
+
+    function _wireDualPoolFacet() internal {
+        address dualPoolFacet = address(new DualPoolFacet({
+            hook_    : _dualPoolHook(),
+            permit2_ : _PERMIT2,
+            router_  : _UNISWAP_V4_ROUTER
+        }));
+
+        vm.label(dualPoolFacet, "DualPoolFacet");
+
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](28);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_FREEZER_ROLE.selector,
+            IDualPoolFacet.FREEZER_ROLE.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_hook.selector,
+            IDualPoolFacet.hook.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_permit2.selector,
+            IDualPoolFacet.permit2.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_router.selector,
+            IDualPoolFacet.router.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_acceptHookOwnership.selector,
+            IDualPoolFacet.acceptHookOwnership.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_bootstrap.selector,
+            IDualPoolFacet.bootstrap.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_deposit.selector,
+            IDualPoolFacet.deposit.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_emergencyRevokeVault.selector,
+            IDualPoolFacet.emergencyRevokeVault.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_initializePool.selector,
+            IDualPoolFacet.initializePool.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_pausePool.selector,
+            IDualPoolFacet.pausePool.selector
+        );
+
+        wires[11] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_refreshVaultApproval.selector,
+            IDualPoolFacet.refreshVaultApproval.selector
+        );
+
+        wires[12] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_resumePool.selector,
+            IDualPoolFacet.resumePool.selector
+        );
+
+        wires[13] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_setDistribution.selector,
+            IDualPoolFacet.setDistribution.selector
+        );
+
+        wires[14] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_setExternalDeposits.selector,
+            IDualPoolFacet.setExternalDeposits.selector
+        );
+
+        wires[15] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_setMaxSlippage.selector,
+            IDualPoolFacet.setMaxSlippage.selector
+        );
+
+        wires[16] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_swap.selector,
+            IDualPoolFacet.swap.selector
+        );
+
+        wires[17] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_transferHookOwnership.selector,
+            IDualPoolFacet.transferHookOwnership.selector
+        );
+
+        wires[18] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_withdraw.selector,
+            IDualPoolFacet.withdraw.selector
+        );
+
+        wires[19] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAggregateDepositRateLimitKey.selector,
+            IDualPoolFacet.getAggregateDepositRateLimitKey.selector
+        );
+
+        wires[20] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAggregateWithdrawRateLimitKey.selector,
+            IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[21] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAssetDepositRateLimitKey.selector,
+            IDualPoolFacet.getAssetDepositRateLimitKey.selector
+        );
+
+        wires[22] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAssetWithdrawRateLimitKey.selector,
+            IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
+        );
+
+        wires[23] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getMaxSlippage.selector,
+            IDualPoolFacet.getMaxSlippage.selector
+        );
+
+        wires[24] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getShares.selector,
+            IDualPoolFacet.getShares.selector
+        );
+
+        wires[25] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getSwapRateLimitKey.selector,
+            IDualPoolFacet.getSwapRateLimitKey.selector
+        );
+
+        wires[26] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_setPriceRatio.selector,
+            IDualPoolFacet.setPriceRatio.selector
+        );
+
+        wires[27] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getPriceRatio.selector,
+            IDualPoolFacet.getPriceRatio.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : dualPoolFacet,
+            wires : wires
+        });
+
+        beacon.setIntegration("DUAL_POOL_FACET", config);
     }
 
     function _wireNFATHaloFacet() internal {
