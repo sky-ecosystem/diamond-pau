@@ -17,6 +17,7 @@ import { PoolKey }  from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/P
 import { makeAddressAddressKey, makeAddressKey } from "../../src/libraries/RateLimitHelpers.sol";
 
 import { AaveV3_TestBase }                   from "./Aave.t.sol";
+import { AaveV4_TestBase }                   from "./AaveV4.t.sol";
 import { Centrifuge_TestBase }               from "./Centrifuge.t.sol";
 import { Curve_TestBase }                    from "./Curve.t.sol";
 import { ERC4626_SUSDS_TestBase }            from "./ERC4626.t.sol";
@@ -28,6 +29,8 @@ import { Pendle_TestBase }                   from "./Pendle.t.sol";
 import { UniswapV3_TestBase }                from "./UniswapV3.t.sol";
 import { UniswapV4_USDC_USDT_TestBase }      from "./UniswapV4.t.sol";
 import { WEETH_TestBase }                    from "./WEETH.t.sol";
+
+import { IAaveV4SpokeLike } from "../../src/facets/aave-v4/AaveV4Facet.sol";
 
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
 
@@ -106,6 +109,44 @@ contract MainnetController_Aave_Attack_Tests is AaveV3_TestBase {
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(allocator);
         mainnetController.aave_deposit(ATOKEN_USDS, 1_000_000e18);
+    }
+
+}
+
+contract MainnetController_AaveV4_Attack_Tests is AaveV4_TestBase {
+
+    function test_attack_underlyingChanged_depositAaveV4() external {
+        assertEq(rateLimits.getCurrentRateLimit(mainUsdcDepositKey), USDC_DEPOSIT_LIMIT);
+
+        // Deposit succeeds with the original underlying (USDC).
+        deal(address(usdc), address(almProxy), USDC_DEPOSIT_AMOUNT);
+
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+
+        assertEq(
+            rateLimits.getCurrentRateLimit(mainUsdcDepositKey),
+            USDC_DEPOSIT_LIMIT - USDC_DEPOSIT_AMOUNT
+        );
+
+        // Attack: mock getReserve() to remap the reserve's underlying to a different address,
+        // keeping the real hub and assetId so only the rate-limit key derivation changes.
+        IAaveV4SpokeLike.Reserve memory reserve
+            = IAaveV4SpokeLike(MAIN_SPOKE).getReserve(MAIN_USDC_RESERVE_ID);
+        reserve.underlying = makeAddr("changed-underlying");
+
+        vm.mockCall(
+            MAIN_SPOKE,
+            abi.encodeWithSignature("getReserve(uint256)", MAIN_USDC_RESERVE_ID),
+            abi.encode(reserve)
+        );
+
+        deal(address(usdc), address(almProxy), USDC_DEPOSIT_AMOUNT);
+
+        // Cannot deposit against the remapped underlying: its key was never configured.
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
     }
 
 }
