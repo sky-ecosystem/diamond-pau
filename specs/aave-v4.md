@@ -15,7 +15,12 @@ Supply-only integration with Aave V4 hub-and-spoke lending markets. The facet su
 ## External protocol
 
 - **Protocol:** Aave V4 (hub-and-spoke), live on mainnet since March 2026. Behavior in this spec verified against [aave/aave-v4](https://github.com/aave/aave-v4) at commit `cfdf931c8c61715bef590c087c1fabe64c92ac92`.
-- **Contracts touched:** Core Hub, Main Spoke, and Forex Spoke on Ethereum, per the address registry at the pinned submodule commit: [`Ethereum.sol` lines 229-232](https://github.com/grove-labs/grove-address-registry/blob/6a51b96aa920b4b45b5c70e2e76f0529bd4f4103/src/Ethereum.sol#L229-L232). The hub holds pooled liquidity and share accounting per `assetId`; a spoke maps `reserveId` to `(underlying, hub, assetId)` and records user positions. Initial markets: Main Spoke USDC (reserveId 7), Main Spoke WETH (reserveId 0), Forex Spoke USDC (reserveId 1), all on the Core Hub. The facet itself is market-agnostic; governance whitelists markets via rate-limit keys and `maxSlippage`.
+- **Contracts touched (Ethereum):**
+  - Core Hub `0xCca852Bc40e560adC3b1Cc58CA5b55638ce826c9`: pooled liquidity and share accounting per `assetId`; source of the deposit-gate deficit read (`getAssetDeficitRay`)
+  - Main Spoke `0x94e7A5dCbE816e498b89aB752661904E2F56c485`: market entry point for supply/withdraw; hosts the USDC (reserveId 7, assetId 5) and WETH (reserveId 0, assetId 0) markets
+  - Forex Spoke `0xD8B93635b8C6d0fF98CbE90b5988E3F2d1Cd9da1`: hosts the USDC (reserveId 1, assetId 5) market
+
+  A spoke maps `reserveId` to `(underlying, hub, assetId)` and records user positions. Addresses match the `AAVE_V4_*` constants in `lib/grove-address-registry` (`src/Ethereum.sol`) at the pinned submodule commit and were verified against Etherscan on 2026-07-22. The facet itself is market-agnostic; governance whitelists markets via rate-limit keys and `maxSlippage`.
 - **Audited/battle-tested status:** audit reports through 2026-04 (Blackthorn x2, Trail of Bits, ChainSecurity x3, Certora formal verification x4) in the [aave-v4 repo `audits/` directory](https://github.com/aave/aave-v4/tree/cfdf931c8c61715bef590c087c1fabe64c92ac92/audits).
 - **Trust assumptions:**
   - All spoke/hub contracts are proxies upgradeable by Aave governance through a single AccessManager; a hostile upgrade can take the full supplied position. Exposure is bounded by position sizing and deposit rate limits, not facet code.
