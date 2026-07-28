@@ -58,7 +58,7 @@ The `underlying` is embedded in the key deliberately: `getReserve(reserveId).und
 **Flow:**
 
 1. Resolve `underlying` from `spoke.getReserve(reserveId)`.
-2. Snapshot the ALMProxy `underlying` balance, then `doCall` `spoke.withdraw(reserveId, amount, proxy)`. The spoke clamps the request to the full position size (`min(amount, previewRemoveByShares(...))`), so passing `type(uint256).max` withdraws the entire supplied position.
+2. Snapshot the ALMProxy `underlying` balance, then `doCall` `spoke.withdraw(reserveId, amount, proxy)`. The spoke caps the request at the full position size (`min(amount, previewRemoveByShares(...))`), so passing `type(uint256).max` withdraws the entire supplied position.
 3. Measure `amountWithdrawn` as the ALMProxy balance delta rather than trusting the spoke's return value.
 4. Decrement `LIMIT_AAVE_V4_WITHDRAW` keyed `(spoke, reserveId)` by `amountWithdrawn`, and `_tryIncreaseRateLimit` the deposit key by the same amount (see [Try-Increase](./RATE_LIMITS.md#try-increase-not-gate-check): the refill silently no-ops if the deposit key is unconfigured, and the deposit key is not a precondition for withdrawal).
 
@@ -66,9 +66,9 @@ The `underlying` is embedded in the key deliberately: `getReserve(reserveId).und
 
 **Event:** `AaveV4Withdraw(spoke, reserveId, amountWithdrawn)`, emitting the measured balance delta, not the caller-supplied `amount`.
 
-**No slippage parameter:** withdrawal has no exchange-rate leg. The hub transfers exactly the requested amount or reverts (`InsufficientLiquidity`); it never partially fills below the (position-clamped) request.
+**No slippage parameter:** withdrawal has no exchange-rate leg. The hub transfers exactly the requested amount or reverts (`InsufficientLiquidity`); it never partially fills.
 
-**Zero amount:** reverts inside Aave V4 (`Hub.remove` requires `amount > 0`, error `InvalidAmount()`). A `type(uint256).max` withdrawal on an empty position clamps to zero and reverts the same way.
+**Zero amount:** reverts inside Aave V4 (`Hub.remove` requires `amount > 0`, error `InvalidAmount()`). A `type(uint256).max` withdrawal on an empty position resolves to zero and reverts the same way.
 
 ### Set Max Slippage (admin)
 
@@ -117,7 +117,7 @@ When bad debt is socialized in Aave V4, the hub records a deficit (`getAssetDefi
 
 ### Withdrawal Availability
 
-A withdrawal reverts, and never silently clamps below the position-clamped request, when:
+A withdrawal either transfers the requested amount in full or reverts; there are no partial fills. It reverts when:
 
 - the hub lacks liquidity (`InsufficientLiquidity`),
 - the reserve is paused on the spoke (`ReservePaused`); a **frozen** reserve still allows withdrawal (freeze blocks supply/borrow only),
@@ -168,6 +168,7 @@ No seeding is required: the integration holds no intermediate token and uses no 
 
 ### Monitoring
 
+- **Proxy upgrades**: `Upgraded` events on the spoke and hub proxies, plus admin changes on their proxy admins and on the Aave AccessManager. A hostile or buggy upgrade is the single largest risk to the position (see [Aave Governance and Upgradability](#aave-governance-and-upgradability)); alert immediately on any upgrade and treat an unannounced one as an exit trigger.
 - **Hub deficit** (`getAssetDeficitRay` per asset): nonzero blocks deposits and signals socialized bad debt accruing exit-liquidity risk.
 - **Hub liquidity vs. position size**: the withdrawable amount is capped by hub liquidity, which the reinvestment controller can reduce.
 - **Spoke/hub control states**: reserve pause, hub-side spoke deactivation or halt, all of which block withdrawal.
