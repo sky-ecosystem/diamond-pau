@@ -10,6 +10,7 @@ import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
 import { DAIUSDSFacet }       from "../../src/facets/dai-usds/DAIUSDSFacet.sol";
+import { DualPoolFacet }      from "../../src/facets/dual-pool/DualPoolFacet.sol";
 import { ERC4626Facet }       from "../../src/facets/erc4626/ERC4626Facet.sol";
 import { ERC7540Facet }       from "../../src/facets/erc7540/ERC7540Facet.sol";
 import { EthenaFacet }        from "../../src/facets/ethena/EthenaFacet.sol";
@@ -44,6 +45,7 @@ contract FacetVersions_Tests is Test {
     CentrifugeFacet    internal centrifugeFacet;
     CurveFacet         internal curveFacet;
     DAIUSDSFacet       internal daiUSDSFacet;
+    DualPoolFacet      internal dualPoolFacet;
     ERC4626Facet       internal erc4626Facet;
     ERC7540Facet       internal erc7540Facet;
     EthenaFacet        internal ethenaFacet;
@@ -75,6 +77,7 @@ contract FacetVersions_Tests is Test {
         centrifugeFacet    = new CentrifugeFacet();
         curveFacet         = new CurveFacet();
         daiUSDSFacet       = new DAIUSDSFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
+        dualPoolFacet      = new DualPoolFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         erc4626Facet       = new ERC4626Facet();
         erc7540Facet       = new ERC7540Facet();
         ethenaFacet        = new EthenaFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
@@ -107,6 +110,7 @@ contract FacetVersions_Tests is Test {
         assertEq(centrifugeFacet.VERSION(),    "1.0.0");
         assertEq(curveFacet.VERSION(),         "1.0.0");
         assertEq(daiUSDSFacet.VERSION(),       "1.0.0");
+        assertEq(dualPoolFacet.VERSION(),      "1.0.0");
         assertEq(erc4626Facet.VERSION(),       "1.0.0");
         assertEq(erc7540Facet.VERSION(),       "1.0.0");
         assertEq(ethenaFacet.VERSION(),        "1.0.0");

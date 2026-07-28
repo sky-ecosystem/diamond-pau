@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { Currency } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/Currency.sol";
+import { PoolKey }  from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
+
 import { IController }     from "../../src/interfaces/IController.sol";
+import { IDualPoolFacet }  from "../../src/facets/dual-pool/IDualPoolFacet.sol";
 import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { INFATHaloFacet }  from "../../src/facets/nfat-halo/INFATHaloFacet.sol";
 import { IUniswapV3Facet } from "../../src/facets/uniswap-v3/IUniswapV3Facet.sol";
@@ -238,6 +242,90 @@ interface IMainnetControllerFull is IController {
     function daiUSDS_daiToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
 
     function daiUSDS_usdsToDAISwapRateLimitKey() external pure returns (bytes32 key);
+
+    /**********************************************************************************************/
+    /*** DualPoolFacet actions                                                                  ***/
+    /**********************************************************************************************/
+
+    function dualPool_VERSION() external pure returns (string memory);
+
+    function dualPool_FREEZER_ROLE() external pure returns (bytes32);
+
+    function dualPool_hook() external view returns (address);
+
+    function dualPool_permit2() external view returns (address);
+
+    function dualPool_router() external view returns (address);
+
+    function dualPool_acceptHookOwnership() external;
+
+    function dualPool_bootstrap(PoolKey calldata key, uint256 amount0, uint256 amount1) external;
+
+    function dualPool_deposit(
+        PoolKey calldata key,
+        uint256 sharesToMint,
+        uint128 amount0Max,
+        uint128 amount1Max
+    ) external;
+
+    function dualPool_emergencyRevokeVault(PoolKey calldata key) external;
+
+    function dualPool_initializePool(PoolKey calldata key, IDualPoolFacet.PoolConfig calldata config)
+        external;
+
+    function dualPool_pausePool(PoolKey calldata key) external;
+
+    function dualPool_refreshVaultApproval(PoolKey calldata key, Currency currency) external;
+
+    function dualPool_resumePool(PoolKey calldata key) external;
+
+    function dualPool_setDistribution(
+        PoolKey calldata key,
+        IDualPoolFacet.LiquidityBucket[] calldata buckets
+    ) external;
+
+    function dualPool_setExternalDeposits(PoolKey calldata key, bool enabled) external;
+
+    function dualPool_setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
+
+    function dualPool_setPriceRatio(bytes32 poolId, uint256 priceRatio) external;
+
+    function dualPool_swap(PoolKey calldata key, address tokenIn, uint128 amountIn, uint128 amountOutMin)
+        external;
+
+    function dualPool_transferHookOwnership(address newOwner) external;
+
+    function dualPool_withdraw(
+        PoolKey calldata key,
+        uint256 sharesToBurn,
+        uint128 amount0Min,
+        uint128 amount1Min
+    ) external;
+
+    function dualPool_getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+
+    function dualPool_getAggregateWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+
+    function dualPool_getAssetDepositRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
+
+    function dualPool_getAssetWithdrawRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
+
+    function dualPool_getMaxSlippage(bytes32 poolId) external view returns (uint256);
+
+    function dualPool_getPriceRatio(bytes32 poolId) external view returns (uint256);
+
+    function dualPool_getShares(PoolKey calldata key) external view returns (uint256);
+
+    function dualPool_getSwapRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
 
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
