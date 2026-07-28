@@ -145,6 +145,7 @@ The system uses a facet-based architecture where each protocol integration is en
 | `CentrifugeFacet`    | Centrifuge async vault (ERC-7887) interactions |
 | `CurveFacet`         | Curve StableSwap pool operations               |
 | `DAIUSDSFacet`       | DAI to USDS conversion                         |
+| `DualPoolFacet`      | DualPool hook operation, LP shares, and swaps  |
 | `ERC4626Facet`       | ERC-4626 vault deposit/withdraw                |
 | `ERC7540Facet`       | ERC-7540 async vault interactions              |
 | `EthenaFacet`        | Ethena USDe/sUSDe operations                   |
