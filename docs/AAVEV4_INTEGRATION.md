@@ -38,14 +38,14 @@ Withdraw: spoke.withdraw → hub.remove → underlying (ALMProxy)
 1. Read `maxSlippage` for `(spoke, reserveId)`; revert `AaveV4Facet/max-slippage-not-set` if it is zero. A market must be explicitly configured before it can receive deposits.
 2. Read the reserve from `spoke.getReserve(reserveId)`, resolving `underlying`, `hub`, and `assetId`.
 3. Require `hub.getAssetDeficitRay(assetId) == 0`; revert `AaveV4Facet/asset-deficit` otherwise. Aave V4 deficits (socialized bad debt) never mark down the supplier share price, so supplying into a deficit-carrying asset buys into the pool at par against unbacked debt. Deposits are blocked until the deficit is cleared.
-4. Decrement `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, underlying)` by `amount`.
+4. Decrement `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, hub, assetId, underlying)` by `amount`.
 5. Approve `underlying` from the ALMProxy to the spoke, snapshot the supplied position, then `doCall` `spoke.supply(reserveId, amount, proxy)`.
 6. Measure `amountReceived` as the supplied-position delta (`getUserSuppliedAssets` after minus before) rather than trusting the `(shares, amount)` tuple the spoke returns, and require `amountReceived >= amount * maxSlippage / 1e18`; revert `AaveV4Facet/slippage-too-high` otherwise.
 7. Reset the approval to zero in case the spoke did not pull the full amount.
 
-**Rate Limit:** `LIMIT_AAVE_V4_DEPOSIT` via `makeAddressUint256AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, underlying)`.
+**Rate Limit:** `LIMIT_AAVE_V4_DEPOSIT` via `makeAddressUint256AddressUint16AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, hub, assetId, underlying)`.
 
-The `underlying` is embedded in the key deliberately: `getReserve(reserveId).underlying` is a mutable third-party read, and a spoke that remaps a reserve to a different underlying must not be able to spend a budget governance configured for the original asset. Remapping invalidates the key, so deposits stop until governance configures a new limit for the new tuple.
+The reserve-derived values are embedded in the key deliberately: `getReserve(reserveId)` is a mutable third-party read, and a spoke that remaps a reserve must not be able to spend a budget governance configured for the original mapping. Each component covers a distinct trust surface: `underlying` because the facet approves and transfers it, `hub` because it is the deficit gate's target, `assetId` because it is the parameter passed into that gate. Remapping any of them invalidates the key, so deposits stop until governance configures a new limit for the new tuple.
 
 **Event:** `AaveV4Deposit(spoke, reserveId, amount)`. `amount` is the requested supply amount; the measured position delta is enforced against the slippage floor rather than emitted.
 
@@ -57,12 +57,12 @@ The `underlying` is embedded in the key deliberately: `getReserve(reserveId).und
 
 **Flow:**
 
-1. Resolve `underlying` from `spoke.getReserve(reserveId)`.
+1. Read the full `Reserve` struct from `spoke.getReserve(reserveId)`: `underlying` for the balance measurement, `hub` and `assetId` for the deposit-key refill in step 4.
 2. Snapshot the ALMProxy `underlying` balance, then `doCall` `spoke.withdraw(reserveId, amount, proxy)`. The spoke caps the request at the full position size (`min(amount, previewRemoveByShares(...))`), so passing `type(uint256).max` withdraws the entire supplied position.
 3. Measure `amountWithdrawn` as the ALMProxy balance delta rather than trusting the spoke's return value.
-4. Decrement `LIMIT_AAVE_V4_WITHDRAW` keyed `(spoke, reserveId)` by `amountWithdrawn`, and `_tryIncreaseRateLimit` the deposit key by the same amount (see [Try-Increase](./RATE_LIMITS.md#try-increase-not-gate-check): the refill silently no-ops if the deposit key is unconfigured, and the deposit key is not a precondition for withdrawal).
+4. Decrement `LIMIT_AAVE_V4_WITHDRAW` keyed `(spoke, reserveId)` by `amountWithdrawn`, and `_tryIncreaseRateLimit` the deposit key by the same amount (see [Try-Increase](./RATE_LIMITS.md#try-increase-not-gate-check): the refill silently no-ops if the deposit key is unconfigured, and the deposit key is not a precondition for withdrawal). This is the fail-safe direction for reserve remaps: a reserve remapped between deposit and withdraw still exits fine, but the refill resolves to the unconfigured new-tuple key and no-ops.
 
-**Rate Limit:** `LIMIT_AAVE_V4_WITHDRAW` via `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)`. The withdraw key does not embed `underlying`: withdrawals return funds to custody, so an underlying remap is not a budget-theft vector on this path, and the measured balance delta already sizes the decrement in whatever token arrived.
+**Rate Limit:** `LIMIT_AAVE_V4_WITHDRAW` via `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)`. The withdraw key embeds none of the reserve-derived values: withdrawals return funds to custody, so a reserve remap is not a budget-theft vector on this path, and the measured balance delta already sizes the decrement in whatever token arrived.
 
 **Event:** `AaveV4Withdraw(spoke, reserveId, amountWithdrawn)`, emitting the measured balance delta, not the caller-supplied `amount`.
 
@@ -77,7 +77,7 @@ The `underlying` is embedded in the key deliberately: `getReserve(reserveId).und
 Sets the per-market deposit tolerance, 1e18-scaled (higher = stricter):
 
 - `spoke` must be nonzero: `AaveV4Facet/spoke-zero-address`.
-- `maxSlippage` must be strictly below 1e18: `AaveV4Facet/invalid-max-slippage`. An exact-1:1 requirement (`1e18`) is only satisfiable while the share price is exactly 1:1; once the reserve accrues interest, floor rounding in the shares round-trip leaves the credited position below `amount`, and every deposit reverts. The fork test `test_depositAaveV4_usdcSlippageOneToOneAfterAccrual` pins this behavior.
+- `maxSlippage` itself is unbounded; value bounds belong at the spell/config layer, consistent with the other facets. A value of `1e18` or above is accepted but wedges deposits: an at-least-1:1 requirement is only satisfiable while the share price is exactly 1:1, and once the reserve accrues interest, floor rounding in the shares round-trip leaves the credited position below `amount`, so every deposit reverts. The fork test `test_depositAaveV4_usdcSlippageOneToOneAfterAccrualBoundary` pins both sides of the boundary: `1e18` reverts after accrual while `1e18 - 1` still admits a deposit, so accrual can never wedge a market configured below `1e18`.
 - Setting `maxSlippage` back to `0` disables deposits for the market (`deposit` requires it nonzero); withdrawals are unaffected.
 
 **Event:** `AaveV4MaxSlippageSet(spoke, reserveId, maxSlippage)`
@@ -88,7 +88,7 @@ Together with the deposit rate-limit key, the nonzero `maxSlippage` acts as the 
 
 | Function | Returns |
 | --- | --- |
-| `getDepositRateLimitKey(spoke, reserveId, underlying)` | `makeAddressUint256AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, underlying)` |
+| `getDepositRateLimitKey(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, hub, assetId, underlying)` |
 | `getWithdrawRateLimitKey(spoke, reserveId)` | `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)` |
 | `getMaxSlippage(spoke, reserveId)` | Configured tolerance, `0` when unset |
 
@@ -98,7 +98,7 @@ Together with the deposit rate-limit key, the nonzero `maxSlippage` acts as the 
 
 | Limit | Key tuple | Helper |
 | --- | --- | --- |
-| `LIMIT_AAVE_V4_DEPOSIT` | `(spoke, reserveId, underlying)` | `makeAddressUint256AddressKey` |
+| `LIMIT_AAVE_V4_DEPOSIT` | `(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey` |
 | `LIMIT_AAVE_V4_WITHDRAW` | `(spoke, reserveId)` | `makeAddressUint256Key` |
 
 `withdraw` refills the deposit key by the withdrawn amount (`_tryIncreaseRateLimit`), so capital rotated out of a market restores deposit headroom for that market without governance action.
@@ -147,7 +147,6 @@ All interactive functions are `nonReentrant`.
 | `AaveV4Facet/asset-deficit` | facet | `deposit` while the hub asset carries a deficit |
 | `AaveV4Facet/slippage-too-high` | facet | credited position below `amount * maxSlippage / 1e18` |
 | `AaveV4Facet/spoke-zero-address` | facet | `setMaxSlippage` with zero spoke |
-| `AaveV4Facet/invalid-max-slippage` | facet | `setMaxSlippage` with `maxSlippage >= 1e18` |
 | `RateLimits/rate-limit-exceeded` | rate limits | deposit or withdraw exceeding the configured limit, or key unconfigured |
 | `InvalidAmount()` | Aave V4 hub | zero-amount supply or withdraw |
 | `InsufficientLiquidity(...)` | Aave V4 hub | withdrawal exceeding available hub liquidity |
@@ -160,8 +159,8 @@ All interactive functions are `nonReentrant`.
 
 ### Configuration (per market, before first deposit)
 
-1. `setMaxSlippage(spoke, reserveId, maxSlippage)`: required, nonzero, strictly below 1e18. `0.9999e18` is the standard tolerance; tighter values risk spurious reverts on low-decimal assets once the share price exceeds 1:1.
-2. Configure `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, underlying)`.
+1. `setMaxSlippage(spoke, reserveId, maxSlippage)`: required, nonzero. `0.9999e18` is the standard tolerance; values at or above `1e18` wedge deposits once the reserve accrues interest, and tighter values risk spurious reverts on low-decimal assets once the share price exceeds 1:1.
+2. Configure `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, hub, assetId, underlying)`.
 3. Configure `LIMIT_AAVE_V4_WITHDRAW` keyed `(spoke, reserveId)`. The withdraw path is gated only by this key; the deposit key is refilled opportunistically and zeroing it does not pause withdrawals.
 
 No seeding is required: the integration holds no intermediate token and uses no auxiliary module.
@@ -172,7 +171,7 @@ No seeding is required: the integration holds no intermediate token and uses no 
 - **Hub deficit** (`getAssetDeficitRay` per asset): nonzero blocks deposits and signals socialized bad debt accruing exit-liquidity risk.
 - **Hub liquidity vs. position size**: the withdrawable amount is capped by hub liquidity, which the reinvestment controller can reduce.
 - **Spoke/hub control states**: reserve pause, hub-side spoke deactivation or halt, all of which block withdrawal.
-- **Reserve remaps**: a change in `getReserve(reserveId).underlying` invalidates the deposit key and warrants investigation.
+- **Reserve remaps**: a change in any of `getReserve(reserveId)`'s `.underlying`, `.hub`, or `.assetId` invalidates the deposit key and warrants investigation.
 
 ## Related Documentation
 
