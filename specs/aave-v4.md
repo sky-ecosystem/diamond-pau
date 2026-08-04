@@ -3,7 +3,7 @@ facet: AaveV4Facet
 dir: aave-v4
 chains: [mainnet]
 integration_doc: AAVEV4_INTEGRATION.md
-dependencies: []
+dependencies: [grove-address-registry]
 ---
 
 # AaveV4 Integration Spec
