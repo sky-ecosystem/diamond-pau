@@ -242,7 +242,7 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
 
         assertEq(usdc.allowance(address(almProxy), MAIN_SPOKE),      0);
         assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID),  0);
-        assertEq(usdc.balanceOf(address(almProxy)),                  2 *USDC_DEPOSIT_AMOUNT);
+        assertEq(usdc.balanceOf(address(almProxy)),                  2 * USDC_DEPOSIT_AMOUNT);
         assertEq(usdc.balanceOf(CORE_HUB),                           startingHubBalanceUsdc);
         assertEq(rateLimits.getCurrentRateLimit(mainUsdcDepositKey), USDC_DEPOSIT_LIMIT);
 
