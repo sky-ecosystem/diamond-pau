@@ -77,7 +77,7 @@ The reserve-derived values are embedded in the key deliberately: `getReserve(res
 Sets the per-market deposit tolerance, 1e18-scaled (higher = stricter):
 
 - `spoke` must be nonzero: `AaveV4Facet/spoke-zero-address`.
-- `maxSlippage` itself is unbounded; value bounds belong at the spell/config layer, consistent with the other facets. A value of `1e18` or above is accepted but wedges deposits: an at-least-1:1 requirement is only satisfiable while the share price is exactly 1:1, and once the reserve accrues interest, floor rounding in the shares round-trip leaves the credited position below `amount`, so every deposit reverts. The fork test `test_depositAaveV4_usdcSlippageOneToOneAfterAccrualBoundary` pins both sides of the boundary: `1e18` reverts after accrual while `1e18 - 1` still admits a deposit, so accrual can never wedge a market configured below `1e18`.
+- `maxSlippage` itself is unbounded; value bounds belong at the spell/config layer, consistent with the other facets. A value of `1e18` or above is accepted but wedges deposits: an at-least-1:1 requirement is only satisfiable while the share price is exactly 1:1, and once the reserve accrues interest, floor rounding in the shares round-trip leaves the credited position below `amount`, so every deposit reverts. The fork test `test_depositAaveV4_usdc_slippageOneToOneAfterAccrualBoundary` pins both sides of the boundary: `1e18` reverts after accrual while `1e18 - 1` still admits a deposit, so accrual can never wedge a market configured below `1e18`.
 - Setting `maxSlippage` back to `0` disables deposits for the market (`deposit` requires it nonzero); withdrawals are unaffected.
 
 **Event:** `AaveV4MaxSlippageSet(spoke, reserveId, maxSlippage)`
