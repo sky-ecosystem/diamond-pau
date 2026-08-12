@@ -77,7 +77,7 @@ contract FacetVersions_Tests is Test {
         centrifugeFacet    = new CentrifugeFacet();
         curveFacet         = new CurveFacet();
         daiUSDSFacet       = new DAIUSDSFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
-        dualPoolFacet      = new DualPoolFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
+        dualPoolFacet      = new DualPoolFacet(MOCK_ADDRESS);
         erc4626Facet       = new ERC4626Facet();
         erc7540Facet       = new ERC7540Facet();
         ethenaFacet        = new EthenaFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);

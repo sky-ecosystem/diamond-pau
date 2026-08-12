@@ -890,15 +890,11 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _wireDualPoolFacet() internal {
-        address dualPoolFacet = address(new DualPoolFacet({
-            hook_    : _dualPoolHook(),
-            permit2_ : _PERMIT2,
-            router_  : _UNISWAP_V4_ROUTER
-        }));
+        address dualPoolFacet = address(new DualPoolFacet({ hook_ : _dualPoolHook() }));
 
         vm.label(dualPoolFacet, "DualPoolFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](28);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_VERSION.selector,
@@ -906,138 +902,63 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_FREEZER_ROLE.selector,
-            IDualPoolFacet.FREEZER_ROLE.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_hook.selector,
             IDualPoolFacet.hook.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_permit2.selector,
-            IDualPoolFacet.permit2.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_router.selector,
-            IDualPoolFacet.router.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_acceptHookOwnership.selector,
-            IDualPoolFacet.acceptHookOwnership.selector
-        );
-
-        wires[6] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_bootstrap.selector,
-            IDualPoolFacet.bootstrap.selector
-        );
-
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_deposit.selector,
             IDualPoolFacet.deposit.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_emergencyRevokeVault.selector,
-            IDualPoolFacet.emergencyRevokeVault.selector
-        );
-
-        wires[9] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_initializePool.selector,
-            IDualPoolFacet.initializePool.selector
-        );
-
-        wires[10] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_pausePool.selector,
-            IDualPoolFacet.pausePool.selector
-        );
-
-        wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_refreshVaultApproval.selector,
-            IDualPoolFacet.refreshVaultApproval.selector
-        );
-
-        wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_resumePool.selector,
-            IDualPoolFacet.resumePool.selector
-        );
-
-        wires[13] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_setDistribution.selector,
-            IDualPoolFacet.setDistribution.selector
-        );
-
-        wires[14] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_setExternalDeposits.selector,
-            IDualPoolFacet.setExternalDeposits.selector
-        );
-
-        wires[15] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_setMaxSlippage.selector,
             IDualPoolFacet.setMaxSlippage.selector
         );
 
-        wires[16] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_swap.selector,
-            IDualPoolFacet.swap.selector
-        );
-
-        wires[17] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_transferHookOwnership.selector,
-            IDualPoolFacet.transferHookOwnership.selector
-        );
-
-        wires[18] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_withdraw.selector,
-            IDualPoolFacet.withdraw.selector
-        );
-
-        wires[19] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getAggregateDepositRateLimitKey.selector,
-            IDualPoolFacet.getAggregateDepositRateLimitKey.selector
-        );
-
-        wires[20] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getAggregateWithdrawRateLimitKey.selector,
-            IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
-        );
-
-        wires[21] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getAssetDepositRateLimitKey.selector,
-            IDualPoolFacet.getAssetDepositRateLimitKey.selector
-        );
-
-        wires[22] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getAssetWithdrawRateLimitKey.selector,
-            IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
-        );
-
-        wires[23] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getMaxSlippage.selector,
-            IDualPoolFacet.getMaxSlippage.selector
-        );
-
-        wires[24] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getShares.selector,
-            IDualPoolFacet.getShares.selector
-        );
-
-        wires[25] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getSwapRateLimitKey.selector,
-            IDualPoolFacet.getSwapRateLimitKey.selector
-        );
-
-        wires[26] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_setPriceRatio.selector,
             IDualPoolFacet.setPriceRatio.selector
         );
 
-        wires[27] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_withdraw.selector,
+            IDualPoolFacet.withdraw.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAggregateDepositRateLimitKey.selector,
+            IDualPoolFacet.getAggregateDepositRateLimitKey.selector
+        );
+
+        wires[7] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAggregateWithdrawRateLimitKey.selector,
+            IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
+        );
+
+        wires[8] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAssetDepositRateLimitKey.selector,
+            IDualPoolFacet.getAssetDepositRateLimitKey.selector
+        );
+
+        wires[9] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getAssetWithdrawRateLimitKey.selector,
+            IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
+        );
+
+        wires[10] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getMaxSlippage.selector,
+            IDualPoolFacet.getMaxSlippage.selector
+        );
+
+        wires[11] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getPriceRatio.selector,
             IDualPoolFacet.getPriceRatio.selector
+        );
+
+        wires[12] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.dualPool_getShares.selector,
+            IDualPoolFacet.getShares.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
