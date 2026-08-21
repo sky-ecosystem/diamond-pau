@@ -97,7 +97,7 @@ Rate limit keys (hash of function identifier + address) act as an implicit white
 | **ERC-4626 Vaults** | Rounding/donation attacks  | Require burned shares; maxExchangeRate mechanism |
 | **Curve Pools**     | Unseeded pool manipulation | Require pools to be seeded before whitelisting   |
 | **CCTP**            | Bridge delays              | Operational consideration only                   |
-| **Aave V4**         | Socialized bad debt (hub deficit) never marks down supplier share price; loss surfaces as exit-liquidity shortfall for the last suppliers out | Deposits revert while `getAssetDeficitRay != 0`; hub liquidity vs. position size monitored operationally |
+| **Aave V4**         | Socialized bad debt (hub deficit) never marks down supplier share price; loss surfaces as exit-liquidity shortfall for the last suppliers out | Deposits revert while `getAssetDeficitRay` exceeds the per-Hub-asset tolerance, which defaults to zero and is governance-set; hub liquidity vs. position size monitored operationally |
 | **Aave V4**         | Spoke remaps a reserve's `underlying`, `hub` or `assetId` | Deposit rate-limit key embeds all three, so any remap invalidates the configured budget; withdrawals are deliberately unaffected (they key only on `(spoke, reserveId)`), so exits are never wedged by a remap |
 | **Aave V4**         | Credited position short of supplied amount (rounding/misreport) | Position delta measured on-chain and enforced against per-market `maxSlippage` floor |
 

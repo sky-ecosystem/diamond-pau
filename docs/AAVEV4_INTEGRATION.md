@@ -1,6 +1,6 @@
 # Aave V4 Integration
 
-This document describes the Aave V4 integration with the PAU system. It covers the `AaveV4Facet`, the hub-and-spoke model it integrates with, how a non-tokenized supply position is measured and rate-limited, and the per-market slippage control that governs deposits.
+This document describes the Aave V4 integration with the PAU system. It covers the `AaveV4Facet`, the hub-and-spoke model it integrates with, how a non-tokenized supply position is measured and rate-limited, and the per-market slippage and per-Hub-asset deficit controls that govern deposits.
 
 Protocol behavior described here was checked against the Aave V4 codebase at commit `cfdf931c8c61715bef590c087c1fabe64c92ac92` (v0.5.11 line, 2026-07).
 
@@ -37,7 +37,7 @@ Withdraw: spoke.withdraw → hub.remove → underlying (ALMProxy)
 
 1. Read `maxSlippage` for `(spoke, reserveId)`; revert `AaveV4Facet/max-slippage-not-set` if it is zero. A market must be explicitly configured before it can receive deposits.
 2. Read the reserve from `spoke.getReserve(reserveId)`, resolving `underlying`, `hub`, and `assetId`.
-3. Require `hub.getAssetDeficitRay(assetId) == 0`; revert `AaveV4Facet/asset-deficit` otherwise. Aave V4 deficits (socialized bad debt) never mark down the supplier share price, so supplying into a deficit-carrying asset buys into the pool at par against unbacked debt. Deposits are blocked until the deficit is cleared.
+3. Require `hub.getAssetDeficitRay(assetId) <= maxDeficits[hub][assetId]`; revert `AaveV4Facet/deficit-too-high` otherwise. Aave V4 deficits (socialized bad debt) never mark down the supplier share price, so supplying into a deficit-carrying asset buys into the pool at par against unbacked debt. The tolerance defaults to zero, so deposits stay blocked until the deficit is cleared or governance opts into a specific amount (see [Set Max Deficit](#set-max-deficit-admin)).
 4. Decrement `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, hub, assetId, underlying)` by `amount`.
 5. Approve `underlying` from the ALMProxy to the spoke, snapshot the supplied position, then `doCall` `spoke.supply(reserveId, amount, proxy)`.
 6. Measure `amountReceived` as the supplied-position delta (`getUserSuppliedAssets` after minus before) rather than trusting the `(shares, amount)` tuple the spoke returns, and require `amountReceived >= amount * maxSlippage / 1e18`; revert `AaveV4Facet/slippage-too-high` otherwise.
@@ -70,6 +70,20 @@ The reserve-derived values are embedded in the key deliberately: `getReserve(res
 
 **Zero amount:** reverts inside Aave V4 (`Hub.remove` requires `amount > 0`, error `InvalidAmount()`). A `type(uint256).max` withdrawal on an empty position resolves to zero and reverts the same way.
 
+### Set Max Deficit (admin)
+
+**Function:** `setMaxDeficit(hub, assetId, maxDeficit)` (`DEFAULT_ADMIN_ROLE`)
+
+Sets how much outstanding deficit a deposit is willing to buy into, RAY-scaled in the asset's own units to match `getAssetDeficitRay` (a $1,000 tolerance on USDC is `1_000e6 * 1e27`, not `1_000e27`):
+
+- `hub` must be nonzero: `AaveV4Facet/hub-zero-address`.
+- The tolerance is keyed `(hub, assetId)` rather than `(spoke, reserveId)`, matching the scope the hub reports the deficit over: the shortfall is shared by every spoke fronting the asset, so it impairs all of those markets equally. Both USDC markets (Main and Forex spokes against Core Hub `assetId 5`) therefore read one value.
+- It defaults to `0`, the strictest setting, under which any deficit blocks deposits. Raising it is an explicit decision to supply into partially unbacked liquidity at par, so it is sized against the position rather than left permissive.
+- The gate reads the reserve's current `(hub, assetId)`. A remapped reserve is judged by the tolerance of the asset it now points at, and separately loses its deposit budget because the key changes.
+- Unlike `maxSlippage`, the tolerance is not a per-market whitelist: leaving it at `0` does not block a deposit into a healthy asset.
+
+**Event:** `AaveV4MaxDeficitSet(hub, assetId, maxDeficit)`
+
 ### Set Max Slippage (admin)
 
 **Function:** `setMaxSlippage(spoke, reserveId, maxSlippage)` (`DEFAULT_ADMIN_ROLE`)
@@ -90,6 +104,7 @@ Together with the deposit rate-limit key, the nonzero `maxSlippage` acts as the 
 | --- | --- |
 | `getDepositRateLimitKey(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, hub, assetId, underlying)` |
 | `getWithdrawRateLimitKey(spoke, reserveId)` | `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)` |
+| `getMaxDeficit(hub, assetId)` | Configured deficit tolerance in RAY, `0` when unset |
 | `getMaxSlippage(spoke, reserveId)` | Configured tolerance, `0` when unset |
 
 ---
@@ -113,7 +128,7 @@ Every Aave V4 contract the facet touches (spoke and hub) is an upgradeable proxy
 
 ### Deficit Is Exit-Liquidity Risk, Not a Markdown
 
-When bad debt is socialized in Aave V4, the hub records a deficit (`getAssetDeficitRay`) but the supplier share price is never marked down. The loss surfaces as exit liquidity: the last suppliers out cannot fully withdraw. The facet's deficit gate stops new capital from buying into unbacked debt at par, but it does not protect the existing position; monitoring hub liquidity against position size is an operational requirement.
+When bad debt is socialized in Aave V4, the hub records a deficit (`getAssetDeficitRay`) but the supplier share price is never marked down. The loss surfaces as exit liquidity: the last suppliers out cannot fully withdraw. The facet's deficit gate stops new capital from buying into unbacked debt beyond the tolerance governance set for that Hub asset (zero by default), but it does not protect the existing position; monitoring hub liquidity against position size is an operational requirement. Withdrawals never read the deficit, so an impaired market can always be exited.
 
 ### Withdrawal Availability
 
@@ -144,8 +159,9 @@ All interactive functions are `nonReentrant`.
 | Revert | Origin | Cause |
 | --- | --- | --- |
 | `AaveV4Facet/max-slippage-not-set` | facet | `deposit` on a market with no configured `maxSlippage` |
-| `AaveV4Facet/asset-deficit` | facet | `deposit` while the hub asset carries a deficit |
+| `AaveV4Facet/deficit-too-high` | facet | `deposit` while the hub asset's deficit exceeds the configured tolerance |
 | `AaveV4Facet/slippage-too-high` | facet | credited position below `amount * maxSlippage / 1e18` |
+| `AaveV4Facet/hub-zero-address` | facet | `setMaxDeficit` with zero hub |
 | `AaveV4Facet/spoke-zero-address` | facet | `setMaxSlippage` with zero spoke |
 | `RateLimits/rate-limit-exceeded` | rate limits | deposit or withdraw exceeding the configured limit, or key unconfigured |
 | `InvalidAmount()` | Aave V4 hub | zero-amount supply or withdraw |
@@ -157,18 +173,24 @@ All interactive functions are `nonReentrant`.
 
 ## Operational Requirements
 
-### Configuration (per market, before first deposit)
+### Configuration (before first deposit)
+
+Per market (`spoke`, `reserveId`):
 
 1. `setMaxSlippage(spoke, reserveId, maxSlippage)`: required, nonzero. `0.9999e18` is the standard tolerance; values at or above `1e18` wedge deposits once the reserve accrues interest, and tighter values risk spurious reverts on low-decimal assets once the share price exceeds 1:1.
 2. Configure `LIMIT_AAVE_V4_DEPOSIT` keyed `(spoke, reserveId, hub, assetId, underlying)`.
 3. Configure `LIMIT_AAVE_V4_WITHDRAW` keyed `(spoke, reserveId)`. The withdraw path is gated only by this key; the deposit key is refilled opportunistically and zeroing it does not pause withdrawals.
+
+Per Hub asset (`hub`, `assetId`):
+
+4. `setMaxDeficit(hub, assetId, maxDeficit)`: optional, and left at `0` unless the deficit is a known, sized amount that the position can absorb. One value covers every market fronting that asset, so raising it for one market loosens the rest.
 
 No seeding is required: the integration holds no intermediate token and uses no auxiliary module.
 
 ### Monitoring
 
 - **Proxy upgrades**: `Upgraded` events on the spoke and hub proxies, plus admin changes on their proxy admins and on the Aave AccessManager. A hostile or buggy upgrade is the single largest risk to the position (see [Aave Governance and Upgradability](#aave-governance-and-upgradability)); alert immediately on any upgrade and treat an unannounced one as an exit trigger.
-- **Hub deficit** (`getAssetDeficitRay` per asset): nonzero blocks deposits and signals socialized bad debt accruing exit-liquidity risk.
+- **Hub deficit** (`getAssetDeficitRay` per asset): blocks deposits once it exceeds the configured tolerance (zero by default) and signals socialized bad debt accruing exit-liquidity risk.
 - **Hub liquidity vs. position size**: the withdrawable amount is capped by hub liquidity, which the reinvestment controller can reduce.
 - **Spoke/hub control states**: reserve pause, hub-side spoke deactivation or halt, all of which block withdrawal.
 - **Reserve remaps**: a change in any of `getReserve(reserveId)`'s `.underlying`, `.hub`, or `.assetId` invalidates the deposit key and warrants investigation.

@@ -511,39 +511,49 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(aaveV4Facet, "AaveV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.aaveV4_setMaxDeficit.selector,
+            IAaveV4Facet.setMaxDeficit.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IMainnetControllerFull.aaveV4_getMaxDeficit.selector,
+            IAaveV4Facet.getMaxDeficit.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_setMaxSlippage.selector,
             IAaveV4Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_getMaxSlippage.selector,
             IAaveV4Facet.getMaxSlippage.selector
         );
 
-        wires[2] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_deposit.selector,
             IAaveV4Facet.deposit.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_withdraw.selector,
             IAaveV4Facet.withdraw.selector
         );
 
-        wires[4] = IEnumerableIntegrations.Wire(
+        wires[6] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_getDepositRateLimitKey.selector,
             IAaveV4Facet.getDepositRateLimitKey.selector
         );
 
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_getWithdrawRateLimitKey.selector,
             IAaveV4Facet.getWithdrawRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.aaveV4_VERSION.selector,
             IFacet.VERSION.selector
         );
