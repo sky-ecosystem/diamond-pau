@@ -310,19 +310,22 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV4Facet
-    function swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
+    function swap(PoolKey calldata poolKey, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external
         override
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
+        // Deriving the id from the caller-supplied key gives the same id-to-key binding the
+        // PositionManager registry check provided, without requiring the pool to have a
+        // PositionManager position (hooked pools such as DualPool never do). A fabricated key
+        // hashes to an id with no max slippage or rate limits, so it can only reach a disabled
+        // configuration.
+        bytes32 poolId = keccak256(abi.encode(poolKey));
+
         uint256 maxSlippage = _getFacetStorage().maxSlippages[poolId];
 
         require(maxSlippage != 0, "UniswapV4Facet/max-slippage-not-set");
-
-        PoolKey memory poolKey = _getPoolKeyFromPoolId(poolId);
-
-        _requirePoolIdMatch(poolId, poolKey);
 
         require(
             tokenIn == Currency.unwrap(poolKey.currency0) ||
