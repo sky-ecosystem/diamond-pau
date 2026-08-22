@@ -116,7 +116,8 @@ Uniswap V4 operations use different slippage models depending on the operation:
 - Onboarded pools should be limited to those with 1:1 stablecoin pairs.
 - Tick limits must be configured for `mintPosition` and `increasePosition`
 - `maxSlippage` must be configured per pool for `swap`
-- Only hookless pools can be onboarded. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.
+- Only hookless pools can be onboarded for liquidity provision. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.
+- `swap` takes the full `PoolKey` from calldata and derives the pool identifier as `keccak256(abi.encode(poolKey))`, so it needs no PositionManager registration and also serves hooked pools such as DualPool pools. A fabricated key hashes to an identifier with no `maxSlippage` or rate limits, so it can only reach a disabled configuration. Safety comes from the output-side checks (the `maxSlippage` value floor, `amountOutMin`, and swap rate limits), which hold regardless of the pool's hook.
 
 ### Seeding Requirement
 
@@ -126,7 +127,7 @@ Uniswap V4 pools must be seeded with initial liquidity before use. Seeding must 
 
 ## DualPool Integration
 
-DualPool pools are Uniswap V4 pools whose liquidity is provisioned just-in-time by the DualPoolHook from hook-held (and ERC-4626 rehypothecated) reserves. They cannot be onboarded to the `UniswapV4Facet` for liquidity provision because the hook blocks LP entry through the PositionManager (entry and exit go through the hook's own share-based functions), and the `UniswapV4Facet` only allows hookless pools. The `DualPoolFacet` is a rate-limited LP allocator: the hook is owned by governance (the Spark Proxy) and its pools are permissionless, so pool lifecycle, configuration, and incident response are operated by governance directly on the hook, and the ALMProxy enters and exits as a regular LP. Swaps through DualPool pools go through the `UniswapV4Facet` swap path.
+DualPool pools are Uniswap V4 pools whose liquidity is provisioned just-in-time by the DualPoolHook from hook-held (and ERC-4626 rehypothecated) reserves. They cannot be onboarded to the `UniswapV4Facet` for liquidity provision because the hook blocks LP entry through the PositionManager (entry and exit go through the hook's own share-based functions), and the `UniswapV4Facet` only allows hookless pools for LP. The `DualPoolFacet` is a rate-limited LP allocator: the hook is owned by governance (the Spark Proxy) and its pools are permissionless, so pool lifecycle, configuration, and incident response are operated by governance directly on the hook, and the ALMProxy enters and exits as a regular LP. Swaps through DualPool pools go through `UniswapV4Facet.swap`, which takes the `PoolKey` from calldata; onboarding a DualPool pool for swaps means configuring the UniswapV4 facet's `maxSlippage` and swap rate limits for the same derived poolId.
 
 One facet instance is bound to one hook deployment via an immutable. The hook has no poolId to PoolKey registry, so interactive functions take the full `PoolKey` from calldata and derive `poolId = keccak256(abi.encode(key))`; `key.hooks` must match the facet's hook, so a fabricated key can only reach a disabled configuration.
 
@@ -137,7 +138,7 @@ One facet instance is bound to one hook deployment via an immutable. The hook ha
 
 ### Roles
 
-- **`DEFAULT_ADMIN_ROLE`:** The per-pool `maxSlippage` and `priceRatio` that denominate the allocator value floors
+- **`DEFAULT_ADMIN_ROLE`:** The per-pool `maxSlippage` that denominates the allocator value floors
 - **`ALLOCATOR_ROLE`:** Rate-limited `deposit` and `withdraw`
 
 Hook-side operations (pool creation, genesis bootstrap, JIT distribution updates, external deposit gating, pause and resume, vault approval levers) are the hook owner's, i.e. governance acting directly on the hook rather than through the facet.
@@ -160,15 +161,12 @@ Both allocator value paths are floored by the per-pool `maxSlippage` (zero disab
 - **`deposit`:** After the deposit, the minted shares must be redeemable (pro rata, via `previewWithdraw`) for at least `maxSlippage` of the value paid. This round-trip floor catches share-price skew (donation-style manipulation, vault share-price moves, hook mis-accounting) that per-token `amountMax` caps cannot express.
 - **`withdraw`:** The caller-supplied minimums must be worth at least `maxSlippage` of the `previewWithdraw` value of the shares burned.
 
-Each floor compares an aggregate value across both currencies rather than per-token amounts, because the token split of a deposit or withdrawal moves with pool price while the total value does not. Making those aggregates comparable requires knowing what one currency is worth in terms of the other, which is the per-pool `priceRatio`: the value of one whole unit of `currency1` in whole units of `currency0`, in 1e18 precision. A pegged pair is `1e18`.
-
-Both halves must be non-zero before any allocator path opens, so a pool cannot be onboarded with floors that silently assume parity. For a non-pegged pair the ratio is load-bearing and governance must keep it current: a stale ratio weakens both floors in proportion to its drift from the true price.
+Each floor compares an aggregate value across both currencies rather than per-token amounts, because the token split of a deposit or withdrawal moves with pool price while the total value does not. Both legs are weighed equally after 18-decimal normalization, which assumes the pair is 1:1 correlated (i.e. 1.000000 USDC = 1.000000000000000000 USDT); this matches the aggregate rate limits and is an onboarding requirement, the same one the `UniswapV4Facet` documents.
 
 ### Requirements
 
-- `maxSlippage` and `priceRatio` must both be configured per pool; either left at zero disables allocator operations.
-- `maxSlippage` is capped at `1e18` and must be set strictly below it for `deposit` to be usable. The deposit floor compares what the minted shares redeem for against what was paid, and the hook rounds the deposit up while rounding the redemption down, so the round trip is lossy by design. At exactly `1e18`, `withdraw` still works but every `deposit` reverts.
-- A non-pegged pair requires governance to maintain `priceRatio` as the market moves. Pegged stablecoin pairs (`priceRatio = 1e18`) are the intended case and need no maintenance.
+- Onboarded pools must have 1:1 correlated pairs; the value floors and aggregate rate limits price both currencies at parity.
+- `maxSlippage` must be configured per pool; left at zero it disables allocator operations. The value is validated in the governance spell that schedules the call. It must be set strictly below `1e18` for `deposit` to be usable: the deposit floor compares what the minted shares redeem for against what was paid, and the hook rounds the deposit up while rounding the redemption down, so the round trip is lossy by design. At exactly `1e18`, `withdraw` still works but every `deposit` reverts.
 - Deposits require authorization on the hook side: external deposits must be enabled for the pool, which is the intended permissionless configuration.
 - Pool shares are pool-scoped and non-transferable; the only exit is `removeLiquidity`. Net asset accounting should read `previewWithdraw(key, sharesOf(key, proxy))`.
 - When the pool's `minDepositBlocks` is non-zero, a withdrawal in the same block as a deposit reverts, and each deposit refreshes the lock for the ALMProxy's entire position in that pool. Allocator automation must sequence accordingly. Prefer `minDepositBlocks = 0` unless the hook's anti-fee-sniping property is specifically wanted: the lock is keyed on the depositor, and the ALMProxy is always the depositor, so any deposit, including a dust one, defers the whole position's exit. Note that a compromised allocator can also use a dust deposit to defer exits; the mitigation is the freezer removing the allocator role.
