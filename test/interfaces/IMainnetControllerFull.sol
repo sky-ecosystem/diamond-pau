@@ -258,8 +258,6 @@ interface IMainnetControllerFull is IController {
 
     function dualPool_setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
-    function dualPool_setPriceRatio(bytes32 poolId, uint256 priceRatio) external;
-
     function dualPool_withdraw(
         PoolKey calldata key,
         uint256 sharesToBurn,
@@ -282,10 +280,6 @@ interface IMainnetControllerFull is IController {
         returns (bytes32 key);
 
     function dualPool_getMaxSlippage(bytes32 poolId) external view returns (uint256);
-
-    function dualPool_getPriceRatio(bytes32 poolId) external view returns (uint256);
-
-    function dualPool_getShares(PoolKey calldata key) external view returns (uint256);
 
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
@@ -803,7 +797,7 @@ interface IMainnetControllerFull is IController {
     )
         external;
 
-    function uniswapV4_swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
+    function uniswapV4_swap(PoolKey calldata poolKey, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external;
 
     function uniswapV4_getAggregateDepositRateLimitKey(bytes32 poolId)

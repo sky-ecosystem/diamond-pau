@@ -28,8 +28,6 @@ interface IControllerLike {
 
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
-    function setPriceRatio(bytes32 poolId, uint256 priceRatio) external;
-
     function withdraw(
         PoolKey calldata key,
         uint256 sharesToBurn,
@@ -48,10 +46,6 @@ interface IControllerLike {
     function getAssetWithdrawRateLimitKey(bytes32 poolId, address token) external pure returns (bytes32);
 
     function getMaxSlippage(bytes32 poolId) external view returns (uint256);
-
-    function getPriceRatio(bytes32 poolId) external view returns (uint256);
-
-    function getShares(PoolKey calldata key) external view returns (uint256);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
@@ -74,7 +68,7 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
 
         vm.label(facet, "DualPoolFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.deposit.selector,
@@ -87,53 +81,38 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            IControllerLike.setPriceRatio.selector,
-            IDualPoolFacet.setPriceRatio.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
             IControllerLike.withdraw.selector,
             IDualPoolFacet.withdraw.selector
         );
 
-        wires[4] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IControllerLike.hook.selector,
             IDualPoolFacet.hook.selector
         );
 
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IControllerLike.getAggregateDepositRateLimitKey.selector,
             IDualPoolFacet.getAggregateDepositRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IControllerLike.getAggregateWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[6] = IEnumerableIntegrations.Wire(
             IControllerLike.getAssetDepositRateLimitKey.selector,
             IDualPoolFacet.getAssetDepositRateLimitKey.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IControllerLike.getAssetWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
         );
 
-        wires[9] = IEnumerableIntegrations.Wire(
+        wires[8] = IEnumerableIntegrations.Wire(
             IControllerLike.getMaxSlippage.selector,
             IDualPoolFacet.getMaxSlippage.selector
-        );
-
-        wires[10] = IEnumerableIntegrations.Wire(
-            IControllerLike.getPriceRatio.selector,
-            IDualPoolFacet.getPriceRatio.selector
-        );
-
-        wires[11] = IEnumerableIntegrations.Wire(
-            IControllerLike.getShares.selector,
-            IDualPoolFacet.getShares.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -222,23 +201,6 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         controller.setMaxSlippage(bytes32(0), 0.98e18);
     }
 
-    function test_setMaxSlippage_aboveOne() external {
-        vm.expectRevert("DualPoolFacet/max-slippage-too-high");
-        vm.prank(admin);
-        controller.setMaxSlippage(poolId, 1e18 + 1);
-
-        vm.expectRevert("DualPoolFacet/max-slippage-too-high");
-        vm.prank(admin);
-        controller.setMaxSlippage(poolId, type(uint256).max);
-    }
-
-    function test_setMaxSlippage_atOneBoundary() external {
-        vm.prank(admin);
-        controller.setMaxSlippage(poolId, 1e18);
-
-        assertEq(controller.getMaxSlippage(poolId), 1e18);
-    }
-
     function test_setMaxSlippage() external {
         vm.expectEmit(address(controller));
         emit IDualPoolFacet.DualPoolMaxSlippageSet(poolId, 0.98e18);
@@ -251,54 +213,6 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         _assertReentrancyGuardWrittenToTwice(address(controller));
 
         assertEq(controller.getMaxSlippage(poolId), 0.98e18);
-    }
-
-    /**********************************************************************************************/
-    /*** setPriceRatio Tests                                                                    ***/
-    /**********************************************************************************************/
-
-    function test_setPriceRatio_reentrancy() external {
-        _setEntered(address(controller));
-        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setPriceRatio(bytes32(0), 0);
-    }
-
-    function test_setPriceRatio_notAdmin() external {
-        _expectUnauthorized(unauthorized, DEFAULT_ADMIN_ROLE);
-        vm.prank(unauthorized);
-        controller.setPriceRatio(bytes32(0), 0);
-
-        _expectUnauthorized(allocator, DEFAULT_ADMIN_ROLE);
-        vm.prank(allocator);
-        controller.setPriceRatio(bytes32(0), 0);
-    }
-
-    function test_setPriceRatio_zeroPoolId() external {
-        vm.expectRevert("DualPoolFacet/zero-pool-id");
-        vm.prank(admin);
-        controller.setPriceRatio(bytes32(0), 1e18);
-    }
-
-    function test_setPriceRatio() external {
-        vm.expectEmit(address(controller));
-        emit IDualPoolFacet.DualPoolPriceRatioSet(poolId, 1.0002e18);
-
-        vm.record();
-
-        vm.prank(admin);
-        controller.setPriceRatio(poolId, 1.0002e18);
-
-        _assertReentrancyGuardWrittenToTwice(address(controller));
-
-        assertEq(controller.getPriceRatio(poolId), 1.0002e18);
-    }
-
-    /**********************************************************************************************/
-    /*** getPriceRatio Tests                                                                    ***/
-    /**********************************************************************************************/
-
-    function test_getPriceRatio_unset() external {
-        assertEq(controller.getPriceRatio(poolId), 0);
     }
 
     /**********************************************************************************************/

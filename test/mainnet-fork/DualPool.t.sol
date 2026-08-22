@@ -10,8 +10,9 @@ import { PoolKey }  from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/P
 
 import { IHooks } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/interfaces/IHooks.sol";
 
-import { IFacet }         from "../../src/facets/IFacet.sol";
-import { IDualPoolFacet } from "../../src/facets/dual-pool/IDualPoolFacet.sol";
+import { IFacet }          from "../../src/facets/IFacet.sol";
+import { IDualPoolFacet }  from "../../src/facets/dual-pool/IDualPoolFacet.sol";
+import { IUniswapV4Facet } from "../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
 
 import { MockDualPoolHook } from "../mocks/MockDualPoolHook.sol";
 
@@ -27,13 +28,19 @@ interface IERC20Like {
 
 }
 
+interface IPermit2Like {
+
+    function allowance(address user, address token, address spender)
+        external
+        view
+        returns (uint160 amount, uint48 expiration, uint48 nonce);
+
+}
+
 abstract contract DualPool_TestBase is ForkTestBase {
 
     uint256 internal constant BOOTSTRAP_AMOUNT = 1_000_000e6;
     uint256 internal constant MAX_SLIPPAGE     = 0.99e18;
-
-    // USDC/USDT is a pegged pair, so one unit of currency1 is worth one unit of currency0.
-    uint256 internal constant PRICE_RATIO = 1e18;
 
     MockDualPoolHook internal hook;
 
@@ -74,7 +81,6 @@ abstract contract DualPool_TestBase is ForkTestBase {
         hook.initializePool(poolKey, _defaultConfig());
 
         mainnetController.dualPool_setMaxSlippage(poolId, MAX_SLIPPAGE);
-        mainnetController.dualPool_setPriceRatio(poolId, PRICE_RATIO);
 
         rateLimits.setRateLimitData(
             mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId),
@@ -228,17 +234,6 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
         mainnetController.dualPool_deposit(poolKey, 1e6, 1e6, 1e6);
     }
 
-    function test_deposit_priceRatioNotSet() external {
-        _bootstrap();
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.dualPool_setPriceRatio(poolId, 0);
-
-        vm.expectRevert("DualPoolFacet/price-ratio-not-set");
-        vm.prank(allocator);
-        mainnetController.dualPool_deposit(poolKey, 1e6, 1e6, 1e6);
-    }
-
     function test_deposit() external {
         _bootstrap();
 
@@ -252,11 +247,11 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
         uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
         uint256 asset1Before    = rateLimits.getCurrentRateLimit(asset1Key);
 
-        assertEq(mainnetController.dualPool_getShares(poolKey), 0);
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
         ( uint256 need0, uint256 need1 ) = _deposit(shares);
 
-        assertEq(mainnetController.dualPool_getShares(poolKey), shares);
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), shares);
 
         ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
 
@@ -281,10 +276,9 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
     function test_deposit_valueFloor() external {
         _bootstrap();
 
-        // 1e18 is the strictest floor governance can set, and the deposit round trip cannot meet
-        // it: the hook rounds the deposit up and the redemption down, so the shares minted are
-        // always worth marginally less than what was paid. Proves the check binds at the boundary
-        // of the legal range rather than at a value setMaxSlippage would now reject.
+        // A 1e18 floor demands a perfect round trip, which a deposit cannot meet: the hook rounds
+        // the deposit up and the redemption down, so the shares minted are always worth marginally
+        // less than what was paid. Proves the check binds at the perfect-round-trip boundary.
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.dualPool_setMaxSlippage(poolId, 1e18);
 
@@ -363,26 +357,17 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         mainnetController.dualPool_withdraw(poolKey, 1e6, 0, 0);
     }
 
-    function test_withdraw_priceRatioNotSet() external {
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.dualPool_setPriceRatio(poolId, 0);
-
-        vm.expectRevert("DualPoolFacet/price-ratio-not-set");
-        vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, 1e6, 0, 0);
-    }
-
     function test_withdraw_zeroShares() external {
         vm.expectRevert("DualPoolFacet/zero-shares");
         vm.prank(allocator);
         mainnetController.dualPool_withdraw(poolKey, 0, 0, 0);
     }
 
-    /// @dev The property the setMaxSlippage upper bound exists to guarantee: at the strictest floor
-    ///      governance can set, the exit is still reachable. Pool shares are non-transferable and
-    ///      removeLiquidity is the only way out, so a floor that no withdrawal could satisfy would
-    ///      strand the position. Minimums set exactly to the hook's preview clear the floor by
-    ///      equality, and the hook pays precisely that.
+    /// @dev At the strictest sensible floor (1e18, a perfect round trip), the exit is still
+    ///      reachable. Pool shares are non-transferable and removeLiquidity is the only way out, so
+    ///      a floor that no withdrawal could satisfy would strand the position. Minimums set
+    ///      exactly to the hook's preview clear the floor by equality, and the hook pays precisely
+    ///      that.
     function test_withdraw_atStrictestFloor() external {
         _bootstrap();
 
@@ -405,7 +390,7 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         assertEq(balance0, expected0);
         assertEq(balance1, expected1);
 
-        assertEq(mainnetController.dualPool_getShares(poolKey), 0);
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
     }
 
     function test_withdraw() external {
@@ -434,7 +419,7 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         assertEq(balance0, expected0);
         assertEq(balance1, expected1);
 
-        assertEq(mainnetController.dualPool_getShares(poolKey), 0);
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
         assertEq(
             rateLimits.getCurrentRateLimit(aggregateKey),
@@ -467,6 +452,130 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
 
         vm.prank(allocator);
         mainnetController.dualPool_withdraw(poolKey, 50_000e6, uint128(expected0), uint128(expected1));
+    }
+
+}
+
+/// @notice DualPool pools swap through the UniswapV4 facet: its swap takes the PoolKey from
+///         calldata, so pools without PositionManager positions (which DualPool pools can never
+///         have) still swap through it. This is the e2e coverage of that path against the mock
+///         hook's flat curve; swap config binds to the same derived poolId the DualPool facet
+///         uses for LP config.
+contract MainnetController_DualPool_SwapTests is DualPool_TestBase {
+
+    uint128 internal constant SWAP_AMOUNT = 10_000e6;
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        mainnetController.uniswapV4_setMaxSlippage(poolId, MAX_SLIPPAGE);
+
+        rateLimits.setRateLimitData(
+            mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDC),
+            5_000_000e6,
+            uint256(1_000_000e6) / 4 hours
+        );
+
+        rateLimits.setRateLimitData(
+            mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDT),
+            5_000_000e6,
+            uint256(1_000_000e6) / 4 hours
+        );
+
+        vm.stopPrank();
+
+        _bootstrap();
+    }
+
+    function test_swap_maxSlippageNotSet() external {
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.uniswapV4_setMaxSlippage(poolId, 0);
+
+        vm.expectRevert("UniswapV4Facet/max-slippage-not-set");
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, SWAP_AMOUNT);
+    }
+
+    function test_swap_invalidTokenIn() external {
+        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDS, SWAP_AMOUNT, SWAP_AMOUNT);
+    }
+
+    function test_swap_amountOutMinBelowFloor() external {
+        // Half the input value is far below the 0.99e18 governance floor.
+        vm.expectRevert("UniswapV4Facet/amountOutMin-too-low");
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, SWAP_AMOUNT / 2);
+    }
+
+    function test_swap_amountOutMinNotMet() external {
+        deal(Ethereum.USDC, address(almProxy), SWAP_AMOUNT);
+
+        // Above the governance floor but above what the pool pays (1:1 less the 0.01% fee), so
+        // the router's slippage check reverts inside the swap.
+        uint128 amountOutMin = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6 + 1;
+
+        vm.expectRevert();
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, amountOutMin);
+    }
+
+    function test_swap() external {
+        // The mock's stable curve pays 1:1 less the 0.01% pool fee.
+        uint128 expectedOut  = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6;
+        uint128 amountOutMin = uint128(uint256(SWAP_AMOUNT) * MAX_SLIPPAGE / 1e18);
+
+        deal(Ethereum.USDC, address(almProxy), SWAP_AMOUNT);
+
+        bytes32 swapKey = mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDC);
+
+        uint256 swapLimitBefore = rateLimits.getCurrentRateLimit(swapKey);
+
+        ( , uint256 balance1Before ) = _proxyBalances();
+
+        vm.expectEmit(address(mainnetController));
+        emit IUniswapV4Facet.UniswapV4Swap(poolId, Ethereum.USDC, Ethereum.USDT, SWAP_AMOUNT, expectedOut);
+
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, amountOutMin);
+
+        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
+
+        assertEq(balance0, 0);
+        assertEq(balance1, balance1Before + expectedOut);
+
+        assertEq(rateLimits.getCurrentRateLimit(swapKey), swapLimitBefore - SWAP_AMOUNT);
+
+        // Permit2 allowance to the router is reset after the swap.
+        ( uint160 permitAmount, , ) = IPermit2Like(_PERMIT2).allowance(
+            address(almProxy),
+            Ethereum.USDC,
+            _UNISWAP_V4_ROUTER
+        );
+
+        assertEq(permitAmount, 0);
+
+        assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _PERMIT2), 0);
+    }
+
+    function test_swap_oneForZero() external {
+        uint128 expectedOut  = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6;
+        uint128 amountOutMin = uint128(uint256(SWAP_AMOUNT) * MAX_SLIPPAGE / 1e18);
+
+        deal(Ethereum.USDT, address(almProxy), SWAP_AMOUNT);
+
+        ( uint256 balance0Before, ) = _proxyBalances();
+
+        vm.prank(allocator);
+        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDT, SWAP_AMOUNT, amountOutMin);
+
+        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
+
+        assertEq(balance0, balance0Before + expectedOut);
+        assertEq(balance1, 0);
     }
 
 }

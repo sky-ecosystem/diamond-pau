@@ -894,7 +894,7 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(dualPoolFacet, "DualPoolFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](13);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_VERSION.selector,
@@ -917,48 +917,33 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[4] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_setPriceRatio.selector,
-            IDualPoolFacet.setPriceRatio.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_withdraw.selector,
             IDualPoolFacet.withdraw.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAggregateDepositRateLimitKey.selector,
             IDualPoolFacet.getAggregateDepositRateLimitKey.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[6] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAggregateWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAssetDepositRateLimitKey.selector,
             IDualPoolFacet.getAssetDepositRateLimitKey.selector
         );
 
-        wires[9] = IEnumerableIntegrations.Wire(
+        wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAssetWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
         );
 
-        wires[10] = IEnumerableIntegrations.Wire(
+        wires[9] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getMaxSlippage.selector,
             IDualPoolFacet.getMaxSlippage.selector
-        );
-
-        wires[11] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getPriceRatio.selector,
-            IDualPoolFacet.getPriceRatio.selector
-        );
-
-        wires[12] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_getShares.selector,
-            IDualPoolFacet.getShares.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
