@@ -1,28 +1,26 @@
-# Parallel Controller Upgrade: Diamond PAU with UniswapV4Facet
+# Parallel Controller Upgrade: Diamond PAU alongside the legacy ALM Controller
 
-This document describes a staged first step for onboarding the Diamond PAU system on Ethereum mainnet
-alongside the existing (legacy) ALM Controller. Both controllers custody the same `ALMProxy`, and they
-either share the existing `RateLimits` contract or the new controller gets a dedicated one, which is an
-open decision covered in section 4. The new Diamond PAU Controller is wired with exactly one
-integration, `UNISWAP_V4_FACET`, and nothing else.
+This document proposes onboarding the Diamond PAU system on Ethereum mainnet alongside the existing
+(legacy) ALM Controller. Both controllers custody the same `ALMProxy`. The Diamond PAU Controller gets
+its own dedicated `RateLimits` instance and is wired with three integrations: `UNISWAP_V4_FACET`,
+`CCTP_FACET` (CCTP v2) and `DUAL_POOL_FACET`.
 
-The intent of the staged approach is to bring the Diamond PAU architecture into production behind a
-narrow, well understood integration, without migrating funds, without redeploying the custody
-contract, and without changing how the legacy controller currently operates.
+No funds are migrated, no custody contract is redeployed, and the legacy controller is not modified.
+Exposure is created by a role grant rather than by a deposit, and it is bounded by the rate limits
+governance sets on the new instance.
 
-The central property this document needs to make explicit for risk planning:
+The central property for risk planning:
 
 > The Diamond PAU Controller holds the `CONTROLLER` role on the `ALMProxy`, which confers unrestricted
-> authority over the full `ALMProxy` balance. It is constrained **not** by the proxy, but by the set
-> of call selectors wired into it (Uniswap V4 only) and by the rate limits attached to those specific
-> functions.
+> authority over the full `ALMProxy` balance. It is constrained **not** by the proxy, but by the set of
+> call selectors wired into it and by the rate limits attached to those specific functions.
 
 ---
 
 ## 1. Target topology
 
 <p align="center">
-  <img src="./multicontroller.png" alt="Parallet controller setup" height="700px" style="margin-right:100px;"/>
+  <img src="./multicontroller.png" alt="Parallel controller setup" height="700px" style="margin-right:100px;"/>
 </p>
 
 `ALLOCATOR_ROLE` is held by the `AdministeredAgent` on `AccessControls`, not on the Controller itself.
@@ -32,8 +30,8 @@ structural difference from the legacy controller, which stores `RELAYER` and `FR
 
 One contract is omitted from the diagram for readability but is part of the deployment: `Beacon`, the
 canonical registry of integration configs (facet address plus selector wiring). The Controller syncs
-its local dispatch table from the Beacon via `updateIntegrations`, and the Beacon is the only place the
-`UniswapV4Facet` address is registered.
+its local dispatch table from the Beacon via `updateIntegrations`, and the Beacon is the only place
+facet addresses are registered.
 
 ### 1.1 Contract inventory
 
@@ -42,89 +40,86 @@ its local dispatch table from the Beacon via `updateIntegrations`, and the Beaco
 | Contract | Mainnet address | Change |
 | --- | --- | --- |
 | `ALMProxy` | `0x1601843c5E9bC251A3272907010AFa41Fa18347E` | One `grantRole(CONTROLLER, diamondController)` |
-| `RateLimits` | `0x7A5FD5cf045e010e62147F065cEAe59e5344b188` | Option A: one `grantRole(CONTROLLER, diamondController)` plus new UniV4 keys. Option B: no change, see section 4 |
+| `RateLimits` (legacy) | `0x7A5FD5cf045e010e62147F065cEAe59e5344b188` | **None.** The Diamond PAU Controller is never granted a role on this instance |
 | `MainnetController` (legacy) | `0x5c46Fc65855c0C7465a1EA85EEA0B24B601502D3` | None |
 | `SPARK_PROXY` | `0x3300f198988e4C9C63F75dF86De36421f06af8c4` | None, remains admin everywhere |
 | `ALM_RELAYER_MULTISIG` | `0x8a25A24EDE9482C4Fc0738F99611BE58F1c839AB` | Additionally becomes agent Actor |
 | `ALM_BACKSTOP_RELAYER_MULTISIG` | `0x8Cc0Cb0cfB6B7e548cfd395B833c05C346534795` | Additionally becomes agent Actor |
 | `ALM_FREEZER_MULTISIG` | `0x90D8c80C028B4C09C0d8dcAab9bbB057F0513431` | Additionally becomes agent Revoker |
 
-**Already deployed, reused unchanged:** the Diamond PAU core infrastructure and the `UniswapV4Facet`
-are live on mainnet. Addresses from
+**Already deployed, reused unchanged.** Addresses from
 [`sky-pau-registry/src/Ethereum.sol`](https://github.com/sky-ecosystem/sky-pau-registry/blob/master/src/Ethereum.sol),
-which is the canonical source of truth.
+the canonical source of truth.
 
 | Contract | Mainnet address | Role in this upgrade |
 | --- | --- | --- |
-| `Beacon` | `0x829dC2b7E94B1954F0764E573f2E0d45Afa28199` | Holds the `UNISWAP_V4_FACET` integration config the Controller syncs from |
-| `PAUFactory` | `0x69A5d548830AC2A4Ba90A44a2C75BDA71f97fc66` | Deploys the new `AccessControls` and `Controller` |
+| `Beacon` | `0x829dC2b7E94B1954F0764E573f2E0d45Afa28199` | Holds the integration configs the Controller syncs from |
+| `PAUFactory` | `0x69A5d548830AC2A4Ba90A44a2C75BDA71f97fc66` | Deploys the new `AccessControls`, `RateLimits` and `Controller` |
 | `AdministeredAgentFactory` | `0x2968c3b5478cF93B70aB1e24255d4EDBBd27a089` | Deploys the new `AdministeredAgent` |
-| `UniswapV4Facet` | `0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D` | The only integration wired into the new Controller |
-| `DefaultPAUAssembler` | `0xc812aAD3FaE2D3511C664374B601a9BeBFeCCa2E` | Not used here, see section 5 |
+| `UniswapV4Facet` | `0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D` | Integration 1 |
+| `CCTPFacet` | `0xADf62692340e46EF90336f2e75ce3b37f1148873` | Integration 2 (CCTP v2) |
 
 **Still to be deployed:**
 
 | Contract | Source | Notes |
 | --- | --- | --- |
-| `AccessControls` | via `PAUFactory.deployAccessControls` | Admin: `SPARK_PROXY`. |
-| `Controller` (Diamond PAU) | via `PAUFactory.deployController` | Points at the **existing** `ALMProxy`, and at the existing or a new `RateLimits` depending on the section 4 decision. |
-| `AdministeredAgent` | via `AdministeredAgentFactory` | Actors: relayer and backstop relayer multisigs. Revoker: freezer multisig. |
-| `RateLimits` (Option B only) | via `PAUFactory.deployRateLimits` | Admin: `SPARK_PROXY`. Only if a dedicated rate limits instance is chosen, see section 4. |
+| `AccessControls` | `PAUFactory.deployAccessControls` | Admin: `SPARK_PROXY` |
+| `RateLimits` | `PAUFactory.deployRateLimits` | Admin: `SPARK_PROXY`. Dedicated to this Controller, see section 4 |
+| `Controller` | `PAUFactory.deployController` | Points at the **existing** `ALMProxy` and the **new** `RateLimits` |
+| `AdministeredAgent` | `AdministeredAgentFactory.deploy` | Actors: relayer and backstop relayer multisigs. Revoker: freezer multisig |
+| `DualPoolFacet` | `diamond-pau` release | **Not yet available.** |
 
-Three or four contracts are new, and none of them custody funds. In particular **no new `ALMProxy` is
-deployed**, which is the deliberate difference from the standard `DefaultPAUAssembler` flow, see
-section 5. Whether a new `RateLimits` is deployed is open question 1.
-
-### 1.2 `UniswapV4Facet` immutables
-
-The facet takes three constructor arguments, all validated non-zero. The deployed instance at
-`0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D` exposes them as `permit2()`, `positionManager()` and
-`router()`. These should be confirmed to read as follows before the spell:
-
-| Argument | Expected mainnet address |
-| --- | --- |
-| `permit2` | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
-| `positionManager` | `0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e` |
-| `router` (Universal Router) | `0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af` |
-
-These are the same addresses currently defined as constants in the legacy
-`UniswapV4Lib` (`_PERMIT2`, `_POSITION_MANAGER`, `_ROUTER`), so the two controllers target identical
-Uniswap V4 infrastructure.
-
-Because the facet is a deployed singleton reached by `delegatecall`, the same instance can back
-several controllers concurrently. Its `permit2`, `positionManager` and `router` immutables live in its
-own bytecode and are therefore shared, while `maxSlippages` and `tickLimits` are read from the calling
-Controller's storage and are per Controller. See 4.8.
+Four contracts are new, none custody funds, and none hold privileges outside their own stack. **No new
+`ALMProxy` is deployed**, which is the deliberate difference from the standard `DefaultPAUAssembler`
+flow, see section 5.
 
 ---
 
-## 2. Scope of authority of the Diamond PAU Controller
+## 2. Scope of the parallel controller upgrade
 
-This section covers the central risk consideration of the proposal.
+### 2.1 What is deployed, granted and onboarded
 
-### 2.1 The proxy confers unrestricted authority
+**Deployed** (permissionless, before any spell): `AccessControls`, `RateLimits`, `Controller`,
+`AdministeredAgent`.
 
-`ALMProxy` is intentionally minimal. Its entire authorization surface is:
+**Granted** (Spark spell):
 
-```solidity
-function doCall(address target, bytes calldata data) external onlyRole(CONTROLLER) returns (bytes memory);
-function doCallWithValue(address target, bytes calldata data, uint256 value) external payable onlyRole(CONTROLLER) returns (bytes memory);
-function doDelegateCall(address target, bytes calldata data) external onlyRole(CONTROLLER) returns (bytes memory);
-```
+- `CONTROLLER` on the existing `ALMProxy`, to the new Controller.
+- `CONTROLLER` on the **new** `RateLimits` only, to the new Controller.
+- `ALLOCATOR_ROLE` on the new `AccessControls`, to the `AdministeredAgent`.
+- Actors and revoker on the `AdministeredAgent`.
 
-There is no per-target allowlist, no per-asset scoping, and no notion of a budget. Any holder of
-`CONTROLLER` can direct the proxy to call any address with any calldata, spend its ETH, and
-`delegatecall` into arbitrary code. `doDelegateCall` in particular means a `CONTROLLER` can modify the
-proxy's own storage, including its role mappings.
+**Onboarded**, three integrations:
 
-Consequently, **granting `CONTROLLER` to the Diamond PAU Controller is, at the proxy level, equivalent
-to granting full authority over every asset the `ALMProxy` holds.** This is the same trust level the
-legacy controller already has, and no narrower grant is available.
+| Facet | Wires | Allocator functions that can move value | Admin setters | External targets |
+| --- | --- | --- | --- | --- |
+| `UniswapV4Facet` | 17 | 4: `mintPosition`, `increasePosition`, `decreasePosition`, `swap` | `setMaxSlippage`, `setTickLimits` | immutable `positionManager`, `router`, `permit2` |
+| `CCTPFacet` | 10 | 1: `transfer` | `setDomainParameters` | immutable `cctp`, `usdc` |
+| `DualPoolFacet` | 13 | 2: `deposit`, `withdraw` | `setMaxSlippage`, `setPriceRatio` | immutable `hook` |
 
-### 2.2 Containment is enforced by the Controller's dispatch table
+Seven allocator functions in total can move value. Every one is `nonReentrant`, gated on
+`ALLOCATOR_ROLE`, rate limited, and targets an address fixed in facet bytecode at construction.
 
-The Diamond PAU `Controller` has no interactive functions of its own beyond admin integration
-management. Every operational call reaches it through the fallback:
+`CCTPFacet` is CCTP **v2** only: it calls the seven argument `depositForBurn` with `destinationCaller`,
+`maxFee` and `minFinalityThreshold`. The legacy controller implements CCTP **v1** (four argument
+`depositForBurn`). The two are different routes for the same operation, not duplicates.
+
+### 2.2 What this upgrade does not do
+
+- No new `ALMProxy`. The custody contract keeps its bytecode, storage, admin, approvals and positions.
+- No fund or position migration.
+- No change to the legacy controller, its roles, or its rate limit keys.
+- No shared rate limit state between the two controllers.
+
+### 2.3 The authority being granted, and what contains it
+
+`ALMProxy` is intentionally minimal. Its entire authorization surface is `doCall`, `doCallWithValue`
+and `doDelegateCall`, each `onlyRole(CONTROLLER)`. There is no per-target allowlist, no per-asset
+scoping and no notion of a budget. Granting `CONTROLLER` is, at the proxy level, equivalent to granting
+full authority over every asset the `ALMProxy` holds. This is the same trust level the legacy
+controller already has, and no narrower grant exists.
+
+Containment comes entirely from the Controller's own dispatch table:
 
 ```solidity
 fallback() external payable {
@@ -136,52 +131,18 @@ fallback() external payable {
 }
 ```
 
-If a selector is not present in `dispatches`, the call reverts with `CallSelectorNotWired`. There is no
-generic passthrough, no `execute(target, data)`, and no path for an allocator to reach `doCall` with
-arbitrary calldata. The Controller can only ever issue calls into the proxy that a wired facet
-constructs.
+There is no generic passthrough, no `execute(target, data)`, and no path for an allocator to reach
+`doCall` with arbitrary calldata. The reachable surface is exactly the synced integration set.
 
-With only `UNISWAP_V4_FACET` synced, the complete reachable surface is 17 selectors:
+Within that surface, a compromised allocator key cannot forge a pool (`UniswapV4Facet` resolves the
+`PoolKey` from the position manager and asserts `keccak256(abi.encode(poolKey)) == poolId`;
+`DualPoolFacet` asserts `key.hooks == hook`), cannot choose a call target (every target is a facet
+immutable), cannot choose a CCTP recipient (`mintRecipient` is governance set per destination domain),
+and cannot leave a standing approval (Permit2 approvals are set and zeroed in the same call).
 
-| Kind | Selectors | Gate |
-| --- | --- | --- |
-| Allocator, state changing | `mintPosition`, `increasePosition`, `decreasePosition`, `swap` | `ALLOCATOR_ROLE`, `nonReentrant`, rate limited |
-| Admin, state changing | `setMaxSlippage`, `setTickLimits` | `DEFAULT_ADMIN_ROLE`, `nonReentrant` |
-| Views | `getMaxSlippage`, `getTickLimits`, `getAggregateDepositRateLimitKey`, `getAssetDepositRateLimitKey`, `getAggregateWithdrawRateLimitKey`, `getAssetWithdrawRateLimitKey`, `getSwapRateLimitKey`, `permit2`, `positionManager`, `router`, `VERSION` | none |
-
-Only four functions can move value, and each of them:
-
-1. resolves the `PoolKey` from the position manager (from `poolKeys(bytes25(poolId))` for
-   `mintPosition` and `swap`, from `getPoolAndPositionInfo(tokenId)` for `increasePosition` and
-   `decreasePosition`) and asserts `keccak256(abi.encode(poolKey)) == poolId`, so a caller cannot supply
-   an arbitrary pool struct;
-2. constrains the target of the proxy call to the immutable `positionManager` (liquidity operations) or
-   the immutable `router` (swaps);
-3. decrements rate limits before or around the proxy call;
-4. for `mintPosition` and `increasePosition`, validates tick bounds against `setTickLimits`; for `swap`,
-   requires `maxSlippage` to be set and enforces `amountOutMin` against it.
-
-`increasePosition` additionally requires `positionManager.ownerOf(tokenId) == proxy`.
-`decreasePosition` deliberately does not, since the proxy is always the recipient of the withdrawn
-tokens.
-
-Token approvals are granted through Permit2 immediately before the proxy call and reset to zero
-immediately after, so no standing allowance to the position manager or router persists between calls.
-
-### 2.3 Summary of the trust statement
-
-- **Exposure if the facet or the allocator key is compromised:** bounded by the UniV4 rate limits
-  per operation, though a per-operation cap can be exhausted through repeated calls within the refill
-  schedule, and losses within Uniswap V4 are further shaped by `maxSlippage` and the configured tick
-  limits.
-- **Exposure if the Controller admin (`SPARK_PROXY`) or the Beacon admin (Sky governance) is
-  compromised:** unbounded, since between them they can register and sync an arbitrary facet. This is
-  not a new condition for `SPARK_PROXY`; the same already holds for the legacy controller and for the
-  proxy itself. The Beacon dependency is new, and is discussed in 6.2.
-- **The proxy provides no defence in depth.** Any statement of the form "the Diamond PAU can only
-  interact with Uniswap V4" is a statement about the Controller's synced integration set, which is
-  governance mutable via `Beacon.setIntegration` followed by `Controller.updateIntegrations`. It is not
-  enforced by the custody contract.
+**The proxy provides no defence in depth.** Any statement of the form "the Diamond PAU can only
+interact with these three integrations" is a statement about the Controller's synced integration set,
+which is governance mutable. It is not enforced by the custody contract. Section 6.3 develops this.
 
 ---
 
@@ -191,10 +152,10 @@ immediately after, so no standing allowance to the position manager or router pe
 | --- | --- | --- |
 | `ALMProxy` (existing) | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
 | `ALMProxy` (existing) | `CONTROLLER` | legacy `MainnetController`, **new Diamond PAU `Controller`** |
-| `RateLimits` (existing) | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
-| `RateLimits` (existing) | `CONTROLLER` | legacy `MainnetController`, plus the **new Diamond PAU `Controller`** under Option A only |
-| `RateLimits` (new, Option B only) | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
-| `RateLimits` (new, Option B only) | `CONTROLLER` | **new Diamond PAU `Controller`** only |
+| `RateLimits` (legacy) | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
+| `RateLimits` (legacy) | `CONTROLLER` | legacy `MainnetController` only, unchanged |
+| `RateLimits` (new) | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
+| `RateLimits` (new) | `CONTROLLER` | **new Diamond PAU `Controller`** only |
 | legacy `MainnetController` | `DEFAULT_ADMIN_ROLE` | `SPARK_PROXY` |
 | legacy `MainnetController` | `RELAYER` | `ALM_RELAYER_MULTISIG` |
 | legacy `MainnetController` | `FREEZER` | `ALM_FREEZER_MULTISIG` |
@@ -204,492 +165,368 @@ immediately after, so no standing allowance to the position manager or router pe
 | `AdministeredAgent` | admin | `SPARK_PROXY` |
 | `AdministeredAgent` | actor | `ALM_RELAYER_MULTISIG`, `ALM_BACKSTOP_RELAYER_MULTISIG` |
 | `AdministeredAgent` | revoker | `ALM_FREEZER_MULTISIG` |
-| `AdministeredAgent` | grantor | see open question 2 |
+| `AdministeredAgent` | grantor | see open question 1 |
 
 Notes:
 
-- The Diamond PAU `Controller` holds no roles of its own. Its admin functions
-  (`updateIntegrations`, `removeIntegrations`) authorize against `DEFAULT_ADMIN_ROLE` on the external
-  `AccessControls`. Facets do the same via the `Facet.onlyRole` modifier. Whoever holds
-  `DEFAULT_ADMIN_ROLE` on `AccessControls` therefore governs the Controller and every facet's admin
-  setters (`setMaxSlippage`, `setTickLimits`).
-- The relayer multisigs do not hold `ALLOCATOR_ROLE` directly. They act as Actors on the
-  `AdministeredAgent`, which forwards `call` and `batchCall` into the Controller. The Controller
-  observes `msg.sender == AdministeredAgent` regardless of which actor originated the call, so the two
-  relayers are indistinguishable from the Controller's perspective and share the same rate limits.
-- `CONTROLLER` is `keccak256("CONTROLLER")` in both codebases, and both `ALMProxy` implementations use
-  the identical role constant, so the grant is a standard `grantRole` from `SPARK_PROXY`.
-- `CONTROLLER` on `RateLimits` is not scoped to any key. Under Option A the grant on the existing
-  instance gives the Diamond PAU Controller write access to every legacy rate limit key, not only the
-  UniV4 ones. See 4.3.
+- The Diamond PAU `Controller` holds no roles of its own. Its admin functions (`updateIntegrations`,
+  `removeIntegrations`) authorize against `DEFAULT_ADMIN_ROLE` on the external `AccessControls`, and
+  facets do the same via `Facet.onlyRole`. Whoever holds `DEFAULT_ADMIN_ROLE` there governs the
+  Controller **and** every facet admin setter.
+- `AdministeredAgent` maintains four independent address sets. `admin` can do everything; `actor` can
+  call `call`, `batchCall` and `sendValue`; `grantor` can only `addActor`; `revoker` can only
+  `removeActor`. The last admin cannot be removed.
+- The agent holds **no** controller reference. Targets are passed per call and the only restriction is
+  `target != address(this)`. One agent can therefore drive N controllers, and its effective authority
+  is the union of every role ever granted to its address. That is a standing invariant to monitor, not
+  a code guarantee.
+- The relayer multisigs do not hold `ALLOCATOR_ROLE` directly. The Controller observes
+  `msg.sender == AdministeredAgent` regardless of which actor originated the call, so the two relayers
+  are indistinguishable from the Controller's perspective and share the same rate limits.
+- `CONTROLLER` is `keccak256("CONTROLLER")` in both codebases and both `ALMProxy` implementations use
+  the identical constant, so the grant is a standard `grantRole` from `SPARK_PROXY`.
 
 ### 3.1 Freeze and revocation paths
-
-The two controllers have structurally different emergency paths, which the operations runbook needs
-to reflect.
 
 | Scenario | Legacy controller | Diamond PAU controller |
 | --- | --- | --- |
 | Compromised relayer key | `ALM_FREEZER_MULTISIG` calls `MainnetController.removeRelayer(relayer)` | `ALM_FREEZER_MULTISIG` calls `AdministeredAgent.removeActor(relayer)`, once per affected actor |
-| Disable one integration | not applicable, monolithic | `SPARK_PROXY` calls `Controller.removeIntegrations(["UNISWAP_V4_FACET"])`, or zeroes the relevant rate limit keys |
+| Disable one integration | not applicable, monolithic | `SPARK_PROXY` calls `Controller.removeIntegrations([id])`, or zeroes that facet's rate limit keys |
 | Full revocation | `SPARK_PROXY` revokes `CONTROLLER` on `ALMProxy` | `SPARK_PROXY` revokes `CONTROLLER` on `ALMProxy`, or revokes `ALLOCATOR_ROLE` from the agent |
 
-A single freezer action does **not** halt both controllers. Two separate transactions from the freezer
-multisig are required to stop allocator activity across the pair, and the runbook should state this
-explicitly.
+Two properties the runbook must state explicitly:
+
+1. A single freezer action does **not** halt both controllers. Two separate transactions are required,
+   and the Diamond side needs one per actor.
+2. The shared custody contract `ALMProxy` `0x1601843c...` is the non-freezable `spark-alm-controller`
+   v1.0.0 instance and **has no freeze function at all**. `ALM_PROXY_FREEZABLE`
+   (`0xe5c6318456a7Cb6f74f93B4eee4616dB5fcef699`) is a different proxy doing a different job (Spark
+   Savings rate setting, Morpho allocation, SparkLend cap automation) and is not the SLL custody
+   account. There is no global kill switch for the custody account under either controller.
 
 ---
 
 ## 4. Rate limits
 
-There are two viable options, and they must be chosen before the Controller is deployed:
+The Diamond PAU Controller gets a **dedicated** `RateLimits` instance, deployed via
+`PAUFactory.deployRateLimits(SPARK_PROXY)`. `rateLimits` is written to the Controller's shared storage
+by the constructor and has no setter, so the instance is bound at deploy time. Pointing the Controller
+at a different instance later would require deploying a new Controller and repeating the full wiring
+sequence.
 
-- **Option A:** point the Diamond PAU Controller at the existing `RateLimits`
-  (`0x7A5FD5cf045e010e62147F065cEAe59e5344b188`), shared with the legacy controller.
-- **Option B:** deploy a new `RateLimits` via `PAUFactory.deployRateLimits(SPARK_PROXY)` and point the
-  Diamond PAU Controller at it, leaving the existing instance untouched.
+### 4.1 Why a dedicated instance
 
-The two `RateLimits` implementations are functionally identical (same storage layout, same interface,
-same semantics). The `diamond-pau` version differs only in pragma version, import paths, section
-ordering, and a `ZeroAdmin()` check in the constructor. Nothing about the existing deployed instance
-is incompatible with the new facet.
+`RateLimits.triggerRateLimitDecrease` and `triggerRateLimitIncrease`
+([src/RateLimits.sol:72-113](../src/RateLimits.sol#L72-L113)) are `onlyRole(CONTROLLER)` and accept an
+**arbitrary `bytes32 key`**. The role is not key scoped.
 
-### 4.1 The choice is bound at Controller deployment
+A single instance shared with the legacy controller would therefore give the Diamond PAU Controller,
+and every facet ever synced into it, write access to **every** legacy budget: PSM, mint and burn, Aave,
+ERC-4626, LayerZero, CCTP, all of them. The relationship would be symmetric, with legacy code able to
+refill Diamond budgets and defeat a deliberate drain. A dedicated instance makes that authority empty
+in both directions and is the strongest single security property of this proposal.
 
-`rateLimits` is written into the Controller's shared storage domain by the constructor and has no
-setter:
+It also neutralizes several exact key collisions. These are byte identical derivations, not merely
+similar ones:
 
-```solidity
-constructor(address accessControls_, address beacon_, address proxy_, address rateLimits_) initializer {
-    ...
-    $.proxy      = proxy_;
-    $.rateLimits = rateLimits_;
-}
-```
-
-Facets read it on every call through `Facet._decreaseRateLimit`. Switching instances later therefore
-requires deploying a **new Controller** and repeating the whole wiring sequence: `CONTROLLER` grant on
-the `ALMProxy`, `ALLOCATOR_ROLE` on `AccessControls`, `updateIntegrations`, all rate limit keys, and
-`setMaxSlippage` / `setTickLimits` (facet storage lives in the Controller, so it does not carry over).
-No funds or positions would need to move, since custody stays with the `ALMProxy`, but it is a full
-governance cycle. The decision belongs before step 2 of section 5.1, not after.
-
-### 4.2 Key derivation comparison
-
-Both use the same base hashes: `keccak256("LIMIT_UNISWAP_V4_DEPOSIT")`, `..._WITHDRAW`, `..._SWAP`.
-
-| Purpose | Legacy (`UniswapV4Lib`) | Diamond (`UniswapV4Facet`) | Same key? |
+| Operation | Legacy derivation | Diamond derivation | Would collide |
 | --- | --- | --- | --- |
-| Aggregate deposit | `keccak(LIMIT_DEPOSIT, poolId)` | `keccak(LIMIT_DEPOSIT, poolId)` | **Yes, collides** |
-| Aggregate withdraw | `keccak(LIMIT_WITHDRAW, poolId)` | `keccak(LIMIT_WITHDRAW, poolId)` | **Yes, collides** |
-| Per asset deposit | not present | `keccak(LIMIT_DEPOSIT, token, poolId)` | new |
-| Per asset withdraw | not present | `keccak(LIMIT_WITHDRAW, token, poolId)` | new |
-| Swap | `keccak(LIMIT_SWAP, poolId)` | `keccak(LIMIT_SWAP, token, poolId)` | No, independent |
+| UniV4 aggregate deposit | `keccak(keccak("LIMIT_UNISWAP_V4_DEPOSIT"), poolId)` | identical | Yes |
+| UniV4 aggregate withdraw | `keccak(keccak("LIMIT_UNISWAP_V4_WITHDRAW"), poolId)` | identical | Yes |
+| UniV4 swap | `keccak(LIMIT_SWAP, poolId)` | `keccak(LIMIT_SWAP, token, poolId)` | No |
+| CCTP total | `keccak("LIMIT_USDC_TO_CCTP")` | same constant | Yes |
+| CCTP per domain | `makeUint32Key(LIMIT_USDC_TO_DOMAIN, domain)` | same derivation | Yes |
+| UniV4 per asset, DualPool | not present | new keys | n/a |
 
-Keys are a pure function of the base hash and the pool, with no controller component, which is why
-sharing an instance shares budgets. The collision binds **per `poolId`**: it only has an effect for
-pools configured on both controllers.
+Legacy UniV4 is live today with configured pools (PYUSD/USDS and USDT/USDS from spell `20260129`,
+USDG/USDS and RLUSD/USDS from `20260813`), and legacy CCTP v1 is live on all its domains. Under a
+shared instance those budgets would have been coupled from the first allocator call.
 
-The legacy aggregate keys are already populated on mainnet. Spark spell `20260129` onboarded PYUSD/USDS
-and USDT/USDS with non-zero `LIMIT_UNISWAP_V4_DEPOSIT`, `..._WITHDRAW` and `..._SWAP` keys (aggregate
-deposit maxima of 10m and 5m, withdraw 50m, swap 5m), and spell `20260813` adds USDG/USDS and
-RLUSD/USDS. So under Option A, if the Diamond PAU controller is onboarded for any of these four pools,
-it inherits a budget that is already partially consumed by legacy activity, and the collision is live
-from the first allocator call. Only if it is onboarded exclusively for pools the legacy controller has
-never been configured for does the collision stay dormant, and it would then become live the moment a
-future legacy spell onboards the same pool.
+### 4.2 The cost: capacity becomes additive
 
-### 4.3 Option A: reuse the existing `RateLimits`
+For every operation reachable on both controllers, total capacity is the legacy budget **plus** the
+Diamond budget. This is live from day one for Uniswap V4, and for CCTP until the legacy v1 keys are
+zeroed in stage 4.
 
-Mechanically: `rateLimits.grantRole(CONTROLLER, diamondController)` on
-`0x7A5FD5cf045e010e62147F065cEAe59e5344b188`, then set the eight keys of 4.7 on that same instance.
+Invariant to adopt in spell review: **the number risk approves is the sum, and any spell changing one
+side must state the other side's current value.** This is the direct cost of the isolation in 4.1, and
+6.4 covers how it is reconciled and then removed.
 
-**Pros**
+### 4.3 Keys and denominations
 
-- No new contract, no new address to register, monitor, or index. Offchain rate limit tooling, the
-  relayer backend, and dashboards keep reading a single instance.
-- The colliding aggregate deposit and withdraw keys act as a **genuine combined cap on UniV4 exposure
-  per pool**, across both controllers. Total exposure is the key's `maxAmount`, not the sum of two
-  budgets, so risk sizing needs no cross-contract arithmetic.
-- Disabling UniV4 deposits or withdrawals for a pool is one `setRateLimitData(key, 0, 0)` and it stops
-  both controllers at once. Under Option B the same emergency action is two writes on two contracts.
-- The Diamond PAU controller inherits the pool's already partially consumed budget rather than a fresh
-  one, so onboarding it cannot expand the aggregate capacity that governance has already sized.
+All facet limits use `_decreaseRateLimit`, never a permissive try-variant, so an unset key
+(`maxAmount == 0`) reverts the call.
 
-**Cons**
+| Facet | Keys per onboarded unit |
+| --- | --- |
+| `UniswapV4Facet` | 8 per pool: 2 aggregate (18 decimal normalized) and 6 per asset (raw token decimals), across deposit, withdraw and swap |
+| `CCTPFacet` | 2: `toCCTPRateLimitKey()` flat aggregate, plus `getToDomainRateLimitKey(domain)` per destination |
+| `DualPoolFacet` | 4 per pool: aggregate and per asset, deposit and withdraw |
 
-- **`CONTROLLER` on `RateLimits` is not key scoped.** `triggerRateLimitDecrease` and
-  `triggerRateLimitIncrease` accept an arbitrary `bytes32 key` from any `CONTROLLER` holder. Granting
-  the role on the shared instance therefore gives the Diamond PAU Controller, and any facet ever synced
-  into it, write access to **every** legacy rate limit key, including limits that have nothing to do
-  with Uniswap V4 (PSM, CCTP, ERC4626, and the rest). A facet that exposed an attacker chosen key could
-  exhaust a legacy budget to grief operations, or refill one up to `maxAmount` to defeat a deliberate
-  drain. No currently wired facet does this, and Uniswap V4 selectors derive their keys internally, but
-  the containment argument of section 2.2 is what stands between the two systems' accounting, rather
-  than the `RateLimits` contract itself. The relationship is symmetric: legacy code can also write the
-  new UniV4 keys.
-- **Legacy UniV4 cannot be disabled while the Diamond PAU integration stays live** for the same pool.
-  Zeroing an aggregate key (the standard disable mechanism, since `triggerRateLimitDecrease` reverts
-  with `RateLimits/zero-maxAmount` when `maxAmount == 0`) disables the operation for both. Legacy swap
-  can be disabled independently because its key omits the token, but legacy deposits and withdrawals
-  cannot. If the objective is for the Diamond PAU controller to become the sole route to Uniswap V4,
-  Option A cannot express it.
-- **Slope and refill are shared.** Recovery after a large legacy operation reduces the Diamond PAU
-  controller's available capacity for the same pool, and the reverse. Neither system surfaces the
-  other's consumption, so a relayer can see a full budget and still have a call revert with
-  `RateLimits/rate-limit-exceeded`.
-- The live contract the legacy controller depends on is modified by the spell (one role grant plus new
-  keys), so the change has a blast radius that includes legacy operations.
-- Any future non UniV4 facet synced into the Diamond PAU Controller would collide with the legacy
-  controller wherever key derivations coincide, not only for Uniswap V4. This decision extends past the
-  current one integration scope.
+The canonical key lists belong in the spell, not here. Two denomination traps for whoever authors it:
 
-### 4.4 Option B: deploy a dedicated `RateLimits`
+- Aggregate keys are decremented with 18 decimal normalized amounts while per asset keys use the
+  token's raw amount. A USDC per asset limit is expressed in 6 decimals, the aggregate limit covering
+  the same flow in 18.
+- The legacy swap limit is decremented with a **normalized** amount; the facet's swap limit uses the
+  **raw** `amountIn`. A legacy swap value copied across for a 6 decimal token is wrong by `1e12`.
 
-Mechanically: `PAUFactory.deployRateLimits(SPARK_PROXY)` (permissionless, step 1a below), then
-`newRateLimits.grantRole(CONTROLLER, diamondController)` and the eight keys of 4.7 on the new instance.
-The existing `RateLimits` is not touched at all.
+### 4.4 Facet configuration required
 
-**Pros**
+Facet settings live in each facet's ERC-7201 storage domain inside the Controller, so they are per
+Controller and legacy values do not carry over. All are fail closed:
 
-- **Rate limit accounting is isolated.** The Diamond PAU Controller has no authority on the legacy
-  instance, and the legacy controller has no authority on the new one. Each system's budgets are
-  unreachable from the other's code, which removes the unscoped `CONTROLLER` concern above and keeps
-  the two capability grants independent at the accounting layer as well as the dispatch layer.
-- **Each integration can be disabled independently.** Legacy UniV4 can be switched off pool by pool
-  while the Diamond PAU route stays live, which is what "make Diamond PAU the sole route to Uniswap V4"
-  actually requires. Conversely the Diamond PAU route can be halted without touching legacy limits.
-- No collision to reason about, so per pool limits can be sized for the new controller directly rather
-  than as a share of a budget the legacy controller also draws on.
-- The existing `RateLimits` is left byte for byte unchanged, so the spell cannot regress legacy
-  behaviour through this contract.
-- Every key starts at full `maxAmount`, so the first Diamond PAU operations are not blocked by legacy
-  consumption that happened earlier in the same block or day.
-- Matches how a standalone PAU stack is normally assembled (`DefaultPAUAssembler` always deploys a
-  fresh `RateLimits`), so the topology is closer to the reviewed default and easier to reason about for
-  anyone reading the deployment later.
+| Unset | Effect |
+| --- | --- |
+| `setTickLimits` | `mintPosition` and `increasePosition` revert with `UniswapV4Facet/tickLimits-not-set` |
+| `setMaxSlippage` | `swap` reverts with `UniswapV4Facet/max-slippage-not-set` |
+| `setDomainParameters` | `transfer` reverts with `CCTPFacet/domain-not-configured` |
 
-**Cons**
-
-- **No combined cap.** Total UniV4 exposure per pool becomes the sum of the legacy budget and the new
-  budget. If both remain configured for the same pool, governance must size them as a pair and
-  remember to adjust both, or explicitly zero the legacy side.
-- **Two contracts to operate.** Every future rate limit spell, monitoring job, and dashboard must
-  target the correct instance. A key set on the wrong instance fails silently in the sense that nothing
-  reverts at spell time: the intended controller stays blocked with `RateLimits/zero-maxAmount`, or a
-  live limit is created for the wrong controller. This is the main recurring operational cost.
-- One extra deployment and one extra address to add to the registries, plus post spell checks on two
-  contracts instead of one.
-- An emergency "stop all UniV4 activity" action becomes two transactions across two contracts, which
-  the runbook must state, in the same way section 3.1 already notes that a single freezer action does
-  not halt both controllers.
-- Historical rate limit consumption for Uniswap V4 is split across two contracts, so any analysis of
-  UniV4 usage over time has to union two event streams.
-
-### 4.5 What is identical under both options
-
-- **No key migration is needed either way.** The facet reads nothing from the existing instance beyond
-  the eight keys of 4.7, and those are new keys in both cases. Legacy keys are never read by the new
-  facet, and no `lastAmount` or `lastUpdated` state has to be copied.
-- `DEFAULT_ADMIN_ROLE` on the rate limits contract is `SPARK_PROXY` in both cases, so neither option
-  changes who can set limits, and neither adds a governance body.
-- `setMaxSlippage` and `setTickLimits` live in facet storage inside the Controller, so they are per
-  Controller regardless of the rate limits choice. See 4.8.
-- The balance snapshot concern of 6.1 is a property of the shared `ALMProxy`, not of the rate limits
-  contract. A dedicated `RateLimits` does not mitigate it: interleaved legacy transfers still corrupt
-  the computed delta, they just corrupt a private key instead of a shared one.
-- Rollback is unchanged in shape. Under Option B the `RateLimits` role revocation in section 7 targets
-  the new instance, and the existing instance needs no cleanup.
-
-### 4.6 Decision drivers
-
-The choice reduces to one question: **is legacy Uniswap V4 expected to stay live in parallel, or is the
-Diamond PAU controller meant to replace it as the route to Uniswap V4?**
-
-- If both routes stay live indefinitely and a hard combined cap per pool is the desired risk control,
-  Option A expresses that directly and costs nothing extra.
-- If the Diamond PAU controller is meant to take over Uniswap V4, or if the intent is that a compromise
-  of one controller cannot reach the other's rate limit state, Option A cannot express either property
-  and Option B is the correct choice.
-
-Final decision is open question 1.
-
-### 4.7 Keys to configure per onboarded pool
-
-Every rate limit consumed by the facet uses `_decreaseRateLimit` rather than the permissive
-`_tryIncreaseRateLimit` variant, so an unset key (`maxAmount == 0`) causes the call to revert. For a
-pool with `token0` and `token1`, eight keys must be set before the first allocator call, on whichever
-instance the Controller was pointed at in 4.1. Under Option A keys 1 and 4 may already exist, set by a
-legacy UniV4 spell for the same pool, in which case they are reused as is rather than overwritten:
-
-| # | Key | Consumed by | Denomination |
-| --- | --- | --- | --- |
-| 1 | `getAggregateDepositRateLimitKey(poolId)` | `mintPosition`, `increasePosition` | normalized to 18 decimals |
-| 2 | `getAssetDepositRateLimitKey(poolId, token0)` | `mintPosition`, `increasePosition` | raw `token0` decimals |
-| 3 | `getAssetDepositRateLimitKey(poolId, token1)` | `mintPosition`, `increasePosition` | raw `token1` decimals |
-| 4 | `getAggregateWithdrawRateLimitKey(poolId)` | `decreasePosition` | normalized to 18 decimals |
-| 5 | `getAssetWithdrawRateLimitKey(poolId, token0)` | `decreasePosition` | raw `token0` decimals |
-| 6 | `getAssetWithdrawRateLimitKey(poolId, token1)` | `decreasePosition` | raw `token1` decimals |
-| 7 | `getSwapRateLimitKey(poolId, token0)` | `swap` with `tokenIn == token0` | raw `token0` decimals |
-| 8 | `getSwapRateLimitKey(poolId, token1)` | `swap` with `tokenIn == token1` | raw `token1` decimals |
-
-Two denomination considerations for whoever authors the spell:
-
-- The aggregate keys are decremented with 18 decimal normalized amounts, whereas the per asset keys
-  are decremented with the token's raw amount. A USDC per asset limit is therefore expressed in 6
-  decimals, while the aggregate limit covering the same flow is expressed in 18 decimals.
-- The legacy swap limit is decremented with a **normalized** amount; the Diamond facet's swap limit is
-  decremented with the **raw** `amountIn`. Legacy swap limit values cannot be carried across unchanged
-  for a token with fewer than 18 decimals.
-
-### 4.8 Additional configuration required by the facet
-
-`setMaxSlippage(poolId, maxSlippage)` and `setTickLimits(poolId, ...)` live in the facet's own
-ERC-7201 storage domain, reached by `delegatecall` from the Controller, so they are per Controller
-state. Values configured on the legacy `MainnetController` do **not** carry over and must be set again
-on the Diamond PAU Controller after `updateIntegrations`. `swap` reverts with
-`UniswapV4Facet/max-slippage-not-set` if `maxSlippage` is zero.
-
-Both settings are fail closed. `_checkTickLimits` requires `maxTickSpacing != 0` and reverts with
-`UniswapV4Facet/tickLimits-not-set` otherwise, so `mintPosition` and `increasePosition` are blocked
-until tick limits are configured for the pool. `setTickLimits` explicitly permits the all-zero triple
-as a means of clearing a pool's limits, which blocks liquidity operations on that pool while leaving
-`swap` and `decreasePosition` available.
+`setTickLimits` accepts the all zero triple as a way to clear a pool's limits, which blocks liquidity
+operations on that pool while leaving `swap` and `decreasePosition` available.
 
 ---
 
-## 5. Deployment and spell sequence
+## 5. Deployment and rollout
 
-`DefaultPAUAssembler` (`0xc812aAD3FaE2D3511C664374B601a9BeBFeCCa2E`, from the `pau-assemblers` repo,
-previously named `PAUAdministeredAgentFactory`) is the standard one-shot path for standing up a Prime
-PAU. It deploys a **complete new stack**, calling `deployAccessControls`, `deployALMProxy`,
-`deployRateLimits` and then `deployController` on the `PAUFactory`, so it always creates a fresh
-`ALMProxy` and cannot be pointed at an existing one. That alone rules it out for this topology,
-independently of the section 4 decision (a fresh `RateLimits` is what Option B wants anyway, but a fresh
-`ALMProxy` is never acceptable here). Two paths are available:
+`DefaultPAUAssembler` and the `sky-factories` variant both always call `deployALMProxy`, so neither can
+be used here. `PAUFactory` is called directly, and the role wiring the assembler would have performed
+is carried out explicitly in the spell. An assembler variant that accepts an existing proxy would be
+reusable for future controllers joining an existing custody account, but it is new contract code
+needing its own review and is kept off the critical path.
 
-- **Path A (recommended for this upgrade):** call `PAUFactory` (`0x69A5d548...`) directly.
-  `PAUFactory.deployController(accessControls, proxy, rateLimits)` accepts arbitrary `proxy` and
-  `rateLimits` addresses, so it can be pointed at the existing deployments. The agent and role wiring
-  that `DefaultPAUAssembler` normally performs is carried out explicitly in the spell.
-- **Path B:** add an assembler variant to `pau-assemblers` that accepts existing `proxy` and
-  `rateLimits` addresses instead of deploying them. This is cleaner and reusable for future controllers
-  that join an existing custody account, but introduces a contract requiring its own review pass.
+### 5.1 Deployment and grants
 
-Path A is the recommendation here, since it introduces no new contract code. Path B is worth raising
-separately if joining an existing custody account is expected to recur.
+1. **Permissionless deploys.** `PAUFactory.deployAccessControls(SPARK_PROXY)`,
+   `PAUFactory.deployRateLimits(SPARK_PROXY)`,
+   `PAUFactory.deployController(accessControls, existingALMProxy, newRateLimits)`, and
+   `AdministeredAgentFactory.deploy(SPARK_PROXY)`. Read back every constructor argument and admin
+   cardinality before proceeding.
+2. **Spark spell, grants.** `CONTROLLER` on the `ALMProxy`; `CONTROLLER` on the new `RateLimits`;
+   `ALLOCATOR_ROLE` to the agent; agent actors and revoker.
+3. **Sky spell, Beacon registration** per facet, since the Beacon is Sky owned infrastructure. Steps 2
+   and 3 are independent, but step 4 depends on step 3.
+4. **Spark spell, sync.** `Controller.updateIntegrations([id])`. Before syncing, read
+   `Beacon.getConfig(id)` in the same transaction and require the facet address equals the hardcoded
+   audited address and the wire count matches (17, 10, 13). This guard matters, see 6.3.
+5. **Spark spell, configuration.** Rate limit keys first, then facet setters: tick limits and
+   `maxSlippage` per pool for UniV4, `setDomainParameters` per domain for CCTP, `maxSlippage` and
+   `priceRatio` per pool for DualPool. Facet key getter selectors are only reachable after step 4.
 
-### 5.1 Sequence
+### 5.2 Staged rollout
 
-The sequence spans three executors: a permissionless deployer, a Sky spell (the `Beacon` is Sky owned
-infrastructure), and a Spark spell (`SPARK_PROXY` admins the new stack, the existing `ALMProxy` and both
-`RateLimits` instances). Steps 5 and 6 therefore require coordination between the two governance
-processes. Step 1a and the choice of `rateLimits` in step 2 depend on the section 4 decision.
+Two rules govern the ramp:
 
-**Step 1. Deploy `AccessControls`** (permissionless).
+> **No two stages advance in the same spell, and a cap increase never ships alongside a new
+> integration.** Any anomaly must have exactly one candidate cause.
 
-```solidity
-address accessControls = PAUFactory.deployAccessControls(Ethereum.SPARK_PROXY);
-```
+All advance criteria are expressed as elapsed time, round trip counts, multiples of the stage's own
+cap, and binary monitoring gates. None depends on an absolute number, so the ramp is unaffected by
+whatever caps risk sets.
 
-**Step 1a. Deploy `RateLimits`** (permissionless, **Option B only**, skip under Option A).
+| Stage | Enables | Advance criteria |
+| --- | --- | --- |
+| **0. Prerequisites** | No on-chain authority. Deploys, Beacon registration, test harness extension, registry constants, monitoring across both controllers and both rate limit instances, freeze rehearsal | Constructor arguments and admin cardinality read back as expected. Harness green **with the new instance actually covered**. Freeze rehearsed on a fork with a recorded wall clock time |
+| **1. UniV4, one pool, minimum viable cap** | `UNISWAP_V4_FACET` only, one pool, caps at the smallest size that still produces a real operation. Legacy UniV4 untouched. Chosen first because it is the only facet with a line comparable legacy counterpart, so a discrepancy is observable against a known good baseline, and it has no cross-chain leg | N weeks in production with at least one full deposit to withdraw round trip per week. All 8 keys exercised and observed decrementing by the expected amount. No unexplained accounting delta between the two controllers' event streams. No reverts of unknown cause. One fork rehearsal of `removeIntegrations` and re-sync |
+| **2. UniV4, higher caps and more pools** | Cap increases and additional pools. Still one facet | Cumulative volume at a stated multiple of the stage 1 aggregate deposit cap, incident free, measured from the **last cap change**. Hook review completed and recorded for every added pool, as a gate rather than a guideline (see 6.4). Legacy plus Diamond sum stated per pool in the spell |
+| **3. CCTP v2, one domain** | `CCTP_FACET` with a small per domain cap on one destination whose `mintRecipient` is well established. Legacy v1 keys left non-zero so the fallback route stays available | `mintRecipient` independently verified as the destination `ALMProxy` by a second party. Destination confirmed able to receive v2 messages. Fee band set so the upper bound times the cap is an acceptable absolute loss. N successful transfers including one at the largest allowed chunk, to exercise the `burnLimitsPerMessage` loop. Every burn reconciled to a mint |
+| **4. Retire legacy CCTP v1** | Zero the legacy aggregate and per domain CCTP keys. Removes CCTP capacity addition and consolidates the route. Possible only because the instances are separate | v2 proven per stage 3 for **every** domain legacy currently serves. Circle v1 deprecation timeline confirmed. No unattested in-flight v1 messages. Rollback spell pre-drafted |
+| **5. DualPool** | Blocked on: merge to `dev`, inclusion in an audited release, deployment, `sky-pau-registry` entry, Beacon registration by Sky. Then repeat the stage 1 pattern from the smallest viable cap | Same shape as stage 1, plus the DualPool hook confirmed governance owned and non-upgradeable |
+| **6. Steady state** | Optionally zero legacy UniV4 keys per pool to make Diamond PAU the sole UniV4 route, retiring capacity addition there too. Possible only with the dedicated instance | Product decision, not a risk gate |
 
-```solidity
-address rateLimits = PAUFactory.deployRateLimits(Ethereum.SPARK_PROXY);
-```
+**Standing de-ramp triggers.** Any one of these halts the ramp and freezes caps at the current stage:
+an unexplained rate limit decrement; a balance-delta revert of unknown cause; a Beacon config change
+Spark did not initiate; a facet address in `Controller.integrations()` differing from the audited
+registry entry; any role granted to the `AdministeredAgent` address other than `ALLOCATOR_ROLE` on this
+`AccessControls`.
 
-**Step 2. Deploy `Controller`** (permissionless), pointed at the existing proxy and at the rate limits
-instance chosen in section 4.
+### 5.3 Post-spell verification
 
-```solidity
-// Option A
-address diamondController = PAUFactory.deployController(accessControls, ALM_PROXY, ALM_RATE_LIMITS);
-
-// Option B
-address diamondController = PAUFactory.deployController(accessControls, ALM_PROXY, rateLimits);
-```
-
-`proxy` and `rateLimits` are written to shared storage at construction with no setter, so both are
-bound at deploy time. Pointing the Controller at a different `RateLimits` later requires deploying a
-new Controller and repeating steps 4 to 9, see 4.1.
-
-**Step 3. Deploy `AdministeredAgent`** (permissionless).
-
-```solidity
-address agent = AdministeredAgentFactory.deploy(Ethereum.SPARK_PROXY);
-```
-
-**Step 4. Grant `CONTROLLER` on the proxy and rate limits** (Spark spell).
-
-```solidity
-almProxy.grantRole(almProxy.CONTROLLER(), diamondController);
-
-// Option A: the existing shared instance. Option B: the instance deployed in step 1a.
-rateLimits.grantRole(rateLimits.CONTROLLER(), diamondController);
-```
-
-Under Option A this modifies the live rate limits contract the legacy controller depends on. Under
-Option B the existing instance is not touched by the spell at all.
-
-**Step 5. Grant `ALLOCATOR_ROLE` and configure the agent** (Spark spell).
-
-```solidity
-accessControls.grantRole(ALLOCATOR_ROLE, agent);
-
-agent.addActor(Ethereum.ALM_RELAYER_MULTISIG);           // 0x8a25A24E...
-agent.addActor(Ethereum.ALM_BACKSTOP_RELAYER_MULTISIG);  // 0x8Cc0Cb0c...
-agent.addRevoker(Ethereum.ALM_FREEZER_MULTISIG);         // 0x90D8c80C...
-```
-
-**Step 6. Wire `UNISWAP_V4_FACET` on the `Beacon`** (Sky spell).
-
-```solidity
-IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-    facet : UNISWAP_V4_FACET,  // 0x75D35ffB..., already deployed, no need to redeploy
-    wires : wires              // 17 entries
-});
-
-beacon.setIntegration("UNISWAP_V4_FACET", config);
-```
-
-Each wire maps a `uniswapV4_*` call selector on the controller ABI to the plain facet selector. The
-canonical 17-entry list is in `test/mainnet-fork/ForkTestBase.t.sol` `_wireUniswapV4Facet`. Check
-`Beacon.getConfig("UNISWAP_V4_FACET")` first: if the integration is already registered against the
-deployed facet with the full wire set, this step is unnecessary.
-
-**Step 7. Sync the integration into the new Controller** (Spark spell, must follow step 6).
-
-```solidity
-bytes32[] memory integrationIds = new bytes32[](1);
-integrationIds[0] = "UNISWAP_V4_FACET";
-
-diamondController.updateIntegrations(integrationIds);
-```
-
-**Step 8. Set the eight rate limit keys per pool** (Spark spell, must follow step 7 since the key
-getters are only reachable once wired). Using a USDC/USDT pool as the example:
-
-```solidity
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAggregateDepositRateLimitKey(POOL_ID),          max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAssetDepositRateLimitKey(POOL_ID,  USDC),       max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAssetDepositRateLimitKey(POOL_ID,  USDT),       max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAggregateWithdrawRateLimitKey(POOL_ID),         max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAssetWithdrawRateLimitKey(POOL_ID, USDC),       max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getAssetWithdrawRateLimitKey(POOL_ID, USDT),       max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getSwapRateLimitKey(POOL_ID,          USDC),       max, slope);
-rateLimits.setRateLimitData(diamondController.uniswapV4_getSwapRateLimitKey(POOL_ID,          USDT),       max, slope);
-```
-
-Note the denominations from 4.7: the two aggregate keys are 18 decimal normalized, the six per asset
-keys use the token's own decimals.
-
-Under Option B, `rateLimits` here is the instance deployed in step 1a and all eight writes are to fresh
-keys. Under Option A, `rateLimits` is the existing instance and the two aggregate writes may target keys
-a legacy UniV4 spell already configured for the same pool. The three argument `setRateLimitData`
-overload resets `lastAmount` to `maxAmount` and `lastUpdated` to `block.timestamp`, so re-setting an
-existing aggregate key refills the legacy controller's consumed budget as a side effect. Under Option A
-the aggregate keys should either be omitted from the spell when already configured, or set deliberately
-with the four argument overload.
-
-**Step 9. Set slippage and tick limits per pool** (Spark spell, must follow step 7).
-
-```solidity
-diamondController.uniswapV4_setMaxSlippage(POOL_ID, maxSlippage);
-diamondController.uniswapV4_setTickLimits(POOL_ID, tickLowerMin, tickUpperMax, maxTickSpacing);
-```
-
-Both are mandatory. `swap` reverts without `maxSlippage`, and liquidity operations revert without tick
-limits.
-
-**Step 10 (optional, subject to open question 1).** Route UniV4 flow exclusively through the Diamond
-PAU controller by zeroing the legacy keys.
-
-- Under Option A, only the legacy swap key can be zeroed, because its derivation differs. Zeroing the
-  legacy aggregate deposit or withdraw key would also disable the Diamond PAU controller for that pool,
-  see 4.3.
-- Under Option B, all three legacy keys (`LIMIT_DEPOSIT`, `LIMIT_WITHDRAW`, `LIMIT_SWAP` for the pool)
-  can be zeroed on the existing instance without affecting the Diamond PAU controller.
-
-### 5.2 Post-spell verification
-
-- `Controller.integrations()` returns exactly one entry, `UNISWAP_V4_FACET`, pointing at
-  `0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D`. This is the check that most directly substantiates the
-  claim in section 2, since every other facet in the registry is reachable only if it is synced here.
-- `Controller.getDispatch(selector)` returns the facet for each of the 17 wired selectors, and
-  `address(0)` for a sample of legacy controller selectors (`mintUSDS`, `swapUSDSToUSDC`, `transferAsset`,
-  CCTP selectors), demonstrating that they are unreachable.
-- `Controller.proxy()` returns the existing `ALMProxy`, and `Controller.rateLimits()` returns the
-  instance chosen in section 4. Under Option B this is the address from step 1a, and it must not be the
-  legacy `0x7A5FD5cf...`.
-- `ALMProxy.getRoleMemberCount(CONTROLLER) == 2` and both members are the expected addresses.
-- Rate limits role membership matches the chosen option. Option A: the existing instance has two
-  `CONTROLLER` members. Option B: the existing instance still has exactly one, the legacy controller,
-  and the new instance has exactly one, the Diamond PAU Controller, with `DEFAULT_ADMIN_ROLE` held by
-  `SPARK_PROXY`.
-- All eight keys of 4.7 read back non zero `maxAmount` on the **intended** instance, and are unset on
-  the other one under Option B. This is the check that catches a mis-targeted rate limit spell.
-- Legacy controller functional regression test confirming no change in behaviour.
-- A Diamond PAU `mintPosition` and `decreasePosition` round trip at small size, verifying the rate
-  limit decrement on all four affected keys.
+- `Controller.integrations()` returns exactly the expected ids, each pointing at the audited registry
+  address. This is the check that most directly substantiates section 2.
+- `Controller.getDispatch(selector)` returns the facet for each wired selector and `address(0)` for a
+  sample of legacy selectors (`mintUSDS`, `swapUSDSToUSDC`, `transferAsset`), demonstrating they are
+  unreachable.
+- `Controller.proxy()`, `.rateLimits()`, `.beacon()` and `.accessControls()` all read as expected, and
+  `.rateLimits()` is **not** the legacy `0x7A5FD5cf...`.
+- `ALMProxy.getRoleMemberCount(CONTROLLER) == 2` with both members expected. Legacy `RateLimits` still
+  has exactly one `CONTROLLER` member. New `RateLimits` has exactly one.
+- `AccessControls` and new `RateLimits` each have exactly one `DEFAULT_ADMIN_ROLE` member,
+  `SPARK_PROXY`, with no residual deployer. `AdministeredAgent.adminCount() == 1`.
+- Facet immutables read as expected, and all configured keys read back non-zero on the new instance.
+- Legacy controller functional regression test confirming no behaviour change.
+- A small round trip per onboarded facet, verifying the rate limit decrement on every affected key.
 
 ---
 
-## 6. Risks specific to running two controllers on one proxy
+## 6. Risk assessment
 
-### 6.1 Reentrancy is scoped per Controller, not per proxy
+Four risks matter for this upgrade: the Diamond PAU system is young, the stack is freshly deployed, a
+facet reaches further than the integration it implements, and two controllers share one custody
+account. Each is described below with what the current setup does about it and what remains.
 
-Facet functions carry `nonReentrant`, but facets execute by `delegatecall` from a Controller, so the
-guard slot resides in that Controller's storage. The shared `ALMProxy` has no guard of its own. Each
-controller therefore maintains an independent guard over the same custody account, and operations
-across the two are not atomic with respect to one another.
+### 6.1 The Diamond PAU system is new
 
-The specific concern for `UniswapV4Facet`: `_increaseLiquidity` and `_decreaseLiquidity` snapshot the
-proxy's `token0` and `token1` balances before the proxy call and compare them afterwards, using the
-delta to compute the rate limit decrease. If the legacy controller moves either token into or out of
-the proxy between those two snapshots, the computed delta is incorrect. A negative delta on deposit is
-clamped to zero (`_clampedSub`), which under-decrements the deposit limit; on withdrawal,
-`endingBalance - startingBalance` is an unclamped subtraction, so an interleaved outflow causes the
-call to revert on underflow rather than record incorrect accounting.
+**The risk.** A system without much production history immediately holds authority over a large
+balance, so a latent bug surfaces at full size rather than at a size the protocol can absorb.
 
-This behaviour is documented in
-[ARCHITECTURE.md](./ARCHITECTURE.md#multi-controller-topology-single-almproxy). Reaching it requires
-either a call path that yields control to the legacy relayer mid-operation (the Uniswap V4 position
-manager and universal router are the only external targets here, so a malicious hook in an onboarded
-pool is the realistic vector), or a compromised relayer able to interleave transactions. It is
-mitigated in practice by onboarding only pools whose hooks have been reviewed, and it is a reason to
-keep pool onboarding under governance review rather than allocator discretion.
+**What reduces it.** The stack is not uniformly new. Its parts have very different track records:
 
-### 6.2 Two independent capability grants, and a split admin path
+| Component | Production history |
+| --- | --- |
+| `ALMProxy` `0x1601843c...` (custody) | Unchanged since `spark-alm-controller` v1.0.0. Not redeployed, not migrated, no storage change in this upgrade |
+| diamond-pau `ALMProxyFreezable` | Live in **Spark** production since spell `20251211`, instance rotated in `20260604`. Holds Spark Savings `SETTER_ROLE` on spUSDC, spUSDT, spETH and spPYUSD, Morpho allocator on two vaults, and SparkLend Cap Automator `UPDATE_ROLE` |
+| Diamond `Controller`, `Beacon`, `AccessControls` dispatch stack | Live at **Grove**, alongside Grove's legacy controller, on Grove's existing proxy |
+| `UniswapV4Facet` | Deployed and audited through the v1.14.0 release cycle. Its legacy counterpart is live and still being extended, most recently by spell `20260813` |
+| `CCTPFacet` v1.0.0 | No production usage yet |
+| `DualPoolFacet` | In progress |
 
-There are now two independent code paths capable of moving the entire proxy balance if either is
-compromised at the admin level. Audit coverage, upgrade cadence, and key management for the Diamond
-PAU path therefore carry the same weight as for the legacy controller.
+The codebase carries 33 audit reports across v1.0.0 to v1.14.0 from five firms (Cantina,
+ChainSecurity, Certora, Octane, Unvariant), so review is a per release cadence rather than a one time
+event. Grove already runs this topology in production, at smaller scale and with a different
+integration set, and does so with a *shared* `RateLimits` instance, which is a weaker configuration
+than the dedicated instance proposed here.
 
-The Diamond PAU path additionally splits admin authority across two governance bodies. Sky governance
-controls the `Beacon` and therefore what a given integration id resolves to, while `SPARK_PROXY`
-controls whether the Controller syncs it (`updateIntegrations`) and holds `DEFAULT_ADMIN_ROLE` on the
-`ALMProxy`. Neither can unilaterally add a new integration to the live Controller, which is a
-meaningful separation of duties, but it also means integration changes require coordination across two
-spell processes and that the effective admin set for the custody account is now larger than
-`SPARK_PROXY` alone.
+**What remains.** `ALMProxyFreezable` is a permissioned forwarder, so its record says nothing about
+the dispatch machinery itself (`fallback()`, `updateIntegrations`, facet `delegatecall`). That
+machinery has production history only at Grove's scale, and time in production does not transfer
+across asset scale. This risk is therefore handled by the staged ramp in 5.2 rather than argued away:
+stages 1 and 2 buy production history at Spark scale at a cost bounded by the caps governance sets,
+and nothing makes the first transaction on this proxy safer than its cap.
 
-### 6.3 Rate limit coupling
+### 6.2 Misconfiguration of a freshly deployed stack
 
-Option A dependent, covered in 4.3 and 4.4.
+**The risk.** A new stack has many parameters set for the first time, and a wrong value causes loss
+even when the code is correct.
 
-Under Option A the relayer runbook needs to account for the fact that a UniV4 deposit executed through
-the legacy controller reduces the budget available to the Diamond PAU controller for the same pool, and
-that neither system surfaces the other's consumption. It also needs to record that the Diamond PAU
-Controller holds unscoped `CONTROLLER` authority over all legacy rate limit keys.
+**What reduces it.**
 
-Under Option B the coupling disappears, and the residual risk moves to the operational side: two
-instances to target correctly and a per pool exposure that is the sum of two independent budgets.
+- **Nothing is migrated.** The custody contract keeps its bytecode, storage, approvals and positions.
+  Exposure comes from a role grant, not from moving funds, so a bad deployment can be reversed by
+  revoking one role rather than by recovering assets.
+- **The role grant itself is routine.** Spells `20250403`, `20250417`, `20250918`, `20251030`,
+  `20251127`, `20260129` and `20260312` each granted unscoped `CONTROLLER` on this exact proxy to
+  freshly deployed bytecode and revoked the predecessor. What is new here is that the previous grant
+  stays in place, not that a new controller receives one.
+- **The four new contracts custody nothing** and hold no privileges outside their own stack.
+- **Almost every misconfiguration fails closed**, so the default outcome is that the new controller
+  cannot act rather than that it acts wrongly:
 
-### 6.4 Accounting and monitoring
+| Unset or wrong | Result |
+| --- | --- |
+| Rate limit key (`maxAmount == 0`) | `RateLimits/zero-maxAmount` |
+| Tick limits | `UniswapV4Facet/tickLimits-not-set` |
+| `maxSlippage` | `UniswapV4Facet/max-slippage-not-set` |
+| CCTP domain parameters | `CCTPFacet/domain-not-configured` |
+| Selector not wired | `CallSelectorNotWired` |
+| Protocol addresses | Cannot be misconfigured post deploy. `permit2`, `positionManager`, `router`, `cctp`, `usdc` and `hook` are all bytecode immutables |
 
-Offchain accounting that attributes proxy balance changes to controller events needs to index both
-controllers. Diamond PAU events are emitted from the Controller address (facets execute by
-`delegatecall`), with different event signatures than the legacy `MainnetController` equivalents.
+**What remains.** A handful of parameters fail open, meaning a plausible wrong value causes loss
+rather than a revert. These need explicit per value review at spell time:
+
+| Parameter | Wrong value | Consequence |
+| --- | --- | --- |
+| CCTP `mintRecipient` | valid but wrong `bytes32` | USDC bridged to the wrong address, irrecoverable. The highest consequence value in the deployment |
+| `maxFeeCapRate` per domain | too generous | recurring fee leak on every transfer, invisible to rate limits, which meter amount and not fee |
+| Tick limits, `maxSlippage`, `priceRatio` | too permissive | real impermanent loss or slippage, inside the cap |
+| Aggregate versus per asset denomination | see 4.3 | a legacy swap value copied for a 6 decimal token is wrong by `1e12` |
+| Key written to the wrong `RateLimits` instance | either | the intended controller stays blocked, or a live budget is created on the wrong instance. Nothing reverts at spell time |
+
+Two mitigations cover this. First, stage 1 caps are set small enough that a wrong value is survivable
+while it is discovered. Second, the spell test harness must be extended before the grant, because it
+is currently instance scoped: `_getRateLimitKeys` in
+`spark-spells/src/test-harness/SparkLiquidityLayerTests.sol` filters rate limit events to the single
+`ctx.rateLimits`, so orphan key detection and the maximum and slope sanity bounds would skip the new
+instance and the harness would pass green with no coverage of it. Constructor argument and admin
+cardinality assertions for a new PAU stack also do not exist yet and need writing. Both are
+prerequisites in stage 0, not follow ups.
+
+### 6.3 A facet reaches further than its own integration
+
+**The risk.** Facets run by `delegatecall` from the Controller. An ERC-7201 storage namespace is a
+layout convention, not a sandbox. A buggy or malicious facet can read the proxy address from shared
+storage and issue arbitrary `doCall`, `doCallWithValue` or `doDelegateCall`, and can write any
+Controller storage slot including the dispatch table. Per facet blast radius is therefore the whole
+`ALMProxy` balance, not the assets that facet manages. Rate limits do not bound this case either,
+because a compromised facet chooses which key to decrement and can decline to decrement anything.
+
+**What reduces it.**
+
+1. **Arming a facet needs two governance bodies.** Sky can register a facet on the Beacon but cannot
+   make it live; `SPARK_PROXY` can sync but cannot invent a config. `fallback()` consults only the
+   local dispatch table, so neither body acting alone can make new code reachable.
+2. **The sync is pinned.** Per 5.1, the spell reads `Beacon.getConfig(id)` and requires the facet
+   address and wire count to match hardcoded audited values in the same transaction, so what goes
+   live is the reviewed facet and not whatever the Beacon happens to hold at execution time.
+3. **The reachable surface is small and fully enumerable**: 7 value moving functions across 3 facets
+   per the table in 2.1, each `nonReentrant`, role gated, rate limited and pointed at a bytecode
+   immutable.
+4. **A compromised allocator cannot widen it**, per 2.3. CCTP is the clearest case: the allocator
+   supplies only amount, destination domain and fee cap rate, while `mintRecipient` is governance set
+   per domain, `destinationCaller` and `minFinalityThreshold` are bytecode constants, and `maxFee` is
+   clamped to a governance band. That is tighter than legacy CCTP v1 for the same operation.
+5. **Each facet has its own kill switch.** `removeIntegrations([id])` deletes that facet's dispatches,
+   is callable by `SPARK_PROXY` alone with no Sky coordination, and leaves the other facets and the
+   legacy controller untouched. The legacy controller has no equivalent beyond zeroing rate limits.
+6. **The change is smaller than the upgrades it replaces.** A `MainnetController` upgrade swapped 40+
+   integrations at once into bytecode with no production history and the same unscoped proxy
+   authority. Onboarding two or three facets onto a controller whose dispatch table starts empty is a
+   strictly smaller version of the same operation.
+
+**What remains.** Every added facet is another code path holding full proxy authority, bounded by
+review and audit coverage rather than by architecture, which is why facets are onboarded one stage at
+a time. `DualPoolFacet` is not yet in an audited release and must be merged, audited, deployed and
+Beacon registered before it is in scope, which is why it is last in the ramp. `CCTPFacet` has no
+production usage yet and adds a dependency on Circle's CCTP v2 attestation infrastructure that legacy
+v1 does not have.
+
+### 6.4 Two controllers on one `ALMProxy`
+
+**The risk.** Two controllers custody the same account, so state that one assumes to be stable can be
+changed by the other. There are three places this could bite: shared rate limit accounting, balance
+measurements taken around a call, and total capacity across the pair.
+
+**Shared rate limit accounting is removed entirely.** `CONTROLLER` on `RateLimits` is not key scoped,
+so a shared instance would let either controller write any of the other's budgets, and several key
+derivations are byte identical across the two codebases. The dedicated instance in 4.1 makes that
+authority empty in both directions: the Diamond Controller holds no role on the legacy instance and
+the legacy controller holds no role on the new one. This is the double spend and cross access concern,
+and it does not exist in this configuration.
+
+**Balance measurements are protected by hook policy.** The reentrancy guard lives in Controller
+storage because facets `delegatecall` in, and the shared `ALMProxy` has no guard of its own
+([ARCHITECTURE.md](./ARCHITECTURE.md#multi-controller-topology-single-almproxy)). Several facet
+functions snapshot proxy balances around a call and use the delta for rate limit accounting:
+
+| Site | Arithmetic | If the balance moves mid-operation |
+| --- | --- | --- |
+| `UniswapV4Facet._increaseLiquidity` | `_clampedSub(start, end)` | under-decrements the deposit limit on inflow, over-decrements on outflow |
+| `UniswapV4Facet._decreaseLiquidity` | `end - start`, unclamped | over-decrements the withdraw limit on inflow, reverts on outflow |
+| `UniswapV4Facet._swap` | `end - start`, unclamped | inflates the measured output so the facet's own slippage check passes spuriously, though the Universal Router's `amountOutMin` in the calldata still binds |
+| `DualPoolFacet._addLiquidity` / `_removeLiquidity` | same clamped and unclamped pattern | same |
+
+The snapshots are taken and consumed **inside one transaction**, so a separately submitted legacy
+transaction cannot land between them and transaction ordering alone cannot reach this. The only way in
+is control yielding inside the Diamond Controller's own call frame, which means a Uniswap V4 hook on
+an onboarded pool, or the DualPool hook, calling back. That is closed by policy rather than by code:
+onboard only pools whose hooks are zero, or reviewed and non-upgradeable; keep pool onboarding a
+governance action and never allocator discretion; keep the DualPool hook governance owned. Stage 2
+makes recorded hook review a gate for every added pool for exactly this reason. The residual outcomes
+are also bounded even if a hook did get through, since the withdraw path reverts, the deposit path
+mis-accounts a limit while staying inside the cap, and the swap path is still bound by the router's own
+minimum.
+
+**Capacity is reconciled in spell review, then removed.** For any operation both controllers can
+perform, real capacity is the sum of the two budgets rather than either one. The control is procedural:
+any spell touching one side states the other side's current value, so the approved number is always
+the sum. It then goes away on its own, since stage 4 zeroes the legacy CCTP v1 keys and stage 6 can
+zero the legacy UniV4 keys per pool. Both are only possible because the instances are separate.
+
+**Emergency response needs two transactions.** Stopping allocator activity across the pair means
+`MainnetController.removeRelayer` on the legacy side and `AdministeredAgent.removeActor` per actor on
+the Diamond side, per 3.1. Nothing consolidates these, so it is handled operationally: the runbook
+documents both paths and stage 0 requires the full stop to be rehearsed on a fork with a recorded wall
+clock time before the grant is made.
 
 ---
 
@@ -699,57 +536,45 @@ Reverting the upgrade is a single governance transaction:
 
 ```solidity
 ALMProxy.revokeRole(CONTROLLER, diamondController);
-RateLimits.revokeRole(CONTROLLER, diamondController);
+newRateLimits.revokeRole(CONTROLLER, diamondController);
 ```
 
-The `RateLimits` revocation targets the existing instance under Option A. Under Option B it targets the
-instance from step 1a, and the existing instance needs no cleanup because it was never granted to.
+The legacy `RateLimits` needs no cleanup, because the Diamond Controller was never granted a role on
+it. After revocation the Diamond PAU Controller retains no authority.
 
-After this the Diamond PAU Controller retains no authority. Any open Uniswap V4 positions minted
-through it remain owned by the `ALMProxy`, and because the legacy controller uses the same position
-manager and asserts `positionManager.ownerOf(tokenId) == proxy`, they can be unwound through the legacy
-controller. This should be confirmed against the actual position NFTs before being relied upon.
+Two caveats:
+
+- Open Uniswap V4 positions minted through it remain owned by the `ALMProxy`, and because the legacy
+  controller uses the same position manager and asserts `positionManager.ownerOf(tokenId) == proxy`,
+  they can be unwound through the legacy controller. Confirm this against the actual position NFTs
+  before relying on it.
+- In-flight CCTP v2 messages are unaffected by revocation and will still mint at the destination.
+  Revocation prevents new transfers, it does not recall pending ones.
 
 ---
 
 ## 8. Open questions
 
-**1. Shared `RateLimits` or a dedicated one for the Diamond PAU controller?**
-This is the one decision that must be made before any contract is deployed, since `rateLimits` is bound
-in the Controller constructor with no setter (4.1). Neither option requires migrating keys. Full pros
-and cons are in 4.3 and 4.4, decision drivers in 4.6.
-
-- *(a) Option A, share the existing `RateLimits` (`0x7A5FD5cf...`).* No new contract, one instance to
-  operate, and the colliding aggregate deposit and withdraw keys act as a hard combined cap on UniV4
-  exposure per pool. Accepts that legacy UniV4 cannot be disabled per pool without also disabling the
-  Diamond PAU route, that refill is shared, and that the Diamond PAU Controller gains unscoped
-  `CONTROLLER` write access to every legacy rate limit key.
-- *(b) Option B, deploy a dedicated `RateLimits` via `PAUFactory.deployRateLimits(SPARK_PROXY)`.* Fully
-  isolates the two systems' rate limit accounting, lets legacy UniV4 be switched off independently, and
-  leaves the live instance untouched by the spell. Costs one extra deployment, gives up the combined
-  cap (per pool exposure becomes the sum of two budgets), and adds a second instance that every future
-  rate limit spell and monitoring job must target correctly.
-
-Answering the underlying product question settles it: does legacy Uniswap V4 stay live in parallel
-indefinitely (favours a), or is the Diamond PAU controller intended to become the sole route to
-Uniswap V4 (requires b)?
-
-**2. Who holds the `AdministeredAgent` grantor role?**
-Options: leave it unassigned so that only the agent admin (`SPARK_PROXY`) can add actors, which makes
-adding a relayer a governance action; or assign it to an ops multisig for faster rotation.
+**1. Who holds the `AdministeredAgent` grantor role?**
+Leave it unassigned so only the agent admin (`SPARK_PROXY`) can add actors, which makes adding a
+relayer a governance action; or assign it to an ops multisig for faster rotation.
 
 ---
 
 ## References
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md), specifically the Multi-Controller Topology section
-- [RATE_LIMITS.md](./RATE_LIMITS.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md), Multi-Controller Topology section
+- [SECURITY.md](./SECURITY.md), Beacon governance surface
 - [THREAT_MODEL.md](./THREAT_MODEL.md)
+- [RATE_LIMITS.md](./RATE_LIMITS.md)
+- [BEACON.md](./BEACON.md)
 - [UNIV3_UNIV4_COMPARISON.md](./UNIV3_UNIV4_COMPARISON.md)
-- `src/facets/uniswap-v4/UniswapV4Facet.sol`
-- `test/mainnet-fork/ForkTestBase.t.sol`, `_wireUniswapV4Facet` for the canonical selector wiring
-- `spark-alm-controller/src/libraries/UniswapV4Lib.sol` for the legacy implementation
+- `src/facets/uniswap-v4/UniswapV4Facet.sol`, `src/facets/cctp/CCTPFacet.sol`
+- `test/mainnet-fork/ForkTestBase.t.sol`, `_wireUniswapV4Facet` and `_wireCCTPFacet` for the canonical
+  selector wiring
+- `spark-alm-controller/src/libraries/UniswapV4Lib.sol` and `src/libraries/CCTPLib.sol` for the legacy
+  implementations
 - [sky-pau-registry](https://github.com/sky-ecosystem/sky-pau-registry/blob/master/src/Ethereum.sol),
   canonical addresses for the Diamond PAU core and facets
-- [pau-assemblers](https://github.com/sky-ecosystem/pau-assemblers), `DefaultPAUAssembler` docs and
-  the Sky Core review checklist
+- [pau-assemblers](https://github.com/sky-ecosystem/pau-assemblers), `DefaultPAUAssembler` docs and the
+  Sky Core review checklist
