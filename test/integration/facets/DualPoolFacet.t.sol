@@ -21,18 +21,18 @@ interface IControllerLike {
 
     function deposit(
         PoolKey calldata key,
-        uint256 sharesToMint,
-        uint128 amount0Max,
-        uint128 amount1Max
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
     ) external;
 
     function setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     function withdraw(
         PoolKey calldata key,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     ) external;
 
     function hook() external view returns (address);

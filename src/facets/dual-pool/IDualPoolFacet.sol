@@ -60,7 +60,12 @@ interface IDualPoolFacet is IFacet {
      * @param  amount0 Measured amount of currency0 received by the ALMProxy.
      * @param  amount1 Measured amount of currency1 received by the ALMProxy.
      */
-    event DualPoolWithdraw(bytes32 indexed poolId, uint256 shares, uint256 amount0, uint256 amount1);
+    event DualPoolWithdraw(
+        bytes32 indexed poolId,
+        uint256         shares,
+        uint256         amount0,
+        uint256         amount1
+    );
 
     /**********************************************************************************************/
     /*** Interactive Functions                                                                  ***/
@@ -75,9 +80,9 @@ interface IDualPoolFacet is IFacet {
      */
     function deposit(
         PoolKey calldata key,
-        uint256 sharesToMint,
-        uint128 amount0Max,
-        uint128 amount1Max
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
     ) external;
 
     /**
@@ -102,9 +107,9 @@ interface IDualPoolFacet is IFacet {
      */
     function withdraw(
         PoolKey calldata key,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     ) external;
 
     /**********************************************************************************************/

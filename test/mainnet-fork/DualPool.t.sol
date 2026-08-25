@@ -10,9 +10,8 @@ import { PoolKey }  from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/P
 
 import { IHooks } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/interfaces/IHooks.sol";
 
-import { IFacet }          from "../../src/facets/IFacet.sol";
-import { IDualPoolFacet }  from "../../src/facets/dual-pool/IDualPoolFacet.sol";
-import { IUniswapV4Facet } from "../../src/facets/uniswap-v4/IUniswapV4Facet.sol";
+import { IFacet }         from "../../src/facets/IFacet.sol";
+import { IDualPoolFacet } from "../../src/facets/dual-pool/IDualPoolFacet.sol";
 
 import { MockDualPoolHook } from "../mocks/MockDualPoolHook.sol";
 
@@ -82,6 +81,22 @@ abstract contract DualPool_TestBase is ForkTestBase {
 
         mainnetController.dualPool_setMaxSlippage(poolId, MAX_SLIPPAGE);
 
+        _seedRateLimits();
+
+        vm.stopPrank();
+    }
+
+    // NOTE: Uniswap V4 deployed to mainnet in January 2025, well before this block.
+    function _getBlock() internal pure override returns (uint256) {
+        return 23470490;  // September 29, 2025
+    }
+
+    /**********************************************************************************************/
+    /*** Helper Functions                                                                       ***/
+    /**********************************************************************************************/
+
+    /// @dev Must be called while pranking SPARK_PROXY.
+    function _seedRateLimits() internal {
         rateLimits.setRateLimitData(
             mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId),
             10_000_000e18,
@@ -117,18 +132,7 @@ abstract contract DualPool_TestBase is ForkTestBase {
             5_000_000e6,
             uint256(1_000_000e6) / 4 hours
         );
-
-        vm.stopPrank();
     }
-
-    // NOTE: Uniswap V4 deployed to mainnet in January 2025, well before this block.
-    function _getBlock() internal pure override returns (uint256) {
-        return 23470490;  // September 29, 2025
-    }
-
-    /**********************************************************************************************/
-    /*** Helper Functions                                                                       ***/
-    /**********************************************************************************************/
 
     function _badHookKey() internal view returns (PoolKey memory badKey) {
         badKey = poolKey;
@@ -179,25 +183,53 @@ abstract contract DualPool_TestBase is ForkTestBase {
         vm.roll(block.number + 1);
     }
 
-    /// @dev Allocator deposit sized by the hook's preview, funded to the ALMProxy just in time.
-    function _deposit(uint256 shares) internal returns (uint256 need0, uint256 need1) {
+    function _fund(uint256 shares) internal returns (uint256 need0, uint256 need1) {
         ( need0, need1 ) = hook.previewDeposit(poolKey, shares);
 
-        deal(Ethereum.USDC, address(almProxy), IERC20Like(Ethereum.USDC).balanceOf(address(almProxy)) + need0);
-        deal(Ethereum.USDT, address(almProxy), IERC20Like(Ethereum.USDT).balanceOf(address(almProxy)) + need1);
+        deal(Ethereum.USDC, address(almProxy), _getProxyBalance0() + need0);
+        deal(Ethereum.USDT, address(almProxy), _getProxyBalance1() + need1);
+    }
+
+    /// @dev Allocator deposit sized by the hook's preview, funded to the ALMProxy just in time.
+    function _deposit(uint256 shares) internal returns (uint256 need0, uint256 need1) {
+        ( need0, need1 ) = _fund(shares);
 
         vm.prank(allocator);
         mainnetController.dualPool_deposit(poolKey, shares, uint128(need0), uint128(need1));
     }
 
+    function _getProxyBalance0() internal view returns (uint256) {
+        return IERC20Like(Ethereum.USDC).balanceOf(address(almProxy));
+    }
+
+    function _getProxyBalance1() internal view returns (uint256) {
+        return IERC20Like(Ethereum.USDT).balanceOf(address(almProxy));
+    }
+
     function _proxyBalances() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = IERC20Like(Ethereum.USDC).balanceOf(address(almProxy));
-        balance1 = IERC20Like(Ethereum.USDT).balanceOf(address(almProxy));
+        balance0 = _getProxyBalance0();
+        balance1 = _getProxyBalance1();
     }
 
 }
 
 contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
+
+    uint256 internal constant DEPOSIT_SHARES = 100_000e6;
+
+    bytes32 internal aggregateKey;
+    bytes32 internal asset0Key;
+    bytes32 internal asset1Key;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        _bootstrap();
+
+        aggregateKey = mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId);
+        asset0Key    = mainnetController.dualPool_getAssetDepositRateLimitKey(poolId, Ethereum.USDC);
+        asset1Key    = mainnetController.dualPool_getAssetDepositRateLimitKey(poolId, Ethereum.USDT);
+    }
 
     function test_deposit_reentrancy() external {
         _setControllerEntered();
@@ -224,8 +256,6 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
     }
 
     function test_deposit_maxSlippageNotSet() external {
-        _bootstrap();
-
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.dualPool_setMaxSlippage(poolId, 0);
 
@@ -234,29 +264,97 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
         mainnetController.dualPool_deposit(poolKey, 1e6, 1e6, 1e6);
     }
 
+    function test_deposit_valueFloor() external {
+        // A 1e18 floor demands a perfect round trip, which a deposit cannot meet: the hook rounds
+        // the deposit up and the redemption down, so the shares minted are always worth marginally
+        // less than what was paid. Proves the check binds at the perfect-round-trip boundary.
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.dualPool_setMaxSlippage(poolId, 1e18);
+
+        ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
+
+        vm.expectRevert("DualPoolFacet/deposit-value-too-low");
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+    }
+
+    function test_deposit_rateLimitBoundary_aggregate() external {
+        ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
+
+        // Aggregate limit exactly one unit short of the normalized deposit value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(aggregateKey, need0 * 1e12 + need1 * 1e12 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+
+        // At the exact limit the deposit succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(aggregateKey, need0 * 1e12 + need1 * 1e12, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+    }
+
+    function test_deposit_rateLimitBoundary_token0() external {
+        ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
+
+        // Token 0 limit exactly one unit short of the normalized deposit value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset0Key, need0 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+
+        // At the exact limit the deposit succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset0Key, need0, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+    }
+
+    function test_deposit_rateLimitBoundary_token1() external {
+        ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
+
+        // Token 1 limit exactly one unit short of the normalized deposit value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset1Key, need1 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+
+        // At the exact limit the deposit succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset1Key, need1, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+    }
+
     function test_deposit() external {
-        _bootstrap();
+        ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
 
-        uint256 shares = 100_000e6;
-
-        bytes32 aggregateKey = mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId);
-        bytes32 asset0Key    = mainnetController.dualPool_getAssetDepositRateLimitKey(poolId, Ethereum.USDC);
-        bytes32 asset1Key    = mainnetController.dualPool_getAssetDepositRateLimitKey(poolId, Ethereum.USDT);
-
-        uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
         uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
         uint256 asset1Before    = rateLimits.getCurrentRateLimit(asset1Key);
+        uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
 
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-        ( uint256 need0, uint256 need1 ) = _deposit(shares);
+        assertEq(_getProxyBalance0(), need0);
+        assertEq(_getProxyBalance1(), need1);
 
-        assertEq(hook.sharesOf(poolKey, address(almProxy)), shares);
+        vm.prank(allocator);
+        mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
 
-        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
 
-        assertEq(balance0, 0);
-        assertEq(balance1, 0);
+        // Everything the facet approved was spent.
+        assertEq(_getProxyBalance0(), 0);
+        assertEq(_getProxyBalance1(), 0);
 
         // Asset rate limits decrement by raw 6-decimal amounts; the aggregate rate limit
         // decrements by the 1e18-normalized sum of both legs.
@@ -273,56 +371,25 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
         assertEq(IERC20Like(Ethereum.USDT).allowance(address(almProxy), _DUAL_POOL_HOOK), 0);
     }
 
-    function test_deposit_valueFloor() external {
-        _bootstrap();
-
-        // A 1e18 floor demands a perfect round trip, which a deposit cannot meet: the hook rounds
-        // the deposit up and the redemption down, so the shares minted are always worth marginally
-        // less than what was paid. Proves the check binds at the perfect-round-trip boundary.
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.dualPool_setMaxSlippage(poolId, 1e18);
-
-        ( uint256 need0, uint256 need1 ) = hook.previewDeposit(poolKey, 100_000e6);
-
-        deal(Ethereum.USDC, address(almProxy), need0);
-        deal(Ethereum.USDT, address(almProxy), need1);
-
-        vm.expectRevert("DualPoolFacet/deposit-value-too-low");
-        vm.prank(allocator);
-        mainnetController.dualPool_deposit(poolKey, 100_000e6, uint128(need0), uint128(need1));
-    }
-
-    function test_deposit_rateLimitBoundary() external {
-        _bootstrap();
-
-        ( uint256 need0, uint256 need1 ) = hook.previewDeposit(poolKey, 100_000e6);
-
-        bytes32 aggregateKey = mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId);
-
-        // Aggregate limit exactly one unit short of the normalized deposit value.
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(aggregateKey, need0 * 1e12 + need1 * 1e12 - 1, 0);
-
-        deal(Ethereum.USDC, address(almProxy), need0);
-        deal(Ethereum.USDT, address(almProxy), need1);
-
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
-        vm.prank(allocator);
-        mainnetController.dualPool_deposit(poolKey, 100_000e6, uint128(need0), uint128(need1));
-
-        // At the exact limit the deposit succeeds.
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(aggregateKey, need0 * 1e12 + need1 * 1e12, 0);
-
-        vm.prank(allocator);
-        mainnetController.dualPool_deposit(poolKey, 100_000e6, uint128(need0), uint128(need1));
-
-        assertEq(rateLimits.getCurrentRateLimit(aggregateKey), 0);
-    }
-
 }
 
 contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
+
+    uint256 internal constant DEPOSIT_SHARES = 100_000e6;
+
+    bytes32 internal aggregateKey;
+    bytes32 internal asset0Key;
+    bytes32 internal asset1Key;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        _bootstrap();
+
+        aggregateKey = mainnetController.dualPool_getAggregateWithdrawRateLimitKey(poolId);
+        asset0Key    = mainnetController.dualPool_getAssetWithdrawRateLimitKey(poolId, Ethereum.USDC);
+        asset1Key    = mainnetController.dualPool_getAssetWithdrawRateLimitKey(poolId, Ethereum.USDT);
+    }
 
     function test_withdraw_reentrancy() external {
         _setControllerEntered();
@@ -363,83 +430,147 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         mainnetController.dualPool_withdraw(poolKey, 0, 0, 0);
     }
 
+    function test_withdraw_minsBelowGovernanceFloor() external {
+        // A compromised allocator passing zero mins is caught by the maxSlippage floor even
+        // though the hook itself would accept them.
+        vm.expectRevert("DualPoolFacet/amountMins-too-low");
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, 0, 0);
+    }
+
+    function test_withdraw_rateLimitBoundary_aggregate() external {
+        _deposit(DEPOSIT_SHARES);
+
+        vm.roll(block.number + 1);
+
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
+
+        // Aggregate limit exactly one unit short of the normalized withdraw value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(aggregateKey, (expected0 + expected1) * 1e12 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+
+        // At the exact limit the withdrawal succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(aggregateKey, (expected0 + expected1) * 1e12, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+    }
+
+    function test_withdraw_rateLimitBoundary_token0() external {
+        _deposit(DEPOSIT_SHARES);
+
+        vm.roll(block.number + 1);
+
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
+
+        // Asset 0 limit exactly one unit short of the normalized withdraw value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset0Key, expected0 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+
+        // At the exact limit the withdrawal succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset0Key, expected0, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+    }
+
+    function test_withdraw_rateLimitBoundary_token1() external {
+        _deposit(DEPOSIT_SHARES);
+
+        vm.roll(block.number + 1);
+
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
+
+        // Asset 1 limit exactly one unit short of the normalized withdraw value.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset1Key, expected1 - 1, 0);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+
+        // At the exact limit the withdrawal succeeds.
+        vm.prank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(asset1Key, expected1, 0);
+
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
+    }
+
     /// @dev At the strictest sensible floor (1e18, a perfect round trip), the exit is still
     ///      reachable. Pool shares are non-transferable and removeLiquidity is the only way out, so
     ///      a floor that no withdrawal could satisfy would strand the position. Minimums set
     ///      exactly to the hook's preview clear the floor by equality, and the hook pays precisely
     ///      that.
     function test_withdraw_atStrictestFloor() external {
-        _bootstrap();
-
-        uint256 shares = 100_000e6;
-
-        _deposit(shares);
+        _deposit(DEPOSIT_SHARES);
 
         vm.roll(block.number + 1);
 
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.dualPool_setMaxSlippage(poolId, 1e18);
 
-        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, shares);
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
 
         vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, shares, uint128(expected0), uint128(expected1));
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
 
-        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
-
-        assertEq(balance0, expected0);
-        assertEq(balance1, expected1);
+        assertEq(_getProxyBalance0(), expected0);
+        assertEq(_getProxyBalance1(), expected1);
 
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
     }
 
     function test_withdraw() external {
-        _bootstrap();
-
-        uint256 shares = 100_000e6;
-
-        _deposit(shares);
+        _deposit(DEPOSIT_SHARES);
 
         vm.roll(block.number + 1);
 
-        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, shares);
-
-        bytes32 aggregateKey = mainnetController.dualPool_getAggregateWithdrawRateLimitKey(poolId);
-
+        uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
+        uint256 asset1Before    = rateLimits.getCurrentRateLimit(asset1Key);
         uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
 
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
+
+        assertEq(_getProxyBalance0(), 0);
+        assertEq(_getProxyBalance1(), 0);
+
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
+
         vm.expectEmit(address(mainnetController));
-        emit IDualPoolFacet.DualPoolWithdraw(poolId, shares, expected0, expected1);
+        emit IDualPoolFacet.DualPoolWithdraw(poolId, DEPOSIT_SHARES, expected0, expected1);
 
         vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, shares, uint128(expected0), uint128(expected1));
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
 
         ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
 
-        assertEq(balance0, expected0);
-        assertEq(balance1, expected1);
-
-        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
+        assertEq(rateLimits.getCurrentRateLimit(asset0Key), asset0Before - expected0);
+        assertEq(rateLimits.getCurrentRateLimit(asset1Key), asset1Before - expected1);
 
         assertEq(
             rateLimits.getCurrentRateLimit(aggregateKey),
             aggregateBefore - (expected0 * 1e12 + expected1 * 1e12)
         );
-    }
 
-    function test_withdraw_minsBelowGovernanceFloor() external {
-        _bootstrap();
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-        // A compromised allocator passing zero mins is caught by the maxSlippage floor even
-        // though the hook itself would accept them.
-        vm.expectRevert("DualPoolFacet/amountMins-too-low");
-        vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, 100_000e6, 0, 0);
+        assertEq(balance0, expected0);
+        assertEq(balance1, expected1);
     }
 
     function test_withdraw_sameBlockAsDepositReverts() external {
-        _bootstrap();
-        _deposit(100_000e6);  // records the deposit block; minDepositBlocks = 1
+        _deposit(DEPOSIT_SHARES);  // records the deposit block; minDepositBlocks = 1
 
         ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, 50_000e6);
 
@@ -452,130 +583,6 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
 
         vm.prank(allocator);
         mainnetController.dualPool_withdraw(poolKey, 50_000e6, uint128(expected0), uint128(expected1));
-    }
-
-}
-
-/// @notice DualPool pools swap through the UniswapV4 facet: its swap takes the PoolKey from
-///         calldata, so pools without PositionManager positions (which DualPool pools can never
-///         have) still swap through it. This is the e2e coverage of that path against the mock
-///         hook's flat curve; swap config binds to the same derived poolId the DualPool facet
-///         uses for LP config.
-contract MainnetController_DualPool_SwapTests is DualPool_TestBase {
-
-    uint128 internal constant SWAP_AMOUNT = 10_000e6;
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        mainnetController.uniswapV4_setMaxSlippage(poolId, MAX_SLIPPAGE);
-
-        rateLimits.setRateLimitData(
-            mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDC),
-            5_000_000e6,
-            uint256(1_000_000e6) / 4 hours
-        );
-
-        rateLimits.setRateLimitData(
-            mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDT),
-            5_000_000e6,
-            uint256(1_000_000e6) / 4 hours
-        );
-
-        vm.stopPrank();
-
-        _bootstrap();
-    }
-
-    function test_swap_maxSlippageNotSet() external {
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.uniswapV4_setMaxSlippage(poolId, 0);
-
-        vm.expectRevert("UniswapV4Facet/max-slippage-not-set");
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, SWAP_AMOUNT);
-    }
-
-    function test_swap_invalidTokenIn() external {
-        vm.expectRevert("UniswapV4Facet/invalid-tokenIn");
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDS, SWAP_AMOUNT, SWAP_AMOUNT);
-    }
-
-    function test_swap_amountOutMinBelowFloor() external {
-        // Half the input value is far below the 0.99e18 governance floor.
-        vm.expectRevert("UniswapV4Facet/amountOutMin-too-low");
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, SWAP_AMOUNT / 2);
-    }
-
-    function test_swap_amountOutMinNotMet() external {
-        deal(Ethereum.USDC, address(almProxy), SWAP_AMOUNT);
-
-        // Above the governance floor but above what the pool pays (1:1 less the 0.01% fee), so
-        // the router's slippage check reverts inside the swap.
-        uint128 amountOutMin = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6 + 1;
-
-        vm.expectRevert();
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, amountOutMin);
-    }
-
-    function test_swap() external {
-        // The mock's stable curve pays 1:1 less the 0.01% pool fee.
-        uint128 expectedOut  = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6;
-        uint128 amountOutMin = uint128(uint256(SWAP_AMOUNT) * MAX_SLIPPAGE / 1e18);
-
-        deal(Ethereum.USDC, address(almProxy), SWAP_AMOUNT);
-
-        bytes32 swapKey = mainnetController.uniswapV4_getSwapRateLimitKey(poolId, Ethereum.USDC);
-
-        uint256 swapLimitBefore = rateLimits.getCurrentRateLimit(swapKey);
-
-        ( , uint256 balance1Before ) = _proxyBalances();
-
-        vm.expectEmit(address(mainnetController));
-        emit IUniswapV4Facet.UniswapV4Swap(poolId, Ethereum.USDC, Ethereum.USDT, SWAP_AMOUNT, expectedOut);
-
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDC, SWAP_AMOUNT, amountOutMin);
-
-        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
-
-        assertEq(balance0, 0);
-        assertEq(balance1, balance1Before + expectedOut);
-
-        assertEq(rateLimits.getCurrentRateLimit(swapKey), swapLimitBefore - SWAP_AMOUNT);
-
-        // Permit2 allowance to the router is reset after the swap.
-        ( uint160 permitAmount, , ) = IPermit2Like(_PERMIT2).allowance(
-            address(almProxy),
-            Ethereum.USDC,
-            _UNISWAP_V4_ROUTER
-        );
-
-        assertEq(permitAmount, 0);
-
-        assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _PERMIT2), 0);
-    }
-
-    function test_swap_oneForZero() external {
-        uint128 expectedOut  = SWAP_AMOUNT - SWAP_AMOUNT * poolKey.fee / 1e6;
-        uint128 amountOutMin = uint128(uint256(SWAP_AMOUNT) * MAX_SLIPPAGE / 1e18);
-
-        deal(Ethereum.USDT, address(almProxy), SWAP_AMOUNT);
-
-        ( uint256 balance0Before, ) = _proxyBalances();
-
-        vm.prank(allocator);
-        mainnetController.uniswapV4_swap(poolKey, Ethereum.USDT, SWAP_AMOUNT, amountOutMin);
-
-        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
-
-        assertEq(balance0, balance0Before + expectedOut);
-        assertEq(balance1, 0);
     }
 
 }

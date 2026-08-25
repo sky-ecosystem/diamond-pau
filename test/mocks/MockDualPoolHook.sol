@@ -13,7 +13,6 @@ import {
 } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/BeforeSwapDelta.sol";
 
 import {
-    ModifyLiquidityParams,
     SwapParams
 } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolOperation.sol";
 
@@ -26,8 +25,6 @@ interface IERC20Like {
     //       tokens (e.g. USDT) can be used in fork tests.
 
     function approve(address spender, uint256 amount) external;
-
-    function balanceOf(address account) external view returns (uint256);
 
     function decimals() external view returns (uint8);
 
@@ -120,12 +117,6 @@ contract MockDualPoolHook is Ownable2Step {
         uint256 reserve1;
         uint256 totalShares;
     }
-
-    /**********************************************************************************************/
-    /*** Errors                                                                                 ***/
-    /**********************************************************************************************/
-
-    error LiquidityNotAllowed();
 
     /**********************************************************************************************/
     /*** Declarations                                                                           ***/
@@ -223,48 +214,6 @@ contract MockDualPoolHook is Ownable2Step {
         _lastDepositBlock[poolId][msg.sender] = block.number;
     }
 
-    function setDistribution(PoolKey calldata key, LiquidityBucket[] calldata buckets)
-        external
-        onlyOwner
-    {
-        _setDistribution(_toPoolId(key), buckets);
-    }
-
-    function setExternalDeposits(PoolKey calldata key, bool enabled) external onlyOwner {
-        _pools[_toPoolId(key)].externalDepositsEnabled = enabled;
-    }
-
-    function setPoolLive(PoolKey calldata key, bool live) external onlyOwner {
-        _pools[_toPoolId(key)].live = live;
-    }
-
-    /// @dev The real hook resolves the vault through a (poolId, currency) mapping, so a currency
-    ///      outside the pair resolves to address(0) and the call is a silent no-op. Selecting
-    ///      vault1 for anything that is not currency0 would instead approve vault1 against an
-    ///      arbitrary token.
-    function refreshVaultApproval(PoolKey calldata key, Currency currency) external onlyOwner {
-        PoolState storage pool = _pools[_toPoolId(key)];
-
-        address vault;
-
-        if      (currency == key.currency0) vault = pool.vault0;
-        else if (currency == key.currency1) vault = pool.vault1;
-
-        _refreshVaultApproval(currency, vault);
-    }
-
-    function emergencyRevokeVault(PoolKey calldata key) external onlyOwner {
-        bytes32 poolId = _toPoolId(key);
-
-        PoolState storage pool = _pools[poolId];
-
-        pool.live                    = false;
-        pool.externalDepositsEnabled = false;
-
-        if (pool.vault0 != address(0)) IERC20Like(Currency.unwrap(key.currency0)).approve(pool.vault0, 0);
-        if (pool.vault1 != address(0)) IERC20Like(Currency.unwrap(key.currency1)).approve(pool.vault1, 0);
-    }
-
     /**********************************************************************************************/
     /*** LP Functions                                                                           ***/
     /**********************************************************************************************/
@@ -353,22 +302,6 @@ contract MockDualPoolHook is Ownable2Step {
         return _pools[poolId].decimalsOffset;
     }
 
-    function externalDepositsEnabled(bytes32 poolId) external view returns (bool) {
-        return _pools[poolId].externalDepositsEnabled;
-    }
-
-    function totalShares(bytes32 poolId) external view returns (uint256) {
-        return _pools[poolId].totalShares;
-    }
-
-    function getPoolState(bytes32 poolId) external view returns (PoolState memory state) {
-        return _pools[poolId];
-    }
-
-    function minDepositBlocks(bytes32 poolId) external view returns (uint64) {
-        return _pools[poolId].minDepositBlocks;
-    }
-
     function previewDeposit(PoolKey calldata key, uint256 shares)
         external
         view
@@ -392,24 +325,6 @@ contract MockDualPoolHook is Ownable2Step {
     /**********************************************************************************************/
     /*** Uniswap V4 Hook Callbacks                                                              ***/
     /**********************************************************************************************/
-
-    function beforeAddLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
-        external
-        view
-        onlyPoolManager
-        returns (bytes4)
-    {
-        revert LiquidityNotAllowed();
-    }
-
-    function beforeRemoveLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
-        external
-        view
-        onlyPoolManager
-        returns (bytes4)
-    {
-        revert LiquidityNotAllowed();
-    }
 
     /// @notice Exact-input 1:1 stable swap against hook reserves, charging the pool's static
     ///         fee. Consumes the whole swap via return delta so the core AMM math is skipped.

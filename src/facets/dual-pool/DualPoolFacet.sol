@@ -27,10 +27,10 @@ interface IDualPoolHookLike {
 
     function addLiquidity(
         PoolKey calldata key,
-        uint256 sharesToMint,
-        uint256 maxAmount0,
-        uint256 maxAmount1,
-        uint256 deadline
+        uint256          sharesToMint,
+        uint256         maxAmount0,
+        uint256         maxAmount1,
+        uint256         deadline
     ) external returns (uint256 amount0, uint256 amount1);
 
     function previewWithdraw(PoolKey calldata key, uint256 shares)
@@ -40,10 +40,10 @@ interface IDualPoolHookLike {
 
     function removeLiquidity(
         PoolKey calldata key,
-        uint256 sharesToBurn,
-        uint256 minAmount0,
-        uint256 minAmount1,
-        uint256 deadline
+        uint256         sharesToBurn,
+        uint256         minAmount0,
+        uint256         minAmount1,
+        uint256         deadline
     ) external returns (uint256 amount0, uint256 amount1);
 
 }
@@ -119,9 +119,9 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /// @inheritdoc IDualPoolFacet
     function deposit(
         PoolKey calldata key,
-        uint256 sharesToMint,
-        uint128 amount0Max,
-        uint128 amount1Max
+        uint256         sharesToMint,
+        uint128         amount0Max,
+        uint128         amount1Max
     )
         external
         override
@@ -160,9 +160,9 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /// @inheritdoc IDualPoolFacet
     function withdraw(
         PoolKey calldata key,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        uint256         sharesToBurn,
+        uint128         amount0Min,
+        uint128         amount1Min
     )
         external
         override
@@ -202,12 +202,22 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IDualPoolFacet
-    function getAggregateDepositRateLimitKey(bytes32 poolId) public pure override returns (bytes32) {
+    function getAggregateDepositRateLimitKey(bytes32 poolId)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeBytes32Key(_LIMIT_DEPOSIT, poolId);
     }
 
     /// @inheritdoc IDualPoolFacet
-    function getAggregateWithdrawRateLimitKey(bytes32 poolId) public pure override returns (bytes32) {
+    function getAggregateWithdrawRateLimitKey(bytes32 poolId)
+        public
+        pure
+        override
+        returns (bytes32)
+    {
         return makeBytes32Key(_LIMIT_WITHDRAW, poolId);
     }
 
@@ -246,10 +256,10 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     ///         balance increase would make the subtraction revert, which fails closed.
     function _addLiquidity(
         PoolKey calldata key,
-        address proxy,
-        uint256 sharesToMint,
-        uint128 amount0Max,
-        uint128 amount1Max
+        address         proxy,
+        uint256         sharesToMint,
+        uint128         amount0Max,
+        uint128         amount1Max
     )
         internal
         returns (uint256 amount0, uint256 amount1)
@@ -272,14 +282,14 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         amount1 = startingBalance1 - _getBalance(token1, proxy);
     }
 
-    /// @notice Calls the hook's removeLiquidity through the ALMProxy and measures what the
-    ///         ALMProxy actually received by balance difference.
+    /// @notice Calls the hook's removeLiquidity through the ALMProxy and measures what the ALMProxy
+    ///         actually received by balance difference.
     function _removeLiquidity(
         PoolKey calldata key,
-        address proxy,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        address          proxy,
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     )
         internal
         returns (uint256 amount0, uint256 amount1)
@@ -311,14 +321,10 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         view
         returns (uint256 normalizedBalance)
     {
-        return balance * 1e18 / (10 ** IERC20Like(token).decimals());
+        return (balance * 1e18) / (10 ** IERC20Like(token).decimals());
     }
 
-    function _getBalance(address token, address account)
-        internal
-        view
-        returns (uint256 balance)
-    {
+    function _getBalance(address token, address account) internal view returns (uint256 balance) {
         return IERC20Like(token).balanceOf(account);
     }
 
@@ -341,12 +347,12 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     ///         allocator cannot weaken it.
     function _requireDepositValue(
         PoolKey calldata key,
-        bytes32 poolId,
-        address token0,
-        address token1,
-        uint256 sharesToMint,
-        uint256 amount0,
-        uint256 amount1
+        bytes32          poolId,
+        address          token0,
+        address          token1,
+        uint256          sharesToMint,
+        uint256          amount0,
+        uint256          amount1
     )
         internal
         view
@@ -366,12 +372,12 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     ///         while the pool's total value does not, so the floor is denominated in value.
     function _requireWithdrawValue(
         PoolKey calldata key,
-        bytes32 poolId,
-        address token0,
-        address token1,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        bytes32          poolId,
+        address          token0,
+        address          token1,
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     )
         internal
         view

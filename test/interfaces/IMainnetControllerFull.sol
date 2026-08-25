@@ -251,18 +251,18 @@ interface IMainnetControllerFull is IController {
 
     function dualPool_deposit(
         PoolKey calldata key,
-        uint256 sharesToMint,
-        uint128 amount0Max,
-        uint128 amount1Max
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
     ) external;
 
     function dualPool_setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
 
     function dualPool_withdraw(
         PoolKey calldata key,
-        uint256 sharesToBurn,
-        uint128 amount0Min,
-        uint128 amount1Min
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     ) external;
 
     function dualPool_getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
