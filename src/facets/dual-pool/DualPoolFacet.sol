@@ -28,9 +28,9 @@ interface IDualPoolHookLike {
     function addLiquidity(
         PoolKey calldata key,
         uint256          sharesToMint,
-        uint256         maxAmount0,
-        uint256         maxAmount1,
-        uint256         deadline
+        uint256          maxAmount0,
+        uint256          maxAmount1,
+        uint256          deadline
     ) external returns (uint256 amount0, uint256 amount1);
 
     function previewWithdraw(PoolKey calldata key, uint256 shares)
@@ -40,10 +40,10 @@ interface IDualPoolHookLike {
 
     function removeLiquidity(
         PoolKey calldata key,
-        uint256         sharesToBurn,
-        uint256         minAmount0,
-        uint256         minAmount1,
-        uint256         deadline
+        uint256          sharesToBurn,
+        uint256          minAmount0,
+        uint256          minAmount1,
+        uint256          deadline
     ) external returns (uint256 amount0, uint256 amount1);
 
 }
@@ -119,9 +119,9 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /// @inheritdoc IDualPoolFacet
     function deposit(
         PoolKey calldata key,
-        uint256         sharesToMint,
-        uint128         amount0Max,
-        uint128         amount1Max
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
     )
         external
         override
@@ -160,9 +160,9 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /// @inheritdoc IDualPoolFacet
     function withdraw(
         PoolKey calldata key,
-        uint256         sharesToBurn,
-        uint128         amount0Min,
-        uint128         amount1Min
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
     )
         external
         override
@@ -256,10 +256,10 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     ///         balance increase would make the subtraction revert, which fails closed.
     function _addLiquidity(
         PoolKey calldata key,
-        address         proxy,
-        uint256         sharesToMint,
-        uint128         amount0Max,
-        uint128         amount1Max
+        address          proxy,
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
     )
         internal
         returns (uint256 amount0, uint256 amount1)
