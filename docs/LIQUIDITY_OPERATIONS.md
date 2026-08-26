@@ -143,6 +143,10 @@ One facet instance is bound to one hook deployment via an immutable. The hook ha
 
 Hook-side operations (pool creation, genesis bootstrap, JIT distribution updates, external deposit gating, pause and resume, vault approval levers) are the hook owner's, i.e. governance acting directly on the hook rather than through the facet.
 
+### Important Limitations
+
+A DualPoolHook is vulnerable to front-run and sandwich attacks around discrete ERC4626 yield events. It is recommended to onboard DualPool facets with a DualPoolHook pairs to ERC4626 vaults with non-discrete yield (i.e. Morpho).
+
 ### Rate Limiting
 
 DualPool operations use several rate limit keys per pool:
