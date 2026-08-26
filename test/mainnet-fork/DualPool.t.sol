@@ -336,6 +336,9 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
     }
 
     function test_deposit() external {
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDT, address(almProxy), 500_000e6);
+
         ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
 
         uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
@@ -344,8 +347,8 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
 
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-        assertEq(_getProxyBalance0(), need0);
-        assertEq(_getProxyBalance1(), need1);
+        assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
+        assertEq(_getProxyBalance1(), 500_000e6 + need1);
 
         vm.prank(allocator);
         mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
@@ -353,8 +356,8 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
         assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
 
         // Everything the facet approved was spent.
-        assertEq(_getProxyBalance0(), 0);
-        assertEq(_getProxyBalance1(), 0);
+        assertEq(_getProxyBalance0(), 1_000_000e6);
+        assertEq(_getProxyBalance1(), 500_000e6);
 
         // Asset rate limits decrement by raw 6-decimal amounts; the aggregate rate limit
         // decrements by the 1e18-normalized sum of both legs.

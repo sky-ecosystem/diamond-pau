@@ -297,6 +297,9 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
     }
 
     function test_deposit() external {
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDT, address(almProxy), 500_000e6);
+
         ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
 
         uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
@@ -306,8 +309,8 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         // Pre-state: the ALMProxy holds exactly the funded amounts and no position yet.
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-        assertEq(_getProxyBalance0(), need0);
-        assertEq(_getProxyBalance1(), need1);
+        assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
+        assertEq(_getProxyBalance1(), 500_000e6 + need1);
 
         // The real pool's reserve ratio is heavily skewed, so a proportional deposit is too; this
         // is exactly the asymmetry a 1:1 mock cannot produce.
@@ -330,8 +333,8 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
 
         // Everything the facet approved was spent.
-        assertEq(_getProxyBalance0(), 0);
-        assertEq(_getProxyBalance1(), 0);
+        assertEq(_getProxyBalance0(), 1_000_000e6);
+        assertEq(_getProxyBalance1(), 500_000e6);
 
         // Approvals are reset after the pull.
         assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _DUAL_POOL_HOOK_LIVE), 0);
