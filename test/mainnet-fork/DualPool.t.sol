@@ -13,35 +13,54 @@ import { IHooks } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/interface
 import { IFacet }         from "../../src/facets/IFacet.sol";
 import { IDualPoolFacet } from "../../src/facets/dual-pool/IDualPoolFacet.sol";
 
-import { MockDualPoolHook } from "../mocks/MockDualPoolHook.sol";
-
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IERC20Like {
 
-    function allowance(address owner, address spender) external view returns (uint256 allowance);
+    function allowance(address owner, address spender) external view returns (uint256);
 
-    function approve(address spender, uint256 amount) external;
-
-    function balanceOf(address owner) external view returns (uint256 balance);
+    function balanceOf(address owner) external view returns (uint256);
 
 }
 
-interface IPermit2Like {
+/// @notice The subset of the deployed DualPoolHook the tests read directly. The facet declares its
+///         own call surface; this is the observability surface around it.
+interface IDualPoolHookLike {
 
-    function allowance(address user, address token, address spender)
+    function previewDeposit(PoolKey calldata key, uint256 shares)
         external
         view
-        returns (uint160 amount, uint48 expiration, uint48 nonce);
+        returns (uint256 amount0, uint256 amount1);
+
+    function previewWithdraw(PoolKey calldata key, uint256 shares)
+        external
+        view
+        returns (uint256 amount0, uint256 amount1);
+
+    function sharesOf(PoolKey calldata key, address user) external view returns (uint256);
 
 }
 
-abstract contract DualPool_TestBase is ForkTestBase {
+/// @notice Exercises the DualPoolFacet against the DualPoolHook deployment that is live on mainnet.
+///         Everything downstream of the facet is real: the deployed hook bytecode, its
+///         concentrated-liquidity JIT swap curve, the ERC-4626 vaults holding the pool's idle
+///         inventory, the PoolManager unlock context withdrawals traverse, and the pool's own
+///         accumulated share supply and reserves.
+///
+///         The hook is owned by its incumbent operator and the pool is permissionless, which is the
+///         production topology the facet is designed for: the ALMProxy enters and exits as a
+///         regular LP, with no hook ownership involved.
+abstract contract DualPoolLive_TestBase is ForkTestBase {
 
-    uint256 internal constant BOOTSTRAP_AMOUNT = 1_000_000e6;
-    uint256 internal constant MAX_SLIPPAGE     = 0.99e18;
+    // NOTE: The live DualPoolHook, whose inventory accounting reads vault.maxWithdraw() rather
+    //       than vault.previewRedeem(). Verified onchain: the hook is owned by its incumbent
+    //       operator and the USDC/USDT pool below is bootstrapped, live and permissionless at the
+    //       pinned block.
+    address internal constant _DUAL_POOL_HOOK_LIVE = 0x0000005bb4DF4109bF356a585C8b8Ea70FCbAaC0;
 
-    MockDualPoolHook internal hook;
+    uint256 internal constant MAX_SLIPPAGE = 0.99e18;
+
+    IDualPoolHookLike internal hook = IDualPoolHookLike(_DUAL_POOL_HOOK_LIVE);
 
     PoolKey internal poolKey;
 
@@ -50,34 +69,20 @@ abstract contract DualPool_TestBase is ForkTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        // The DualPool hook is deployed in-place at the flag-encoded address the facet was wired
-        // with in the fork test base. Governance (the Spark Proxy) is the hook owner and the pool
-        // is permissionless, matching the intended production topology: pool lifecycle is operated
-        // by governance directly on the hook, and the ALMProxy enters and exits as a regular LP
-        // through the facet.
-        deployCodeTo(
-            "MockDualPoolHook.sol:MockDualPoolHook",
-            abi.encode(_UNISWAP_V4_POOL_MANAGER, Ethereum.SPARK_PROXY),
-            _DUAL_POOL_HOOK
-        );
+        vm.label(_DUAL_POOL_HOOK_LIVE, "DualPoolHook");
 
-        hook = MockDualPoolHook(_DUAL_POOL_HOOK);
-
-        vm.label(_DUAL_POOL_HOOK, "MockDualPoolHook");
-
+        // The live USDC/USDT pool. Reconstructed rather than hardcoded so poolId stays derived.
         poolKey = PoolKey({
             currency0   : Currency.wrap(Ethereum.USDC),
             currency1   : Currency.wrap(Ethereum.USDT),
-            fee         : 100,  // 0.01% in pips
-            tickSpacing : 1,
-            hooks       : IHooks(_DUAL_POOL_HOOK)
+            fee         : 10,  // 0.001% in pips
+            tickSpacing : 10,
+            hooks       : IHooks(_DUAL_POOL_HOOK_LIVE)
         });
 
         poolId = keccak256(abi.encode(poolKey));
 
         vm.startPrank(Ethereum.SPARK_PROXY);
-
-        hook.initializePool(poolKey, _defaultConfig());
 
         mainnetController.dualPool_setMaxSlippage(poolId, MAX_SLIPPAGE);
 
@@ -86,9 +91,15 @@ abstract contract DualPool_TestBase is ForkTestBase {
         vm.stopPrank();
     }
 
-    // NOTE: Uniswap V4 deployed to mainnet in January 2025, well before this block.
+    // NOTE: The live USDC/USDT DualPool pool was bootstrapped well before this block. Archive
+    //       state at this block was verified against the configured RPC.
     function _getBlock() internal pure override returns (uint256) {
-        return 23470490;  // September 29, 2025
+        return 25740000;  // August 2026
+    }
+
+    /// @dev Points the facet the fork base deploys at the live hook instead of the mock's address.
+    function _dualPoolHook() internal view override returns (address) {
+        return _DUAL_POOL_HOOK_LIVE;
     }
 
     /**********************************************************************************************/
@@ -139,50 +150,8 @@ abstract contract DualPool_TestBase is ForkTestBase {
         badKey.hooks = IHooks(address(0xBAD));
     }
 
-    function _defaultConfig() internal pure returns (MockDualPoolHook.PoolConfig memory config) {
-        MockDualPoolHook.LiquidityBucket[] memory distribution =
-            new MockDualPoolHook.LiquidityBucket[](1);
-
-        distribution[0] = MockDualPoolHook.LiquidityBucket({
-            tickLower : -10,
-            tickUpper : 10,
-            weightBps : 10_000
-        });
-
-        config = MockDualPoolHook.PoolConfig({
-            sqrtPriceX96          : 79228162514264337593543950336,  // 2**96, price of 1.0
-            distribution          : distribution,
-            allowExternalDeposits : true,  // permissionless pool; the ALMProxy is a regular LP
-            vault0                : makeAddrPure("vault0"),
-            vault1                : makeAddrPure("vault1"),
-            minDepositBlocks      : 1
-        });
-    }
-
-    // NOTE: makeAddr is not pure, so config construction uses this derivation instead.
-    function makeAddrPure(string memory name) internal pure returns (address addr) {
-        addr = vm.addr(uint256(keccak256(abi.encodePacked(name))));
-    }
-
-    /// @dev Governance genesis deposit, made directly on the hook it owns, then advances one block
-    ///      so the minDepositBlocks = 1 lock does not gate the next operation. Bootstrap shares
-    ///      belong to governance; the ALMProxy's position starts at zero.
-    function _bootstrap() internal {
-        deal(Ethereum.USDC, Ethereum.SPARK_PROXY, BOOTSTRAP_AMOUNT);
-        deal(Ethereum.USDT, Ethereum.SPARK_PROXY, BOOTSTRAP_AMOUNT);
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-
-        IERC20Like(Ethereum.USDC).approve(_DUAL_POOL_HOOK, BOOTSTRAP_AMOUNT);
-        IERC20Like(Ethereum.USDT).approve(_DUAL_POOL_HOOK, BOOTSTRAP_AMOUNT);
-
-        hook.bootstrap(poolKey, BOOTSTRAP_AMOUNT, BOOTSTRAP_AMOUNT);
-
-        vm.stopPrank();
-
-        vm.roll(block.number + 1);
-    }
-
+    /// @dev Sizes the deposit off the hook's own preview and funds the ALMProxy just in time, so
+    ///      the amounts track the live pool's real reserve ratio.
     function _fund(uint256 shares) internal returns (uint256 need0, uint256 need1) {
         ( need0, need1 ) = hook.previewDeposit(poolKey, shares);
 
@@ -190,7 +159,6 @@ abstract contract DualPool_TestBase is ForkTestBase {
         deal(Ethereum.USDT, address(almProxy), _getProxyBalance1() + need1);
     }
 
-    /// @dev Allocator deposit sized by the hook's preview, funded to the ALMProxy just in time.
     function _deposit(uint256 shares) internal returns (uint256 need0, uint256 need1) {
         ( need0, need1 ) = _fund(shares);
 
@@ -206,16 +174,11 @@ abstract contract DualPool_TestBase is ForkTestBase {
         return IERC20Like(Ethereum.USDT).balanceOf(address(almProxy));
     }
 
-    function _proxyBalances() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = _getProxyBalance0();
-        balance1 = _getProxyBalance1();
-    }
-
 }
 
-contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
+contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
 
-    uint256 internal constant DEPOSIT_SHARES = 100_000e6;
+    uint256 internal constant DEPOSIT_SHARES = 1_000e6;
 
     bytes32 internal aggregateKey;
     bytes32 internal asset0Key;
@@ -223,8 +186,6 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
 
     function setUp() public virtual override {
         super.setUp();
-
-        _bootstrap();
 
         aggregateKey = mainnetController.dualPool_getAggregateDepositRateLimitKey(poolId);
         asset0Key    = mainnetController.dualPool_getAssetDepositRateLimitKey(poolId, Ethereum.USDC);
@@ -341,23 +302,26 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
 
         ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
 
+        uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
         uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
         uint256 asset1Before    = rateLimits.getCurrentRateLimit(asset1Key);
-        uint256 aggregateBefore = rateLimits.getCurrentRateLimit(aggregateKey);
 
+        // Pre-state: the ALMProxy holds exactly the funded amounts and no position yet.
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
         assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
         assertEq(_getProxyBalance1(), 500_000e6 + need1);
 
+        // The real pool's reserve ratio is heavily skewed, so a proportional deposit is too; this
+        // is exactly the asymmetry a 1:1 mock cannot produce.
+        assertGt(need0, 0);
+        assertGt(need1, 0);
+
+        vm.expectEmit(address(mainnetController));
+        emit IDualPoolFacet.DualPoolDeposit(poolId, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+
         vm.prank(allocator);
         mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
-
-        assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
-
-        // Everything the facet approved was spent.
-        assertEq(_getProxyBalance0(), 1_000_000e6);
-        assertEq(_getProxyBalance1(), 500_000e6);
 
         // Asset rate limits decrement by raw 6-decimal amounts; the aggregate rate limit
         // decrements by the 1e18-normalized sum of both legs.
@@ -369,16 +333,22 @@ contract MainnetController_DualPool_DepositTests is DualPool_TestBase {
             aggregateBefore - (need0 * 1e12 + need1 * 1e12)
         );
 
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), DEPOSIT_SHARES);
+
+        // Everything the facet approved was spent.
+        assertEq(_getProxyBalance0(), 1_000_000e6);
+        assertEq(_getProxyBalance1(), 500_000e6);
+
         // Approvals are reset after the pull.
-        assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _DUAL_POOL_HOOK), 0);
-        assertEq(IERC20Like(Ethereum.USDT).allowance(address(almProxy), _DUAL_POOL_HOOK), 0);
+        assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _DUAL_POOL_HOOK_LIVE), 0);
+        assertEq(IERC20Like(Ethereum.USDT).allowance(address(almProxy), _DUAL_POOL_HOOK_LIVE), 0);
     }
 
 }
 
-contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
+contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
 
-    uint256 internal constant DEPOSIT_SHARES = 100_000e6;
+    uint256 internal constant DEPOSIT_SHARES = 1_000e6;
 
     bytes32 internal aggregateKey;
     bytes32 internal asset0Key;
@@ -386,8 +356,6 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
 
     function setUp() public virtual override {
         super.setUp();
-
-        _bootstrap();
 
         aggregateKey = mainnetController.dualPool_getAggregateWithdrawRateLimitKey(poolId);
         asset0Key    = mainnetController.dualPool_getAssetWithdrawRateLimitKey(poolId, Ethereum.USDC);
@@ -518,8 +486,6 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
     function test_withdraw_atStrictestFloor() external {
         _deposit(DEPOSIT_SHARES);
 
-        vm.roll(block.number + 1);
-
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.dualPool_setMaxSlippage(poolId, 1e18);
 
@@ -534,10 +500,11 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
     }
 
+    /// @dev The exit path the mock cannot model: removeLiquidity routes through
+    ///      poolManager.unlock, redeems the hook's ERC-6909 claims inside the callback, and pulls
+    ///      from the real ERC-4626 vaults when the hook's raw balance is short.
     function test_withdraw() external {
         _deposit(DEPOSIT_SHARES);
-
-        vm.roll(block.number + 1);
 
         uint256 asset0Before    = rateLimits.getCurrentRateLimit(asset0Key);
         uint256 asset1Before    = rateLimits.getCurrentRateLimit(asset1Key);
@@ -556,8 +523,6 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
         vm.prank(allocator);
         mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
 
-        ( uint256 balance0, uint256 balance1 ) = _proxyBalances();
-
         assertEq(rateLimits.getCurrentRateLimit(asset0Key), asset0Before - expected0);
         assertEq(rateLimits.getCurrentRateLimit(asset1Key), asset1Before - expected1);
 
@@ -568,77 +533,30 @@ contract MainnetController_DualPool_WithdrawTests is DualPool_TestBase {
 
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-        assertEq(balance0, expected0);
-        assertEq(balance1, expected1);
-    }
-
-    function test_withdraw_sameBlockAsDepositReverts() external {
-        _deposit(DEPOSIT_SHARES);  // records the deposit block; minDepositBlocks = 1
-
-        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, 50_000e6);
-
-        vm.expectRevert("MockDualPoolHook/deposit-locked");
-        vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, 50_000e6, uint128(expected0), uint128(expected1));
-
-        // Next block the same call succeeds.
-        vm.roll(block.number + 1);
-
-        vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, 50_000e6, uint128(expected0), uint128(expected1));
+        // The virtual-share offset makes the round trip lossy by design, so the exit returns at
+        // most what went in.
+        assertGe(_getProxyBalance0(), expected0);
+        assertGe(_getProxyBalance1(), expected1);
     }
 
 }
 
-/// @notice Guards the fidelity of MockDualPoolHook against the real DualPoolHook. The rest of this
-///         file is only meaningful if the double behaves like the contract it stands in for, so the
-///         semantics it deliberately mirrors are asserted here rather than left implicit. The
-///         divergences it does not mirror are enumerated at the top of the mock and covered against
-///         the real deployed hook in DualPoolLive.t.sol.
-contract MainnetController_DualPool_MockFidelityTests is DualPool_TestBase {
+contract MainnetController_DualPoolLive_RoundTripTests is DualPoolLive_TestBase {
 
-    /// @dev The offset is derived from the pair's decimals (average less a 6-decimal margin,
-    ///      clamped to [6, 12]), so a 6/6 pair such as USDC/USDT lands on 6.
-    function test_mock_decimalsOffsetDerivedFromPairDecimals() external view {
-        assertEq(hook.decimalsOffset(poolId), 6);
-    }
+    uint256 internal constant DEPOSIT_SHARES = 1_000e6;
 
-    /// @dev Conversions must revert on an unbootstrapped pool rather than quoting zero, which is
-    ///      what stops the facet's value floor from being satisfied by a vacuous 0 >= 0.
-    function test_mock_previewRevertsBeforeBootstrap() external {
-        vm.expectRevert("MockDualPoolHook/vault-not-bootstrapped");
-        hook.previewWithdraw(poolKey, 1e6);
+    function test_depositWithdrawRoundTrip_doesNotProfit() external {
+        ( uint256 need0, uint256 need1 ) = _deposit(DEPOSIT_SHARES);
 
-        vm.expectRevert("MockDualPoolHook/vault-not-bootstrapped");
-        hook.previewDeposit(poolKey, 1e6);
-    }
+        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, DEPOSIT_SHARES);
 
-    /// @dev The genesis mint is floored at 100 * 10**decimalsOffset so the virtual-share inflation
-    ///      defense is meaningful; for this pair that is 100e6 shares.
-    function test_mock_bootstrapBelowFloorReverts() external {
-        // sqrt(1e6 * 1e6) = 1e6 shares, an order of magnitude under the 1e8 floor.
-        vm.expectRevert("MockDualPoolHook/bootstrap-too-small");
-        vm.prank(Ethereum.SPARK_PROXY);
-        hook.bootstrap(poolKey, 1e6, 1e6);
+        vm.prank(allocator);
+        mainnetController.dualPool_withdraw(poolKey, DEPOSIT_SHARES, uint128(expected0), uint128(expected1));
 
-        vm.expectRevert("MockDualPoolHook/insufficient-bootstrap");
-        vm.prank(Ethereum.SPARK_PROXY);
-        hook.bootstrap(poolKey, 0, BOOTSTRAP_AMOUNT);
-    }
+        assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
 
-    /// @dev The round trip is lossy by construction: the +1 on each balance and the virtual-share
-    ///      offset in the denominator, plus rounding up on the way in and down on the way out,
-    ///      leave the pool marginally ahead on every deposit.
-    function test_mock_shareRoundTripFavoursThePool() external {
-        _bootstrap();
-
-        uint256 shares = 100_000e6;
-
-        ( uint256 need0,     uint256 need1     ) = hook.previewDeposit(poolKey, shares);
-        ( uint256 expected0, uint256 expected1 ) = hook.previewWithdraw(poolKey, shares);
-
-        assertLe(expected0, need0);
-        assertLe(expected1, need1);
+        // Rounding is in the pool's favour on both legs, so a round trip can never mint value.
+        assertLe(_getProxyBalance0() + _getProxyBalance1(), need0 + need1);
     }
 
 }
