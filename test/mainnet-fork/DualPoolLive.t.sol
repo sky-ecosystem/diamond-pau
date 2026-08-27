@@ -317,6 +317,9 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertGt(need0, 0);
         assertGt(need1, 0);
 
+        vm.expectEmit(address(mainnetController));
+        emit IDualPoolFacet.DualPoolDeposit(poolId, DEPOSIT_SHARES, uint128(need0), uint128(need1));
+
         vm.prank(allocator);
         mainnetController.dualPool_deposit(poolKey, DEPOSIT_SHARES, uint128(need0), uint128(need1));
 
