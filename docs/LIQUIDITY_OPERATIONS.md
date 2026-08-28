@@ -129,7 +129,7 @@ Uniswap V4 pools must be seeded with initial liquidity before use. Seeding must 
 
 DualPool pools are Uniswap V4 pools whose liquidity is provisioned just-in-time by the DualPoolHook from hook-held (and ERC-4626 rehypothecated) reserves. They cannot be onboarded to the `UniswapV4Facet` for liquidity provision because the hook blocks LP entry through the PositionManager (entry and exit go through the hook's own share-based functions), and the `UniswapV4Facet` only allows hookless pools for LP. The `DualPoolFacet` is a rate-limited LP allocator: the hook is owned by governance (the Spark Proxy) and its pools are permissionless, so pool lifecycle, configuration, and incident response are operated by governance directly on the hook, and the ALMProxy enters and exits as a regular LP. Swaps through DualPool pools go through `UniswapV4Facet.swap`, which takes the `PoolKey` from calldata; onboarding a DualPool pool for swaps means configuring the UniswapV4 facet's `maxSlippage` and swap rate limits for the same derived poolId.
 
-One facet instance is bound to one hook deployment via an immutable. The hook has no poolId to PoolKey registry, so interactive functions take the full `PoolKey` from calldata and derive `poolId = keccak256(abi.encode(key))`; `key.hooks` must match the facet's hook, so a fabricated key can only reach a disabled configuration.
+The hook is retrieved by the DualPoolFacet from the `PoolKey` via `key.hooks` while the pool id is derived from the `PoolKey` via `keccak256(abi.encode(poolKey))`. Since the `PoolKey` contains the token addresses and hook address, the hook address is not needed to derive rate limit keys, and the token addresses are not needed to derive the aggregate rate limit keys.
 
 ### Supported Operations
 
@@ -147,7 +147,7 @@ Hook-side operations (pool creation, genesis bootstrap, JIT distribution updates
 
 A DualPoolHook can be vulnerable to front-run and sandwich attacks around discrete ERC4626 yield events. It is recommended to limit onboarded pools to those that with hooks that only interact with ERC4626 vaults with non-discrete yield (i.e. Morpho).
 
-After satisfying a JIT liquidity provisioning for a swap, a DualPoolHook leaves an entire side of liquidity withdrawn from the ERC4626 vault (until the next swap in the opposite direction). Further, after two swap in opposing directions in a single unlock cycle, it leaves both sides of liquidity withdrawn from the ERC4626. Without swap fees, this becomes a low-cost DOS vector to continuously force the DualPoolHook's liquidity out of the vault, where it will not earn yield.
+After a DualPoolHook satisfies a JIT liquidity provisioning for a swap, the swap's input token is left idle in the PositionManager contract (until the next unlock, when it is claimed and deposited into the vault). Further, after two swap in opposing directions in a single unlock cycle, both sides of the swap are left as idle in the PositionManager contract (until the next unlock). This can be a low-cost DOS vector to continuously force a portion (or all) DualPoolHook's liquidity out of the vault, where it will not earn yield. Swap fees on the pool hook make this attack economically unviable, and are thus a requirement for all pools that are onboarded to the facet.
 
 ### Rate Limiting
 
@@ -167,7 +167,7 @@ Both allocator value paths are floored by the per-pool `maxSlippage` (zero disab
 - **`deposit`:** After the deposit, the minted shares must be redeemable (pro rata, via `previewWithdraw`) for at least `maxSlippage` of the value paid. This round-trip floor catches share-price skew (donation-style manipulation, vault share-price moves, hook mis-accounting) that per-token `amountMax` caps cannot express.
 - **`withdraw`:** The caller-supplied minimums must be worth at least `maxSlippage` of the `previewWithdraw` value of the shares burned.
 
-Each floor compares an aggregate value across both currencies rather than per-token amounts, because the token split of a deposit or withdrawal moves with pool price while the total value does not. Both legs are weighed equally after 18-decimal normalization, which assumes the pair is 1:1 correlated (i.e. 1.000000 USDC = 1.000000000000000000 USDT); this matches the aggregate rate limits and is an onboarding requirement, the same one the `UniswapV4Facet` documents.
+Each floor compares an aggregate value across both currencies rather than per-token amounts, because the token split of a deposit or withdrawal moves with pool price while the total value does not. Both legs are weighed equally after 18-decimal normalization, which assumes the pair is 1:1 correlated (i.e. 1.000000 USDT = 1.000000000000000000 USDS); this matches the aggregate rate limits and is an onboarding requirement, the same one the `UniswapV4Facet` documents.
 
 ### Requirements
 

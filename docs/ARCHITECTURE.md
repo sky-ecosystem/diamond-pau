@@ -136,33 +136,33 @@ contract for role checks. The following roles are defined:
 
 The system uses a facet-based architecture where each protocol integration is encapsulated in its own facet. All facets extend `Facet` (the abstract base contract), which provides the `onlyRole` modifier and inherits `ControllerSharedStorage` and `ReentrancyGuardUpgradeable` for reentrancy protection and shared state access (proxy, rate limits, access controls). Each facet has its own ERC-7201 namespaced storage domain and is wired to the Controller via dispatch configuration. Which facets are active depends on the deployment (e.g., a mainnet deployment may have different facets than an L2 deployment).
 
-| Facet                | Purpose                                        |
-| -------------------- | ---------------------------------------------- |
-| `AaveFacet`          | Aave protocol deposit/withdraw                 |
-| `AaveV4Facet`        | Aave V4 protocol deposit/withdraw              |
-| `BasinFacet`         | Grove Basin protocol deposit/withdraw          |
-| `CCTPFacet`          | Circle CCTP v2 USDC bridging                   |
-| `CentrifugeFacet`    | Centrifuge async vault (ERC-7887) interactions |
-| `CurveFacet`         | Curve StableSwap pool operations               |
-| `DAIUSDSFacet`       | DAI to USDS conversion                         |
-| `DualPoolFacet`      | Rate-limited LP allocation into DualPool pools |
-| `ERC4626Facet`       | ERC-4626 vault deposit/withdraw                |
-| `ERC7540Facet`       | ERC-7540 async vault interactions              |
-| `EthenaFacet`        | Ethena USDe/sUSDe operations                   |
-| `FarmFacet`          | SPK farming deposit/withdraw                   |
-| `LayerZeroFacet`     | LayerZero v2 cross-chain messaging             |
-| `MapleFacet`         | Maple token redemptions                        |
-| `MerklFacet`         | Merkl operator toggles                         |
-| `OTCFacet`           | Over-the-counter swap buffering                |
-| `PendleFacet`        | Pendle PT redemptions                          |
-| `PSM3Facet`          | PSM3 deposit/withdraw                          |
-| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
-| `SparkVaultFacet`    | Spark Vault asset withdrawals                  |
-| `SuperstateFacet`    | Superstate USTB subscriptions                  |
-| `TransferAssetFacet` | Generic ERC-20 transfers                       |
-| `UniswapV3Facet`     | Uniswap V3 positions and swaps                 |
-| `UniswapV4Facet`     | Uniswap V4 positions and swaps                 |
-| `USDSFacet`          | USDS minting/burning via vault                 |
-| `WEETHFacet`         | EtherFi weETH/eETH operations                  |
-| `WrapProxyETHFacet`  | WETH wrapping utility                          |
-| `WSTETHFacet`        | Lido wstETH deposit/withdraw                   |
+| Facet                | Purpose                                                  |
+| -------------------- | -------------------------------------------------------- |
+| `AaveFacet`          | Aave protocol deposit/withdraw                           |
+| `AaveV4Facet`        | Aave V4 protocol deposit/withdraw                        |
+| `BasinFacet`         | Grove Basin protocol deposit/withdraw                    |
+| `CCTPFacet`          | Circle CCTP v2 USDC bridging                             |
+| `CentrifugeFacet`    | Centrifuge async vault (ERC-7887) interactions           |
+| `CurveFacet`         | Curve StableSwap pool operations                         |
+| `DAIUSDSFacet`       | DAI to USDS conversion                                   |
+| `DualPoolFacet`      | Rate-limited LP allocation into UniswapV4 DualPool pools |
+| `ERC4626Facet`       | ERC-4626 vault deposit/withdraw                          |
+| `ERC7540Facet`       | ERC-7540 async vault interactions                        |
+| `EthenaFacet`        | Ethena USDe/sUSDe operations                             |
+| `FarmFacet`          | SPK farming deposit/withdraw                             |
+| `LayerZeroFacet`     | LayerZero v2 cross-chain messaging                       |
+| `MapleFacet`         | Maple token redemptions                                  |
+| `MerklFacet`         | Merkl operator toggles                                   |
+| `OTCFacet`           | Over-the-counter swap buffering                          |
+| `PendleFacet`        | Pendle PT redemptions                                    |
+| `PSM3Facet`          | PSM3 deposit/withdraw                                    |
+| `PSMFacet`           | Mainnet PSM USDS/USDC swaps                              |
+| `SparkVaultFacet`    | Spark Vault asset withdrawals                            |
+| `SuperstateFacet`    | Superstate USTB subscriptions                            |
+| `TransferAssetFacet` | Generic ERC-20 transfers                                 |
+| `UniswapV3Facet`     | Uniswap V3 positions and swaps                           |
+| `UniswapV4Facet`     | Uniswap V4 positions and swaps                           |
+| `USDSFacet`          | USDS minting/burning via vault                           |
+| `WEETHFacet`         | EtherFi weETH/eETH operations                            |
+| `WrapProxyETHFacet`  | WETH wrapping utility                                    |
+| `WSTETHFacet`        | Lido wstETH deposit/withdraw                             |

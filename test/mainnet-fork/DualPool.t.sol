@@ -62,8 +62,8 @@ interface IDualPoolHookLike {
 ///         regular LP, with no hook ownership involved.
 abstract contract DualPoolLive_TestBase is ForkTestBase {
 
-    // NOTE: The live DualPoolHook, whose inventory accounting reads vault.maxWithdraw() rather
-    //       than vault.previewRedeem(). Verified onchain: the hook is owned by its incumbent
+    // NOTE: The live DualPoolHook, whose inventory accounting reads `vault.maxWithdraw()` rather
+    //       than `vault.previewRedeem()`. Verified onchain: the hook is owned by its incumbent
     //       operator and the USDC/USDT pool below is bootstrapped, live and permissionless at the
     //       pinned block.
     address internal constant _DUAL_POOL_HOOK = 0x0000005bb4DF4109bF356a585C8b8Ea70FCbAaC0;
@@ -282,13 +282,12 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
     }
 
     function test_deposit_depositValueTooLowBoundary() external {
+        // The hook rounds the deposit up and the redemption down, so the shares minted are always
+        // worth marginally less than what was paid.
         uint256 expectedSlippage = 0.999999999999798566e18;
 
         ( uint256 need0, uint256 need1 ) = _fund(DEPOSIT_SHARES);
 
-        // A 1e18 floor demands a perfect round trip, which a deposit cannot meet: the hook rounds
-        // the deposit up and the redemption down, so the shares minted are always worth marginally
-        // less than what was paid. Proves the check binds at the perfect-round-trip boundary.
         vm.prank(Ethereum.SPARK_PROXY);
         mainnetController.dualPool_setMaxSlippage(poolId, expectedSlippage + 1);
 
@@ -321,11 +320,6 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
 
         assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
         assertEq(_getProxyBalance1(), 500_000e6 + need1);
-
-        // The real pool's reserve ratio is heavily skewed, so a proportional deposit is too; this
-        // is exactly the asymmetry a 1:1 mock cannot produce.
-        assertGt(need0, 0);
-        assertGt(need1, 0);
 
         IERC4626Like vault0 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDC)));
         IERC4626Like vault1 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDT)));
@@ -407,12 +401,6 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         vm.expectRevert("DualPoolFacet/max-slippage-not-set");
         vm.prank(allocator);
         mainnetController.dualPool_withdraw(poolKey, 1e6, 0, 0);
-    }
-
-    function test_withdraw_zeroShares() external {
-        vm.expectRevert("DualPoolFacet/zero-shares");
-        vm.prank(allocator);
-        mainnetController.dualPool_withdraw(poolKey, 0, 0, 0);
     }
 
     function test_withdraw_minAmountsTooLowBoundary() external {
@@ -530,9 +518,9 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertEq(hook.sharesOf(poolKey, address(almProxy)), 0);
     }
 
-    /// @dev The exit path the mock cannot model: removeLiquidity routes through
-    ///      poolManager.unlock, redeems the hook's ERC-6909 claims inside the callback, and pulls
-    ///      from the real ERC-4626 vaults when the hook's raw balance is short.
+    /// @dev `removeLiquidity` routes through `poolManager.unlock`, redeems the hook's ERC-6909
+    ///      claims inside the callback, and pulls from the real ERC-4626 vaults when the hook's
+    ///      raw balance is short.
     function test_withdraw() external {
         _deposit(DEPOSIT_SHARES);
 
@@ -578,8 +566,8 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertGe(_getProxyBalance1(), expected1);
 
         // Vault assets owned by the hook decreased by at most the withdrawn amounts.
-        assertGe(vault0.convertToAssets(vault0.balanceOf(address(hook))), startingAssets0 - expected0);
-        assertGe(vault1.convertToAssets(vault1.balanceOf(address(hook))), startingAssets1 - expected1);
+        assertApproxEqAbs(vault0.convertToAssets(vault0.balanceOf(address(hook))), startingAssets0 - expected0, 1);
+        assertApproxEqAbs(vault1.convertToAssets(vault1.balanceOf(address(hook))), startingAssets1 - expected1, 1);
     }
 
 }

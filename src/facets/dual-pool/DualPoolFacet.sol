@@ -156,8 +156,6 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
 
         require(_getFacetStorage().maxSlippages[poolId] != 0, "DualPoolFacet/max-slippage-not-set");
 
-        require(sharesToBurn != 0, "DualPoolFacet/zero-shares");
-
         address token0 = Currency.unwrap(key.currency0);
         address token1 = Currency.unwrap(key.currency1);
 
@@ -323,7 +321,7 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
 
     /// @notice 1e18-normalized sum of a currency pair amount.
     /// @dev    Weighting both legs equally assumes the tokens are pegged and valued equally
-    ///         (i.e. 1.000000 USDC = 1.000000000000000000 USDT), which is an onboarding
+    ///         (i.e. 1.000000 USDT = 1.000000000000000000 USDS), which is an onboarding
     ///         requirement for DualPool pools.
     function _normalizedSum(address token0, address token1, uint256 amount0, uint256 amount1)
         internal
