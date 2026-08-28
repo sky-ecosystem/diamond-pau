@@ -166,11 +166,6 @@ abstract contract ForkTestBase is DssTest {
     address internal constant _UNISWAP_V4_POSITION_MANAGER = 0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e;
     address internal constant _UNISWAP_V4_ROUTER           = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
 
-    // NOTE: The DualPool hook is etched at this address by the DualPool fork tests. The low 14
-    //       bits encode the Uniswap V4 hook permissions BEFORE_ADD_LIQUIDITY,
-    //       BEFORE_REMOVE_LIQUIDITY, BEFORE_SWAP, and BEFORE_SWAP_RETURNS_DELTA (0x0a88).
-    address internal constant _DUAL_POOL_HOOK = 0x4444000000000000000000000000000000000A88;
-
     address allocator      = Ethereum.ALM_RELAYER_MULTISIG;
     address allocatorAdmin = Ethereum.ALM_FREEZER_MULTISIG;
 
@@ -882,19 +877,12 @@ abstract contract ForkTestBase is DssTest {
         beacon.setIntegration("DAIUSDS_FACET", config);
     }
 
-    /// @dev The hook the DualPoolFacet is constructed against. Suites that exercise the real
-    ///      deployed hook override this to return its mainnet address; the default is the
-    ///      flag-encoded address the mock is etched at.
-    function _dualPoolHook() internal view virtual returns (address) {
-        return _DUAL_POOL_HOOK;
-    }
-
     function _wireDualPoolFacet() internal {
-        address dualPoolFacet = address(new DualPoolFacet({ hook_ : _dualPoolHook() }));
+        address dualPoolFacet = address(new DualPoolFacet());
 
         vm.label(dualPoolFacet, "DualPoolFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_VERSION.selector,
@@ -902,46 +890,41 @@ abstract contract ForkTestBase is DssTest {
         );
 
         wires[1] = IEnumerableIntegrations.Wire(
-            IMainnetControllerFull.dualPool_hook.selector,
-            IDualPoolFacet.hook.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_deposit.selector,
             IDualPoolFacet.deposit.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
+        wires[2] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_setMaxSlippage.selector,
             IDualPoolFacet.setMaxSlippage.selector
         );
 
-        wires[4] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_withdraw.selector,
             IDualPoolFacet.withdraw.selector
         );
 
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAggregateDepositRateLimitKey.selector,
             IDualPoolFacet.getAggregateDepositRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAggregateWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[6] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAssetDepositRateLimitKey.selector,
             IDualPoolFacet.getAssetDepositRateLimitKey.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getAssetWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
         );
 
-        wires[9] = IEnumerableIntegrations.Wire(
+        wires[8] = IEnumerableIntegrations.Wire(
             IMainnetControllerFull.dualPool_getMaxSlippage.selector,
             IDualPoolFacet.getMaxSlippage.selector
         );

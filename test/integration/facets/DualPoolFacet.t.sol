@@ -35,8 +35,6 @@ interface IControllerLike {
         uint128          amount1Min
     ) external;
 
-    function hook() external view returns (address);
-
     function getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32);
 
     function getAggregateWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32);
@@ -53,8 +51,6 @@ interface IControllerLike {
 
 contract Controller_DualPoolFacet_Tests is Integration_TestBase {
 
-    address internal hookAddress = makeAddr("hook");
-
     IControllerLike internal controller;
 
     PoolKey internal poolKey;
@@ -64,11 +60,11 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
     function setUp() external {
         controller = IControllerLike(_deploy());
 
-        address facet = address(new DualPoolFacet({ hook_ : hookAddress }));
+        address facet = address(new DualPoolFacet());
 
         vm.label(facet, "DualPoolFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
             IControllerLike.deposit.selector,
@@ -86,31 +82,26 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
-            IControllerLike.hook.selector,
-            IDualPoolFacet.hook.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
             IControllerLike.getAggregateDepositRateLimitKey.selector,
             IDualPoolFacet.getAggregateDepositRateLimitKey.selector
         );
 
-        wires[5] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IControllerLike.getAggregateWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
         );
 
-        wires[6] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IControllerLike.getAssetDepositRateLimitKey.selector,
             IDualPoolFacet.getAssetDepositRateLimitKey.selector
         );
 
-        wires[7] = IEnumerableIntegrations.Wire(
+        wires[6] = IEnumerableIntegrations.Wire(
             IControllerLike.getAssetWithdrawRateLimitKey.selector,
             IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
         );
 
-        wires[8] = IEnumerableIntegrations.Wire(
+        wires[7] = IEnumerableIntegrations.Wire(
             IControllerLike.getMaxSlippage.selector,
             IDualPoolFacet.getMaxSlippage.selector
         );
@@ -126,6 +117,7 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
 
+        address hook   = makeAddr("hook");
         address tokenA = makeAddr("tokenA");
         address tokenB = makeAddr("tokenB");
 
@@ -136,7 +128,7 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
             currency1   : Currency.wrap(token1),
             fee         : 100,
             tickSpacing : 1,
-            hooks       : IHooks(hookAddress)
+            hooks       : IHooks(hook)
         });
 
         poolId = keccak256(abi.encode(poolKey));
@@ -150,29 +142,6 @@ contract Controller_DualPoolFacet_Tests is Integration_TestBase {
         vm.expectRevert(
             abi.encodeWithSelector(IFacet.AccessControlUnauthorizedAccount.selector, caller, role)
         );
-    }
-
-    /**********************************************************************************************/
-    /*** Constructor Tests                                                                      ***/
-    /**********************************************************************************************/
-
-    function test_constructor_zeroHook() external {
-        vm.expectRevert("DualPoolFacet/zero-hook");
-        new DualPoolFacet(address(0));
-    }
-
-    function test_constructor() external {
-        DualPoolFacet facet = new DualPoolFacet(hookAddress);
-
-        assertEq(facet.hook(), hookAddress);
-    }
-
-    /**********************************************************************************************/
-    /*** Immutables Tests                                                                       ***/
-    /**********************************************************************************************/
-
-    function test_immutables() external {
-        assertEq(controller.hook(), hookAddress);
     }
 
     /**********************************************************************************************/

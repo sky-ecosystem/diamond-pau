@@ -247,8 +247,6 @@ interface IMainnetControllerFull is IController {
 
     function dualPool_VERSION() external pure returns (string memory);
 
-    function dualPool_hook() external view returns (address);
-
     function dualPool_deposit(
         PoolKey calldata key,
         uint256          sharesToMint,

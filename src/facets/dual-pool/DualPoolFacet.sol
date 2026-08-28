@@ -80,23 +80,6 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     string public constant override VERSION = "1.0.0";
 
     /**********************************************************************************************/
-    /*** Declarations                                                                           ***/
-    /**********************************************************************************************/
-
-    /// @inheritdoc IDualPoolFacet
-    address public immutable override hook;
-
-    /**********************************************************************************************/
-    /*** Constructor                                                                            ***/
-    /**********************************************************************************************/
-
-    constructor(address hook_) {
-        require(hook_ != address(0), "DualPoolFacet/zero-hook");
-
-        hook = hook_;
-    }
-
-    /**********************************************************************************************/
     /*** External Interactive Admin Functions                                                   ***/
     /**********************************************************************************************/
 
@@ -128,18 +111,19 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        bytes32 poolId = _requireOnboarded(key);
+        bytes32 poolId = keccak256(abi.encode(key));
 
-        address token0 = Currency.unwrap(key.currency0);
-        address token1 = Currency.unwrap(key.currency1);
+        require(_getFacetStorage().maxSlippages[poolId] != 0, "DualPoolFacet/max-slippage-not-set");
+
+        _approveTokens(key, amount0Max, amount1Max);
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        ApproveLib.approve(token0, proxy, hook, amount0Max);
-        ApproveLib.approve(token1, proxy, hook, amount1Max);
-
         ( uint256 amount0, uint256 amount1 )
             = _addLiquidity(key, proxy, sharesToMint, amount0Max, amount1Max);
+
+        address token0 = Currency.unwrap(key.currency0);
+        address token1 = Currency.unwrap(key.currency1);
 
         _decreaseRateLimit(
             getAggregateDepositRateLimitKey(poolId),
@@ -151,8 +135,7 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
 
         _requireDepositValue(key, poolId, token0, token1, sharesToMint, amount0, amount1);
 
-        ApproveLib.approve(token0, proxy, hook, 0);
-        ApproveLib.approve(token1, proxy, hook, 0);
+        _approveTokens(key, 0, 0);
 
         emit DualPoolDeposit(poolId, sharesToMint, amount0, amount1);
     }
@@ -169,7 +152,9 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        bytes32 poolId = _requireOnboarded(key);
+        bytes32 poolId = keccak256(abi.encode(key));
+
+        require(_getFacetStorage().maxSlippages[poolId] != 0, "DualPoolFacet/max-slippage-not-set");
 
         require(sharesToBurn != 0, "DualPoolFacet/zero-shares");
 
@@ -250,6 +235,14 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
+    function _approveTokens(PoolKey calldata key, uint256 amount0, uint256 amount1) internal {
+        address proxy = _getSharedControllerStorage().proxy;
+        address hook  = address(key.hooks);
+
+        ApproveLib.approve(Currency.unwrap(key.currency0), proxy, hook, amount0);
+        ApproveLib.approve(Currency.unwrap(key.currency1), proxy, hook, amount1);
+    }
+
     /// @notice Calls the hook's addLiquidity through the ALMProxy and measures what it actually
     ///         spent by balance difference, so the rate limits and value floor operate on real
     ///         amounts rather than the hook's return values. addLiquidity only pulls funds, so a
@@ -271,7 +264,7 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         uint256 startingBalance1 = _getBalance(token1, proxy);
 
         IALMProxy(proxy).doCall(
-            hook,
+            address(key.hooks),
             abi.encodeCall(
                 IDualPoolHookLike.addLiquidity,
                 (key, sharesToMint, amount0Max, amount1Max, block.timestamp)
@@ -301,7 +294,7 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         uint256 startingBalance1 = _getBalance(token1, proxy);
 
         IALMProxy(proxy).doCall(
-            hook,
+            address(key.hooks),
             abi.encodeCall(
                 IDualPoolHookLike.removeLiquidity,
                 (key, sharesToBurn, amount0Min, amount1Min, block.timestamp)
@@ -357,11 +350,15 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         internal
         view
     {
-        ( uint256 preview0, uint256 preview1 ) = IDualPoolHookLike(hook).previewWithdraw(key, sharesToMint);
+        ( uint256 preview0, uint256 preview1 ) =
+            IDualPoolHookLike(address(key.hooks)).previewWithdraw(key, sharesToMint);
 
         require(
             _normalizedSum(token0, token1, preview0, preview1) * 1e18 >=
-            _normalizedSum(token0, token1, amount0, amount1) * _getFacetStorage().maxSlippages[poolId],
+            (
+                _normalizedSum(token0, token1, amount0, amount1) *
+                _getFacetStorage().maxSlippages[poolId]
+            ),
             "DualPoolFacet/deposit-value-too-low"
         );
     }
@@ -382,24 +379,17 @@ contract DualPoolFacet is IDualPoolFacet, Facet {
         internal
         view
     {
-        ( uint256 preview0, uint256 preview1 ) = IDualPoolHookLike(hook).previewWithdraw(key, sharesToBurn);
+        ( uint256 preview0, uint256 preview1 ) =
+            IDualPoolHookLike(address(key.hooks)).previewWithdraw(key, sharesToBurn);
 
         require(
             _normalizedSum(token0, token1, amount0Min, amount1Min) * 1e18 >=
-            _normalizedSum(token0, token1, preview0, preview1) * _getFacetStorage().maxSlippages[poolId],
-            "DualPoolFacet/amountMins-too-low"
+            (
+                _normalizedSum(token0, token1, preview0, preview1) *
+                _getFacetStorage().maxSlippages[poolId]
+            ),
+            "DualPoolFacet/min-amounts-too-low"
         );
-    }
-
-    /// @notice Validates that a pool belongs to the facet's hook and is onboarded for allocator
-    ///         operations, which requires its max slippage to be configured. The _require*Value
-    ///         helpers re-read the config from storage when they run.
-    function _requireOnboarded(PoolKey calldata key) internal view returns (bytes32 poolId) {
-        require(address(key.hooks) == hook, "DualPoolFacet/invalid-hook");
-
-        poolId = keccak256(abi.encode(key));
-
-        require(_getFacetStorage().maxSlippages[poolId] != 0, "DualPoolFacet/max-slippage-not-set");
     }
 
 }

@@ -145,7 +145,9 @@ Hook-side operations (pool creation, genesis bootstrap, JIT distribution updates
 
 ### Important Limitations
 
-A DualPoolHook is vulnerable to front-run and sandwich attacks around discrete ERC4626 yield events. It is recommended to onboard DualPool facets with a DualPoolHook pairs to ERC4626 vaults with non-discrete yield (i.e. Morpho).
+A DualPoolHook can be vulnerable to front-run and sandwich attacks around discrete ERC4626 yield events. It is recommended to limit onboarded pools to those that with hooks that only interact with ERC4626 vaults with non-discrete yield (i.e. Morpho).
+
+After satisfying a JIT liquidity provisioning for a swap, a DualPoolHook leaves an entire side of liquidity withdrawn from the ERC4626 vault (until the next swap in the opposite direction). Further, after two swap in opposing directions in a single unlock cycle, it leaves both sides of liquidity withdrawn from the ERC4626. Without swap fees, this becomes a low-cost DOS vector to continuously force the DualPoolHook's liquidity out of the vault, where it will not earn yield.
 
 ### Rate Limiting
 
