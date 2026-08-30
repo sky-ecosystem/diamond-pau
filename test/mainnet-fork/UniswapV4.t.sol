@@ -1099,7 +1099,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_mintPositionUniswapV4_revertsWhenPoolHasHooks() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.uniswapV4_setTickLimits(_POOL_ID, -60, 60, 20);
         rateLimits.setUnlimitedRateLimitData(_aggregateDepositLimitKey);
@@ -1379,7 +1379,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenPoolHasHooks() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, -10, 0, 1_000_000e6);
 
         vm.mockCall(
@@ -1782,7 +1782,7 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     /*** decreaseLiquidityUniswapV4 Tests                                                       ***/
     /**********************************************************************************************/
 
-    function test_decreaseLiquidityUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_decreaseLiquidityUniswapV4_revertsWhenPoolHasHooks() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, -10, 0, 1_000_000e6);
 
         vm.mockCall(
@@ -3402,7 +3402,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_mintPositionUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_mintPositionUniswapV4_revertsWhenPoolHasHooks() external {
         vm.startPrank(SPARK_PROXY);
         mainnetController.uniswapV4_setTickLimits(_POOL_ID, 270_000, 280_000, 1_000);
         rateLimits.setUnlimitedRateLimitData(_aggregateDepositLimitKey);
@@ -3682,7 +3682,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
         });
     }
 
-    function test_increaseLiquidityUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_increaseLiquidityUniswapV4_revertsWhenPoolHasHooks() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, 276_000, 276_600, 1_000_000e6);
 
         vm.mockCall(
@@ -4115,7 +4115,7 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
     /*** decreaseLiquidityUniswapV4 Tests                                                       ***/
     /**********************************************************************************************/
 
-    function test_decreaseLiquidityUniswapV4_revertsWhenPoolHasHooks_xxx() external {
+    function test_decreaseLiquidityUniswapV4_revertsWhenPoolHasHooks() external {
         IncreasePositionResult memory minted = _setupLiquidity(_POOL_ID, 276_000, 276_600, 1_000_000e6);
 
         vm.mockCall(

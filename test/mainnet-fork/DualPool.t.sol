@@ -31,6 +31,12 @@ interface IERC4626Like {
 
 }
 
+interface IERC6909Like {
+
+    function balanceOf(address owner, uint256 id) external view returns (uint256);
+
+}
+
 /// @notice The subset of the deployed DualPoolHook the tests read directly. The facet declares its
 ///         own call surface; this is the observability surface around it.
 interface IDualPoolHookLike {
@@ -179,6 +185,17 @@ abstract contract DualPoolLive_TestBase is ForkTestBase {
         return IERC20Like(Ethereum.USDT).balanceOf(address(almProxy));
     }
 
+    function _getAssets(address token) internal view returns (uint256) {
+        uint256 claims = IERC6909Like(_UNISWAP_V4_POOL_MANAGER).balanceOf(
+            address(hook),
+            uint256(uint160(token))
+        );
+
+        IERC4626Like vault = IERC4626Like(hook.vaults(poolId, Currency.wrap(token)));
+
+        return vault.convertToAssets(vault.balanceOf(address(hook))) + claims;
+    }
+
 }
 
 contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
@@ -321,11 +338,8 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
         assertEq(_getProxyBalance1(), 500_000e6 + need1);
 
-        IERC4626Like vault0 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDC)));
-        IERC4626Like vault1 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDT)));
-
-        uint256 startingAssets0 = vault0.convertToAssets(vault0.balanceOf(address(hook)));
-        uint256 startingAssets1 = vault1.convertToAssets(vault1.balanceOf(address(hook)));
+        uint256 startingAssets0 = _getAssets(Ethereum.USDC);
+        uint256 startingAssets1 = _getAssets(Ethereum.USDT);
 
         vm.expectEmit(address(mainnetController));
         emit IDualPoolFacet.DualPoolDeposit(poolId, DEPOSIT_SHARES, uint128(need0), uint128(need1));
@@ -350,8 +364,8 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertEq(_getProxyBalance1(), 500_000e6);
 
         // Vault assets owned by the hook increased by the deposited amounts.
-        assertEq(vault0.convertToAssets(vault0.balanceOf(address(hook))), startingAssets0 + need0);
-        assertEq(vault1.convertToAssets(vault1.balanceOf(address(hook))), startingAssets1 + need1);
+        assertEq(_getAssets(Ethereum.USDC), startingAssets0 + need0);
+        assertEq(_getAssets(Ethereum.USDT), startingAssets1 + need1);
 
         // Approvals are reset after the pull.
         assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _DUAL_POOL_HOOK), 0);
@@ -538,11 +552,8 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertEq(expected0, 2_272_673.253281e6);
         assertEq(expected1, 7_656_142.985179e6);
 
-        IERC4626Like vault0 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDC)));
-        IERC4626Like vault1 = IERC4626Like(hook.vaults(poolId, Currency.wrap(Ethereum.USDT)));
-
-        uint256 startingAssets0 = vault0.convertToAssets(vault0.balanceOf(address(hook)));
-        uint256 startingAssets1 = vault1.convertToAssets(vault1.balanceOf(address(hook)));
+        uint256 startingAssets0 = _getAssets(Ethereum.USDC);
+        uint256 startingAssets1 = _getAssets(Ethereum.USDT);
 
         vm.expectEmit(address(mainnetController));
         emit IDualPoolFacet.DualPoolWithdraw(poolId, DEPOSIT_SHARES, expected0, expected1);
@@ -566,8 +577,8 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertGe(_getProxyBalance1(), expected1);
 
         // Vault assets owned by the hook decreased by at most the withdrawn amounts.
-        assertApproxEqAbs(vault0.convertToAssets(vault0.balanceOf(address(hook))), startingAssets0 - expected0, 1);
-        assertApproxEqAbs(vault1.convertToAssets(vault1.balanceOf(address(hook))), startingAssets1 - expected1, 1);
+        assertEq(_getAssets(Ethereum.USDC), startingAssets0 - expected0);
+        assertEq(_getAssets(Ethereum.USDT), startingAssets1 - expected1);
     }
 
 }
