@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
+import { PoolKey } from "../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
+
 import { IController }     from "../../src/interfaces/IController.sol";
 import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { INFATHaloFacet }  from "../../src/facets/nfat-halo/INFATHaloFacet.sol";
@@ -238,6 +240,44 @@ interface IMainnetControllerFull is IController {
     function daiUSDS_daiToUSDSSwapRateLimitKey() external pure returns (bytes32 key);
 
     function daiUSDS_usdsToDAISwapRateLimitKey() external pure returns (bytes32 key);
+
+    /**********************************************************************************************/
+    /*** DualPoolFacet actions                                                                  ***/
+    /**********************************************************************************************/
+
+    function dualPool_VERSION() external pure returns (string memory);
+
+    function dualPool_deposit(
+        PoolKey calldata key,
+        uint256          sharesToMint,
+        uint128          amount0Max,
+        uint128          amount1Max
+    ) external;
+
+    function dualPool_setMaxSlippage(bytes32 poolId, uint256 maxSlippage) external;
+
+    function dualPool_withdraw(
+        PoolKey calldata key,
+        uint256          sharesToBurn,
+        uint128          amount0Min,
+        uint128          amount1Min
+    ) external;
+
+    function dualPool_getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+
+    function dualPool_getAggregateWithdrawRateLimitKey(bytes32 poolId) external pure returns (bytes32 key);
+
+    function dualPool_getAssetDepositRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
+
+    function dualPool_getAssetWithdrawRateLimitKey(bytes32 poolId, address token)
+        external
+        pure
+        returns (bytes32 key);
+
+    function dualPool_getMaxSlippage(bytes32 poolId) external view returns (uint256);
 
     /**********************************************************************************************/
     /*** ERC4626Facet actions                                                                   ***/
@@ -755,7 +795,7 @@ interface IMainnetControllerFull is IController {
     )
         external;
 
-    function uniswapV4_swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
+    function uniswapV4_swap(PoolKey calldata poolKey, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external;
 
     function uniswapV4_getAggregateDepositRateLimitKey(bytes32 poolId)

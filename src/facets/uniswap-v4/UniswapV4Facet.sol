@@ -191,6 +191,8 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         PoolKey memory poolKey = _getPoolKeyFromPoolId(poolId);
 
+        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
+
         _requirePoolIdMatch(poolId, poolKey);
 
         bytes memory callData = _getMintCalldata({
@@ -244,6 +246,8 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         ( PoolKey memory poolKey, PositionInfo info ) = _getPoolKeyAndPositionInfo(tokenId);
 
+        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
+
         _requirePoolIdMatch(poolId, poolKey);
 
         // Since funds are being added to the position, the ticks of the position need to be checked
@@ -286,6 +290,8 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     {
         PoolKey memory poolKey = _getPoolKeyFromTokenId(tokenId);
 
+        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
+
         // NOTE: No need to check the token ownership here, as the proxy will be defined as the
         //       recipient of the tokens, so the worst case is that another account's position is
         //       decreased or closed by the proxy.
@@ -310,19 +316,22 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     }
 
     /// @inheritdoc IUniswapV4Facet
-    function swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin)
+    function swap(PoolKey calldata poolKey, address tokenIn, uint128 amountIn, uint128 amountOutMin)
         external
         override
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
+        // Deriving the id from the caller-supplied key gives the same id-to-key binding the
+        // PositionManager registry check provided, without requiring the pool to have a
+        // PositionManager position (hooked pools such as DualPool never do). A fabricated key
+        // hashes to an id with no max slippage or rate limits, so it can only reach a disabled
+        // configuration.
+        bytes32 poolId = keccak256(abi.encode(poolKey));
+
         uint256 maxSlippage = _getFacetStorage().maxSlippages[poolId];
 
         require(maxSlippage != 0, "UniswapV4Facet/max-slippage-not-set");
-
-        PoolKey memory poolKey = _getPoolKeyFromPoolId(poolId);
-
-        _requirePoolIdMatch(poolId, poolKey);
 
         require(
             tokenIn == Currency.unwrap(poolKey.currency0) ||
@@ -484,7 +493,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         // using a clamped subtraction.
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
         //       the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         uint256 aggregateAmount = _clampedSub(
             _getNormalizedBalance(token0, startingBalance0) +
             _getNormalizedBalance(token1, startingBalance1),
@@ -528,7 +537,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
         //       makes the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         uint256 aggregateAmount =
             _getNormalizedBalance(token0, amount0) +
             _getNormalizedBalance(token1, amount1);

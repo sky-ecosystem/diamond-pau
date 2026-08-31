@@ -402,7 +402,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
 
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
         //       the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         _decreaseRateLimit(getAggregateDepositRateLimitKey(pool),     aggregateAmount);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetDepositRateLimitKey(pool, token1), amounts.amount1);
@@ -466,7 +466,7 @@ contract UniswapV3Facet is IUniswapV3Facet, Facet {
 
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease,
         //       which makes the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         _decreaseRateLimit(getAggregateWithdrawRateLimitKey(pool),     valueWithdrawn);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token0), amounts.amount0);
         _decreaseRateLimit(getAssetWithdrawRateLimitKey(pool, token1), amounts.amount1);
