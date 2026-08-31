@@ -185,15 +185,17 @@ abstract contract DualPoolLive_TestBase is ForkTestBase {
         return IERC20Like(Ethereum.USDT).balanceOf(address(almProxy));
     }
 
-    function _getAssets(address token) internal view returns (uint256) {
-        uint256 claims = IERC6909Like(_UNISWAP_V4_POOL_MANAGER).balanceOf(
+    function _getHookAssets(address token) internal view returns (uint256 balance, uint256 claims, uint256 vaulted) {
+        balance = IERC20Like(token).balanceOf(address(hook));
+
+        claims = IERC6909Like(_UNISWAP_V4_POOL_MANAGER).balanceOf(
             address(hook),
             uint256(uint160(token))
         );
 
         IERC4626Like vault = IERC4626Like(hook.vaults(poolId, Currency.wrap(token)));
 
-        return vault.convertToAssets(vault.balanceOf(address(hook))) + claims;
+        vaulted = vault.convertToAssets(vault.balanceOf(address(hook)));
     }
 
 }
@@ -338,8 +340,16 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertEq(_getProxyBalance0(), 1_000_000e6 + need0);
         assertEq(_getProxyBalance1(), 500_000e6 + need1);
 
-        uint256 startingAssets0 = _getAssets(Ethereum.USDC);
-        uint256 startingAssets1 = _getAssets(Ethereum.USDT);
+        ( uint256 balance0, uint256 claims0, uint256 vaulted0 ) = _getHookAssets(Ethereum.USDC);
+        ( uint256 balance1, uint256 claims1, uint256 vaulted1 ) = _getHookAssets(Ethereum.USDT);
+
+        assertEq(balance0, 0);
+        assertEq(claims0,  444.137819e6);
+        assertEq(vaulted0, 293.480767e6);
+
+        assertEq(balance1, 0);
+        assertEq(claims1,  0);
+        assertEq(vaulted1, 2_484.876944e6);
 
         vm.expectEmit(address(mainnetController));
         emit IDualPoolFacet.DualPoolDeposit(poolId, DEPOSIT_SHARES, uint128(need0), uint128(need1));
@@ -363,9 +373,23 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         assertEq(_getProxyBalance0(), 1_000_000e6);
         assertEq(_getProxyBalance1(), 500_000e6);
 
+        uint256 startingAssets0 = balance0 + claims0 + vaulted0;
+        uint256 startingAssets1 = balance1 + claims1 + vaulted1;
+
+        ( balance0, claims0, vaulted0 ) = _getHookAssets(Ethereum.USDC);
+        ( balance1, claims1, vaulted1 ) = _getHookAssets(Ethereum.USDT);
+
+        assertEq(balance0, 0);
+        assertEq(claims0,  444.137819e6); // claims left unclaimed
+        assertEq(vaulted0, 293.480767e6 + need0);
+
+        assertEq(balance1, 0);
+        assertEq(claims1,  0);
+        assertEq(vaulted1, 2_484.876944e6 + need1);
+
         // Vault assets owned by the hook increased by the deposited amounts.
-        assertEq(_getAssets(Ethereum.USDC), startingAssets0 + need0);
-        assertEq(_getAssets(Ethereum.USDT), startingAssets1 + need1);
+        assertEq(balance0 + claims0 + vaulted0, startingAssets0 + need0);
+        assertEq(balance1 + claims1 + vaulted1, startingAssets1 + need1);
 
         // Approvals are reset after the pull.
         assertEq(IERC20Like(Ethereum.USDC).allowance(address(almProxy), _DUAL_POOL_HOOK), 0);
@@ -552,8 +576,16 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertEq(expected0, 2_272_673.253281e6);
         assertEq(expected1, 7_656_142.985179e6);
 
-        uint256 startingAssets0 = _getAssets(Ethereum.USDC);
-        uint256 startingAssets1 = _getAssets(Ethereum.USDT);
+        ( uint256 balance0, uint256 claims0, uint256 vaulted0 ) = _getHookAssets(Ethereum.USDC);
+        ( uint256 balance1, uint256 claims1, uint256 vaulted1 ) = _getHookAssets(Ethereum.USDT);
+
+        assertEq(balance0, 0);
+        assertEq(claims0,  444.137819e6);
+        assertEq(vaulted0, 2_272_966.734049e6);
+
+        assertEq(balance1, 0);
+        assertEq(claims1,  0);
+        assertEq(vaulted1, 7_658_627.862124e6);
 
         vm.expectEmit(address(mainnetController));
         emit IDualPoolFacet.DualPoolWithdraw(poolId, DEPOSIT_SHARES, expected0, expected1);
@@ -576,9 +608,23 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
         assertGe(_getProxyBalance0(), expected0);
         assertGe(_getProxyBalance1(), expected1);
 
+        uint256 startingAssets0 = balance0 + claims0 + vaulted0;
+        uint256 startingAssets1 = balance1 + claims1 + vaulted1;
+
+        ( balance0, claims0, vaulted0 ) = _getHookAssets(Ethereum.USDC);
+        ( balance1, claims1, vaulted1 ) = _getHookAssets(Ethereum.USDT);
+
+        assertEq(balance0, 0);
+        assertEq(claims0,  0);
+        assertEq(vaulted0, 2_272_966.734049e6 + 444.137819e6 - expected0); // claims claimed
+
+        assertEq(balance1, 0);
+        assertEq(claims1,  0);
+        assertEq(vaulted1, 7_658_627.862124e6 - expected1);
+
         // Vault assets owned by the hook decreased by at most the withdrawn amounts.
-        assertEq(_getAssets(Ethereum.USDC), startingAssets0 - expected0);
-        assertEq(_getAssets(Ethereum.USDT), startingAssets1 - expected1);
+        assertEq(balance0 + claims0 + vaulted0, startingAssets0 - expected0);
+        assertEq(balance1 + claims1 + vaulted1, startingAssets1 - expected1);
     }
 
 }
