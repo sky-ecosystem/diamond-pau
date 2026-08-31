@@ -380,7 +380,7 @@ contract MainnetController_DualPoolLive_DepositTests is DualPoolLive_TestBase {
         ( balance1, claims1, vaulted1 ) = _getHookAssets(Ethereum.USDT);
 
         assertEq(balance0, 0);
-        assertEq(claims0,  444.137819e6); // claims left unclaimed
+        assertEq(claims0,  444.137819e6); // Claims left unclaimed.
         assertEq(vaulted0, 293.480767e6 + need0);
 
         assertEq(balance1, 0);
@@ -616,7 +616,7 @@ contract MainnetController_DualPoolLive_WithdrawTests is DualPoolLive_TestBase {
 
         assertEq(balance0, 0);
         assertEq(claims0,  0);
-        assertEq(vaulted0, 2_272_966.734049e6 + 444.137819e6 - expected0); // claims claimed
+        assertEq(vaulted0, 2_272_966.734049e6 + 444.137819e6 - expected0); // Claims claimed.
 
         assertEq(balance1, 0);
         assertEq(claims1,  0);
