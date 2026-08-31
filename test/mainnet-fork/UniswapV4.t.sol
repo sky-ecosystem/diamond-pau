@@ -1100,23 +1100,19 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
     }
 
     function test_mintPositionUniswapV4_revertsWhenPoolHasHooks() external {
-        vm.startPrank(SPARK_PROXY);
+        vm.prank(SPARK_PROXY);
         mainnetController.uniswapV4_setTickLimits(_POOL_ID, -60, 60, 20);
-        rateLimits.setUnlimitedRateLimitData(_aggregateDepositLimitKey);
-        rateLimits.setUnlimitedRateLimitData(_token0DepositLimitKey);
-        rateLimits.setUnlimitedRateLimitData(_token1DepositLimitKey);
-        vm.stopPrank();
 
         vm.mockCall(
             _UNISWAP_V4_POSITION_MANAGER,
             abi.encodeCall(IPositionManagerLike.poolKeys, (bytes25(_POOL_ID))),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDC),
-                    currency1    : Currency.wrap(Ethereum.USDT),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDC),
+                    currency1   : Currency.wrap(Ethereum.USDT),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 })
             )
         );
@@ -1387,11 +1383,11 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
             abi.encodeCall(IPositionManagerLike.getPoolAndPositionInfo, (minted.tokenId)),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDC),
-                    currency1    : Currency.wrap(Ethereum.USDT),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDC),
+                    currency1   : Currency.wrap(Ethereum.USDT),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 }),
                 PositionInfo.wrap(0)
             )
@@ -1790,11 +1786,11 @@ contract MainnetController_UniswapV4_USDC_USDT_Tests is UniswapV4_USDC_USDT_Test
             abi.encodeCall(IPositionManagerLike.getPoolAndPositionInfo, (minted.tokenId)),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDC),
-                    currency1    : Currency.wrap(Ethereum.USDT),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDC),
+                    currency1   : Currency.wrap(Ethereum.USDT),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 }),
                 PositionInfo.wrap(0)
             )
@@ -3403,23 +3399,19 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
     }
 
     function test_mintPositionUniswapV4_revertsWhenPoolHasHooks() external {
-        vm.startPrank(SPARK_PROXY);
+        vm.prank(SPARK_PROXY);
         mainnetController.uniswapV4_setTickLimits(_POOL_ID, 270_000, 280_000, 1_000);
-        rateLimits.setUnlimitedRateLimitData(_aggregateDepositLimitKey);
-        rateLimits.setUnlimitedRateLimitData(_token0DepositLimitKey);
-        rateLimits.setUnlimitedRateLimitData(_token1DepositLimitKey);
-        vm.stopPrank();
 
         vm.mockCall(
             _UNISWAP_V4_POSITION_MANAGER,
             abi.encodeCall(IPositionManagerLike.poolKeys, (bytes25(_POOL_ID))),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDT),
-                    currency1    : Currency.wrap(Ethereum.USDS),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDT),
+                    currency1   : Currency.wrap(Ethereum.USDS),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 })
             )
         );
@@ -3690,11 +3682,11 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
             abi.encodeCall(IPositionManagerLike.getPoolAndPositionInfo, (minted.tokenId)),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDT),
-                    currency1    : Currency.wrap(Ethereum.USDS),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDT),
+                    currency1   : Currency.wrap(Ethereum.USDS),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 }),
                 PositionInfo.wrap(0)
             )
@@ -4123,11 +4115,11 @@ contract MainnetController_UniswapV4_USDT_USDS_Tests is UniswapV4_USDT_USDS_Test
             abi.encodeCall(IPositionManagerLike.getPoolAndPositionInfo, (minted.tokenId)),
             abi.encode(
                 PoolKey({
-                    currency0    : Currency.wrap(Ethereum.USDT),
-                    currency1    : Currency.wrap(Ethereum.USDS),
-                    fee          : 0,
-                    tickSpacing  : 1,
-                    hooks        : IHooks(address(1))
+                    currency0   : Currency.wrap(Ethereum.USDT),
+                    currency1   : Currency.wrap(Ethereum.USDS),
+                    fee         : 0,
+                    tickSpacing : 1,
+                    hooks       : IHooks(address(1))
                 }),
                 PositionInfo.wrap(0)
             )
