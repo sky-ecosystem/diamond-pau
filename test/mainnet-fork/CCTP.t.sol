@@ -15,10 +15,11 @@ import { CCTPFacet } from "../../src/facets/cctp/CCTPFacet.sol";
 
 import { ICCTPFacet } from "../../src/facets/cctp/ICCTPFacet.sol";
 
-import { IAccessControls }         from "../../src/interfaces/IAccessControls.sol";
-import { IALMProxy }               from "../../src/interfaces/IALMProxy.sol";
-import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
-import { IRateLimits }             from "../../src/interfaces/IRateLimits.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
+
+import { BeaconConfig } from "../../src/libraries/BeaconConfig.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
 import { PAUFactory } from "../../src/PAUFactory.sol";
@@ -390,10 +391,14 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         vm.stopPrank();
 
+        address cctpFacet = address(new CCTPFacet(Base.CCTP_TOKEN_MESSENGER, Base.USDC));
+
+        vm.label(cctpFacet, "CCTPFacet");
+
         vm.startPrank(skyAdmin);
 
         // Facet wiring
-        _wireForeignCCTPFacet();
+        BeaconConfig.setCCTPIntegration(address(foreignBeacon), cctpFacet);
 
         vm.stopPrank();
 
@@ -467,46 +472,6 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
     function _setControllerEntered() internal override {
         vm.store(address(foreignController), _REENTRANCY_GUARD_SLOT, _REENTRANCY_GUARD_ENTERED);
-    }
-
-    function _wireForeignCCTPFacet() internal {
-        address cctpFacet = address(new CCTPFacet(Base.CCTP_TOKEN_MESSENGER, Base.USDC));
-
-        vm.label(cctpFacet, "CCTPFacet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cctp_setDomainParameters.selector,
-            ICCTPFacet.setDomainParameters.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cctp_transfer.selector,
-            ICCTPFacet.transfer.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cctp_toCCTPRateLimitKey.selector,
-            ICCTPFacet.toCCTPRateLimitKey.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cctp_getDomainParameters.selector,
-            ICCTPFacet.getDomainParameters.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.cctp_getToDomainRateLimitKey.selector,
-            ICCTPFacet.getToDomainRateLimitKey.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : cctpFacet,
-            wires : wires
-        });
-
-        foreignBeacon.setIntegration("CCTP_FACET", config);
     }
 
 }
