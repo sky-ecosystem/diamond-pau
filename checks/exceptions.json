@@ -1,0 +1,45 @@
+{
+  "_comment": [
+    "Grandfathered rulebook deviations in already-audited facets. Each entry is scoped",
+    "to one rule + one file. New facets get NO entries here without a rulebook-change",
+    "PR (this file lives under checks/, which facet PRs may not touch — G-2). Every",
+    "entry must cite the in-repo rationale."
+  ],
+  "exceptions": [
+    {
+      "rule": "V-4",
+      "path": "src/facets/ethena/EthenaFacet.sol",
+      "reason": "prepareMint/prepareBurn intentionally leave a standing approval to the Ethena minter — async off-chain RFQ has no synchronous leg to zero against. Documented in docs/SECURITY.md (async integrations) and audited."
+    },
+    {
+      "rule": "S-6",
+      "path": "src/facets/uniswap-v3/UniswapV3Facet.sol",
+      "reason": "Imports dss-allocator UniV3 math from lib/ — predates the shim rule; audited."
+    },
+    {
+      "rule": "S-6",
+      "path": "src/facets/uniswap-v3/UniswapV3Utils.sol",
+      "reason": "Pure math library vendored against lib/ imports — predates the shim rule; audited."
+    },
+    {
+      "rule": "V-8",
+      "path": "src/facets/uniswap-v3/UniswapV3Facet.sol",
+      "reason": "Tick-math assembly predates the assembly rule; audited."
+    },
+    {
+      "rule": "V-8",
+      "path": "src/facets/uniswap-v3/UniswapV3Utils.sol",
+      "reason": "Tick-math assembly predates the assembly rule; audited."
+    },
+    {
+      "rule": "S-6",
+      "path": "src/facets/uniswap-v4/UniswapV4Facet.sol",
+      "reason": "Imports v4 types/libraries from lib/ — v4 PoolKey/BalanceDelta types cannot be shimmed meaningfully; audited."
+    },
+    {
+      "rule": "S-6",
+      "path": "src/facets/layer-zero/LayerZeroFacet.sol",
+      "reason": "Imports LayerZero message types from lib/ — wire-format structs cannot be shimmed meaningfully; audited."
+    }
+  ]
+}
