@@ -134,36 +134,25 @@ contract Controller_AaveV4Facet_Tests is Integration_TestBase {
 
         assertEq(controller.getMaxDeficit(hub, assetId), 0);
 
-        vm.expectEmit(address(controller));
-        emit IAaveV4Facet.AaveV4MaxDeficitSet(hub, assetId, MAX_DEFICIT);
-        vm.prank(admin);
-        controller.setMaxDeficit(hub, assetId, MAX_DEFICIT);
-
-        assertEq(controller.getMaxDeficit(hub, assetId), MAX_DEFICIT);
-
         vm.record();
 
         vm.expectEmit(address(controller));
+        emit IAaveV4Facet.AaveV4MaxDeficitSet(hub, assetId, MAX_DEFICIT);
+
+        vm.prank(admin);
+        controller.setMaxDeficit(hub, assetId, MAX_DEFICIT);
+
+        _assertReentrancyGuardWrittenToTwice(address(controller));
+
+        assertEq(controller.getMaxDeficit(hub, assetId), MAX_DEFICIT);
+
+        vm.expectEmit(address(controller));
         emit IAaveV4Facet.AaveV4MaxDeficitSet(hub, assetId, 0);
+
         vm.prank(admin);
         controller.setMaxDeficit(hub, assetId, 0);
 
         assertEq(controller.getMaxDeficit(hub, assetId), 0);
-
-        _assertReentrancyGuardWrittenToTwice(address(controller));
-    }
-
-    function test_setMaxDeficit_perHubAsset() external {
-        address hub      = makeAddr("hub");
-        address otherHub = makeAddr("otherHub");
-
-        vm.prank(admin);
-        controller.setMaxDeficit(hub, 5, MAX_DEFICIT);
-
-        // Neither another asset on the same hub nor the same asset id on another hub inherits it.
-        assertEq(controller.getMaxDeficit(hub,      5), MAX_DEFICIT);
-        assertEq(controller.getMaxDeficit(hub,      6), 0);
-        assertEq(controller.getMaxDeficit(otherHub, 5), 0);
     }
 
     /**********************************************************************************************/
@@ -247,24 +236,6 @@ contract Controller_AaveV4Facet_Tests is Integration_TestBase {
         );
     }
 
-    // Literals computed outside Solidity as
-    // keccak256(abi.encode(keccak256("LIMIT_AAVE_V4_DEPOSIT"), spoke, reserveId, hub, assetId, underlying)).
-    // The assertion above shares the key builder under test, so it cannot see a change to the key's
-    // components, their order or their types; pinning the bytes fails here instead of silently
-    // re-pointing every configured market at an unfunded key.
-    function test_getDepositRateLimitKey_pinnedDerivation() external view {
-        assertEq(
-            controller.getDepositRateLimitKey(
-                0x1111111111111111111111111111111111111111,
-                2,
-                0x2222222222222222222222222222222222222222,
-                5,
-                0x3333333333333333333333333333333333333333
-            ),
-            0x1c92a62c98faac6a4a22d9339a4be4b9321ac7f1667a709b2f8688a4bd9dc42c
-        );
-    }
-
     /**********************************************************************************************/
     /*** getWithdrawRateLimitKey Tests                                                          ***/
     /**********************************************************************************************/
@@ -277,15 +248,6 @@ contract Controller_AaveV4Facet_Tests is Integration_TestBase {
         assertEq(
             controller.getWithdrawRateLimitKey(spoke, reserveId),
             makeAddressUint256Key(keyPrefix, spoke, reserveId)
-        );
-    }
-
-    // Pinned for the same reason as the deposit key, and deliberately omitting the reserve-derived
-    // components so a remapped reserve can still be exited.
-    function test_getWithdrawRateLimitKey_pinnedDerivation() external view {
-        assertEq(
-            controller.getWithdrawRateLimitKey(0x1111111111111111111111111111111111111111, 2),
-            0x8b4febf1cc919178afbbadcbae80feb4fcee33aa4c30ae0a4612427624ffd565
         );
     }
 

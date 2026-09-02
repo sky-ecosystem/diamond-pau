@@ -100,21 +100,21 @@ Together with the deposit rate-limit key, the nonzero `maxSlippage` acts as the 
 
 ### Views
 
-| Function | Returns |
-| --- | --- |
+| Function                                                             | Returns                                                                                                        |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `getDepositRateLimitKey(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey(LIMIT_AAVE_V4_DEPOSIT, spoke, reserveId, hub, assetId, underlying)` |
-| `getWithdrawRateLimitKey(spoke, reserveId)` | `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)` |
-| `getMaxDeficit(hub, assetId)` | Configured deficit tolerance in RAY, `0` when unset |
-| `getMaxSlippage(spoke, reserveId)` | Configured tolerance, `0` when unset |
+| `getWithdrawRateLimitKey(spoke, reserveId)`                          | `makeAddressUint256Key(LIMIT_AAVE_V4_WITHDRAW, spoke, reserveId)`                                              |
+| `getMaxDeficit(hub, assetId)`                                        | Configured deficit tolerance in RAY, `0` when unset                                                            |
+| `getMaxSlippage(spoke, reserveId)`                                   | Configured tolerance, `0` when unset                                                                           |
 
 ---
 
 ## Rate Limit Keys
 
-| Limit | Key tuple | Helper |
-| --- | --- | --- |
-| `LIMIT_AAVE_V4_DEPOSIT` | `(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey` |
-| `LIMIT_AAVE_V4_WITHDRAW` | `(spoke, reserveId)` | `makeAddressUint256Key` |
+| Limit                    | Key tuple                                      | Helper                                      |
+| ------------------------ | ---------------------------------------------- | ------------------------------------------- |
+| `LIMIT_AAVE_V4_DEPOSIT`  | `(spoke, reserveId, hub, assetId, underlying)` | `makeAddressUint256AddressUint16AddressKey` |
+| `LIMIT_AAVE_V4_WITHDRAW` | `(spoke, reserveId)`                           | `makeAddressUint256Key`                     |
 
 `withdraw` refills the deposit key by the withdrawn amount (`_tryIncreaseRateLimit`), so capital rotated out of a market restores deposit headroom for that market without governance action.
 
@@ -156,18 +156,18 @@ All interactive functions are `nonReentrant`.
 
 ## Failure Modes
 
-| Revert | Origin | Cause |
-| --- | --- | --- |
-| `AaveV4Facet/max-slippage-not-set` | facet | `deposit` on a market with no configured `maxSlippage` |
-| `AaveV4Facet/deficit-too-high` | facet | `deposit` while the hub asset's deficit exceeds the configured tolerance |
-| `AaveV4Facet/slippage-too-high` | facet | credited position below `amount * maxSlippage / 1e18` |
-| `AaveV4Facet/hub-zero-address` | facet | `setMaxDeficit` with zero hub |
-| `AaveV4Facet/spoke-zero-address` | facet | `setMaxSlippage` with zero spoke |
-| `RateLimits/rate-limit-exceeded` | rate limits | deposit or withdraw exceeding the configured limit, or key unconfigured |
-| `InvalidAmount()` | Aave V4 hub | zero-amount supply or withdraw |
-| `InsufficientLiquidity(...)` | Aave V4 hub | withdrawal exceeding available hub liquidity |
-| `ReservePaused()` / `ReserveFrozen()` | Aave V4 spoke | reserve paused (blocks both); frozen blocks supply only |
-| `SpokeNotActive()` / `SpokeHalted()` | Aave V4 hub | hub-side spoke deactivation or halt |
+| Revert                                | Origin        | Cause                                                                    |
+| ------------------------------------- | ------------- | ------------------------------------------------------------------------ |
+| `AaveV4Facet/max-slippage-not-set`    | facet         | `deposit` on a market with no configured `maxSlippage`                   |
+| `AaveV4Facet/deficit-too-high`        | facet         | `deposit` while the hub asset's deficit exceeds the configured tolerance |
+| `AaveV4Facet/slippage-too-high`       | facet         | credited position below `amount * maxSlippage / 1e18`                    |
+| `AaveV4Facet/hub-zero-address`        | facet         | `setMaxDeficit` with zero hub                                            |
+| `AaveV4Facet/spoke-zero-address`      | facet         | `setMaxSlippage` with zero spoke                                         |
+| `RateLimits/rate-limit-exceeded`      | rate limits   | deposit or withdraw exceeding the configured limit, or key unconfigured  |
+| `InvalidAmount()`                     | Aave V4 hub   | zero-amount supply or withdraw                                           |
+| `InsufficientLiquidity(...)`          | Aave V4 hub   | withdrawal exceeding available hub liquidity                             |
+| `ReservePaused()` / `ReserveFrozen()` | Aave V4 spoke | reserve paused (blocks both); frozen blocks supply only                  |
+| `SpokeNotActive()` / `SpokeHalted()`  | Aave V4 hub   | hub-side spoke deactivation or halt                                      |
 
 ---
 

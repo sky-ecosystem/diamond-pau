@@ -147,8 +147,10 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
         // into the pool at par. The tolerance defaults to zero, so any deficit blocks the deposit
         // until governance opts into an amount for that Hub asset.
         require(
-            IAaveV4HubLike(reserve.hub).getAssetDeficitRay(reserve.assetId)
-                <= $.maxDeficits[reserve.hub][reserve.assetId],
+            (
+                IAaveV4HubLike(reserve.hub).getAssetDeficitRay(reserve.assetId)
+                <= $.maxDeficits[reserve.hub][reserve.assetId]
+            ),
             "AaveV4Facet/deficit-too-high"
         );
 

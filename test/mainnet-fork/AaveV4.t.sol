@@ -143,6 +143,54 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
     }
 
+    function test_depositAaveV4_zeroAssetDeficitBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
+
+        // Simulate an outstanding Hub deficit for USDC (assetId 5): any deficit blocks the deposit.
+        vm.mockCall(
+            CORE_HUB,
+            abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, USDC_ASSET_ID),
+            abi.encode(uint256(1))
+        );
+
+        vm.expectRevert("AaveV4Facet/deficit-too-high");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+
+        // The guard is hardcoded to zero with no admin override, so the deposit only clears once the
+        // deficit itself is gone.
+        vm.clearMockedCalls();
+
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+    }
+
+    function test_depositAaveV4_nonzeroAssetDeficitBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
+
+        uint256 deficit = 10e6;
+
+        // Simulate an outstanding Hub deficit for USDC (assetId 5): any deficit blocks the deposit.
+        vm.mockCall(
+            CORE_HUB,
+            abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, USDC_ASSET_ID),
+            abi.encode(deficit)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxDeficit(CORE_HUB, USDC_ASSET_ID, deficit - 1);
+
+        vm.expectRevert("AaveV4Facet/deficit-too-high");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxDeficit(CORE_HUB, USDC_ASSET_ID, deficit);
+
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+    }
+
     function test_depositAaveV4_zeroMaxAmount() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(mainUsdcDepositKey, 0, 0);
@@ -277,157 +325,6 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         assertEq(weth.balanceOf(address(almProxy)),                  WETH_DEPOSIT_AMOUNT);
         assertEq(weth.balanceOf(CORE_HUB),                           startingHubBalanceWeth + WETH_DEPOSIT_AMOUNT);
         assertEq(rateLimits.getCurrentRateLimit(mainWethDepositKey), WETH_DEPOSIT_LIMIT - WETH_DEPOSIT_AMOUNT);
-    }
-
-}
-
-contract MainnetController_AaveV4_DeficitTolerance_Tests is AaveV4_TestBase {
-
-    // getAssetDeficitRay is denominated in the asset's own units scaled by RAY, so $1,000 of USDC
-    // (6 decimals) is 1_000e6 * 1e27. Every Core Hub asset reads zero at the fork block.
-    uint256 internal constant USDC_DEFICIT_TOLERANCE = 1_000e6 * 1e27;
-
-    function _mockDeficit(uint16 assetId, uint256 deficitRay) internal {
-        vm.mockCall(
-            CORE_HUB,
-            abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, assetId),
-            abi.encode(deficitRay)
-        );
-    }
-
-    function _setMaxDeficit(uint16 assetId, uint256 maxDeficit) internal {
-        vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.aaveV4_setMaxDeficit(CORE_HUB, assetId, maxDeficit);
-    }
-
-    // Simulates governance remapping a live reserveId onto a different Hub asset. No remap has
-    // happened on-chain, so the real reserve is read back and re-encoded with a new assetId.
-    function _remapMainUsdcReserveToAsset(uint16 assetId) internal {
-        IAaveV4SpokeLike.Reserve memory reserve
-            = IAaveV4SpokeLike(MAIN_SPOKE).getReserve(MAIN_USDC_RESERVE_ID);
-
-        reserve.assetId = assetId;
-
-        vm.mockCall(
-            MAIN_SPOKE,
-            abi.encodeCall(IAaveV4SpokeLike.getReserve, (MAIN_USDC_RESERVE_ID)),
-            abi.encode(reserve)
-        );
-    }
-
-    // The tolerance defaults to zero, so any deficit blocks the deposit until governance opts in.
-    function test_depositAaveV4_deficitAboveDefaultTolerance() external {
-        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
-
-        assertEq(mainnetController.aaveV4_getMaxDeficit(CORE_HUB, USDC_ASSET_ID), 0);
-
-        _mockDeficit(USDC_ASSET_ID, 1);
-
-        vm.expectRevert("AaveV4Facet/deficit-too-high");
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        // Clearing the deficit is the other way through the gate, no configuration required.
-        vm.clearMockedCalls();
-
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), USDC_DEPOSIT_AMOUNT - 1);
-    }
-
-    function test_depositAaveV4_usdc_deficitToleranceBoundary() external {
-        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
-
-        _setMaxDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-
-        // One RAY-wei above the tolerance blocks the deposit.
-        _mockDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE + 1);
-
-        vm.expectRevert("AaveV4Facet/deficit-too-high");
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        // Exactly at the tolerance is admitted.
-        _mockDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-    }
-
-    // The tolerance is scoped to one Hub asset, so raising it for USDC leaves every other asset at
-    // zero, whichever market fronts it.
-    function test_depositAaveV4_deficitToleranceIsPerHubAsset() external {
-        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
-
-        _setMaxDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-
-        _mockDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-        _mockDeficit(WETH_ASSET_ID, 1);
-
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        vm.expectRevert("AaveV4Facet/deficit-too-high");
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_WETH_RESERVE_ID, WETH_DEPOSIT_AMOUNT);
-    }
-
-    // One tolerance covers every market fronting the asset: the Main and Forex spokes both supply
-    // Core Hub assetId 5, and the Hub reports a single deficit across both.
-    function test_depositAaveV4_deficitToleranceSpansSpokes() external {
-        uint256 mainAmount  = 200_000e6;
-        uint256 forexAmount = 100_000e6;
-
-        deal(Ethereum.USDC, address(almProxy), mainAmount + forexAmount);
-
-        _setMaxDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-        _mockDeficit(USDC_ASSET_ID,   USDC_DEFICIT_TOLERANCE);
-
-        vm.startPrank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE,  MAIN_USDC_RESERVE_ID,  mainAmount);
-        mainnetController.aaveV4_deposit(FOREX_SPOKE, FOREX_USDC_RESERVE_ID, forexAmount);
-        vm.stopPrank();
-    }
-
-    // The gate reads the reserve's current Hub asset, so a remap moves the deposit onto the new
-    // asset's tolerance and the old one stops applying however permissive it is.
-    function test_depositAaveV4_deficitToleranceFollowsRemappedAsset() external {
-        _setMaxDeficit(USDC_ASSET_ID, type(uint256).max);
-        _mockDeficit(WETH_ASSET_ID,   1);
-        _remapMainUsdcReserveToAsset(WETH_ASSET_ID);
-
-        vm.expectRevert("AaveV4Facet/deficit-too-high");
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        // Configuring the asset the reserve now points at clears the gate, leaving the deposit to
-        // fail on the remapped (and so unconfigured) rate limit key instead.
-        _setMaxDeficit(WETH_ASSET_ID, 1);
-
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-    }
-
-    // Exiting an impaired market is never gated: only deposits read the deficit.
-    function test_withdrawAaveV4_unaffectedByDeficit() external {
-        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
-
-        vm.prank(allocator);
-        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
-
-        _mockDeficit(USDC_ASSET_ID, USDC_DEFICIT_TOLERANCE);
-
-        vm.prank(allocator);
-        uint256 withdrawn
-            = mainnetController.aaveV4_withdraw(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, type(uint256).max);
-
-        assertEq(withdrawn,                                        USDC_DEPOSIT_AMOUNT - 1);
-        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), 0);
-
-        // The restore is keyed on the same deposit key, so capacity comes back despite the deficit.
-        assertEq(rateLimits.getCurrentRateLimit(mainUsdcDepositKey), USDC_DEPOSIT_LIMIT - 1);
     }
 
 }

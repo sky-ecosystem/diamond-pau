@@ -82,24 +82,24 @@ Rate limit keys (hash of function identifier + address) act as an implicit white
 
 ### Trusted with Caveats
 
-| Protocol      | Caveat                                                                          |
-| ------------- | ------------------------------------------------------------------------------- |
-| **Ethena**    | Delegated signer can be set by allocator; Ethena's off-chain validation trusted |
-| **EtherFi**   | Withdrawal requests can be invalidated (and revalidated) by admin               |
-| **OTC Desks** | Assumed to complete trades; max loss bounded by single swap amount              |
-| **Maple**     | Permissioned pools with slower dynamics                                         |
+| Protocol      | Caveat                                                                                                                                                                                                                                          |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ethena**    | Delegated signer can be set by allocator; Ethena's off-chain validation trusted                                                                                                                                                                 |
+| **EtherFi**   | Withdrawal requests can be invalidated (and revalidated) by admin                                                                                                                                                                               |
+| **OTC Desks** | Assumed to complete trades; max loss bounded by single swap amount                                                                                                                                                                              |
+| **Maple**     | Permissioned pools with slower dynamics                                                                                                                                                                                                         |
 | **Aave V4**   | All spoke/hub contracts are proxies upgradeable by Aave governance; withdrawals blockable via reserve pause or hub-side spoke halt/deactivation; hub reinvestment controller can deploy idle liquidity, reducing immediately withdrawable funds |
 
 ### External Protocol Risks
 
-| Protocol            | Risk                       | Mitigation                                       |
-| ------------------- | -------------------------- | ------------------------------------------------ |
-| **ERC-4626 Vaults** | Rounding/donation attacks  | Require burned shares; maxExchangeRate mechanism |
-| **Curve Pools**     | Unseeded pool manipulation | Require pools to be seeded before whitelisting   |
-| **CCTP**            | Bridge delays              | Operational consideration only                   |
-| **Aave V4**         | Socialized bad debt (hub deficit) never marks down supplier share price; loss surfaces as exit-liquidity shortfall for the last suppliers out | Deposits revert while `getAssetDeficitRay` exceeds the per-Hub-asset tolerance, which defaults to zero and is governance-set; hub liquidity vs. position size monitored operationally |
-| **Aave V4**         | Spoke remaps a reserve's `underlying`, `hub` or `assetId` | Deposit rate-limit key embeds all three, so any remap invalidates the configured budget; withdrawals are deliberately unaffected (they key only on `(spoke, reserveId)`), so exits are never wedged by a remap |
-| **Aave V4**         | Credited position short of supplied amount (rounding/misreport) | Position delta measured on-chain and enforced against per-market `maxSlippage` floor |
+| Protocol            | Risk                                                                                                                                          | Mitigation                                                                                                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ERC-4626 Vaults** | Rounding/donation attacks                                                                                                                     | Require burned shares; maxExchangeRate mechanism                                                                                                                                                               |
+| **Curve Pools**     | Unseeded pool manipulation                                                                                                                    | Require pools to be seeded before whitelisting                                                                                                                                                                 |
+| **CCTP**            | Bridge delays                                                                                                                                 | Operational consideration only                                                                                                                                                                                 |
+| **Aave V4**         | Socialized bad debt (hub deficit) never marks down supplier share price; loss surfaces as exit-liquidity shortfall for the last suppliers out | Deposits revert while `getAssetDeficitRay` exceeds the per-Hub-asset tolerance, which defaults to zero and is governance-set; hub liquidity vs. position size monitored operationally                          |
+| **Aave V4**         | Spoke remaps a reserve's `underlying`, `hub` or `assetId`                                                                                     | Deposit rate-limit key embeds all three, so any remap invalidates the configured budget; withdrawals are deliberately unaffected (they key only on `(spoke, reserveId)`), so exits are never wedged by a remap |
+| **Aave V4**         | Credited position short of supplied amount (rounding/misreport)                                                                               | Position delta measured on-chain and enforced against per-market `maxSlippage` floor                                                                                                                           |
 
 ---
 
