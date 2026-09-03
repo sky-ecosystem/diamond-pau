@@ -171,7 +171,7 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
     function test_depositAaveV4_nonzeroAssetDeficitBoundary() external {
         deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
 
-        uint256 deficit = 10e6;
+        uint256 deficit = 10e6 * RAY;
 
         // Simulate an outstanding Hub deficit for USDC.
         vm.mockCall(
