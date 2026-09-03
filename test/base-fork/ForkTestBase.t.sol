@@ -292,7 +292,9 @@ abstract contract ForkTestBase is Test {
     }
 
     function _onboardUniswapV3() internal {
-        address uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+        address uniswapV3Facet =
+            address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+
         vm.label(uniswapV3Facet, "UniswapV3Facet");
         BeaconConfig.setUniswapV3Integration(address(beacon), uniswapV3Facet);
     }

@@ -462,7 +462,12 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _onboardDAIUSDS() internal {
-        address daiUSDSFacet = address(new DAIUSDSFacet({ dai_: Ethereum.DAI, daiUSDS_: Ethereum.DAI_USDS, usds_: Ethereum.USDS }));
+        address daiUSDSFacet = address(new DAIUSDSFacet({
+            dai_: Ethereum.DAI,
+            daiUSDS_: Ethereum.DAI_USDS,
+            usds_: Ethereum.USDS
+        }));
+
         vm.label(daiUSDSFacet, "DAIUSDSFacet");
         BeaconConfig.setDAIUSDSIntegration(address(beacon), daiUSDSFacet);
     }
@@ -486,7 +491,9 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _onboardEthena() internal {
-        address ethenaFacet = address(new EthenaFacet(ETHENA_MINTER, address(susde), address(usdc), address(usde)));
+        address ethenaFacet =
+            address(new EthenaFacet(ETHENA_MINTER, address(susde), address(usdc), address(usde)));
+
         vm.label(ethenaFacet, "EthenaFacet");
         BeaconConfig.setEthenaIntegration(address(beacon), ethenaFacet);
     }
@@ -540,7 +547,17 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _onboardPSM() internal {
-        address psmFacet = address(new PSMFacet(Ethereum.DAI, Ethereum.DAI_USDS, Ethereum.PSM, Ethereum.USDC, Ethereum.USDS));
+        address psmFacet =
+            address(
+                new PSMFacet(
+                    Ethereum.DAI,
+                    Ethereum.DAI_USDS,
+                    Ethereum.PSM,
+                    Ethereum.USDC,
+                    Ethereum.USDS
+                )
+            );
+
         vm.label(psmFacet, "PSMFacet");
         BeaconConfig.setPSMIntegration(address(beacon), psmFacet);
     }
@@ -564,13 +581,17 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _onboardUniswapV3() internal {
-        address uniswapV3Facet = address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+        address uniswapV3Facet =
+            address(new UniswapV3Facet(UNISWAP_V3_POSITION_MANAGER, UNISWAP_V3_ROUTER));
+
         vm.label(uniswapV3Facet, "UniswapV3Facet");
         BeaconConfig.setUniswapV3Integration(address(beacon), uniswapV3Facet);
     }
 
     function _onboardUniswapV4() internal {
-        address uniswapV4Facet = address(new UniswapV4Facet({ permit2_: _PERMIT2, positionManager_: _UNISWAP_V4_POSITION_MANAGER, router_: _UNISWAP_V4_ROUTER }));
+        address uniswapV4Facet =
+            address(new UniswapV4Facet(_PERMIT2, _UNISWAP_V4_POSITION_MANAGER, _UNISWAP_V4_ROUTER));
+
         vm.label(uniswapV4Facet, "UniswapV4Facet");
         BeaconConfig.setUniswapV4Integration(address(beacon), uniswapV4Facet);
     }
@@ -594,7 +615,11 @@ abstract contract ForkTestBase is DssTest {
     }
 
     function _onboardWSTETH() internal {
-        address wstethFacet = address(new WSTETHFacet(Ethereum.WETH, Ethereum.WSTETH_WITHDRAW_QUEUE, Ethereum.WSTETH));
+        address wstethFacet =
+            address(
+                new WSTETHFacet(Ethereum.WETH, Ethereum.WSTETH_WITHDRAW_QUEUE, Ethereum.WSTETH)
+            );
+
         vm.label(wstethFacet, "WSTETHFacet");
         BeaconConfig.setWSTETHIntegration(address(beacon), wstethFacet);
     }
