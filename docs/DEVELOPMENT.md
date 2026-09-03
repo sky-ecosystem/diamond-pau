@@ -102,6 +102,8 @@ Use Solidity 0.8.26+ named mapping syntax for readability, e.g., `mapping(addres
 
 Each facet uses generic internal names for its storage: `FacetStorage` (struct), `FACET_STORAGE_LOCATION` (constant), `_getFacetStorage()` (accessor). The ERC-7201 namespace follows the pattern `sky.pau.storage.<FacetName>.<Version>`, where `<FacetName>` must match both the contract name and the file name (e.g., `AaveFacet.sol` contains `contract AaveFacet` with namespace `sky.pau.storage.AaveFacet.v1`).
 
+`FacetStorage` fields are append-only: new fields go after every existing one, never before or between. Inserting a field earlier shifts every subsequent mapping to a different storage slot even though the namespace string is unchanged, and no existing test suite catches this since tests always deploy facets fresh. A genuine layout change needs a namespace version bump instead.
+
 #### Reentrancy Guard and Event Ordering
 
 All external facet functions must use the `nonReentrant` modifier as a standard practice. Events should be emitted at the end of the function, after all state changes and external calls are complete.
