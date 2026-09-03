@@ -14,6 +14,17 @@ import { IAaveV4Facet } from "../../src/facets/aave-v4/IAaveV4Facet.sol";
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IAaveV4SpokeLike {
+    struct Reserve {
+        address underlying;
+        address hub;
+        uint16  assetId;
+        uint8   decimals;
+        uint24  collateralRisk;
+        uint8   flags;
+        uint32  dynamicConfigKey;
+    }
+
+    function getReserve(uint256 reserveId) external view returns (Reserve memory);
     function getUserSuppliedAssets(uint256 reserveId, address user) external view returns (uint256);
 }
 
@@ -132,28 +143,55 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
     }
 
-    function test_depositAaveV4_assetDeficit() external {
+    function test_depositAaveV4_zeroAssetDeficitBoundary() external {
         deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
 
-        // Simulate an outstanding Hub deficit for USDC (assetId 5): any deficit blocks the deposit.
+        // Simulate an outstanding Hub deficit for USDC.
         vm.mockCall(
             CORE_HUB,
             abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, USDC_ASSET_ID),
             abi.encode(uint256(1))
         );
 
-        vm.expectRevert("AaveV4Facet/asset-deficit");
+        vm.expectRevert("AaveV4Facet/deficit-too-high");
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
 
-        // The guard is hardcoded to zero with no admin override, so the deposit only clears once the
-        // deficit itself is gone.
-        vm.clearMockedCalls();
+        // Simulate no outstanding Hub deficit for USDC.
+        vm.mockCall(
+            CORE_HUB,
+            abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, USDC_ASSET_ID),
+            abi.encode(uint256(0))
+        );
 
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+    }
 
-        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), USDC_DEPOSIT_AMOUNT - 1);
+    function test_depositAaveV4_nonzeroAssetDeficitBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
+
+        uint256 deficit = 10e6 * RAY;
+
+        // Simulate an outstanding Hub deficit for USDC.
+        vm.mockCall(
+            CORE_HUB,
+            abi.encodeWithSelector(IAaveV4HubLike.getAssetDeficitRay.selector, USDC_ASSET_ID),
+            abi.encode(deficit)
+        );
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxDeficit(CORE_HUB, USDC_ASSET_ID, deficit - 1);
+
+        vm.expectRevert("AaveV4Facet/deficit-too-high");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxDeficit(CORE_HUB, USDC_ASSET_ID, deficit);
+
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
     }
 
     function test_depositAaveV4_zeroMaxAmount() external {

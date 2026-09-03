@@ -145,7 +145,8 @@ contract MainnetController_AaveV4_Attack_Tests is AaveV4_TestBase {
 
         // Attack: mock getReserve() to remap every reserve-derived key component (underlying,
         // hub, assetId), then zero the new hub's deficit read so the deficit gate still passes
-        // and the deposit fails purely on the unconfigured key.
+        // (the remapped asset has no configured tolerance, so only a zero deficit clears it) and
+        // the deposit fails purely on the unconfigured key.
         IAaveV4SpokeReserveLike.Reserve memory reserve
             = IAaveV4SpokeReserveLike(MAIN_SPOKE).getReserve(MAIN_USDC_RESERVE_ID);
 

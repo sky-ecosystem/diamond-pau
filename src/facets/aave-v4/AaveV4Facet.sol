@@ -60,6 +60,10 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
 
     /// @custom:storage-location erc7201:sky.pau.storage.AaveV4Facet.v1
     struct FacetStorage {
+        // RAY (1e27) precision in the asset's own units, matching getAssetDeficitRay. Keyed per Hub
+        // asset to match the scope the Hub reports the deficit over: the shortfall is shared by
+        // every spoke fronting that asset, so one market cannot carry a tolerance of its own.
+        mapping (address hub => mapping (uint16 assetId => uint256 maxDeficit)) maxDeficits;
         // 1e18 precision, keyed per market so each asset on a spoke gets its own tolerance.
         mapping (address spoke => mapping (uint256 reserveId => uint256 maxSlippage)) maxSlippages;
     }
@@ -89,6 +93,20 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc IAaveV4Facet
+    function setMaxDeficit(address hub, uint16 assetId, uint256 maxDeficit)
+        external
+        override
+        nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(hub != address(0), "AaveV4Facet/hub-zero-address");
+
+        _getFacetStorage().maxDeficits[hub][assetId] = maxDeficit;
+
+        emit AaveV4MaxDeficitSet(hub, assetId, maxDeficit);
+    }
+
+    /// @inheritdoc IAaveV4Facet
     function setMaxSlippage(address spoke, uint256 reserveId, uint256 maxSlippage)
         external
         override
@@ -113,7 +131,9 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        uint256 maxSlippage = _getFacetStorage().maxSlippages[spoke][reserveId];
+        FacetStorage storage $ = _getFacetStorage();
+
+        uint256 maxSlippage = $.maxSlippages[spoke][reserveId];
 
         require(maxSlippage != 0, "AaveV4Facet/max-slippage-not-set");
 
@@ -123,11 +143,15 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
 
         address underlying = reserve.underlying;
 
-        // Block deposits when the Hub asset carries any deficit: supplying against unbacked debt
-        // would buy into the pool at par.
+        // Cap the deficit a deposit is willing to buy into: supplying against unbacked debt buys
+        // into the pool at par. The tolerance defaults to zero, so any deficit blocks the deposit
+        // until governance opts into an amount for that Hub asset.
         require(
-            IAaveV4HubLike(reserve.hub).getAssetDeficitRay(reserve.assetId) == 0,
-            "AaveV4Facet/asset-deficit"
+            (
+                IAaveV4HubLike(reserve.hub).getAssetDeficitRay(reserve.assetId)
+                <= $.maxDeficits[reserve.hub][reserve.assetId]
+            ),
+            "AaveV4Facet/deficit-too-high"
         );
 
         _decreaseRateLimit(
@@ -199,6 +223,16 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
     /**********************************************************************************************/
     /*** External View/Pure Functions                                                           ***/
     /**********************************************************************************************/
+
+    /// @inheritdoc IAaveV4Facet
+    function getMaxDeficit(address hub, uint16 assetId)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return _getFacetStorage().maxDeficits[hub][assetId];
+    }
 
     /// @inheritdoc IAaveV4Facet
     function getMaxSlippage(address spoke, uint256 reserveId)
