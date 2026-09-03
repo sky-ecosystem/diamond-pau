@@ -60,12 +60,12 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
 
     /// @custom:storage-location erc7201:sky.pau.storage.AaveV4Facet.v1
     struct FacetStorage {
+        // 1e18 precision, keyed per market so each asset on a spoke gets its own tolerance.
+        mapping (address spoke => mapping (uint256 reserveId => uint256 maxSlippage)) maxSlippages;
         // RAY (1e27) precision in the asset's own units, matching getAssetDeficitRay. Keyed per Hub
         // asset to match the scope the Hub reports the deficit over: the shortfall is shared by
         // every spoke fronting that asset, so one market cannot carry a tolerance of its own.
         mapping (address hub => mapping (uint16 assetId => uint256 maxDeficit)) maxDeficits;
-        // 1e18 precision, keyed per market so each asset on a spoke gets its own tolerance.
-        mapping (address spoke => mapping (uint256 reserveId => uint256 maxSlippage)) maxSlippages;
     }
 
     // keccak256(abi.encode(uint256(keccak256("sky.pau.storage.AaveV4Facet.v1")) - 1)) & ~bytes32(uint256(0xff))
