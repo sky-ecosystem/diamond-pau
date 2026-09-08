@@ -38,6 +38,11 @@ This repository contains the onchain components of the PAU system. The system en
 | [Code Notes](./docs/CODE_NOTES.md)                             | Implementation details and design decisions                 |
 | [Beacon](./docs/BEACON.md)                                     | Beacon integration configs, lifecycle, and versioning       |
 | [UniV3/V4 Comparison](./docs/UNIV3_UNIV4_COMPARISON.md)        | Functional differences between UniswapV3 and V4 facets      |
+| [Facet Rulebook](./standards/FACET_RULEBOOK.md)                | The enforceable standard for facet submissions (rule IDs)   |
+| [Adversarial Review](./standards/ADVERSARIAL_REVIEW.md)        | Review methodology applied by the CI facet gate             |
+| [Contributing a Facet](./CONTRIBUTING.md)                      | Spec-first submission process for external teams            |
+| [Integration Specs](./specs/README.md)                         | Spec lifecycle — approval required before facet code        |
+| [Gate Setup](./docs/GATE_SETUP.md)                             | Repo-admin activation guide for the facet gate              |
 
 ## Quick Start
 
