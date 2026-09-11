@@ -7,3 +7,4 @@ script/output/*/*.json
 !script/output/*/*-release-*.json
 .DS_Store
 ./package-lock.json
+.certora_internal/

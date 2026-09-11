@@ -1,0 +1,44 @@
+name: Certora
+
+on: [push, pull_request]
+
+jobs:
+  certora:
+    name: Certora
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        diamond-pau:
+          - beacon
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          java-package: jre
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install solc-select
+        run: pip3 install solc-select
+
+      - name: Solc Select 0.8.34
+        run: solc-select install 0.8.34
+
+      - name: Install Certora
+        run: pip3 install certora-cli-beta
+
+      - name: Verify ${{ matrix.diamond-pau }}
+        run: make certora-${{ matrix.diamond-pau }} results=1
+        env:
+          CERTORAKEY: ${{ secrets.CERTORAKEY }}
