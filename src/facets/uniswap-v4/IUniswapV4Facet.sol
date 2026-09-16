@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { PoolKey } from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
-
 import { IFacet } from "../IFacet.sol";
 
 /**
@@ -195,18 +193,13 @@ interface IUniswapV4Facet is IFacet {
         external;
 
     /**
-     * @notice Swaps tokens via the Uniswap V4 Universal Router (exact input). The pool identifier
-     *         binding max slippage and rate limits is derived as keccak256(abi.encode(poolKey)),
-     *         so the caller-supplied key needs no registry lookup: a fabricated key can only reach
-     *         a disabled configuration. Taking the key from calldata is what lets hooked pools
-     *         without PositionManager positions (such as DualPool pools) swap through this facet.
-     * @param  poolKey      PoolKey of the pool to swap through.
+     * @notice Swaps tokens via the Uniswap V4 Universal Router (exact input).
+     * @param  poolId       Uniswap V4 pool identifier.
      * @param  tokenIn      Address of the input token.
      * @param  amountIn     Amount of input tokens to swap.
      * @param  amountOutMin Minimum output tokens to receive.
      */
-    function swap(PoolKey calldata poolKey, address tokenIn, uint128 amountIn, uint128 amountOutMin)
-        external;
+    function swap(bytes32 poolId, address tokenIn, uint128 amountIn, uint128 amountOutMin) external;
 
     /**********************************************************************************************/
     /*** Variables                                                                              ***/

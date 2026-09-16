@@ -20,8 +20,6 @@ import { ICurveController }         from "../facets/curve/ICurveController.sol";
 import { ICurveFacet }              from "../facets/curve/ICurveFacet.sol";
 import { IDAIUSDSController }       from "../facets/dai-usds/IDAIUSDSController.sol";
 import { IDAIUSDSFacet }            from "../facets/dai-usds/IDAIUSDSFacet.sol";
-import { IDualPoolController }      from "../facets/dual-pool/IDualPoolController.sol";
-import { IDualPoolFacet }           from "../facets/dual-pool/IDualPoolFacet.sol";
 import { IERC4626Controller }       from "../facets/erc4626/IERC4626Controller.sol";
 import { IERC4626Facet }            from "../facets/erc4626/IERC4626Facet.sol";
 import { IERC7540Controller }       from "../facets/erc7540/IERC7540Controller.sol";
@@ -97,9 +95,6 @@ library BeaconConfig {
 
     /// @notice Integration identifier for the DAI-USDS facet.
     bytes32 internal constant DAIUSDS_INTEGRATION = "DAIUSDS_FACET";
-
-    /// @notice Integration identifier for the Dual Pool facet.
-    bytes32 internal constant DUAL_POOL_INTEGRATION = "DUAL_POOL_FACET";
 
     /// @notice Integration identifier for the ERC-4626 facet.
     bytes32 internal constant ERC4626_INTEGRATION = "ERC4626_FACET";
@@ -625,71 +620,6 @@ library BeaconConfig {
         });
 
         IBeacon(beacon).setIntegration(DAIUSDS_INTEGRATION, config);
-    }
-
-    /**********************************************************************************************/
-    /*** DualPool Integration                                                                   ***/
-    /**********************************************************************************************/
-
-    /**
-     * @notice Configures the DualPool facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed DualPoolFacet contract.
-     */
-    function setDualPoolIntegration(address beacon, address facet) internal {
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_VERSION.selector,
-            IFacet.VERSION.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_deposit.selector,
-            IDualPoolFacet.deposit.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_setMaxSlippage.selector,
-            IDualPoolFacet.setMaxSlippage.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_withdraw.selector,
-            IDualPoolFacet.withdraw.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_getAggregateDepositRateLimitKey.selector,
-            IDualPoolFacet.getAggregateDepositRateLimitKey.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_getAggregateWithdrawRateLimitKey.selector,
-            IDualPoolFacet.getAggregateWithdrawRateLimitKey.selector
-        );
-
-        wires[6] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_getAssetDepositRateLimitKey.selector,
-            IDualPoolFacet.getAssetDepositRateLimitKey.selector
-        );
-
-        wires[7] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_getAssetWithdrawRateLimitKey.selector,
-            IDualPoolFacet.getAssetWithdrawRateLimitKey.selector
-        );
-
-        wires[8] = IEnumerableIntegrations.Wire(
-            IDualPoolController.dualPool_getMaxSlippage.selector,
-            IDualPoolFacet.getMaxSlippage.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
-        });
-
-        IBeacon(beacon).setIntegration(DUAL_POOL_INTEGRATION, config);
     }
 
     /**********************************************************************************************/

@@ -10,7 +10,6 @@ import { ICCTPController }          from "../../src/facets/cctp/ICCTPController.
 import { ICentrifugeController }    from "../../src/facets/centrifuge/ICentrifugeController.sol";
 import { ICurveController }         from "../../src/facets/curve/ICurveController.sol";
 import { IDAIUSDSController }       from "../../src/facets/dai-usds/IDAIUSDSController.sol";
-import { IDualPoolController }      from "../../src/facets/dual-pool/IDualPoolController.sol";
 import { IERC4626Controller }       from "../../src/facets/erc4626/IERC4626Controller.sol";
 import { IERC7540Controller }       from "../../src/facets/erc7540/IERC7540Controller.sol";
 import { IEthenaController }        from "../../src/facets/ethena/IEthenaController.sol";
@@ -42,7 +41,6 @@ interface IMainnetControllerFull is
     ICentrifugeController,
     ICurveController,
     IDAIUSDSController,
-    IDualPoolController,
     IERC4626Controller,
     IERC7540Controller,
     IEthenaController,
