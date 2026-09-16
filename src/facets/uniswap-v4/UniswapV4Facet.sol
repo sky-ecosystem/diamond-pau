@@ -191,8 +191,6 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         PoolKey memory poolKey = _getPoolKeyFromPoolId(poolId);
 
-        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
-
         _requirePoolIdMatch(poolId, poolKey);
 
         bytes memory callData = _getMintCalldata({
@@ -246,8 +244,6 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         ( PoolKey memory poolKey, PositionInfo info ) = _getPoolKeyAndPositionInfo(tokenId);
 
-        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
-
         _requirePoolIdMatch(poolId, poolKey);
 
         // Since funds are being added to the position, the ticks of the position need to be checked
@@ -289,8 +285,6 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         onlyRole(ALLOCATOR_ROLE)
     {
         PoolKey memory poolKey = _getPoolKeyFromTokenId(tokenId);
-
-        require(address(poolKey.hooks) == address(0), "UniswapV4Facet/hooks-not-supported");
 
         // NOTE: No need to check the token ownership here, as the proxy will be defined as the
         //       recipient of the tokens, so the worst case is that another account's position is
