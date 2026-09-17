@@ -1,0 +1,239 @@
+// Facet.spec
+//
+// Generic specification shared by every facet. It only refers to the facet through parametric
+// methods, so the same file is verified against each facet with its own .conf.
+
+// --- Methods block ---
+
+methods {
+    // Facet constants
+    function DEFAULT_ADMIN_ROLE() external returns (bytes32) envfree;
+    function ALLOCATOR_ROLE()     external returns (bytes32) envfree;
+
+    // AccessControls: the address lives in shared namespaced storage and cannot be linked, so its
+    // answer is modelled by a ghost, which keeps every role combination reachable.
+    function _.hasRole(bytes32 role, address account) external => hasRoleGhost(role, account) expect bool;
+
+    // RateLimits: every interaction is recorded. The configured maxAmount of a key is a ghost so
+    // that a rule can consider the state in which no rate limit is configured at all.
+    function _.triggerRateLimitDecrease(bytes32 key, uint256 amount) external => cvlTriggerRateLimitDecrease(key, amount) expect uint256;
+    function _.triggerRateLimitIncrease(bytes32 key, uint256 amount) external => cvlTriggerRateLimitIncrease(key, amount) expect uint256;
+    function _.getRateLimitData(bytes32 key)                         external => cvlGetRateLimitData(key)                  expect IRateLimits.RateLimitData;
+    function _.getCurrentRateLimit(bytes32 key)                      external => cvlGetCurrentRateLimit(key)               expect uint256;
+
+    // ALMProxy: every value movement goes through the proxy and is recorded.
+    function _.doCall(address target, bytes data)                        external => cvlDoCall(target)          expect bytes;
+    function _.doCallWithValue(address target, bytes data, uint256 value) external => cvlDoCallWithValue(target) expect bytes;
+}
+
+// --- Ghosts ---
+
+persistent ghost hasRoleGhost(bytes32, address) returns bool;
+
+// Configured maxAmount per rate limit key
+persistent ghost rateLimitMaxAmount(bytes32) returns uint256;
+
+persistent ghost mathint rateLimitDecreases;
+persistent ghost mathint rateLimitIncreases;
+persistent ghost mathint rateLimitReads;
+persistent ghost mathint proxyCalls;
+
+// Every non-static external interaction, recorded at the opcode level so that nothing escapes
+// the summaries above (other proxy entry points, other contracts, delegatecalls, deployments)
+persistent ghost mathint externalCalls;
+persistent ghost mathint delegateCalls;
+persistent ghost mathint creates;
+persistent ghost mapping(address => bool) calledTarget;
+
+// --- Hooks ---
+
+hook CALL(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
+    externalCalls       = externalCalls + 1;
+    calledTarget[addr]  = true;
+}
+
+hook CALLCODE(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
+    externalCalls       = externalCalls + 1;
+    calledTarget[addr]  = true;
+}
+
+hook DELEGATECALL(uint g, address addr, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
+    delegateCalls = delegateCalls + 1;
+}
+
+hook CREATE1(uint value, uint offset, uint length) address v {
+    creates = creates + 1;
+}
+
+hook CREATE2(uint value, uint offset, uint length, bytes32 salt) address v {
+    creates = creates + 1;
+}
+
+// --- Summaries ---
+
+function cvlTriggerRateLimitDecrease(bytes32 key, uint256 amount) returns uint256 {
+    rateLimitDecreases = rateLimitDecreases + 1;
+    uint256 newLimit;
+    return newLimit;
+}
+
+function cvlTriggerRateLimitIncrease(bytes32 key, uint256 amount) returns uint256 {
+    rateLimitIncreases = rateLimitIncreases + 1;
+    uint256 newLimit;
+    return newLimit;
+}
+
+function cvlGetRateLimitData(bytes32 key) returns IRateLimits.RateLimitData {
+    rateLimitReads = rateLimitReads + 1;
+    IRateLimits.RateLimitData data;
+    require data.maxAmount == rateLimitMaxAmount(key);
+    return data;
+}
+
+function cvlGetCurrentRateLimit(bytes32 key) returns uint256 {
+    rateLimitReads = rateLimitReads + 1;
+    uint256 limit;
+    return limit;
+}
+
+function cvlDoCall(address target) returns bytes {
+    proxyCalls = proxyCalls + 1;
+    bytes result;
+    return result;
+}
+
+function cvlDoCallWithValue(address target) returns bytes {
+    proxyCalls = proxyCalls + 1;
+    bytes result;
+    return result;
+}
+
+// --- Definitions ---
+
+// ReentrancyGuardUpgradeable states
+definition NOT_ENTERED() returns uint256 = 1;
+definition ENTERED()     returns uint256 = 2;
+
+// openzeppelin.storage.ReentrancyGuard
+definition status() returns uint256 = currentContract.ext_openzeppelin_storage_ReentrancyGuard._status;
+
+// sky.pau.storage.SharedController
+definition accessControlsSlot() returns address = currentContract.ext_sky_pau_storage_SharedController.accessControls;
+definition proxySlot()          returns address = currentContract.ext_sky_pau_storage_SharedController.proxy;
+definition rateLimitsSlot()     returns address = currentContract.ext_sky_pau_storage_SharedController.rateLimits;
+
+definition isAdmin(address account)     returns bool = hasRoleGhost(DEFAULT_ADMIN_ROLE(), account);
+definition isAllocator(address account) returns bool = hasRoleGhost(ALLOCATOR_ROLE(), account);
+
+// --- Access control ---
+
+// Every non-view function is gated by DEFAULT_ADMIN_ROLE or ALLOCATOR_ROLE
+rule roleGated(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require !isAdmin(e.msg.sender) && !isAllocator(e.msg.sender);
+
+    f@withrevert(e, args);
+
+    assert lastReverted;
+}
+
+// Admin functions only configure the facet: they never touch the rate limits nor move value,
+// and more generally make no external call other than reads (static calls)
+rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require isAdmin(e.msg.sender) && !isAllocator(e.msg.sender);
+
+    require rateLimitDecreases == 0 && rateLimitIncreases == 0 && rateLimitReads == 0 && proxyCalls == 0;
+    require externalCalls == 0 && delegateCalls == 0 && creates == 0;
+
+    // Allocator functions revert for this sender: the call is made with @withrevert so that the
+    // rule stays non-vacuous for them
+    f@withrevert(e, args);
+
+    assert !lastReverted => rateLimitDecreases == 0;
+    assert !lastReverted => rateLimitIncreases == 0;
+    assert !lastReverted => rateLimitReads     == 0;
+    assert !lastReverted => proxyCalls         == 0;
+    assert !lastReverted => externalCalls      == 0;
+    assert !lastReverted => delegateCalls      == 0;
+    assert !lastReverted => creates            == 0;
+}
+
+// --- External interactions ---
+
+// A facet only acts on the outside world through the proxy and the rate limits: every non-static
+// external call targets one of them, and a facet never delegatecalls nor deploys
+rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require forall address a. !calledTarget[a];
+    require delegateCalls == 0 && creates == 0;
+
+    address proxy      = proxySlot();
+    address rateLimits = rateLimitsSlot();
+
+    f@withrevert(e, args);
+
+    assert !lastReverted => (forall address a. calledTarget[a] => a == proxy || a == rateLimits);
+    assert !lastReverted => delegateCalls == 0;
+    assert !lastReverted => creates       == 0;
+}
+
+// --- Rate limits ---
+
+// No allocator function can succeed without a configured rate limit for its action. With every
+// maxAmount at zero, `_rateLimitExists` gates revert on their own, and the only way left to
+// succeed is to call triggerRateLimitDecrease, which RateLimits rejects for a zero maxAmount.
+rule allocatorRequiresRateLimit(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require isAllocator(e.msg.sender) && !isAdmin(e.msg.sender);
+
+    require forall bytes32 key. rateLimitMaxAmount(key) == 0;
+    require rateLimitDecreases == 0;
+
+    // Admin functions revert for this sender: the call is made with @withrevert so that the
+    // rule stays non-vacuous for them
+    f@withrevert(e, args);
+
+    assert !lastReverted => rateLimitDecreases > 0;
+}
+
+// --- Reentrancy ---
+
+// Every non-view function is nonReentrant
+rule reentrancyGuarded(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require status() == ENTERED();
+
+    f@withrevert(e, args);
+
+    assert lastReverted;
+}
+
+// --- Storage isolation ---
+
+// The shared addresses are never written and the reentrancy guard is always released on exit
+rule sharedStorageUntouched(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    address accessControlsBefore = accessControlsSlot();
+    address proxyBefore          = proxySlot();
+    address rateLimitsBefore     = rateLimitsSlot();
+
+    f(e, args);
+
+    assert accessControlsSlot() == accessControlsBefore;
+    assert proxySlot()          == proxyBefore;
+    assert rateLimitsSlot()     == rateLimitsBefore;
+    assert status()             == NOT_ENTERED();
+}

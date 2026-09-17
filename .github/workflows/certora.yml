@@ -11,6 +11,37 @@ jobs:
       matrix:
         diamond-pau:
           - beacon
+          - general-facet-aave
+          - specific-facet-aave
+          - general-facet-aave-v4
+          - general-facet-basin
+          - general-facet-cctp
+          - general-facet-centrifuge
+          - general-facet-curve
+          - general-facet-dai-usds
+          - general-facet-dual-pool
+          - general-facet-erc4626
+          - general-facet-erc7540
+          - general-facet-ethena
+          - general-facet-farm
+          - general-facet-layer-zero
+          - general-facet-maple
+          - general-facet-merkl
+          - general-facet-nfat-halo
+          - general-facet-nfat-prime
+          - general-facet-otc
+          - general-facet-pendle
+          - general-facet-psm
+          - general-facet-psm3
+          - general-facet-spark-vault
+          - general-facet-superstate
+          - general-facet-transfer-asset
+          - general-facet-uniswap-v3
+          - general-facet-uniswap-v4
+          - general-facet-usds
+          - general-facet-weeth
+          - general-facet-wrap-proxy-eth
+          - general-facet-wsteth
 
     steps:
       - name: Checkout
