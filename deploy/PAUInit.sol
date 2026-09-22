@@ -110,6 +110,12 @@ library PAUInit {
             "PAUInit/not-rate-limits-admin"
         );
 
+        // Check that no allocator agents have been added to the AccessControls.
+        require(
+            IAccessControlLike(inst.accessControls).getRoleMemberCount(ALLOCATOR_ROLE) == 0,
+            "PAUInit/allocator-agents-present"
+        );
+
         // Structural wiring: the Controller is CONTROLLER on the ALMProxy and on its RateLimits.
         IAccessControlLike(inst.almProxy).grantRole(
             IALMProxyLike(inst.almProxy).CONTROLLER(),

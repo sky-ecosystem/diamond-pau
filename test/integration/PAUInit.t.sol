@@ -253,6 +253,18 @@ contract PAUInit_Integration_Tests is Test {
         governance.initPAU(inst, new bytes32[](0));
     }
 
+    function test_init_allocatorAgentsPresent_reverts() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        // Governance is the sole admin everywhere, but an allocator agent has already been granted
+        // ALLOCATOR_ROLE on the AccessControls, so init must reject the stack.
+        vm.prank(address(governance));
+        IAccessControlLike(inst.accessControls).grantRole(ALLOCATOR_ROLE, makeAddr("allocatorAgent"));
+
+        vm.expectRevert(bytes("PAUInit/allocator-agents-present"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
     function test_init_nonEmptyIntegrationIds_syncsToController() external {
         PAUInstance memory inst = _deployStack(address(governance));
 
