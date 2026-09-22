@@ -178,27 +178,6 @@ rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
     assert !lastReverted => facetCreates       == 0;
 }
 
-// --- External interactions ---
-
-// A facet only acts on the outside world through the proxy and the rate limits: every non-static
-// external call targets one of them, and a facet never delegatecalls nor deploys
-rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView } {
-    env e;
-    calldataarg args;
-
-    require forall address a. !facetCalledTarget[a];
-    require facetDelegateCalls == 0 && facetCreates == 0;
-
-    address proxy      = proxySlot();
-    address rateLimits = rateLimitsSlot();
-
-    f@withrevert(e, args);
-
-    assert !lastReverted => (forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits);
-    assert !lastReverted => facetDelegateCalls == 0;
-    assert !lastReverted => facetCreates       == 0;
-}
-
 // --- Rate limits ---
 
 // No allocator function can succeed without a configured rate limit for its action. With every
@@ -218,6 +197,33 @@ rule allocatorRequiresRateLimit(method f) filtered { f -> !f.isView } {
     f@withrevert(e, args);
 
     assert !lastReverted => rateLimitDecreases > 0;
+}
+
+// --- External interactions ---
+
+// A facet only acts on the outside world through the proxy and the rate limits: every non-static
+// external call it issues targets one of them, and it never delegatecalls nor deploys. The body is
+// a CVL function so that a facet spec which has to make one direct call outside the proxy can
+// re-run the same check over every other function and cover that one with a rule of its own.
+function checkExternalCallsOnlyToProxyAndRateLimits(method f) {
+    env e;
+    calldataarg args;
+
+    require forall address a. !facetCalledTarget[a];
+    require facetDelegateCalls == 0 && facetCreates == 0;
+
+    address proxy      = proxySlot();
+    address rateLimits = rateLimitsSlot();
+
+    f@withrevert(e, args);
+
+    assert !lastReverted => (forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits);
+    assert !lastReverted => facetDelegateCalls == 0;
+    assert !lastReverted => facetCreates       == 0;
+}
+
+rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView } {
+    checkExternalCallsOnlyToProxyAndRateLimits(f);
 }
 
 // --- Reentrancy ---
