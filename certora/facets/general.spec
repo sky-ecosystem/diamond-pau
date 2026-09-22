@@ -21,9 +21,8 @@ methods {
     function _.getRateLimitData(bytes32 key)                         external => cvlGetRateLimitData(key)                  expect IRateLimits.RateLimitData;
     function _.getCurrentRateLimit(bytes32 key)                      external => cvlGetCurrentRateLimit(key)               expect uint256;
 
-    // ALMProxy: every value movement goes through the proxy and is recorded.
-    function _.doCall(address target, bytes data)                        external => cvlDoCall(target)          expect bytes;
-    function _.doCallWithValue(address target, bytes data, uint256 value) external => cvlDoCallWithValue(target) expect bytes;
+    // ALMProxy: not summarised here. Calls to it are observed by the opcode hooks below, which
+    // lets a facet specific spec put the real ALMProxy in the scene and still reuse these rules.
 }
 
 // --- Ghosts ---
@@ -36,43 +35,72 @@ persistent ghost rateLimitMaxAmount(bytes32) returns uint256;
 persistent ghost mathint rateLimitDecreases;
 persistent ghost mathint rateLimitIncreases;
 persistent ghost mathint rateLimitReads;
-persistent ghost mathint proxyCalls;
+persistent ghost bytes32 lastDecreasedKey;
+persistent ghost uint256 lastDecreasedAmount;
 
 // Every non-static external interaction, recorded at the opcode level so that nothing escapes
-// the summaries above (other proxy entry points, other contracts, delegatecalls, deployments)
-persistent ghost mathint externalCalls;
-persistent ghost mathint delegateCalls;
-persistent ghost mathint creates;
-persistent ghost mapping(address => bool) calledTarget;
+// the summaries above (any proxy entry point, other contracts, delegatecalls, deployments).
+// The `facet*` ghosts only count what the facet itself issues (executingContract is the facet);
+// the `scene*` ghosts count every contract in the scene, e.g. what the proxy forwards.
+persistent ghost mathint facetCalls;
+persistent ghost mathint facetDelegateCalls;
+persistent ghost mathint facetCreates;
+persistent ghost mapping(address => bool) facetCalledTarget;
+persistent ghost mapping(address => bool) sceneCalledTarget;
+persistent ghost mathint sceneDelegateCalls;
+persistent ghost mathint sceneCreates;
+
+// Targets called while no rate limit had been decreased yet
+persistent ghost mapping(address => bool) calledBeforeDecrease;
 
 // --- Hooks ---
 
 hook CALL(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
-    externalCalls       = externalCalls + 1;
-    calledTarget[addr]  = true;
+    sceneCalledTarget[addr] = true;
+    if (rateLimitDecreases == 0) {
+        calledBeforeDecrease[addr] = true;
+    }
+    if (executingContract == currentContract) {
+        facetCalls              = facetCalls + 1;
+        facetCalledTarget[addr] = true;
+    }
 }
 
 hook CALLCODE(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
-    externalCalls       = externalCalls + 1;
-    calledTarget[addr]  = true;
+    sceneCalledTarget[addr] = true;
+    if (executingContract == currentContract) {
+        facetCalls              = facetCalls + 1;
+        facetCalledTarget[addr] = true;
+    }
 }
 
 hook DELEGATECALL(uint g, address addr, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
-    delegateCalls = delegateCalls + 1;
+    sceneDelegateCalls = sceneDelegateCalls + 1;
+    if (executingContract == currentContract) {
+        facetDelegateCalls = facetDelegateCalls + 1;
+    }
 }
 
 hook CREATE1(uint value, uint offset, uint length) address v {
-    creates = creates + 1;
+    sceneCreates = sceneCreates + 1;
+    if (executingContract == currentContract) {
+        facetCreates = facetCreates + 1;
+    }
 }
 
 hook CREATE2(uint value, uint offset, uint length, bytes32 salt) address v {
-    creates = creates + 1;
+    sceneCreates = sceneCreates + 1;
+    if (executingContract == currentContract) {
+        facetCreates = facetCreates + 1;
+    }
 }
 
 // --- Summaries ---
 
 function cvlTriggerRateLimitDecrease(bytes32 key, uint256 amount) returns uint256 {
-    rateLimitDecreases = rateLimitDecreases + 1;
+    rateLimitDecreases  = rateLimitDecreases + 1;
+    lastDecreasedKey    = key;
+    lastDecreasedAmount = amount;
     uint256 newLimit;
     return newLimit;
 }
@@ -94,18 +122,6 @@ function cvlGetCurrentRateLimit(bytes32 key) returns uint256 {
     rateLimitReads = rateLimitReads + 1;
     uint256 limit;
     return limit;
-}
-
-function cvlDoCall(address target) returns bytes {
-    proxyCalls = proxyCalls + 1;
-    bytes result;
-    return result;
-}
-
-function cvlDoCallWithValue(address target) returns bytes {
-    proxyCalls = proxyCalls + 1;
-    bytes result;
-    return result;
 }
 
 // --- Definitions ---
@@ -147,8 +163,8 @@ rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
 
     require isAdmin(e.msg.sender) && !isAllocator(e.msg.sender);
 
-    require rateLimitDecreases == 0 && rateLimitIncreases == 0 && rateLimitReads == 0 && proxyCalls == 0;
-    require externalCalls == 0 && delegateCalls == 0 && creates == 0;
+    require rateLimitDecreases == 0 && rateLimitIncreases == 0 && rateLimitReads == 0;
+    require facetCalls == 0 && facetDelegateCalls == 0 && facetCreates == 0;
 
     // Allocator functions revert for this sender: the call is made with @withrevert so that the
     // rule stays non-vacuous for them
@@ -157,10 +173,9 @@ rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
     assert !lastReverted => rateLimitDecreases == 0;
     assert !lastReverted => rateLimitIncreases == 0;
     assert !lastReverted => rateLimitReads     == 0;
-    assert !lastReverted => proxyCalls         == 0;
-    assert !lastReverted => externalCalls      == 0;
-    assert !lastReverted => delegateCalls      == 0;
-    assert !lastReverted => creates            == 0;
+    assert !lastReverted => facetCalls         == 0;
+    assert !lastReverted => facetDelegateCalls == 0;
+    assert !lastReverted => facetCreates       == 0;
 }
 
 // --- External interactions ---
@@ -171,17 +186,17 @@ rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView }
     env e;
     calldataarg args;
 
-    require forall address a. !calledTarget[a];
-    require delegateCalls == 0 && creates == 0;
+    require forall address a. !facetCalledTarget[a];
+    require facetDelegateCalls == 0 && facetCreates == 0;
 
     address proxy      = proxySlot();
     address rateLimits = rateLimitsSlot();
 
     f@withrevert(e, args);
 
-    assert !lastReverted => (forall address a. calledTarget[a] => a == proxy || a == rateLimits);
-    assert !lastReverted => delegateCalls == 0;
-    assert !lastReverted => creates       == 0;
+    assert !lastReverted => (forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits);
+    assert !lastReverted => facetDelegateCalls == 0;
+    assert !lastReverted => facetCreates       == 0;
 }
 
 // --- Rate limits ---
