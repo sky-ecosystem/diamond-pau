@@ -37,6 +37,8 @@ persistent ghost mathint rateLimitIncreases;
 persistent ghost mathint rateLimitReads;
 persistent ghost bytes32 lastDecreasedKey;
 persistent ghost uint256 lastDecreasedAmount;
+persistent ghost mapping(bytes32 => mathint) decreasesOfKey;   // number of decreases per key
+persistent ghost mapping(bytes32 => mathint) decreasedByKey;   // total amount decreased per key
 
 // Every non-static external interaction, recorded at the opcode level so that nothing escapes
 // the summaries above (any proxy entry point, other contracts, delegatecalls, deployments).
@@ -53,10 +55,16 @@ persistent ghost mathint sceneCreates;
 // Targets called while no rate limit had been decreased yet
 persistent ghost mapping(address => bool) calledBeforeDecrease;
 
+// Calls carrying ETH, anywhere in the scene
+persistent ghost mathint sceneValueCalls;
+
 // --- Hooks ---
 
 hook CALL(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
     sceneCalledTarget[addr] = true;
+    if (value > 0) {
+        sceneValueCalls = sceneValueCalls + 1;
+    }
     if (rateLimitDecreases == 0) {
         calledBeforeDecrease[addr] = true;
     }
@@ -101,6 +109,8 @@ function cvlTriggerRateLimitDecrease(bytes32 key, uint256 amount) returns uint25
     rateLimitDecreases  = rateLimitDecreases + 1;
     lastDecreasedKey    = key;
     lastDecreasedAmount = amount;
+    decreasesOfKey[key] = decreasesOfKey[key] + 1;
+    decreasedByKey[key] = decreasedByKey[key] + amount;
     uint256 newLimit;
     return newLimit;
 }
