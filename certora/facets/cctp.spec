@@ -1,11 +1,11 @@
-// cctp.spec
+// Cctp.spec
 //
 // CCTPFacet: the generic facet rules plus rules for each external function. The real ALMProxy is
 // in the scene and the immutable `cctp` and `usdc` are linked to mocks that record what they
 // receive, so that every effect of the facet is pinned to its arguments, to the stored domain
 // parameters and to the rate limit keys it consumes.
 
-import "general.spec";
+import "FacetBase.spec";
 
 using ALMProxy  as almProxy;
 using MockERC20 as usdcToken;

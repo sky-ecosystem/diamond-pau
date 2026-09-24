@@ -1,4 +1,4 @@
-// Facet.spec
+// FacetBase.spec
 //
 // Generic specification shared by every facet. It only refers to the facet through parametric
 // methods, so the same file is verified against each facet with its own .conf.

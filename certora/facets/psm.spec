@@ -1,10 +1,10 @@
-// psm.spec
+// Psm.spec
 //
 // PSMFacet: the generic facet rules. `swapUSDCToUSDS` refills the LitePSM with a direct call to
 // `fill()` when the swap has to be chunked, so the generic external calls rule is replaced for
 // that function by one that pins the extra call to exactly that target and selector.
 
-import "general.spec";
+import "FacetBase.spec";
 
 // --- Methods block ---
 

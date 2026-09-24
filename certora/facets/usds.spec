@@ -1,8 +1,8 @@
-// usds.spec
+// Usds.spec
 //
 // USDSFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

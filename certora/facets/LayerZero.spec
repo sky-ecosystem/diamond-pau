@@ -1,8 +1,8 @@
-// layer-zero.spec
+// LayerZero.spec
 //
 // LayerZeroFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 // --- Methods block ---
 

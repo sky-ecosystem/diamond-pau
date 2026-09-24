@@ -1,8 +1,8 @@
-// nfat-prime.spec
+// TransferAsset.spec
 //
-// NFATPrimeFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
+// TransferAssetFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

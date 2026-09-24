@@ -1,8 +1,8 @@
-// uniswap-v3.spec
+// UniswapV3.spec
 //
 // UniswapV3Facet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 methods {
     // Pure fixed-point math of the Uniswap libraries: the properties do not depend on the values,

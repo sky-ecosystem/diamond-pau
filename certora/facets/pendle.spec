@@ -1,10 +1,10 @@
-// pendle.spec
+// Pendle.spec
 //
 // PendleFacet: the generic facet rules. `redeem` refreshes the PY index with a direct call to the
 // YT contract before redeeming, so the generic external calls rule is replaced for that function
 // by one that pins the extra call to exactly that target and selector.
 
-import "general.spec";
+import "FacetBase.spec";
 
 // --- Methods block ---
 

@@ -1,8 +1,8 @@
-// dual-pool.spec
+// NfatHalo.spec
 //
-// DualPoolFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
+// NFATHaloFacet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

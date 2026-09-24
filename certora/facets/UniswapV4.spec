@@ -1,8 +1,8 @@
-// uniswap-v4.spec
+// UniswapV4.spec
 //
 // UniswapV4Facet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

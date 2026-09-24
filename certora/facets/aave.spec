@@ -1,4 +1,4 @@
-// aave.spec
+// Aave.spec
 //
 // AaveFacet: the generic facet rules plus rules that pin every external effect of each allocator
 // action to its arguments and to the rate limit key it consumes, so that no action hides a call
@@ -6,7 +6,7 @@
 // so that the calls it forwards are observed with their target and arguments; the generic rules
 // keep holding because their counters only see calls issued by the facet itself.
 
-import "general.spec";
+import "FacetBase.spec";
 
 using ALMProxy     as almProxy;
 using MockERC20    as underlyingToken;

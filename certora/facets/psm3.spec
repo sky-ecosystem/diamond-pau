@@ -1,8 +1,8 @@
-// psm3.spec
+// Psm3.spec
 //
 // PSM3Facet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

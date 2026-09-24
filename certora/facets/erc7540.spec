@@ -1,8 +1,8 @@
-// erc7540.spec
+// Erc7540.spec
 //
 // ERC7540Facet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;

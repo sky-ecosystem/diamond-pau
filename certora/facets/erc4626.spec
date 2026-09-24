@@ -1,8 +1,8 @@
-// erc4626.spec
+// Erc4626.spec
 //
 // ERC4626Facet: the generic facet rules. Add facet specific summaries, filters or rules here.
 
-import "general.spec";
+import "FacetBase.spec";
 
 use rule roleGated;
 use rule adminIsConfigurationOnly;
