@@ -51,6 +51,8 @@ methods {
 // --- Generic rules ---
 
 use rule roleGated;
+use rule noForbiddenCalls;
+use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
 use rule allocatorRequiresRateLimit;
 use rule externalCallsOnlyToProxyAndRateLimits;

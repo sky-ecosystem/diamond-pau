@@ -39,6 +39,8 @@ function cvlPyIndexCurrent(address target) returns uint256 {
 // --- Generic rules ---
 
 use rule roleGated;
+use rule noForbiddenCalls;
+use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
 use rule allocatorRequiresRateLimit;
 use rule reentrancyGuarded;
@@ -51,12 +53,11 @@ use rule sharedStorageUntouched;
 // --- redeem ---
 
 // Besides the proxy and the rate limits, redeem only calls the YT token of the market, exactly
-// once, to refresh its PY index. Nothing is delegatecalled or deployed.
+// once, to refresh its PY index.
 rule redeem_externalCalls(address market, uint256 pyAmountIn, uint256 minAmountOut) {
     env e;
 
     require forall address a. !facetCalledTarget[a];
-    require facetDelegateCalls == 0 && facetCreates == 0;
     require pyIndexCurrentCalls == 0;
 
     address proxy      = proxySlot();
@@ -68,6 +69,4 @@ rule redeem_externalCalls(address market, uint256 pyAmountIn, uint256 minAmountO
     assert forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits || a == yt;
     assert pyIndexCurrentCalls  == 1;
     assert pyIndexCurrentTarget == yt;
-    assert facetDelegateCalls   == 0;
-    assert facetCreates         == 0;
 }

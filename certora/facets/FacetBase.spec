@@ -34,7 +34,6 @@ persistent ghost rateLimitMaxAmount(bytes32) returns uint256;
 
 persistent ghost mathint rateLimitDecreases;
 persistent ghost mathint rateLimitIncreases;
-persistent ghost mathint rateLimitReads;
 persistent ghost bytes32 lastDecreasedKey;
 persistent ghost uint256 lastDecreasedAmount;
 persistent ghost mapping(bytes32 => mathint) decreasesOfKey;   // number of decreases per key
@@ -46,6 +45,7 @@ persistent ghost mapping(bytes32 => mathint) decreasedByKey;   // total amount d
 // the `scene*` ghosts count every contract in the scene, e.g. what the proxy forwards.
 persistent ghost mathint facetCalls;
 persistent ghost mathint facetDelegateCalls;
+persistent ghost mathint facetCallcodes;
 persistent ghost mathint facetCreates;
 persistent ghost mapping(address => bool) facetCalledTarget;
 persistent ghost mapping(address => bool) sceneCalledTarget;
@@ -74,11 +74,12 @@ hook CALL(uint g, address addr, uint value, uint argsOffset, uint argsLength, ui
     }
 }
 
+// CALLCODE is deprecated and never emitted by Solidity; it is counted on its own so that
+// noForbiddenCalls can prove it never happens, and it is not part of facetCalls
 hook CALLCODE(uint g, address addr, uint value, uint argsOffset, uint argsLength, uint retOffset, uint retLength) uint rc {
     sceneCalledTarget[addr] = true;
     if (executingContract == currentContract) {
-        facetCalls              = facetCalls + 1;
-        facetCalledTarget[addr] = true;
+        facetCallcodes = facetCallcodes + 1;
     }
 }
 
@@ -122,14 +123,12 @@ function cvlTriggerRateLimitIncrease(bytes32 key, uint256 amount) returns uint25
 }
 
 function cvlGetRateLimitData(bytes32 key) returns IRateLimits.RateLimitData {
-    rateLimitReads = rateLimitReads + 1;
     IRateLimits.RateLimitData data;
     require data.maxAmount == rateLimitMaxAmount(key);
     return data;
 }
 
 function cvlGetCurrentRateLimit(bytes32 key) returns uint256 {
-    rateLimitReads = rateLimitReads + 1;
     uint256 limit;
     return limit;
 }
@@ -165,30 +164,40 @@ rule roleGated(method f) filtered { f -> !f.isView } {
     assert lastReverted;
 }
 
-// Admin functions only configure the facet: they never touch the rate limits nor move value,
-// and more generally make no external call other than reads (static calls)
+// Admin functions only configure the facet: they make no external call other than reads (static
+// calls), so they neither touch the rate limits nor move value (see rateLimitCallsAreFacetCalls)
 rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
     env e;
     calldataarg args;
 
     require isAdmin(e.msg.sender) && !isAllocator(e.msg.sender);
 
-    require rateLimitDecreases == 0 && rateLimitIncreases == 0 && rateLimitReads == 0;
-    require facetCalls == 0 && facetDelegateCalls == 0 && facetCreates == 0;
+    require facetCalls == 0;
 
     // Allocator functions revert for this sender: the call is made with @withrevert so that the
     // rule stays non-vacuous for them
     f@withrevert(e, args);
 
-    assert !lastReverted => rateLimitDecreases == 0;
-    assert !lastReverted => rateLimitIncreases == 0;
-    assert !lastReverted => rateLimitReads     == 0;
-    assert !lastReverted => facetCalls         == 0;
-    assert !lastReverted => facetDelegateCalls == 0;
-    assert !lastReverted => facetCreates       == 0;
+    assert !lastReverted => facetCalls == 0;
 }
 
 // --- Rate limits ---
+
+// Every rate limit decrease or increase is a CALL issued by the facet: a summarised call still
+// executes the CALL opcode, so the facet call counter sees it. This pins down a property of the
+// model that other rules rely on (`facetCalls == 0` implies no rate limit was touched), so that a
+// change in how the Prover applies hooks to summarised calls shows up here.
+rule rateLimitCallsAreFacetCalls(method f) {
+    env e;
+    calldataarg args;
+
+    require facetCalls == 0 && rateLimitDecreases == 0 && rateLimitIncreases == 0;
+
+    f(e, args);
+
+    assert rateLimitDecreases > 0 || rateLimitIncreases > 0 => facetCalls > 0;
+}
+
 
 // No allocator function can succeed without a configured rate limit for its action. With every
 // maxAmount at zero, `_rateLimitExists` gates revert on their own, and the only way left to
@@ -211,8 +220,25 @@ rule allocatorRequiresRateLimit(method f) filtered { f -> !f.isView } {
 
 // --- External interactions ---
 
+// A facet never delegatecalls, callcodes nor deploys a contract, in any function and for any
+// caller, so a CALL is its only way to act on the outside world. A facet that legitimately needs
+// any of them simply does not use this rule.
+rule noForbiddenCalls(method f) {
+    env e;
+    calldataarg args;
+
+    require facetDelegateCalls == 0 && facetCallcodes == 0 && facetCreates == 0;
+
+    f(e, args);
+
+    assert facetDelegateCalls == 0;
+    assert facetCallcodes     == 0;
+    assert facetCreates       == 0;
+}
+
+
 // A facet only acts on the outside world through the proxy and the rate limits: every non-static
-// external call it issues targets one of them, and it never delegatecalls nor deploys. The body is
+// external call it issues targets one of them. The body is
 // a CVL function so that a facet spec which has to make one direct call outside the proxy can
 // re-run the same check over every other function and cover that one with a rule of its own.
 function checkExternalCallsOnlyToProxyAndRateLimits(method f) {
@@ -220,7 +246,6 @@ function checkExternalCallsOnlyToProxyAndRateLimits(method f) {
     calldataarg args;
 
     require forall address a. !facetCalledTarget[a];
-    require facetDelegateCalls == 0 && facetCreates == 0;
 
     address proxy      = proxySlot();
     address rateLimits = rateLimitsSlot();
@@ -228,8 +253,6 @@ function checkExternalCallsOnlyToProxyAndRateLimits(method f) {
     f@withrevert(e, args);
 
     assert !lastReverted => (forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits);
-    assert !lastReverted => facetDelegateCalls == 0;
-    assert !lastReverted => facetCreates       == 0;
 }
 
 rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView } {

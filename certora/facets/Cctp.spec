@@ -53,6 +53,8 @@ methods {
 // --- Generic rules ---
 
 use rule roleGated;
+use rule noForbiddenCalls;
+use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
 use rule allocatorRequiresRateLimit;
 use rule externalCallsOnlyToProxyAndRateLimits;
@@ -75,30 +77,6 @@ definition usdcBurnLimit() returns uint256 = cctpMessenger.burnLimitsPerMessage(
 definition expectedDeposits(uint256 amount, uint256 burnLimit) returns mathint =
     amount == 0 ? 0 : (amount <= burnLimit ? 1 : 2);
 
-// --- Setup ---
-
-// The proxy in shared storage is the ALMProxy of the scene and the facet is its controller
-function setupProxy() {
-    require proxySlot() == almProxy;
-    require almProxy._roles[almProxy.CONTROLLER()].hasRole[currentContract];
-}
-
-// No interaction recorded yet, neither in the ghosts nor in the mocks
-function setupRecorders() {
-    require rateLimitDecreases == 0 && rateLimitIncreases == 0;
-    require forall bytes32 key. decreasesOfKey[key] == 0 && decreasedByKey[key] == 0;
-    require forall address target. !sceneCalledTarget[target];
-    require forall address target. !calledBeforeDecrease[target];
-    require facetCalls == 0 && facetDelegateCalls == 0 && facetCreates == 0;
-    require sceneDelegateCalls == 0 && sceneCreates == 0 && sceneValueCalls == 0;
-
-    require usdcToken.unexpectedCalls == 0 && usdcToken.approveCalls == 0;
-    require forall address spender. usdcToken.approvalsTo[spender] == 0;
-    require forall uint256 amount. !usdcToken.approvedAmountSeen[amount];
-    require cctpMessenger.unexpectedCalls == 0 && cctpMessenger.depositCalls == 0;
-    require cctpMessenger.depositedTotal == 0;
-}
-
 // --- Storage Affected Rule ---
 
 // The domain parameters are only written by setDomainParameters, and only for its domain
@@ -120,6 +98,22 @@ rule storageAffected(method f) filtered { f -> !f.isView } {
         f.selector == sig:setDomainParameters(uint32, bytes32, uint32, uint32).selector;
     assert maxFeeCapRate(anyDomain) != maxFeeCapRateBefore =>
         f.selector == sig:setDomainParameters(uint32, bytes32, uint32, uint32).selector;
+}
+
+// --- External Calls Affected Rule ---
+
+// Only transfer reaches outside the facet. FacetBase proves the facet never delegatecalls,
+// callcodes or deploys, so a CALL is its only way out, and every other effect (rate limits, approvals, burns)
+// happens inside one of those calls. transfer itself is checked in detail by its own rule.
+rule externalCallsAffected(method f) filtered { f -> !f.isView } {
+    env e;
+    calldataarg args;
+
+    require facetCalls == 0;
+
+    f(e, args);
+
+    assert facetCalls > 0 => f.selector == sig:transfer(uint256, uint32, uint64).selector;
 }
 
 // --- View function correctness ---
@@ -148,11 +142,10 @@ rule rateLimitKeys_distinct(uint32 domain1, uint32 domain2) {
 
 // --- Admin functions: setDomainParameters ---
 
+// That it makes no external call, and so touches neither the rate limits nor any other contract,
+// is proven by externalCallsAffected
 rule setDomainParameters(uint32 destinationDomain, bytes32 recipient, uint32 minRate, uint32 maxRate) {
     env e;
-
-    setupProxy();
-    setupRecorders();
 
     uint32 otherDomain;
     require otherDomain != destinationDomain;
@@ -171,10 +164,6 @@ rule setDomainParameters(uint32 destinationDomain, bytes32 recipient, uint32 min
     assert mintRecipient(otherDomain) == otherRecipientBefore;
     assert minFeeCapRate(otherDomain) == otherMinRateBefore;
     assert maxFeeCapRate(otherDomain) == otherMaxRateBefore;
-    // Pure configuration: nothing is called, nothing is decreased
-    assert facetCalls == 0 && facetDelegateCalls == 0 && facetCreates == 0;
-    assert rateLimitDecreases == 0 && rateLimitIncreases == 0;
-    assert forall address target. !sceneCalledTarget[target];
 }
 
 rule setDomainParameters_revert(uint32 destinationDomain, bytes32 recipient, uint32 minRate, uint32 maxRate) {
@@ -200,8 +189,19 @@ rule setDomainParameters_revert(uint32 destinationDomain, bytes32 recipient, uin
 rule transfer(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) {
     env e;
 
-    setupProxy();
-    setupRecorders();
+    require proxySlot() == almProxy;
+    require rateLimitDecreases == 0 && rateLimitIncreases == 0;
+    require forall bytes32 key. decreasesOfKey[key] == 0 && decreasedByKey[key] == 0;
+    require forall address target. !sceneCalledTarget[target];
+    require forall address target. !calledBeforeDecrease[target];
+    require facetCalls == 0;
+    require sceneDelegateCalls == 0 && sceneCreates == 0 && sceneValueCalls == 0;
+
+    require usdcToken.unexpectedCalls == 0 && usdcToken.approveCalls == 0;
+    require forall address spender. usdcToken.approvalsTo[spender] == 0;
+    require forall uint256 amt. !usdcToken.approvedAmountSeen[amt];
+    require cctpMessenger.unexpectedCalls == 0 && cctpMessenger.depositCalls == 0;
+    require cctpMessenger.depositedTotal == 0;
 
     uint256 burnLimit = usdcBurnLimit();
     bytes32 recipient = mintRecipient(destinationDomain);
@@ -265,7 +265,8 @@ rule transfer(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) {
 rule transfer_revert(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) {
     env e;
 
-    setupProxy();
+    require proxySlot() == almProxy;
+    require almProxy._roles[almProxy.CONTROLLER()].hasRole[currentContract];
 
     uint256 burnLimit = usdcBurnLimit();
     require burnLimit > 0;

@@ -31,6 +31,8 @@ function cvlFill(address target) returns uint256 {
 // --- Generic rules ---
 
 use rule roleGated;
+use rule noForbiddenCalls;
+use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
 use rule allocatorRequiresRateLimit;
 use rule reentrancyGuarded;
@@ -47,12 +49,11 @@ rule externalCallsOnlyToProxyAndRateLimitsExcept_swapUSDCToUSDS(method f) filter
 // --- swapUSDCToUSDS ---
 
 // Besides the proxy and the rate limits, swapUSDCToUSDS only calls the PSM, and only to refill
-// it. Nothing is delegatecalled or deployed.
+// it.
 rule swapUSDCToUSDS_externalCalls(uint256 usdcAmount) {
     env e;
 
     require forall address a. !facetCalledTarget[a];
-    require facetDelegateCalls == 0 && facetCreates == 0;
     require fillCalls == 0;
 
     address proxy      = proxySlot();
@@ -63,6 +64,4 @@ rule swapUSDCToUSDS_externalCalls(uint256 usdcAmount) {
 
     assert forall address a. facetCalledTarget[a] => a == proxy || a == rateLimits || a == psm_;
     assert fillCalls > 0 => fillTarget == psm_;
-    assert facetDelegateCalls == 0;
-    assert facetCreates       == 0;
 }
