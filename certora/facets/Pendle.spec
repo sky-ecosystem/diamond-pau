@@ -39,10 +39,10 @@ function cvlPyIndexCurrent(address target) returns uint256 {
 // --- Generic rules ---
 
 use rule roleGated;
-use rule noForbiddenCalls;
-use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
+use rule rateLimitCallsAreFacetCalls;
 use rule allocatorRequiresRateLimit;
+use rule noForbiddenCalls;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;
 

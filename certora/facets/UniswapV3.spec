@@ -12,10 +12,10 @@ methods {
 }
 
 use rule roleGated;
-use rule noForbiddenCalls;
-use rule rateLimitCallsAreFacetCalls;
 use rule adminIsConfigurationOnly;
+use rule rateLimitCallsAreFacetCalls;
 use rule allocatorRequiresRateLimit;
+use rule noForbiddenCalls;
 use rule externalCallsOnlyToProxyAndRateLimits;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;
