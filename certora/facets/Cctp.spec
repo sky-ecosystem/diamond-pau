@@ -32,7 +32,6 @@ methods {
     // contract so that the forwarded calls are observed
     function _.doCall(address target, bytes data)                         external => DISPATCHER(true);
     function _.doCallWithValue(address target, bytes data, uint256 value) external => DISPATCHER(true);
-    function _.doDelegateCall(address target, bytes data)                 external => DISPATCHER(true);
 
     // Calls forwarded by the proxy are dispatched to the mocks. A selector they do not model
     // reaches their fallback and is counted as an unexpected call; a call to any other address is
@@ -57,6 +56,7 @@ use rule adminIsConfigurationOnly;
 use rule rateLimitCallsAreFacetCalls;
 use rule allocatorRequiresRateLimit;
 use rule noForbiddenCalls;
+use rule noProxyDelegateCalls;
 use rule externalCallsOnlyToProxyAndRateLimits;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;
@@ -194,8 +194,7 @@ rule transfer(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) {
     require forall bytes32 key. decreasesOfKey[key] == 0 && decreasedByKey[key] == 0;
     require forall address target. !sceneCalledTarget[target];
     require forall address target. !calledBeforeDecrease[target];
-    require facetCalls == 0;
-    require sceneDelegateCalls == 0 && sceneCreates == 0 && sceneValueCalls == 0;
+    require sceneCreates == 0 && sceneValueCalls == 0;
 
     require usdcToken.unexpectedCalls == 0 && usdcToken.approveCalls == 0;
     require forall address spender. usdcToken.approvalsTo[spender] == 0;
@@ -248,13 +247,13 @@ rule transfer(uint256 amount, uint32 destinationDomain, uint64 feeCapRate) {
     assert forall uint256 approved. usdcToken.approvedAmountSeen[approved] => approved == amount || approved == 0;
     assert usdcToken.lastApprovedAmount == 0;
 
-    // Nothing else is asked of the token or the messenger, no ETH moves, nothing is delegatecalled
-    // or deployed, and every call in the scene targets the proxy, the rate limits, USDC or CCTP
+    // Nothing else is asked of the token or the messenger, no ETH moves, nothing is deployed, and
+    // every call in the scene targets the proxy, the rate limits, USDC or CCTP (that the proxy is
+    // never asked to delegatecall is proven by noProxyDelegateCalls)
     assert usdcToken.unexpectedCalls     == 0;
     assert cctpMessenger.unexpectedCalls == 0;
-    assert sceneValueCalls    == 0;
-    assert sceneDelegateCalls == 0;
-    assert sceneCreates       == 0;
+    assert sceneValueCalls == 0;
+    assert sceneCreates    == 0;
     assert forall address target. sceneCalledTarget[target] =>
         target == almProxy || target == rateLimits || target == usdcToken || target == cctpMessenger;
 }

@@ -27,7 +27,6 @@ methods {
     // contract so that the forwarded calls are observed
     function _.doCall(address target, bytes data)                         external => DISPATCHER(true);
     function _.doCallWithValue(address target, bytes data, uint256 value) external => DISPATCHER(true);
-    function _.doDelegateCall(address target, bytes data)                 external => DISPATCHER(true);
 
     // Calls forwarded by the proxy: their selector is only known at run time, so they are
     // dispatched to the mocks, which record the arguments. A selector the mocks do not model
@@ -55,6 +54,7 @@ use rule adminIsConfigurationOnly;
 use rule rateLimitCallsAreFacetCalls;
 use rule allocatorRequiresRateLimit;
 use rule noForbiddenCalls;
+use rule noProxyDelegateCalls;
 use rule externalCallsOnlyToProxyAndRateLimits;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;

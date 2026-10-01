@@ -43,6 +43,7 @@ use rule adminIsConfigurationOnly;
 use rule rateLimitCallsAreFacetCalls;
 use rule allocatorRequiresRateLimit;
 use rule noForbiddenCalls;
+use rule noProxyDelegateCalls;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;
 

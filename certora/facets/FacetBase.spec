@@ -23,6 +23,10 @@ methods {
 
     // ALMProxy: not summarised here. Calls to it are observed by the opcode hooks below, which
     // lets a facet specific spec put the real ALMProxy in the scene and still reuse these rules.
+    // The one exception is doDelegateCall, the proxy's most powerful entry point (the target runs
+    // with the proxy's storage and funds): it is recorded so that noProxyDelegateCalls can prove
+    // no facet ever reaches it.
+    function _.doDelegateCall(address target, bytes data) external => cvlDoDelegateCall() expect bytes;
 }
 
 // --- Ghosts ---
@@ -46,6 +50,7 @@ persistent ghost mapping(bytes32 => mathint) decreasedByKey;   // total amount d
 persistent ghost mathint facetCalls;
 persistent ghost mathint facetDelegateCalls;
 persistent ghost mathint facetCallcodes;
+persistent ghost mathint proxyDelegateCalls;
 persistent ghost mathint facetCreates;
 persistent ghost mapping(address => bool) facetCalledTarget;
 persistent ghost mapping(address => bool) sceneCalledTarget;
@@ -105,6 +110,12 @@ hook CREATE2(uint value, uint offset, uint length, bytes32 salt) address v {
 }
 
 // --- Summaries ---
+
+function cvlDoDelegateCall() returns bytes {
+    proxyDelegateCalls = proxyDelegateCalls + 1;
+    bytes result;
+    return result;
+}
 
 function cvlTriggerRateLimitDecrease(bytes32 key, uint256 amount) returns uint256 {
     rateLimitDecreases  = rateLimitDecreases + 1;
@@ -234,6 +245,19 @@ rule noForbiddenCalls(method f) {
     assert facetDelegateCalls == 0;
     assert facetCallcodes     == 0;
     assert facetCreates       == 0;
+}
+
+// No facet ever asks the proxy to delegatecall, in any function and for any caller. A facet that
+// legitimately needs ALMProxy.doDelegateCall simply does not use this rule.
+rule noProxyDelegateCalls(method f) {
+    env e;
+    calldataarg args;
+
+    require proxyDelegateCalls == 0;
+
+    f(e, args);
+
+    assert proxyDelegateCalls == 0;
 }
 
 
