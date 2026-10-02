@@ -51,6 +51,11 @@ persistent ghost mathint facetCalls;
 persistent ghost mathint facetDelegateCalls;
 persistent ghost mathint facetCallcodes;
 persistent ghost mathint proxyDelegateCalls;
+
+// Mirror of the shared reentrancy guard slot (ERC-7201 openzeppelin.storage.ReentrancyGuard), and
+// a flag set when the facet issues a CALL while that slot does not hold the lock
+persistent ghost uint256 guardStatus;
+persistent ghost bool    calledWhileUnlocked;
 persistent ghost mathint facetCreates;
 persistent ghost mapping(address => bool) facetCalledTarget;
 persistent ghost mapping(address => bool) sceneCalledTarget;
@@ -76,7 +81,18 @@ hook CALL(uint g, address addr, uint value, uint argsOffset, uint argsLength, ui
     if (executingContract == currentContract) {
         facetCalls              = facetCalls + 1;
         facetCalledTarget[addr] = true;
+        if (guardStatus != ENTERED()) {
+            calledWhileUnlocked = true;
+        }
     }
+}
+
+hook Sload uint256 v currentContract.ext_openzeppelin_storage_ReentrancyGuard._status {
+    require guardStatus == v;
+}
+
+hook Sstore currentContract.ext_openzeppelin_storage_ReentrancyGuard._status uint256 newValue {
+    guardStatus = newValue;
 }
 
 // CALLCODE is deprecated and never emitted by Solidity; it is counted on its own so that
@@ -285,21 +301,29 @@ rule externalCallsOnlyToProxyAndRateLimits(method f) filtered { f -> !f.isView }
 
 // --- Reentrancy ---
 
-// Every non-view function is nonReentrant
+// Every non-view function holds the shared reentrancy lock (ERC-7201 openzeppelin.storage.
+// ReentrancyGuard): it reverts when the slot is already locked, every external call it issues
+// happens while the slot holds the lock, and the lock is released on exit. So no facet can be
+// re-entered through another facet of the same Controller while it calls out.
 rule reentrancyGuarded(method f) filtered { f -> !f.isView } {
     env e;
     calldataarg args;
 
-    require status() == ENTERED();
+    uint256 statusBefore = status();
+
+    require guardStatus == statusBefore;
+    require !calledWhileUnlocked;
 
     f@withrevert(e, args);
 
-    assert lastReverted;
+    assert statusBefore == ENTERED() => lastReverted;
+    assert !lastReverted => !calledWhileUnlocked;
+    assert !lastReverted => status() == NOT_ENTERED();
 }
 
 // --- Storage isolation ---
 
-// The shared addresses are never written and the reentrancy guard is always released on exit
+// The shared addresses are never written
 rule sharedStorageUntouched(method f) filtered { f -> !f.isView } {
     env e;
     calldataarg args;
@@ -313,5 +337,4 @@ rule sharedStorageUntouched(method f) filtered { f -> !f.isView } {
     assert accessControlsSlot() == accessControlsBefore;
     assert proxySlot()          == proxyBefore;
     assert rateLimitsSlot()     == rateLimitsBefore;
-    assert status()             == NOT_ENTERED();
 }
