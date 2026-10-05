@@ -11,6 +11,8 @@ jobs:
       matrix:
         diamond-pau:
           - beacon
+          - controller
+          - rate-limits
           - facet-aave
           - facet-aave-v4
           - facet-basin
