@@ -216,14 +216,11 @@ contract Controller is IController, ControllerSharedStorage, ReentrancyGuardUpgr
     fallback() external payable {
         require(msg.data.length >= 4, InvalidCallDataLength(msg.data.length));
 
-        // TODO: Rollback minor changes here when Certora tool issue is solved
-        bytes4 selector = msg.sig;
-
-        Dispatch storage dispatch = _getControllerStorage().dispatches[selector];
+        Dispatch storage dispatch = _getControllerStorage().dispatches[msg.sig];
 
         address facet = dispatch.facet;
 
-        require(facet != address(0), CallSelectorNotWired(selector));
+        require(facet != address(0), CallSelectorNotWired(msg.sig));
 
         // Replace the incoming selector with the delegate selector.
         ( bool success, bytes memory returnData ) = facet.delegatecall(
