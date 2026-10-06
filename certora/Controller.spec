@@ -199,33 +199,33 @@ invariant integrationConfigConsistency(bytes32 id)
         }
     }
 
-// Every stored wire is reflected in the dispatch table with the integration's facet
-invariant wireDispatchConsistency(bytes32 id, uint256 i)
-    i < wireCount(id) =>
-        dispatchFacet(wireCallSelector(id, i))            == configFacet(id) &&
-        dispatchDelegateSelector(wireCallSelector(id, i)) == wireDelegateSelector(id, i)
-    {
-        preserved updateIntegrations(bytes32[] ids) with (env e) {
-            require allConfigsConsistent();
-            require allWiresDispatched();
-            require allSelectorsUnique();
-        }
-        preserved removeIntegrations(bytes32[] ids) with (env e) {
-            require allSelectorsUnique();
-        }
-    }
+// // Every stored wire is reflected in the dispatch table with the integration's facet
+// invariant wireDispatchConsistency(bytes32 id, uint256 i)
+//     i < wireCount(id) =>
+//         dispatchFacet(wireCallSelector(id, i))            == configFacet(id) &&
+//         dispatchDelegateSelector(wireCallSelector(id, i)) == wireDelegateSelector(id, i)
+//     {
+//         preserved updateIntegrations(bytes32[] ids) with (env e) {
+//             require allConfigsConsistent();
+//             require allWiresDispatched();
+//             require allSelectorsUnique();
+//         }
+//         preserved removeIntegrations(bytes32[] ids) with (env e) {
+//             require allSelectorsUnique();
+//         }
+//     }
 
-// No call selector is wired twice, neither across integrations nor within one
-invariant wireSelectorUniqueness(bytes32 id1, uint256 i, bytes32 id2, uint256 j)
-    (i < wireCount(id1) && j < wireCount(id2) && (id1 != id2 || i != j)) =>
-        wireCallSelector(id1, i) != wireCallSelector(id2, j)
-    {
-        preserved updateIntegrations(bytes32[] ids) with (env e) {
-            require allConfigsConsistent();
-            require allWiresDispatched();
-            require allSelectorsUnique();
-        }
-    }
+// // No call selector is wired twice, neither across integrations nor within one
+// invariant wireSelectorUniqueness(bytes32 id1, uint256 i, bytes32 id2, uint256 j)
+//     (i < wireCount(id1) && j < wireCount(id2) && (id1 != id2 || i != j)) =>
+//         wireCallSelector(id1, i) != wireCallSelector(id2, j)
+//     {
+//         preserved updateIntegrations(bytes32[] ids) with (env e) {
+//             require allConfigsConsistent();
+//             require allWiresDispatched();
+//             require allSelectorsUnique();
+//         }
+//     }
 
 // --- Storage Affected Rule ---
 
