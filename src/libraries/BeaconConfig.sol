@@ -163,15 +163,29 @@ library BeaconConfig {
     bytes32 internal constant WSTETH_INTEGRATION = "WSTETH_FACET";
 
     /**********************************************************************************************/
+    /*** Private Helpers                                                                        ***/
+    /**********************************************************************************************/
+
+    function _setIntegration(address beacon, IEnumerableIntegrations.Integration memory integration)
+        private
+    {
+        IBeacon(beacon).setIntegration(integration.id, integration.config);
+    }
+
+    /**********************************************************************************************/
     /*** Aave Integration                                                                       ***/
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Aave facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed AaveFacet contract.
+     * @notice Builds the Aave facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed AaveFacet contract.
+     * @return integration The Aave integration id and config.
      */
-    function setAaveIntegration(address beacon, address facet) internal {
+    function buildAaveIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -209,12 +223,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : AAVE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(AAVE_INTEGRATION, config);
+    /**
+     * @notice Configures the Aave facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed AaveFacet contract.
+     */
+    function setAaveIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildAaveIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -222,11 +243,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the AaveV4 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed AaveV4Facet contract.
+     * @notice Builds the AaveV4 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed AaveV4Facet contract.
+     * @return integration The AaveV4 integration id and config.
      */
-    function setAaveV4Integration(address beacon, address facet) internal {
+    function buildAaveV4Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -274,12 +299,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : AAVE_V4_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(AAVE_V4_INTEGRATION, config);
+    /**
+     * @notice Configures the AaveV4 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed AaveV4Facet contract.
+     */
+    function setAaveV4Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildAaveV4Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -287,11 +319,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Basin facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed BasinFacet contract.
+     * @notice Builds the Basin facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed BasinFacet contract.
+     * @return integration The Basin integration id and config.
      */
-    function setBasinIntegration(address beacon, address facet) internal {
+    function buildBasinIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -319,12 +355,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : BASIN_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(BASIN_INTEGRATION, config);
+    /**
+     * @notice Configures the Basin facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed BasinFacet contract.
+     */
+    function setBasinIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildBasinIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -332,11 +375,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the CCTP facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed CCTPFacet contract.
+     * @notice Builds the CCTP facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed CCTPFacet contract.
+     * @return integration The CCTP integration id and config.
      */
-    function setCCTPIntegration(address beacon, address facet) internal {
+    function buildCCTPIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -389,12 +436,19 @@ library BeaconConfig {
             ICCTPFacet.usdc.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : CCTP_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(CCTP_INTEGRATION, config);
+    /**
+     * @notice Configures the CCTP facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed CCTPFacet contract.
+     */
+    function setCCTPIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildCCTPIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -402,11 +456,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Centrifuge facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed CentrifugeFacet contract.
+     * @notice Builds the Centrifuge facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed CentrifugeFacet contract.
+     * @return integration The Centrifuge integration id and config.
      */
-    function setCentrifugeIntegration(address beacon, address facet) internal {
+    function buildCentrifugeIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](14);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -479,12 +537,19 @@ library BeaconConfig {
             ICentrifugeFacet.REQUEST_ID.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : CENTRIFUGE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(CENTRIFUGE_INTEGRATION, config);
+    /**
+     * @notice Configures the Centrifuge facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed CentrifugeFacet contract.
+     */
+    function setCentrifugeIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildCentrifugeIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -492,11 +557,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Curve facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed CurveFacet contract.
+     * @notice Builds the Curve facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed CurveFacet contract.
+     * @return integration The Curve integration id and config.
      */
-    function setCurveIntegration(address beacon, address facet) internal {
+    function buildCurveIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](11);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -554,12 +623,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : CURVE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(CURVE_INTEGRATION, config);
+    /**
+     * @notice Configures the Curve facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed CurveFacet contract.
+     */
+    function setCurveIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildCurveIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -567,11 +643,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the DAIUSDS facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed DAIUSDSFacet contract.
+     * @notice Builds the DAIUSDS facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed DAIUSDSFacet contract.
+     * @return integration The DAIUSDS integration id and config.
      */
-    function setDAIUSDSIntegration(address beacon, address facet) internal {
+    function buildDAIUSDSIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -614,12 +694,19 @@ library BeaconConfig {
             IDAIUSDSFacet.usds.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : DAIUSDS_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(DAIUSDS_INTEGRATION, config);
+    /**
+     * @notice Configures the DAIUSDS facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed DAIUSDSFacet contract.
+     */
+    function setDAIUSDSIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildDAIUSDSIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -627,11 +714,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the ERC4626 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed ERC4626Facet contract.
+     * @notice Builds the ERC4626 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed ERC4626Facet contract.
+     * @return integration The ERC4626 integration id and config.
      */
-    function setERC4626Integration(address beacon, address facet) internal {
+    function buildERC4626Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -679,12 +770,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : ERC4626_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(ERC4626_INTEGRATION, config);
+    /**
+     * @notice Configures the ERC4626 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed ERC4626Facet contract.
+     */
+    function setERC4626Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildERC4626Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -692,11 +790,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the ERC7540 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed ERC7540Facet contract.
+     * @notice Builds the ERC7540 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed ERC7540Facet contract.
+     * @return integration The ERC7540 integration id and config.
      */
-    function setERC7540Integration(address beacon, address facet) internal {
+    function buildERC7540Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -744,12 +846,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : ERC7540_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(ERC7540_INTEGRATION, config);
+    /**
+     * @notice Configures the ERC7540 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed ERC7540Facet contract.
+     */
+    function setERC7540Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildERC7540Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -757,11 +866,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Ethena facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed EthenaFacet contract.
+     * @notice Builds the Ethena facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed EthenaFacet contract.
+     * @return integration The Ethena integration id and config.
      */
-    function setEthenaIntegration(address beacon, address facet) internal {
+    function buildEthenaIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](18);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -854,12 +967,19 @@ library BeaconConfig {
             IEthenaFacet.usde.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : ETHENA_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(ETHENA_INTEGRATION, config);
+    /**
+     * @notice Configures the Ethena facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed EthenaFacet contract.
+     */
+    function setEthenaIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildEthenaIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -867,11 +987,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Farm facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed FarmFacet contract.
+     * @notice Builds the Farm facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed FarmFacet contract.
+     * @return integration The Farm integration id and config.
      */
-    function setFarmIntegration(address beacon, address facet) internal {
+    function buildFarmIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -909,12 +1033,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : FARM_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(FARM_INTEGRATION, config);
+    /**
+     * @notice Configures the Farm facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed FarmFacet contract.
+     */
+    function setFarmIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildFarmIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -922,11 +1053,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the LayerZero facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed LayerZeroFacet contract.
+     * @notice Builds the LayerZero facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed LayerZeroFacet contract.
+     * @return integration The LayerZero integration id and config.
      */
-    function setLayerZeroIntegration(address beacon, address facet) internal {
+    function buildLayerZeroIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -959,12 +1094,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : LAYER_ZERO_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(LAYER_ZERO_INTEGRATION, config);
+    /**
+     * @notice Configures the LayerZero facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed LayerZeroFacet contract.
+     */
+    function setLayerZeroIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildLayerZeroIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -972,11 +1114,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Maple facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed MapleFacet contract.
+     * @notice Builds the Maple facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed MapleFacet contract.
+     * @return integration The Maple integration id and config.
      */
-    function setMapleIntegration(address beacon, address facet) internal {
+    function buildMapleIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1004,12 +1150,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : MAPLE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(MAPLE_INTEGRATION, config);
+    /**
+     * @notice Configures the Maple facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed MapleFacet contract.
+     */
+    function setMapleIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildMapleIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1017,11 +1170,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Merkl facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed MerklFacet contract.
+     * @notice Builds the Merkl facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed MerklFacet contract.
+     * @return integration The Merkl integration id and config.
      */
-    function setMerklIntegration(address beacon, address facet) internal {
+    function buildMerklIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1039,12 +1196,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : MERKL_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(MERKL_INTEGRATION, config);
+    /**
+     * @notice Configures the Merkl facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed MerklFacet contract.
+     */
+    function setMerklIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildMerklIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1052,11 +1216,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the NFATHalo facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed NFATHaloFacet contract.
+     * @notice Builds the NFATHalo facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed NFATHaloFacet contract.
+     * @return integration The NFATHalo integration id and config.
      */
-    function setNFATHaloIntegration(address beacon, address facet) internal {
+    function buildNFATHaloIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](12);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1119,12 +1287,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : NFAT_HALO_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(NFAT_HALO_INTEGRATION, config);
+    /**
+     * @notice Configures the NFATHalo facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed NFATHaloFacet contract.
+     */
+    function setNFATHaloIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildNFATHaloIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1132,11 +1307,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the NFATPrime facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed NFATPrimeFacet contract.
+     * @notice Builds the NFATPrime facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed NFATPrimeFacet contract.
+     * @return integration The NFATPrime integration id and config.
      */
-    function setNFATPrimeIntegration(address beacon, address facet) internal {
+    function buildNFATPrimeIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1174,12 +1353,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : NFAT_PRIME_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(NFAT_PRIME_INTEGRATION, config);
+    /**
+     * @notice Configures the NFATPrime facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed NFATPrimeFacet contract.
+     */
+    function setNFATPrimeIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildNFATPrimeIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1187,11 +1373,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the OTC facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed OTCFacet contract.
+     * @notice Builds the OTC facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed OTCFacet contract.
+     * @return integration The OTC integration id and config.
      */
-    function setOTCIntegration(address beacon, address facet) internal {
+    function buildOTCIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](14);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1264,12 +1454,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : OTC_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(OTC_INTEGRATION, config);
+    /**
+     * @notice Configures the OTC facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed OTCFacet contract.
+     */
+    function setOTCIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildOTCIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1277,11 +1474,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Pendle facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed PendleFacet contract.
+     * @notice Builds the Pendle facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed PendleFacet contract.
+     * @return integration The Pendle integration id and config.
      */
-    function setPendleIntegration(address beacon, address facet) internal {
+    function buildPendleIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1304,12 +1505,19 @@ library BeaconConfig {
             IPendleFacet.router.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : PENDLE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(PENDLE_INTEGRATION, config);
+    /**
+     * @notice Configures the Pendle facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed PendleFacet contract.
+     */
+    function setPendleIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildPendleIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1317,11 +1525,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the PSM facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed PSMFacet contract.
+     * @notice Builds the PSM facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed PSMFacet contract.
+     * @return integration The PSM integration id and config.
      */
-    function setPSMIntegration(address beacon, address facet) internal {
+    function buildPSMIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](11);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1379,12 +1591,19 @@ library BeaconConfig {
             IPSMFacet.usds.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : PSM_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(PSM_INTEGRATION, config);
+    /**
+     * @notice Configures the PSM facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed PSMFacet contract.
+     */
+    function setPSMIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildPSMIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1392,11 +1611,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the PSM3 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed PSM3Facet contract.
+     * @notice Builds the PSM3 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed PSM3Facet contract.
+     * @return integration The PSM3 integration id and config.
      */
-    function setPSM3Integration(address beacon, address facet) internal {
+    function buildPSM3Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1429,12 +1652,19 @@ library BeaconConfig {
             IPSM3Facet.psm.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : PSM3_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(PSM3_INTEGRATION, config);
+    /**
+     * @notice Configures the PSM3 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed PSM3Facet contract.
+     */
+    function setPSM3Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildPSM3Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -1442,11 +1672,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the SparkVault facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed SparkVaultFacet contract.
+     * @notice Builds the SparkVault facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed SparkVaultFacet contract.
+     * @return integration The SparkVault integration id and config.
      */
-    function setSparkVaultIntegration(address beacon, address facet) internal {
+    function buildSparkVaultIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1464,12 +1698,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : SPARK_VAULT_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(SPARK_VAULT_INTEGRATION, config);
+    /**
+     * @notice Configures the SparkVault facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed SparkVaultFacet contract.
+     */
+    function setSparkVaultIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildSparkVaultIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1477,11 +1718,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the Superstate facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed SuperstateFacet contract.
+     * @notice Builds the Superstate facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed SuperstateFacet contract.
+     * @return integration The Superstate integration id and config.
      */
-    function setSuperstateIntegration(address beacon, address facet) internal {
+    function buildSuperstateIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1509,12 +1754,19 @@ library BeaconConfig {
             ISuperstateFacet.ustb.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : SUPERSTATE_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(SUPERSTATE_INTEGRATION, config);
+    /**
+     * @notice Configures the Superstate facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed SuperstateFacet contract.
+     */
+    function setSuperstateIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildSuperstateIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1522,11 +1774,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the TransferAsset facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed TransferAssetFacet contract.
+     * @notice Builds the TransferAsset facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed TransferAssetFacet contract.
+     * @return integration The TransferAsset integration id and config.
      */
-    function setTransferAssetIntegration(address beacon, address facet) internal {
+    function buildTransferAssetIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](3);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1544,12 +1800,19 @@ library BeaconConfig {
             IFacet.VERSION.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : TRANSFER_ASSET_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(TRANSFER_ASSET_INTEGRATION, config);
+    /**
+     * @notice Configures the TransferAsset facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed TransferAssetFacet contract.
+     */
+    function setTransferAssetIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildTransferAssetIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1557,11 +1820,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the UniswapV3 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed UniswapV3Facet contract.
+     * @notice Builds the UniswapV3 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed UniswapV3Facet contract.
+     * @return integration The UniswapV3 integration id and config.
      */
-    function setUniswapV3Integration(address beacon, address facet) internal {
+    function buildUniswapV3Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](23);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1679,12 +1946,19 @@ library BeaconConfig {
             IUniswapV3Facet.router.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : UNISWAP_V3_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(UNISWAP_V3_INTEGRATION, config);
+    /**
+     * @notice Configures the UniswapV3 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed UniswapV3Facet contract.
+     */
+    function setUniswapV3Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildUniswapV3Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -1692,11 +1966,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the UniswapV4 facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed UniswapV4Facet contract.
+     * @notice Builds the UniswapV4 facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed UniswapV4Facet contract.
+     * @return integration The UniswapV4 integration id and config.
      */
-    function setUniswapV4Integration(address beacon, address facet) internal {
+    function buildUniswapV4Integration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](17);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1784,12 +2062,19 @@ library BeaconConfig {
             IUniswapV4Facet.router.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : UNISWAP_V4_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(UNISWAP_V4_INTEGRATION, config);
+    /**
+     * @notice Configures the UniswapV4 facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed UniswapV4Facet contract.
+     */
+    function setUniswapV4Integration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildUniswapV4Integration(facet));
     }
 
     /**********************************************************************************************/
@@ -1797,11 +2082,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the USDS facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed USDSFacet contract.
+     * @notice Builds the USDS facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed USDSFacet contract.
+     * @return integration The USDS integration id and config.
      */
-    function setUSDSIntegration(address beacon, address facet) internal {
+    function buildUSDSIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](8);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1844,12 +2133,19 @@ library BeaconConfig {
             IUSDSFacet.usds.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : USDS_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(USDS_INTEGRATION, config);
+    /**
+     * @notice Configures the USDS facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed USDSFacet contract.
+     */
+    function setUSDSIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildUSDSIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1857,11 +2153,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the WEETH facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed WEETHFacet contract.
+     * @notice Builds the WEETH facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed WEETHFacet contract.
+     * @return integration The WEETH integration id and config.
      */
-    function setWEETHIntegration(address beacon, address facet) internal {
+    function buildWEETHIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1909,12 +2209,19 @@ library BeaconConfig {
             IWEETHFacet.weth.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : WEETH_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(WEETH_INTEGRATION, config);
+    /**
+     * @notice Configures the WEETH facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed WEETHFacet contract.
+     */
+    function setWEETHIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildWEETHIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1922,11 +2229,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the WrapProxyETH facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed WrapProxyETHFacet contract.
+     * @notice Builds the WrapProxyETH facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed WrapProxyETHFacet contract.
+     * @return integration The WrapProxyETH integration id and config.
      */
-    function setWrapProxyETHIntegration(address beacon, address facet) internal {
+    function buildWrapProxyETHIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -1949,12 +2260,19 @@ library BeaconConfig {
             IWrapProxyETHFacet.weth.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : WRAP_PROXY_ETH_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
+    }
 
-        IBeacon(beacon).setIntegration(WRAP_PROXY_ETH_INTEGRATION, config);
+    /**
+     * @notice Configures the WrapProxyETH facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed WrapProxyETHFacet contract.
+     */
+    function setWrapProxyETHIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildWrapProxyETHIntegration(facet));
     }
 
     /**********************************************************************************************/
@@ -1962,11 +2280,15 @@ library BeaconConfig {
     /**********************************************************************************************/
 
     /**
-     * @notice Configures the WSTETH facet integration on the beacon.
-     * @param  beacon Address of the Sky Diamond PAU Beacon.
-     * @param  facet  Address of the deployed WSTETHFacet contract.
+     * @notice Builds the WSTETH facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed WSTETHFacet contract.
+     * @return integration The WSTETH integration id and config.
      */
-    function setWSTETHIntegration(address beacon, address facet) internal {
+    function buildWSTETHIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
         IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](10);
 
         wires[0] = IEnumerableIntegrations.Wire(
@@ -2019,12 +2341,18 @@ library BeaconConfig {
             IWSTETHFacet.wsteth.selector
         );
 
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : facet,
-            wires : wires
+        integration = IEnumerableIntegrations.Integration({
+            id     : WSTETH_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
         });
-
-        IBeacon(beacon).setIntegration(WSTETH_INTEGRATION, config);
     }
 
+    /**
+     * @notice Configures the WSTETH facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed WSTETHFacet contract.
+     */
+    function setWSTETHIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildWSTETHIntegration(facet));
+    }
 }
