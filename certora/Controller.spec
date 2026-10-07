@@ -122,8 +122,8 @@ definition beaconSelectorsUnique(bytes32[] ids) returns bool =
          (ids[k1] != ids[k2] || w1 != w2)) =>
             beaconWireCallSelector(ids[k1], w1) != beaconWireCallSelector(ids[k2], w2);
 
-// Inductive hypotheses: the invariants below quantified over all their arguments. Used in the
-// preserved blocks of the batch functions, where pinning single indices is not possible.
+// Inductive hypotheses: the set and config invariants below quantified over all their
+// arguments. Used where pinning single instances is not possible.
 definition allSetConsistent() returns bool =
     (forall uint256 i. i < integrationCount() => integrationPos(integrationAt(i)) == i + 1) &&
     (forall bytes32 id. forall uint256 p.
@@ -133,16 +133,6 @@ definition allConfigsConsistent() returns bool =
     forall bytes32 id.
         (integrationPos(id) != 0 <=> configFacet(id) != 0) &&
         (configFacet(id) != 0 <=> wireCount(id) != 0);
-
-definition allWiresDispatched() returns bool =
-    forall bytes32 id. forall uint256 i. i < wireCount(id) =>
-        dispatchFacet(wireCallSelector(id, i))            == configFacet(id) &&
-        dispatchDelegateSelector(wireCallSelector(id, i)) == wireDelegateSelector(id, i);
-
-definition allSelectorsUnique() returns bool =
-    forall bytes32 id1. forall uint256 i. forall bytes32 id2. forall uint256 j.
-        (i < wireCount(id1) && j < wireCount(id2) && (id1 != id2 || i != j)) =>
-            wireCallSelector(id1, i) != wireCallSelector(id2, j);
 
 // --- Invariants: ReentrancyGuardUpgradeable and Initializable ---
 
@@ -199,33 +189,61 @@ invariant integrationConfigConsistency(bytes32 id)
         }
     }
 
-// // Every stored wire is reflected in the dispatch table with the integration's facet
-// invariant wireDispatchConsistency(bytes32 id, uint256 i)
-//     i < wireCount(id) =>
-//         dispatchFacet(wireCallSelector(id, i))            == configFacet(id) &&
-//         dispatchDelegateSelector(wireCallSelector(id, i)) == wireDelegateSelector(id, i)
-//     {
-//         preserved updateIntegrations(bytes32[] ids) with (env e) {
-//             require allConfigsConsistent();
-//             require allWiresDispatched();
-//             require allSelectorsUnique();
-//         }
-//         preserved removeIntegrations(bytes32[] ids) with (env e) {
-//             require allSelectorsUnique();
-//         }
-//     }
+// Every stored wire is reflected in the dispatch table with the integration's facet.
+//
+// The preserved blocks list the ground instances the steps need instead of quantified
+// hypotheses. They are tied to the loop bound of the conf (loop_iter 2): a batch has at most two
+// entries and every wire array at most two elements. Raising loop_iter requires extending the
+// batch-entry and wire-index instances below. wireDispatchConsistency and wireSelectorUniqueness
+// assume each other in the pre-state, which is sound because both are proven by induction.
+invariant wireDispatchConsistency(bytes32 id, uint256 i)
+    i < wireCount(id) =>
+        dispatchFacet(wireCallSelector(id, i))            == configFacet(id) &&
+        dispatchDelegateSelector(wireCallSelector(id, i)) == wireDelegateSelector(id, i)
+    {
+        preserved updateIntegrations(bytes32[] ids) with (env e) {
+            // Two batch entries cannot be given the same selector by the Beacon (Beacon.spec,
+            // wireSelectorUniqueness)
+            require beaconSelectorsUnique(ids);
 
-// // No call selector is wired twice, neither across integrations nor within one
-// invariant wireSelectorUniqueness(bytes32 id1, uint256 i, bytes32 id2, uint256 j)
-//     (i < wireCount(id1) && j < wireCount(id2) && (id1 != id2 || i != j)) =>
-//         wireCallSelector(id1, i) != wireCallSelector(id2, j)
-//     {
-//         preserved updateIntegrations(bytes32[] ids) with (env e) {
-//             require allConfigsConsistent();
-//             require allWiresDispatched();
-//             require allSelectorsUnique();
-//         }
-//     }
+            // A wire that is kept can only lose its dispatch if a batch entry's deletion clears
+            // that selector, which needs a stored wire of that entry with the same selector.
+            // integrationConfigConsistency gives a non-zero facet, so the already-wired check
+            // prevents an overwrite.
+            requireInvariant integrationConfigConsistency(id);
+            requireInvariant wireSelectorUniqueness(id, i, ids[0], 0);
+            requireInvariant wireSelectorUniqueness(id, i, ids[0], 1);
+            requireInvariant wireSelectorUniqueness(id, i, ids[1], 0);
+            requireInvariant wireSelectorUniqueness(id, i, ids[1], 1);
+        }
+        preserved removeIntegrations(bytes32[] ids) with (env e) {
+            // A removed entry's deletion only clears its own selectors, which differ from those
+            // of any id that is kept
+            requireInvariant wireSelectorUniqueness(id, i, ids[0], 0);
+            requireInvariant wireSelectorUniqueness(id, i, ids[0], 1);
+            requireInvariant wireSelectorUniqueness(id, i, ids[1], 0);
+            requireInvariant wireSelectorUniqueness(id, i, ids[1], 1);
+        }
+    }
+
+// No call selector is wired twice, neither across integrations nor within one
+invariant wireSelectorUniqueness(bytes32 id1, uint256 i, bytes32 id2, uint256 j)
+    (i < wireCount(id1) && j < wireCount(id2) && (id1 != id2 || i != j)) =>
+        wireCallSelector(id1, i) != wireCallSelector(id2, j)
+    {
+        preserved updateIntegrations(bytes32[] ids) with (env e) {
+            // Two batch entries cannot be given the same selector by the Beacon (Beacon.spec,
+            // wireSelectorUniqueness)
+            require beaconSelectorsUnique(ids);
+
+            // A stored wire of id1 or id2 is still dispatched before the call, so the Controller's
+            // already-wired check rejects a re-synced selector that collides with it
+            requireInvariant integrationConfigConsistency(id1);
+            requireInvariant integrationConfigConsistency(id2);
+            requireInvariant wireDispatchConsistency(id1, i);
+            requireInvariant wireDispatchConsistency(id2, j);
+        }
+    }
 
 // --- Storage Affected Rule ---
 
