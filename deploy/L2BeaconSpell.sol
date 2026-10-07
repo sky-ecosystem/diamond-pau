@@ -6,12 +6,10 @@ import { IEnumerableIntegrations } from "../src/interfaces/IEnumerableIntegratio
 
 /**
  * @title  L2BeaconSpell
- * @notice A reusable L2 spell for the L2GovernanceRelay to set or remove integrations on a
+ * @notice A reusable L2 spell for the L2GovernanceRelay to remove and set integrations on a
  *         foreign chain Beacon. The relay delegatecalls into this spell, so the Beacon sees the
  *         relay (its `DEFAULT_ADMIN_ROLE`) as the caller.
- * @dev    Controllers do not pick up Beacon changes automatically: each Controller admin must
- *         call `updateIntegrations` / `removeIntegrations` with the affected integration ids
- *         afterwards.
+ * @dev    Removals and sets are applied atomically within a single relayed message.
  */
 contract L2BeaconSpell {
 
@@ -21,17 +19,26 @@ contract L2BeaconSpell {
         beacon = beacon_;
     }
 
-    function setIntegrations(IEnumerableIntegrations.Integration[] calldata integrations)
+    /**
+     * @notice Removes and then sets integrations on the Beacon.
+     * @dev    Removals run first so that call selectors released by a removed integration can be
+     *         wired into a newly set one. An id present in both arrays is removed and then set
+     *         with its new config. Either array may be empty.
+     * @param  ids          Identifiers of the integrations to remove.
+     * @param  integrations Integrations to set (add or upgrade).
+     */
+    function removeAndSetIntegrations(
+        bytes32[]                             calldata ids,
+        IEnumerableIntegrations.Integration[] calldata integrations
+    )
         external
     {
-        for (uint256 i = 0; i < integrations.length; ++i) {
-            IBeacon(beacon).setIntegration(integrations[i].id, integrations[i].config);
-        }
-    }
-
-    function removeIntegrations(bytes32[] calldata ids) external {
         for (uint256 i = 0; i < ids.length; ++i) {
             IBeacon(beacon).removeIntegration(ids[i]);
+        }
+
+        for (uint256 i = 0; i < integrations.length; ++i) {
+            IBeacon(beacon).setIntegration(integrations[i].id, integrations[i].config);
         }
     }
 
