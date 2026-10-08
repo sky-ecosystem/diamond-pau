@@ -1,4 +1,6 @@
 PATH := ~/.solc-select/artifacts/solc-0.8.34:$(PATH)
+certora-alm-proxy :; PATH=${PATH} certoraRun certora/ALMProxy.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
+certora-alm-proxy-freezable :; PATH=${PATH} certoraRun certora/ALMProxyFreezable.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-beacon :; PATH=${PATH} certoraRun certora/Beacon.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-controller :; PATH=${PATH} certoraRun certora/Controller.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-rate-limits :; PATH=${PATH} certoraRun certora/RateLimits.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)

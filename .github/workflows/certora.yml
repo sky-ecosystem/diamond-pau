@@ -10,6 +10,8 @@ jobs:
       fail-fast: false
       matrix:
         diamond-pau:
+          - alm-proxy
+          - alm-proxy-freezable
           - beacon
           - controller
           - rate-limits
