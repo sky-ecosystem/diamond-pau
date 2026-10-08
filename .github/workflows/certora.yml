@@ -23,7 +23,6 @@ jobs:
           - facet-centrifuge
           - facet-curve
           - facet-dai-usds
-          - facet-dual-pool
           - facet-erc4626
           - facet-erc7540
           - facet-ethena
