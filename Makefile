@@ -3,5 +3,6 @@ certora-alm-proxy :; PATH=${PATH} certoraRun certora/ALMProxy.conf$(if $(rule), 
 certora-alm-proxy-freezable :; PATH=${PATH} certoraRun certora/ALMProxyFreezable.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-beacon :; PATH=${PATH} certoraRun certora/Beacon.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-controller :; PATH=${PATH} certoraRun certora/Controller.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
+certora-access-controls :; PATH=${PATH} certoraRun certora/AccessControls.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-rate-limits :; PATH=${PATH} certoraRun certora/RateLimits.conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)
 certora-facet-% :; PATH=${PATH} certoraRun certora/facets/$(shell echo '$(*)' | awk -F- '{for(i=1;i<=NF;i++) printf "%s", toupper(substr($$i,1,1)) substr($$i,2); print ""}').conf$(if $(rule), --rule $(rule),)$(if $(results), --wait_for_results all,)

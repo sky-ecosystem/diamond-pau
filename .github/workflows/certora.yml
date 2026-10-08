@@ -14,6 +14,7 @@ jobs:
           - alm-proxy-freezable
           - beacon
           - controller
+          - access-controls
           - rate-limits
           - facet-aave
           - facet-aave-v4
