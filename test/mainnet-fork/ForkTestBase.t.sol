@@ -29,7 +29,6 @@ import { CCTPFacet }          from "../../src/facets/cctp/CCTPFacet.sol";
 import { CentrifugeFacet }    from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { CurveFacet }         from "../../src/facets/curve/CurveFacet.sol";
 import { DAIUSDSFacet }       from "../../src/facets/dai-usds/DAIUSDSFacet.sol";
-import { DualPoolFacet }      from "../../src/facets/dual-pool/DualPoolFacet.sol";
 import { ERC4626Facet }       from "../../src/facets/erc4626/ERC4626Facet.sol";
 import { ERC7540Facet }       from "../../src/facets/erc7540/ERC7540Facet.sol";
 import { EthenaFacet }        from "../../src/facets/ethena/EthenaFacet.sol";
@@ -131,7 +130,6 @@ abstract contract ForkTestBase is DssTest {
 
     // NOTE: From https://docs.uniswap.org/contracts/v4/deployments (Ethereum Mainnet).
     address internal constant _PERMIT2                     = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
-    address internal constant _UNISWAP_V4_POOL_MANAGER     = 0x000000000004444c5dc75cB358380D2e3dE08A90;
     address internal constant _UNISWAP_V4_POSITION_MANAGER = 0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e;
     address internal constant _UNISWAP_V4_ROUTER           = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
 
@@ -277,7 +275,6 @@ abstract contract ForkTestBase is DssTest {
         _onboardCentrifuge();
         _onboardCurve();
         _onboardDAIUSDS();
-        _onboardDualPool();
         _onboardERC4626();
         _onboardERC7540();
         _onboardEthena();
@@ -318,7 +315,7 @@ abstract contract ForkTestBase is DssTest {
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        bytes32[] memory integrationIds = new bytes32[](29);
+        bytes32[] memory integrationIds = new bytes32[](28);
         integrationIds[0]  = "AAVE_FACET";
         integrationIds[1]  = "BASIN_FACET";
         integrationIds[2]  = "CCTP_FACET";
@@ -347,7 +344,6 @@ abstract contract ForkTestBase is DssTest {
         integrationIds[25] = "NFAT_HALO_FACET";
         integrationIds[26] = "NFAT_PRIME_FACET";
         integrationIds[27] = "AAVE_V4_FACET";
-        integrationIds[28] = "DUAL_POOL_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -470,12 +466,6 @@ abstract contract ForkTestBase is DssTest {
 
         vm.label(daiUSDSFacet, "DAIUSDSFacet");
         BeaconConfig.setDAIUSDSIntegration(address(beacon), daiUSDSFacet);
-    }
-
-    function _onboardDualPool() internal {
-        address dualPoolFacet = address(new DualPoolFacet());
-        vm.label(dualPoolFacet, "DualPoolFacet");
-        BeaconConfig.setDualPoolIntegration(address(beacon), dualPoolFacet);
     }
 
     function _onboardERC4626() internal {

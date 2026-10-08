@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { PoolKey } from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
-
 interface IUniswapV4Controller {
 
     function uniswapV4_VERSION() external pure returns (string memory);
@@ -52,10 +50,10 @@ interface IUniswapV4Controller {
         external;
 
     function uniswapV4_swap(
-        PoolKey calldata poolKey,
-        address          tokenIn,
-        uint128          amountIn,
-        uint128          amountOutMin
+        bytes32 poolId,
+        address tokenIn,
+        uint128 amountIn,
+        uint128 amountOutMin
     )
         external;
 
