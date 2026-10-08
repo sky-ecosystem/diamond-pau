@@ -40,6 +40,8 @@ persistent ghost mathint rateLimitDecreases;
 persistent ghost mathint rateLimitIncreases;
 persistent ghost bytes32 lastDecreasedKey;
 persistent ghost uint256 lastDecreasedAmount;
+persistent ghost bytes32 lastIncreasedKey;
+persistent ghost uint256 lastIncreasedAmount;
 persistent ghost mapping(bytes32 => mathint) decreasesOfKey;   // number of decreases per key
 persistent ghost mapping(bytes32 => mathint) decreasedByKey;   // total amount decreased per key
 
@@ -144,7 +146,9 @@ function cvlTriggerRateLimitDecrease(bytes32 key, uint256 amount) returns uint25
 }
 
 function cvlTriggerRateLimitIncrease(bytes32 key, uint256 amount) returns uint256 {
-    rateLimitIncreases = rateLimitIncreases + 1;
+    rateLimitIncreases  = rateLimitIncreases + 1;
+    lastIncreasedKey    = key;
+    lastIncreasedAmount = amount;
     uint256 newLimit;
     return newLimit;
 }
