@@ -24,21 +24,21 @@ contract L2BeaconSpell {
      * @dev    Removals run first so that call selectors released by a removed integration can be
      *         wired into a newly set one. An id present in both arrays is removed and then set
      *         with its new config. Either array may be empty.
-     * @param  ids          Identifiers of the integrations to remove.
-     * @param  integrations Integrations to set (add or upgrade).
+     * @param  idsToRemove       Identifiers of the integrations to remove.
+     * @param  integrationsToSet Integrations to set (add or upgrade).
      */
     function removeAndSetIntegrations(
-        bytes32[]                             calldata ids,
-        IEnumerableIntegrations.Integration[] calldata integrations
+        bytes32[]                             calldata idsToRemove,
+        IEnumerableIntegrations.Integration[] calldata integrationsToSet
     )
         external
     {
-        for (uint256 i = 0; i < ids.length; ++i) {
-            IBeacon(beacon).removeIntegration(ids[i]);
+        for (uint256 i = 0; i < idsToRemove.length; ++i) {
+            IBeacon(beacon).removeIntegration(idsToRemove[i]);
         }
 
-        for (uint256 i = 0; i < integrations.length; ++i) {
-            IBeacon(beacon).setIntegration(integrations[i].id, integrations[i].config);
+        for (uint256 i = 0; i < integrationsToSet.length; ++i) {
+            IBeacon(beacon).setIntegration(integrationsToSet[i].id, integrationsToSet[i].config);
         }
     }
 
