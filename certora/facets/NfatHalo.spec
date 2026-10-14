@@ -47,6 +47,8 @@ use rule sharedStorageUntouched;
 
 // --- Definitions ---
 
+override definition OWN_NAMESPACE() returns uint8 = NAMESPACE_NFATHaloFacet_v1();
+
 definition ISSUE_SELECTOR()   returns bytes4 = to_bytes4(0xdfe5ef48);  // issue(address,uint256,uint256)
 definition REPAY_SELECTOR()   returns bytes4 = to_bytes4(0xd8aed145);  // repay(uint256,uint256)
 definition APPROVE_SELECTOR() returns bytes4 = to_bytes4(0x095ea7b3);  // approve(address,uint256)

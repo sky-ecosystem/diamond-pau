@@ -20,3 +20,7 @@ use rule noProxyDelegateCalls;
 use rule externalCallsOnlyToProxyAndRateLimits;
 use rule reentrancyGuarded;
 use rule sharedStorageUntouched;
+
+// --- Definitions ---
+
+override definition OWN_NAMESPACE() returns uint8 = NAMESPACE_UniswapV3Facet_v1();

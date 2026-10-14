@@ -39,6 +39,8 @@ use rule sharedStorageUntouched;
 
 // --- Definitions ---
 
+override definition OWN_NAMESPACE() returns uint8 = NAMESPACE_USDSFacet_v1();
+
 definition DRAW_SELECTOR()          returns bytes4 = to_bytes4(0x3b304147);  // draw(uint256)
 definition WIPE_SELECTOR()          returns bytes4 = to_bytes4(0xb38a1620);  // wipe(uint256)
 definition TRANSFER_SELECTOR()      returns bytes4 = to_bytes4(0xa9059cbb);  // transfer(address,uint256)

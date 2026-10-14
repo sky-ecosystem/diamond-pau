@@ -3,6 +3,8 @@
 // Generic specification shared by every facet. It only refers to the facet through parametric
 // methods, so the same file is verified against each facet with its own .conf.
 
+import "Namespaces.spec";
+
 // --- Methods block ---
 
 methods {
@@ -327,18 +329,22 @@ rule reentrancyGuarded(method f) filtered { f -> !f.isView } {
 
 // --- Storage isolation ---
 
-// The shared addresses are never written
+// The facet's own namespace, if it has one. A facet spec whose facet declares a namespace overrides
+// this with its id from Namespaces.spec.
+definition OWN_NAMESPACE() returns uint8 = NO_NAMESPACE();
+
+// The facet only writes its own storage: neither the shared addresses, nor the Controller's
+// namespace (integration set, configs and dispatch table), nor any other facet's namespace.
+// Namespaces.spec hooks every field of every namespace, so any write the facet makes is recorded.
 rule sharedStorageUntouched(method f) filtered { f -> !f.isView } {
     env e;
     calldataarg args;
 
-    address accessControlsBefore = accessControlsSlot();
-    address proxyBefore          = proxySlot();
-    address rateLimitsBefore     = rateLimitsSlot();
+    clearNamespaceWrites();
 
     f(e, args);
 
-    assert accessControlsSlot() == accessControlsBefore;
-    assert proxySlot()          == proxyBefore;
-    assert rateLimitsSlot()     == rateLimitsBefore;
+    assert !written_SharedController;
+    assert !written_Controller;
+    assertOnlyOwnFacetNamespaceWritten(OWN_NAMESPACE());
 }

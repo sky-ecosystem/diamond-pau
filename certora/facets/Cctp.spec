@@ -63,6 +63,8 @@ use rule sharedStorageUntouched;
 
 // --- Definitions ---
 
+override definition OWN_NAMESPACE() returns uint8 = NAMESPACE_CCTPFacet_v1();
+
 definition ONE_HUNDRED_PERCENT() returns mathint = 10000;
 
 // sky.pau.storage.CCTPFacet.v1
