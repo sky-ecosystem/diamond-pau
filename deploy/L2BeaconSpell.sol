@@ -26,8 +26,11 @@ contract L2BeaconSpell {
      * @notice Removes and then sets integrations on the Beacon.
      * @dev    Removals run first so that call selectors released by a removed integration can be
      *         wired into a newly set one. An id present in both arrays is removed and then set
-     *         with its new config. Either array may be empty. Reverts if executed after
-     *         `deadline`, so a message delayed in the bridge cannot be applied late.
+     *         with its new config. Note that `setIntegration` already clears an existing id's
+     *         config and dispatch entries before applying the new one, so an in-place upgrade
+     *         does not require a removal. Either array may be empty.
+     *         Reverts if executed after `deadline`, so a message delayed in the bridge cannot be
+     *         applied late.
      * @param  idsToRemove       Identifiers of the integrations to remove.
      * @param  integrationsToSet Integrations to set (add or upgrade).
      * @param  deadline          Latest destination chain timestamp (inclusive) at which the
