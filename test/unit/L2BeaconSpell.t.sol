@@ -66,13 +66,14 @@ contract L2BeaconSpell_UnitTests is Test {
 
     function _removeAndSetIntegrations(
         bytes32[]                             memory ids,
-        IEnumerableIntegrations.Integration[] memory integrations
+        IEnumerableIntegrations.Integration[] memory integrations,
+        uint256                                      deadline
     )
         internal
     {
         relay.relay(
             address(spell),
-            abi.encodeCall(L2BeaconSpell.removeAndSetIntegrations, (ids, integrations))
+            abi.encodeCall(L2BeaconSpell.removeAndSetIntegrations, (ids, integrations, deadline))
         );
     }
 
@@ -163,7 +164,11 @@ contract L2BeaconSpell_UnitTests is Test {
                 bytes32(0)
             )
         );
-        spell.removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        spell.removeAndSetIntegrations(
+            new bytes32[](0),
+            _integrations(facet1, facet2),
+            block.timestamp
+        );
     }
 
     function test_removeAndSetIntegrations_notAdmin_removeOnly() external {
@@ -177,17 +182,36 @@ contract L2BeaconSpell_UnitTests is Test {
         bytes32[] memory ids = new bytes32[](2);
         ids[0] = ID_1;
         ids[1] = ID_2;
-        spell.removeAndSetIntegrations(ids, new IEnumerableIntegrations.Integration[](0));
+        spell.removeAndSetIntegrations(
+            ids,
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp
+        );
+    }
+
+    function test_removeAndSetIntegrations_deadlineExpired() external {
+        vm.expectRevert("L2BeaconSpell/deadline-expired");
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp - 1
+        );
+
+        assertEq(beacon.integrations().length, 0);
     }
 
     function test_removeAndSetIntegrations_empty() external {
-        _removeAndSetIntegrations(new bytes32[](0), new IEnumerableIntegrations.Integration[](0));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 0);
     }
 
     function test_removeAndSetIntegrations_setOnly() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         assertEq(beacon.integrations().length, 2);
 
@@ -196,12 +220,16 @@ contract L2BeaconSpell_UnitTests is Test {
     }
 
     function test_removeAndSetIntegrations_setOnly_upgradesExisting() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         address newFacet1 = address(new MockFacet());
         address newFacet2 = address(new MockFacet());
 
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(newFacet1, newFacet2));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            _integrations(newFacet1, newFacet2),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 2);
 
@@ -218,7 +246,7 @@ contract L2BeaconSpell_UnitTests is Test {
         vm.expectRevert(
             abi.encodeWithSignature("CallSelectorAlreadyWired(bytes4)", CALL_SELECTOR_1)
         );
-        _removeAndSetIntegrations(new bytes32[](0), integrations);
+        _removeAndSetIntegrations(new bytes32[](0), integrations, block.timestamp);
 
         assertEq(beacon.integrations().length, 0);
     }
@@ -230,7 +258,7 @@ contract L2BeaconSpell_UnitTests is Test {
         integrations[0] = BeaconConfig.buildAaveIntegration(address(new AaveFacet()));
         integrations[1] = BeaconConfig.buildERC4626Integration(address(new ERC4626Facet()));
 
-        _removeAndSetIntegrations(new bytes32[](0), integrations);
+        _removeAndSetIntegrations(new bytes32[](0), integrations, block.timestamp);
 
         assertEq(beacon.integrations().length, 2);
 
@@ -241,18 +269,26 @@ contract L2BeaconSpell_UnitTests is Test {
         ids[0] = BeaconConfig.AAVE_INTEGRATION;
         ids[1] = BeaconConfig.ERC4626_INTEGRATION;
 
-        _removeAndSetIntegrations(ids, new IEnumerableIntegrations.Integration[](0));
+        _removeAndSetIntegrations(
+            ids,
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 0);
     }
 
     function test_removeAndSetIntegrations_removeOnly() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         bytes32[] memory ids = new bytes32[](2);
         ids[0] = ID_1;
         ids[1] = ID_2;
-        _removeAndSetIntegrations(ids, new IEnumerableIntegrations.Integration[](0));
+        _removeAndSetIntegrations(
+            ids,
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 0);
 
@@ -261,33 +297,53 @@ contract L2BeaconSpell_UnitTests is Test {
     }
 
     function test_removeAndSetIntegrations_removeOnly_notFound() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         bytes32[] memory ids = new bytes32[](2);
         ids[0] = ID_1;
         ids[1] = "UNKNOWN";
 
         vm.expectRevert(abi.encodeWithSignature("IntegrationNotFound(bytes32)", bytes32("UNKNOWN")));
-        _removeAndSetIntegrations(ids, new IEnumerableIntegrations.Integration[](0));
+        _removeAndSetIntegrations(
+            ids,
+            new IEnumerableIntegrations.Integration[](0),
+            block.timestamp
+        );
 
         // Reverts atomically, so the first removal is rolled back too.
         assertEq(beacon.integrations().length, 2);
     }
 
     function test_removeAndSetIntegrations_selectorMovesToNewId_withoutRemovalReverts() external {
-        _removeAndSetIntegrations(new bytes32[](0), _single(_integration(ID_1, CALL_SELECTOR_1, facet1)));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            _single(_integration(ID_1, CALL_SELECTOR_1, facet1)),
+            block.timestamp
+        );
 
         vm.expectRevert(
             abi.encodeWithSignature("CallSelectorAlreadyWired(bytes4)", CALL_SELECTOR_1)
         );
-        _removeAndSetIntegrations(new bytes32[](0), _single(_integration(ID_3, CALL_SELECTOR_1, facet2)));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            _single(_integration(ID_3, CALL_SELECTOR_1, facet2)),
+            block.timestamp
+        );
     }
 
     function test_removeAndSetIntegrations_selectorMovesToNewId() external {
-        _removeAndSetIntegrations(new bytes32[](0), _single(_integration(ID_1, CALL_SELECTOR_1, facet1)));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            _single(_integration(ID_1, CALL_SELECTOR_1, facet1)),
+            block.timestamp
+        );
 
         // Removals run before sets, so ID_3 can take over the selector released by ID_1.
-        _removeAndSetIntegrations(_single(ID_1), _single(_integration(ID_3, CALL_SELECTOR_1, facet2)));
+        _removeAndSetIntegrations(
+            _single(ID_1),
+            _single(_integration(ID_3, CALL_SELECTOR_1, facet2)),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 1);
 
@@ -296,13 +352,17 @@ contract L2BeaconSpell_UnitTests is Test {
     }
 
     function test_removeAndSetIntegrations_failingSetRollsBackRemoval() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         // ID_3 reuses ID_2's selector, which is not being removed.
         vm.expectRevert(
             abi.encodeWithSignature("CallSelectorAlreadyWired(bytes4)", CALL_SELECTOR_2)
         );
-        _removeAndSetIntegrations(_single(ID_1), _single(_integration(ID_3, CALL_SELECTOR_2, facet1)));
+        _removeAndSetIntegrations(
+            _single(ID_1),
+            _single(_integration(ID_3, CALL_SELECTOR_2, facet1)),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 2);
 
@@ -311,14 +371,22 @@ contract L2BeaconSpell_UnitTests is Test {
     }
 
     function test_removeAndSetIntegrations_failingRemovalRollsBackSet() external {
-        _removeAndSetIntegrations(new bytes32[](0), _single(_integration(ID_1, CALL_SELECTOR_1, facet1)));
+        _removeAndSetIntegrations(
+            new bytes32[](0),
+            _single(_integration(ID_1, CALL_SELECTOR_1, facet1)),
+            block.timestamp
+        );
 
         bytes32[] memory ids = new bytes32[](2);
         ids[0] = ID_1;
         ids[1] = "UNKNOWN";
 
         vm.expectRevert(abi.encodeWithSignature("IntegrationNotFound(bytes32)", bytes32("UNKNOWN")));
-        _removeAndSetIntegrations(ids, _single(_integration(ID_2, CALL_SELECTOR_2, facet2)));
+        _removeAndSetIntegrations(
+            ids,
+            _single(_integration(ID_2, CALL_SELECTOR_2, facet2)),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 1);
 
@@ -327,11 +395,15 @@ contract L2BeaconSpell_UnitTests is Test {
     }
 
     function test_removeAndSetIntegrations_sameIdInBoth() external {
-        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2));
+        _removeAndSetIntegrations(new bytes32[](0), _integrations(facet1, facet2), block.timestamp);
 
         address newFacet1 = address(new MockFacet());
 
-        _removeAndSetIntegrations(_single(ID_1), _single(_integration(ID_1, CALL_SELECTOR_1, newFacet1)));
+        _removeAndSetIntegrations(
+            _single(ID_1),
+            _single(_integration(ID_1, CALL_SELECTOR_1, newFacet1)),
+            block.timestamp
+        );
 
         assertEq(beacon.integrations().length, 2);
 

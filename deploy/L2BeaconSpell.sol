@@ -23,16 +23,22 @@ contract L2BeaconSpell {
      * @notice Removes and then sets integrations on the Beacon.
      * @dev    Removals run first so that call selectors released by a removed integration can be
      *         wired into a newly set one. An id present in both arrays is removed and then set
-     *         with its new config. Either array may be empty.
+     *         with its new config. Either array may be empty. Reverts if executed after
+     *         `deadline`, so a message delayed in the bridge cannot be applied late.
      * @param  idsToRemove       Identifiers of the integrations to remove.
      * @param  integrationsToSet Integrations to set (add or upgrade).
+     * @param  deadline          Latest destination chain timestamp (inclusive) at which the
+     *                           spell can be executed.
      */
     function removeAndSetIntegrations(
         bytes32[]                             calldata idsToRemove,
-        IEnumerableIntegrations.Integration[] calldata integrationsToSet
+        IEnumerableIntegrations.Integration[] calldata integrationsToSet,
+        uint256                                        deadline
     )
         external
     {
+        require(block.timestamp <= deadline, "L2BeaconSpell/deadline-expired");
+
         for (uint256 i = 0; i < idsToRemove.length; ++i) {
             IBeacon(beacon).removeIntegration(idsToRemove[i]);
         }
