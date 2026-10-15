@@ -9,7 +9,10 @@ import { IEnumerableIntegrations } from "../src/interfaces/IEnumerableIntegratio
  * @notice A reusable L2 spell for the L2GovernanceRelay to remove and set integrations on a
  *         foreign chain Beacon. The relay delegatecalls into this spell, so the Beacon sees the
  *         relay (its `DEFAULT_ADMIN_ROLE`) as the caller.
- * @dev    Removals and sets are applied atomically within a single relayed message.
+ * @dev    Removals and sets are applied atomically within a single relayed message. Controllers
+ *         do not pick up Beacon changes automatically: each Controller admin must call
+ *         `updateIntegrations` / `removeIntegrations` with the affected integration ids
+ *         afterwards, so the Controller sync is not part of this atomic step.
  */
 contract L2BeaconSpell {
 
