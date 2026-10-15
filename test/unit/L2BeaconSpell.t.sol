@@ -149,7 +149,7 @@ contract L2BeaconSpell_UnitTests is Test {
     /**********************************************************************************************/
 
     function test_constructor() external view {
-        assertEq(spell.beacon(), address(beacon));
+        assertEq(address(spell.beacon()), address(beacon));
     }
 
     /**********************************************************************************************/

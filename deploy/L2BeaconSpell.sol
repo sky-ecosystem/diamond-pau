@@ -16,10 +16,10 @@ import { IEnumerableIntegrations } from "../src/interfaces/IEnumerableIntegratio
  */
 contract L2BeaconSpell {
 
-    address public immutable beacon;
+    IBeacon public immutable beacon;
 
     constructor(address beacon_) {
-        beacon = beacon_;
+        beacon = IBeacon(beacon_);
     }
 
     /**
@@ -43,11 +43,11 @@ contract L2BeaconSpell {
         require(block.timestamp <= deadline, "L2BeaconSpell/deadline-expired");
 
         for (uint256 i = 0; i < idsToRemove.length; ++i) {
-            IBeacon(beacon).removeIntegration(idsToRemove[i]);
+            beacon.removeIntegration(idsToRemove[i]);
         }
 
         for (uint256 i = 0; i < integrationsToSet.length; ++i) {
-            IBeacon(beacon).setIntegration(integrationsToSet[i].id, integrationsToSet[i].config);
+            beacon.setIntegration(integrationsToSet[i].id, integrationsToSet[i].config);
         }
     }
 
