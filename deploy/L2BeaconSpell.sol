@@ -13,6 +13,12 @@ import { IEnumerableIntegrations } from "../src/interfaces/IEnumerableIntegratio
  *         do not pick up Beacon changes automatically: each Controller admin must call
  *         `updateIntegrations` / `removeIntegrations` with the affected integration ids
  *         afterwards, so the Controller sync is not part of this atomic step.
+ *         Whoever syncs a Controller must check that the Beacon holds the full config they
+ *         reviewed (facet and wires), since the Beacon may have changed in between. In a spell:
+ *         `require(keccak256(abi.encode(IBeacon(beacon).getConfig(id))) == EXPECTED_HASH)`.
+ *         Through the PAS Configurator this must be checked off-chain before submitting:
+ *         `callControllerAction` only forwards whitelisted calldata, so no on-chain check can
+ *         be added to the sync transaction.
  */
 contract L2BeaconSpell {
 
