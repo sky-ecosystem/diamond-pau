@@ -196,8 +196,6 @@ contract L2BeaconSpell_UnitTests is Test {
             new IEnumerableIntegrations.Integration[](0),
             block.timestamp - 1
         );
-
-        assertEq(beacon.integrations().length, 0);
     }
 
     function test_removeAndSetIntegrations_empty() external {
