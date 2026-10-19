@@ -29,8 +29,8 @@ contract L2BeaconSpell {
      *         with its new config. Note that `setIntegration` already clears an existing id's
      *         config and dispatch entries before applying the new one, so an in-place upgrade
      *         does not require a removal. Either array may be empty.
-     *         Reverts if executed after `deadline`, so a message delayed in the bridge cannot be
-     *         applied late.
+     *         Reverts if executed after `deadline`, so a message that failed or was delayed, and
+     *         may no longer be desirable, cannot be applied indefinitely.
      * @param  idsToRemove       Identifiers of the integrations to remove.
      * @param  integrationsToSet Integrations to set (add or upgrade).
      * @param  deadline          Latest destination chain timestamp (inclusive) at which the
