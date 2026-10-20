@@ -347,7 +347,7 @@ contract CurveFacet is ICurveFacet, Facet {
 
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
         //       the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS). Aggregate rate limits should be
         //       set to "infinity" (`type(uint256).max`) for pools with unpegged tokens.
         uint256 aggregateAmount;
 
@@ -373,7 +373,7 @@ contract CurveFacet is ICurveFacet, Facet {
     {
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
         //       makes the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT). Aggregate rate limits should be
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS). Aggregate rate limits should be
         //       set to "infinity" (`type(uint256).max`) for pools with unpegged tokens.
         uint256 aggregateAmount;
 

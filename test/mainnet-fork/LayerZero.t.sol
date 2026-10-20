@@ -18,10 +18,11 @@ import { Domain, DomainHelpers } from "../../lib/xchain-helpers/src/testing/Doma
 import { ILayerZeroFacet } from "../../src/facets/layer-zero/ILayerZeroFacet.sol";
 import { LayerZeroFacet }  from "../../src/facets/layer-zero/LayerZeroFacet.sol";
 
-import { IAccessControls }         from "../../src/interfaces/IAccessControls.sol";
-import { IALMProxy }               from "../../src/interfaces/IALMProxy.sol";
-import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
-import { IRateLimits }             from "../../src/interfaces/IRateLimits.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
+
+import { BeaconConfig } from "../../src/libraries/BeaconConfig.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
 import { PAUFactory } from "../../src/PAUFactory.sol";
@@ -461,10 +462,14 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         vm.stopPrank();
 
+        address layerZeroFacet = address(new LayerZeroFacet());
+
+        vm.label(layerZeroFacet, "LayerZeroFacet");
+
         vm.startPrank(skyAdmin);
 
         // Facet wiring
-        _wireLayerZeroFacetForeignController();
+        BeaconConfig.setLayerZeroIntegration(address(foreignBeacon), layerZeroFacet);
 
         vm.stopPrank();
 
@@ -483,46 +488,6 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
         foreignController.updateIntegrations(integrationIds);
 
         vm.stopPrank();
-    }
-
-    function _wireLayerZeroFacetForeignController() internal {
-        address layerZeroFacet = address(new LayerZeroFacet());
-
-        vm.label(layerZeroFacet, "LayerZeroFacet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.layerZero_setRecipient.selector,
-            ILayerZeroFacet.setRecipient.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.layerZero_transfer.selector,
-            ILayerZeroFacet.transfer.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.layerZero_getRecipient.selector,
-            ILayerZeroFacet.getRecipient.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.layerZero_getTransferRateLimitKey.selector,
-            ILayerZeroFacet.getTransferRateLimitKey.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.layerZero_quoteTransfer.selector,
-            ILayerZeroFacet.quoteTransfer.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : layerZeroFacet,
-            wires : wires
-        });
-
-        foreignBeacon.setIntegration("LAYER_ZERO_FACET", config);
     }
 
     function _getBlock() internal pure override returns (uint256) {

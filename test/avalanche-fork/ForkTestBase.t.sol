@@ -12,18 +12,14 @@ import { Avalanche } from "../../lib/grove-address-registry/src/Avalanche.sol";
 import { PSM3Deploy } from "../../lib/spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "../../lib/spark-psm/src/PSM3.sol";
 
-import { IFacet } from "../../src/facets/IFacet.sol";
-
-import { ICentrifugeFacet } from "../../src/facets/centrifuge/ICentrifugeFacet.sol";
-import { IERC7540Facet }    from "../../src/facets/erc7540/IERC7540Facet.sol";
-
 import { CentrifugeFacet } from "../../src/facets/centrifuge/CentrifugeFacet.sol";
 import { ERC7540Facet }    from "../../src/facets/erc7540/ERC7540Facet.sol";
 
-import { IAccessControls }         from "../../src/interfaces/IAccessControls.sol";
-import { IALMProxy }               from "../../src/interfaces/IALMProxy.sol";
-import { IEnumerableIntegrations } from "../../src/interfaces/IEnumerableIntegrations.sol";
-import { IRateLimits }             from "../../src/interfaces/IRateLimits.sol";
+import { IAccessControls } from "../../src/interfaces/IAccessControls.sol";
+import { IALMProxy }       from "../../src/interfaces/IALMProxy.sol";
+import { IRateLimits }     from "../../src/interfaces/IRateLimits.sol";
+
+import { BeaconConfig } from "../../src/libraries/BeaconConfig.sol";
 
 import { Beacon }     from "../../src/Beacon.sol";
 import { PAUFactory } from "../../src/PAUFactory.sol";
@@ -141,9 +137,8 @@ contract ForkTestBase is Test {
 
         vm.startPrank(skyAdmin);
 
-        // Facet wiring
-        _wireCentrifugeFacet();
-        _wireERC7540Facet();
+        _onboardCentrifuge();
+        _onboardERC7540();
 
         vm.stopPrank();
 
@@ -171,154 +166,19 @@ contract ForkTestBase is Test {
     }
 
     /**********************************************************************************************/
-    /*** Facet wiring helpers                                                                   ***/
+    /*** Facet onboarding helpers                                                               ***/
     /**********************************************************************************************/
 
-    function _wireCentrifugeFacet() internal {
-        // NOTE: We are NOT wiring DEPOSIT, REDEEM keys, as they already wired in _wireERC7540Facet.
-
+    function _onboardCentrifuge() internal {
         address centrifugeFacet = address(new CentrifugeFacet());
-
         vm.label(centrifugeFacet, "CentrifugeFacet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](14);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_setRecipient.selector,
-            ICentrifugeFacet.setRecipient.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_cancelDepositRequest.selector,
-            ICentrifugeFacet.cancelDepositRequest.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_claimCancelDepositRequest.selector,
-            ICentrifugeFacet.claimCancelDepositRequest.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_cancelRedeemRequest.selector,
-            ICentrifugeFacet.cancelRedeemRequest.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_claimCancelRedeemRequest.selector,
-            ICentrifugeFacet.claimCancelRedeemRequest.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_transferShares.selector,
-            ICentrifugeFacet.transferShares.selector
-        );
-
-        wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getRecipient.selector,
-            ICentrifugeFacet.getRecipient.selector
-        );
-
-        wires[7] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getCancelDepositRateLimitKey.selector,
-            ICentrifugeFacet.getCancelDepositRateLimitKey.selector
-        );
-
-        wires[8] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getClaimCancelDepositRateLimitKey.selector,
-            ICentrifugeFacet.getClaimCancelDepositRateLimitKey.selector
-        );
-
-        wires[9] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getCancelRedeemRateLimitKey.selector,
-            ICentrifugeFacet.getCancelRedeemRateLimitKey.selector
-        );
-
-        wires[10] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getClaimCancelRedeemRateLimitKey.selector,
-            ICentrifugeFacet.getClaimCancelRedeemRateLimitKey.selector
-        );
-
-        wires[11] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_getTransferRateLimitKey.selector,
-            ICentrifugeFacet.getTransferRateLimitKey.selector
-        );
-
-        wires[12] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_VERSION.selector,
-            IFacet.VERSION.selector
-        );
-
-        wires[13] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.centrifuge_REQUEST_ID.selector,
-            ICentrifugeFacet.REQUEST_ID.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : centrifugeFacet,
-            wires : wires
-        });
-
-        beacon.setIntegration("CENTRIFUGE_FACET", config);
+        BeaconConfig.setCentrifugeIntegration(address(beacon), centrifugeFacet);
     }
 
-    function _wireERC7540Facet() internal {
+    function _onboardERC7540() internal {
         address erc7540Facet = address(new ERC7540Facet());
-
         vm.label(erc7540Facet, "ERC7540Facet");
-
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](9);
-
-        wires[0] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_requestDeposit.selector,
-            IERC7540Facet.requestDeposit.selector
-        );
-
-        wires[1] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_claimDeposit.selector,
-            IERC7540Facet.claimDeposit.selector
-        );
-
-        wires[2] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_requestRedeem.selector,
-            IERC7540Facet.requestRedeem.selector
-        );
-
-        wires[3] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_claimRedeem.selector,
-            IERC7540Facet.claimRedeem.selector
-        );
-
-        wires[4] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_getRequestDepositRateLimitKey.selector,
-            IERC7540Facet.getRequestDepositRateLimitKey.selector
-        );
-
-        wires[5] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_getClaimDepositRateLimitKey.selector,
-            IERC7540Facet.getClaimDepositRateLimitKey.selector
-        );
-
-        wires[6] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_getRequestRedeemRateLimitKey.selector,
-            IERC7540Facet.getRequestRedeemRateLimitKey.selector
-        );
-
-        wires[7] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_getClaimRedeemRateLimitKey.selector,
-            IERC7540Facet.getClaimRedeemRateLimitKey.selector
-        );
-
-        wires[8] = IEnumerableIntegrations.Wire(
-            IForeignControllerFull.erc7540_VERSION.selector,
-            IFacet.VERSION.selector
-        );
-
-        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
-            facet : erc7540Facet,
-            wires : wires
-        });
-
-        beacon.setIntegration("ERC7540_FACET", config);
+        BeaconConfig.setERC7540Integration(address(beacon), erc7540Facet);
     }
 
 }

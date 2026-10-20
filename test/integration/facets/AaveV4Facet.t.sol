@@ -17,7 +17,11 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
+    function setMaxDeficit(address hub, uint16 assetId, uint256 maxDeficit) external;
+
     function setMaxSlippage(address spoke, uint256 reserveId, uint256 maxSlippage) external;
+
+    function getMaxDeficit(address hub, uint16 assetId) external view returns (uint256);
 
     function getMaxSlippage(address spoke, uint256 reserveId) external view returns (uint256);
 
@@ -43,6 +47,9 @@ interface IControllerLike {
 
 contract Controller_AaveV4Facet_Tests is Integration_TestBase {
 
+    // RAY-denominated in the asset's own units, so this is 1,000 units of a 6-decimal asset.
+    uint256 internal constant MAX_DEFICIT = 1_000e6 * 1e27;
+
     IControllerLike internal controller;
 
     function setUp() external {
@@ -52,24 +59,34 @@ contract Controller_AaveV4Facet_Tests is Integration_TestBase {
 
         vm.label(facet, "AaveV4Facet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
+            IControllerLike.setMaxDeficit.selector,
+            IAaveV4Facet.setMaxDeficit.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IControllerLike.getMaxDeficit.selector,
+            IAaveV4Facet.getMaxDeficit.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
             IControllerLike.setMaxSlippage.selector,
             IAaveV4Facet.setMaxSlippage.selector
         );
 
-        wires[1] = IEnumerableIntegrations.Wire(
+        wires[3] = IEnumerableIntegrations.Wire(
             IControllerLike.getMaxSlippage.selector,
             IAaveV4Facet.getMaxSlippage.selector
         );
 
-        wires[2] = IEnumerableIntegrations.Wire(
+        wires[4] = IEnumerableIntegrations.Wire(
             IControllerLike.getDepositRateLimitKey.selector,
             IAaveV4Facet.getDepositRateLimitKey.selector
         );
 
-        wires[3] = IEnumerableIntegrations.Wire(
+        wires[5] = IEnumerableIntegrations.Wire(
             IControllerLike.getWithdrawRateLimitKey.selector,
             IAaveV4Facet.getWithdrawRateLimitKey.selector
         );
@@ -84,6 +101,58 @@ contract Controller_AaveV4Facet_Tests is Integration_TestBase {
 
         vm.prank(admin);
         controller.updateIntegrations(integrationIds);
+    }
+
+    /**********************************************************************************************/
+    /*** setMaxDeficit Tests                                                                    ***/
+    /**********************************************************************************************/
+
+    function test_setMaxDeficit_reentrancy() external {
+        _setEntered(address(controller));
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        controller.setMaxDeficit(makeAddr("hub"), 5, MAX_DEFICIT);
+    }
+
+    function test_setMaxDeficit_unauthorizedAccount() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        controller.setMaxDeficit(makeAddr("hub"), 5, MAX_DEFICIT);
+    }
+
+    function test_setMaxDeficit_hubZeroAddress() external {
+        vm.expectRevert("AaveV4Facet/hub-zero-address");
+        vm.prank(admin);
+        controller.setMaxDeficit(address(0), 5, MAX_DEFICIT);
+    }
+
+    function test_setMaxDeficit() external {
+        address hub     = makeAddr("hub");
+        uint16  assetId = 5;
+
+        assertEq(controller.getMaxDeficit(hub, assetId), 0);
+
+        vm.record();
+
+        vm.expectEmit(address(controller));
+        emit IAaveV4Facet.AaveV4MaxDeficitSet(hub, assetId, MAX_DEFICIT);
+
+        vm.prank(admin);
+        controller.setMaxDeficit(hub, assetId, MAX_DEFICIT);
+
+        _assertReentrancyGuardWrittenToTwice(address(controller));
+
+        assertEq(controller.getMaxDeficit(hub, assetId), MAX_DEFICIT);
+
+        vm.expectEmit(address(controller));
+        emit IAaveV4Facet.AaveV4MaxDeficitSet(hub, assetId, 0);
+
+        vm.prank(admin);
+        controller.setMaxDeficit(hub, assetId, 0);
+
+        assertEq(controller.getMaxDeficit(hub, assetId), 0);
     }
 
     /**********************************************************************************************/

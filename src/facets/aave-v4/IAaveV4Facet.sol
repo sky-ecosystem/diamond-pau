@@ -24,6 +24,14 @@ interface IAaveV4Facet is IFacet {
     event AaveV4Deposit(address indexed spoke, uint256 indexed reserveId, uint256 amount);
 
     /**
+     * @notice Emitted when the max deficit tolerated for an Aave V4 Hub asset is updated.
+     * @param  hub        Address of the hub holding the asset's liquidity.
+     * @param  assetId    Identifier of the asset on the hub.
+     * @param  maxDeficit New max deficit in RAY (1e27) precision, in the asset's own units.
+     */
+    event AaveV4MaxDeficitSet(address indexed hub, uint16 indexed assetId, uint256 maxDeficit);
+
+    /**
      * @notice Emitted when the max slippage for an Aave V4 market is updated.
      * @param  spoke       Address of the spoke hosting the market.
      * @param  reserveId   Reserve identifier on the spoke.
@@ -58,6 +66,18 @@ interface IAaveV4Facet is IFacet {
      * @param  amount    Amount of underlying asset to supply.
      */
     function deposit(address spoke, uint256 reserveId, uint256 amount) external;
+
+    /**
+     * @notice Sets the max deficit tolerated on deposits into markets fronting a Hub asset.
+     * @dev    Applies to every market fronting `(hub, assetId)`. Denominated in RAY in the asset's
+     *         own units, matching `getAssetDeficitRay`: a 1,000 unit tolerance on a 6-decimal asset
+     *         is `1_000e6 * 1e27`. Defaults to zero, which blocks any deposit into a Hub asset
+     *         carrying a deficit.
+     * @param  hub        Address of the hub holding the asset's liquidity.
+     * @param  assetId    Identifier of the asset on the hub.
+     * @param  maxDeficit Max deficit in RAY (1e27) precision, in the asset's own units.
+     */
+    function setMaxDeficit(address hub, uint16 assetId, uint256 maxDeficit) external;
 
     /**
      * @notice Sets the max slippage for deposit operations on a given `(spoke, reserveId)` market.
@@ -105,6 +125,17 @@ interface IAaveV4Facet is IFacet {
         external
         pure
         returns (bytes32 key);
+
+    /**
+     * @notice Returns the configured max deficit tolerated for a given Hub asset.
+     * @param  hub        Address of the hub holding the asset's liquidity.
+     * @param  assetId    Identifier of the asset on the hub.
+     * @return maxDeficit Max deficit in RAY (1e27) precision, in the asset's own units.
+     */
+    function getMaxDeficit(address hub, uint16 assetId)
+        external
+        view
+        returns (uint256 maxDeficit);
 
     /**
      * @notice Returns the configured max slippage for a given `(spoke, reserveId)` market.

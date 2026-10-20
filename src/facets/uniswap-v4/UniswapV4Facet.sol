@@ -484,7 +484,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         // using a clamped subtraction.
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
         //       the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         uint256 aggregateAmount = _clampedSub(
             _getNormalizedBalance(token0, startingBalance0) +
             _getNormalizedBalance(token1, startingBalance1),
@@ -528,7 +528,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
 
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
         //       makes the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDC = 1.000000000000000000 USDT).
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
         uint256 aggregateAmount =
             _getNormalizedBalance(token0, amount0) +
             _getNormalizedBalance(token1, amount1);
