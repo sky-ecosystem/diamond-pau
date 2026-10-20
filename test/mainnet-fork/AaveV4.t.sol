@@ -14,6 +14,7 @@ import { IAaveV4Facet } from "../../src/facets/aave-v4/IAaveV4Facet.sol";
 import { ForkTestBase } from "./ForkTestBase.t.sol";
 
 interface IAaveV4SpokeLike {
+
     struct Reserve {
         address underlying;
         address hub;
@@ -25,14 +26,23 @@ interface IAaveV4SpokeLike {
     }
 
     function getReserve(uint256 reserveId) external view returns (Reserve memory);
+
     function getUserSuppliedAssets(uint256 reserveId, address user) external view returns (uint256);
+
 }
 
 interface IAaveV4HubLike {
-    function getAssetLiquidity(uint256 assetId)  external view returns (uint256);
-    function getAddedAssets(uint256 assetId)     external view returns (uint256);
-    function getAddedShares(uint256 assetId)     external view returns (uint256);
+
+    function getAddedAssets(uint256 assetId) external view returns (uint256);
+
+    function getAddedShares(uint256 assetId) external view returns (uint256);
+
     function getAssetDeficitRay(uint256 assetId) external view returns (uint256);
+
+    function getAssetLiquidity(uint256 assetId) external view returns (uint256);
+
+    function getAssetUnderlyingAndDecimals(uint256 assetId) external view returns (address, uint8);
+
 }
 
 abstract contract AaveV4_TestBase is ForkTestBase {
@@ -139,6 +149,19 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 0);
 
         vm.expectRevert("AaveV4Facet/max-slippage-not-set");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+    }
+
+    function test_depositAaveV4_hubAndSpokeUnderlyingMismatch() external {
+        // Simulate an outstanding Hub deficit for USDC.
+        vm.mockCall(
+            CORE_HUB,
+            abi.encodeWithSelector(IAaveV4HubLike.getAssetUnderlyingAndDecimals.selector, USDC_ASSET_ID),
+            abi.encode(address(1), 18)
+        );
+
+        vm.expectRevert("AaveV4Facet/hub-and-spoke-underlying-mismatch");
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
     }
