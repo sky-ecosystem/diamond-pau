@@ -184,7 +184,9 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
         uint256 amountReceived
             = IAaveV4SpokeLike(spoke).getUserSuppliedAssets(reserveId, proxy) - startingBalance;
 
-        require(amountReceived >= amount * maxSlippage / 1e18, "AaveV4Facet/slippage-too-high");
+        // Scale the received side instead of rounding the threshold down, so that dust deposits can
+        // not leak value through repeated rounding (Cantina-261005-5).
+        require(amountReceived * 1e18 >= amount * maxSlippage, "AaveV4Facet/slippage-too-high");
 
         // Clear the approval in case the spoke did not pull the full amount.
         ApproveLib.approve(underlying, proxy, spoke, 0);

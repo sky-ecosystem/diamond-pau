@@ -103,10 +103,13 @@ abstract contract AaveV4_TestBase is ForkTestBase {
         rateLimits.setRateLimitData(mainWethWithdrawKey,  WETH_WITHDRAW_LIMIT, WETH_WITHDRAW_LIMIT / 1 days);
         rateLimits.setRateLimitData(forexUsdcWithdrawKey, USDC_WITHDRAW_LIMIT, USDC_WITHDRAW_LIMIT / 1 days);
 
-        // Per-(spoke, reserveId) slippage: each market gets its own rounding tolerance.
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE,  MAIN_USDC_RESERVE_ID,  1e18 - 1e4);
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE,  MAIN_WETH_RESERVE_ID,  1e18 - 1e4);
-        mainnetController.aaveV4_setMaxSlippage(FOREX_SPOKE, FOREX_USDC_RESERVE_ID, 1e18 - 1e4);
+        // Per-(spoke, reserveId) slippage: each market gets its own rounding tolerance. The check
+        // scales the received side (`amountReceived * 1e18 >= amount * maxSlippage`) so the
+        // tolerance has to genuinely cover the reserve's 1 wei round-down: 1e18 - 1e8 admits it on
+        // any deposit of at least 1e8 base units.
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE,  MAIN_USDC_RESERVE_ID,  1e18 - 1e8);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE,  MAIN_WETH_RESERVE_ID,  1e18 - 1e8);
+        mainnetController.aaveV4_setMaxSlippage(FOREX_SPOKE, FOREX_USDC_RESERVE_ID, 1e18 - 1e8);
 
         vm.stopPrank();
 
@@ -248,28 +251,54 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_WETH_RESERVE_ID, WETH_DEPOSIT_AMOUNT);
     }
 
-    // The reserve credits a round-down share amount, so a 1e18 tolerance always trips the guard and
-    // one wei below it is the strictest tolerance that still admits an honest deposit.
+    // The reserve credits a round-down share amount worth USDC_DEPOSIT_AMOUNT - 1, so the check
+    // `amountReceived * 1e18 >= amount * maxSlippage` holds exactly at maxSlippage = 1e18 - 1e6
+    // (1e6 = 1e18 / USDC_DEPOSIT_AMOUNT) and fails one wei above it. Nothing is rounded away on
+    // the threshold side, so a 1 wei loss is tolerated only when the configured tolerance covers it.
     function test_depositAaveV4_usdc_slippageTooHighBoundary() external {
         deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
 
         vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1e6 + 1);
 
         vm.expectRevert("AaveV4Facet/slippage-too-high");
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
 
         vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1e6);
 
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
+
+        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), USDC_DEPOSIT_AMOUNT - 1);
     }
 
-    // Pins why an exact 1:1 (1e18) tolerance is unusable: the reserve credits a round-down share
-    // amount, so a 1e18 tolerance reverts every deposit, accrual or not, while one wei below it
-    // still clears an honest deposit.
+    // A 2 wei deposit is credited 1 wei (the reserve rounds shares down), a 50% loss. The old
+    // round-down threshold (`amount * maxSlippage / 1e18`) evaluated to 1 for any tolerance below
+    // 1e18 and let it through; scaling the received side instead rejects it for every tolerance
+    // above 0.5e18, so repeated dust deposits can no longer leak value (Cantina-261005-5).
+    function test_depositAaveV4_usdc_dustDepositRoundingLossBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), 2);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 0.5e18 + 1);
+
+        vm.expectRevert("AaveV4Facet/slippage-too-high");
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 2);
+
+        vm.prank(Ethereum.SPARK_PROXY);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 0.5e18);
+
+        vm.prank(allocator);
+        mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 2);
+
+        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), 1);
+    }
+
+    // Pins that accrual does not change the boundary: the reserve still credits one wei less than
+    // the deposit after a year of interest, so 1e18 - 1e6 + 1 reverts while 1e18 - 1e6 clears.
     function test_depositAaveV4_usdc_slippageOneToOneAfterAccrualBoundary() external {
         deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
 
@@ -284,7 +313,7 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
         deal(Ethereum.USDC, address(almProxy), USDC_DEPOSIT_AMOUNT);
 
         vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1e6 + 1);
 
         vm.expectRevert("AaveV4Facet/slippage-too-high");
         vm.prank(allocator);
@@ -292,7 +321,7 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
 
         // Accrual can never wedge deposits: the strictest usable tolerance still admits one.
         vm.prank(Ethereum.SPARK_PROXY);
-        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1);
+        mainnetController.aaveV4_setMaxSlippage(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 1e18 - 1e6);
 
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, USDC_DEPOSIT_AMOUNT);
