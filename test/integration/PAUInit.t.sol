@@ -31,7 +31,7 @@ interface IRateLimitsLike {
 
 }
 
-interface IControllerIntegrationsLike {
+interface IIntegrationsLike {
 
     function getConfig(bytes32 id) external view returns (IEnumerableIntegrations.Config memory);
 
@@ -150,7 +150,10 @@ contract PAUInit_Integration_Tests is Test {
     }
 
     function _integrationSet(address controller, bytes32 id) internal view returns (bool) {
-        return IControllerIntegrationsLike(controller).getConfig(id).facet != address(0);
+        address facet = IIntegrationsLike(controller).getConfig(id).facet;
+        return
+            facet != address(0) &&
+            facet == IIntegrationsLike(address(beacon)).getConfig(id).facet;
     }
 
     /**********************************************************************************************/
@@ -253,13 +256,13 @@ contract PAUInit_Integration_Tests is Test {
         PAUInstance memory inst = _deployStack(address(governance));
 
         // Precondition: the Controller holds no CONTROLLER role yet.
-        assertFalse(_controllerRoleGranted(inst.almProxy,   inst.controller));
-        assertFalse(_controllerRoleGranted(inst.rateLimits, inst.controller));
+        assertEq(_controllerRoleGranted(inst.almProxy,   inst.controller), false);
+        assertEq(_controllerRoleGranted(inst.rateLimits, inst.controller), false);
 
         governance.initPAU(inst, new bytes32[](0));
 
-        assertTrue(_controllerRoleGranted(inst.almProxy,   inst.controller));
-        assertTrue(_controllerRoleGranted(inst.rateLimits, inst.controller));
+        assertEq(_controllerRoleGranted(inst.almProxy,   inst.controller), true);
+        assertEq(_controllerRoleGranted(inst.rateLimits, inst.controller), true);
     }
 
     function test_init_emptyIntegrationIds_skipsUpdate() external {
@@ -275,7 +278,7 @@ contract PAUInit_Integration_Tests is Test {
 
         governance.initPAU(inst, new bytes32[](0));
 
-        assertEq(IControllerIntegrationsLike(inst.controller).integrations().length, 0);
+        assertEq(IIntegrationsLike(inst.controller).integrations().length, 0);
     }
 
     function test_init_nonEmptyIntegrationIds_syncsToController() external {
@@ -291,12 +294,12 @@ contract PAUInit_Integration_Tests is Test {
         governance.initPAU(inst, ids);
 
         // Both the structural role wiring and the integration sync happen in one call.
-        assertTrue(_controllerRoleGranted(inst.almProxy,   inst.controller));
-        assertTrue(_controllerRoleGranted(inst.rateLimits, inst.controller));
-        assertTrue(_integrationSet(inst.controller, ids[0]));
-        assertTrue(_integrationSet(inst.controller, ids[1]));
+        assertEq(_controllerRoleGranted(inst.almProxy,   inst.controller), true);
+        assertEq(_controllerRoleGranted(inst.rateLimits, inst.controller), true);
+        assertEq(_integrationSet(inst.controller, ids[0]), true);
+        assertEq(_integrationSet(inst.controller, ids[1]), true);
 
-        assertEq(IControllerIntegrationsLike(inst.controller).integrations().length, 2);
+        assertEq(IIntegrationsLike(inst.controller).integrations().length, 2);
     }
 
     /**********************************************************************************************/
@@ -325,11 +328,11 @@ contract PAUInit_Integration_Tests is Test {
 
         address agent = makeAddr("agent");
 
-        assertFalse(IAccessControlLike(inst.accessControls).hasRole(ALLOCATOR_ROLE, agent));
+        assertEq(IAccessControlLike(inst.accessControls).hasRole(ALLOCATOR_ROLE, agent), false);
 
         governance.addAllocator(inst, agent);
 
-        assertTrue(IAccessControlLike(inst.accessControls).hasRole(ALLOCATOR_ROLE, agent));
+        assertEq(IAccessControlLike(inst.accessControls).hasRole(ALLOCATOR_ROLE, agent), true);
     }
 
     /**********************************************************************************************/
@@ -380,14 +383,15 @@ contract PAUInit_Integration_Tests is Test {
         _registerIntegration(ids[1]);
 
         // Precondition: the Controller knows about neither integration.
-        assertFalse(_integrationSet(inst.controller, ids[0]));
-        assertFalse(_integrationSet(inst.controller, ids[1]));
+        assertEq(_integrationSet(inst.controller, ids[0]), false);
+        assertEq(_integrationSet(inst.controller, ids[1]), false);
 
         governance.setIntegrations(inst, ids);
 
-        assertTrue(_integrationSet(inst.controller, ids[0]));
-        assertTrue(_integrationSet(inst.controller, ids[1]));
-        assertEq(IControllerIntegrationsLike(inst.controller).integrations().length, 2);
+        assertEq(_integrationSet(inst.controller, ids[0]), true);
+        assertEq(_integrationSet(inst.controller, ids[1]), true);
+
+        assertEq(IIntegrationsLike(inst.controller).integrations().length, 2);
     }
 
     /**********************************************************************************************/
@@ -438,15 +442,22 @@ contract PAUInit_Integration_Tests is Test {
 
         governance.setIntegrations(inst, ids);
 
+        // Precondition: both integrations are synced to the Controller.
+        assertEq(_integrationSet(inst.controller, ids[0]), true);
+        assertEq(_integrationSet(inst.controller, ids[1]), true);
+
+        assertEq(IIntegrationsLike(inst.controller).integrations().length, 2);
+
         // Remove only the first; the second must remain.
         bytes32[] memory toRemove = new bytes32[](1);
         toRemove[0] = ids[0];
 
         governance.removeIntegrations(inst, toRemove);
 
-        assertFalse(_integrationSet(inst.controller, ids[0]));
-        assertTrue(_integrationSet(inst.controller, ids[1]));
-        assertEq(IControllerIntegrationsLike(inst.controller).integrations().length, 1);
+        assertEq(_integrationSet(inst.controller, ids[0]), false);
+        assertEq(_integrationSet(inst.controller, ids[1]), true);
+
+        assertEq(IIntegrationsLike(inst.controller).integrations().length, 1);
     }
 
 }
