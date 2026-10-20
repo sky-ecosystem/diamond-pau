@@ -272,7 +272,7 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
     // A 2 wei deposit is credited 1 wei (the reserve rounds shares down), a 50% loss. The old
     // round-down threshold (`amount * maxSlippage / 1e18`) evaluated to 1 for any tolerance below
     // 1e18 and let it through; scaling the received side instead rejects it for every tolerance
-    // above 0.5e18, so repeated dust deposits can no longer leak value (Cantina-261005-5).
+    // above 0.5e18, so repeated dust deposits can no longer leak value.
     function test_depositAaveV4_usdc_dustDepositRoundingLossBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 2);
 
@@ -288,6 +288,8 @@ contract MainnetController_AaveV4_Deposit_Tests is AaveV4_TestBase {
 
         vm.prank(allocator);
         mainnetController.aaveV4_deposit(MAIN_SPOKE, MAIN_USDC_RESERVE_ID, 2);
+
+        assertEq(_suppliedAssets(MAIN_SPOKE, MAIN_USDC_RESERVE_ID), 1);
     }
 
     // Pins that accrual does not change the boundary: the reserve still credits one wei less than
