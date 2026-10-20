@@ -296,6 +296,7 @@ contract PAUInit_Integration_Tests is Test {
         // Both the structural role wiring and the integration sync happen in one call.
         assertEq(_controllerRoleGranted(inst.almProxy,   inst.controller), true);
         assertEq(_controllerRoleGranted(inst.rateLimits, inst.controller), true);
+
         assertEq(_integrationSet(inst.controller, ids[0]), true);
         assertEq(_integrationSet(inst.controller, ids[1]), true);
 
