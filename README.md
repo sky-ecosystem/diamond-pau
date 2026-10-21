@@ -31,6 +31,7 @@ This repository contains the onchain components of the PAU system. The system en
 | [Rate Limits](./docs/RATE_LIMITS.md)                           | Rate limit design, calculations, and configuration          |
 | [Liquidity Operations](./docs/LIQUIDITY_OPERATIONS.md)         | Curve, Uniswap V3, Uniswap V4, OTC, and PSM integrations    |
 | [weETH Integration](./docs/WEETH_INTEGRATION.md)               | EtherFi weETH module architecture and withdrawal flow       |
+| [Swap Integration](./docs/SWAP_INTEGRATION.md)                 | PAU-to-PAU par-value swap facet (Spark Savings reorg)       |
 | [Threat Model](./docs/THREAT_MODEL.md)                         | Attack vectors, trust assumptions, and security invariants  |
 | [Security](./docs/SECURITY.md)                                 | Protocol-specific considerations and audit information      |
 | [Operational Requirements](./docs/OPERATIONAL_REQUIREMENTS.md) | Seeding, configuration, and onboarding checklists           |

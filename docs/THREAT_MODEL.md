@@ -88,6 +88,7 @@ Rate limit keys (hash of function identifier + address) act as an implicit white
 | **EtherFi**   | Withdrawal requests can be invalidated (and revalidated) by admin                                                                                                                                                                               |
 | **OTC Desks** | Assumed to complete trades; max loss bounded by single swap amount                                                                                                                                                                              |
 | **Maple**     | Permissioned pools with slower dynamics                                                                                                                                                                                                         |
+| **Swap counterparty PAU** | A Spark PAU under the same governance; the allowance it grants bounds what the executing PAU can pull, and the executing PAU's par values and rate limits bound what it gives. See [Swap Integration](./SWAP_INTEGRATION.md).      |
 | **Aave V4**   | All spoke/hub contracts are proxies upgradeable by Aave governance; withdrawals blockable via reserve pause or hub-side spoke halt/deactivation; hub reinvestment controller can deploy idle liquidity, reducing immediately withdrawable funds |
 
 ### External Protocol Risks

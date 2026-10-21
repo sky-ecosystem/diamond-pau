@@ -50,6 +50,8 @@ import { ISparkVaultController }    from "../facets/spark-vault/ISparkVaultContr
 import { ISparkVaultFacet }         from "../facets/spark-vault/ISparkVaultFacet.sol";
 import { ISuperstateController }    from "../facets/superstate/ISuperstateController.sol";
 import { ISuperstateFacet }         from "../facets/superstate/ISuperstateFacet.sol";
+import { ISwapController }          from "../facets/swap/ISwapController.sol";
+import { ISwapFacet }               from "../facets/swap/ISwapFacet.sol";
 import { ITransferAssetController } from "../facets/transfer-asset/ITransferAssetController.sol";
 import { ITransferAssetFacet }      from "../facets/transfer-asset/ITransferAssetFacet.sol";
 import { IUniswapV3Controller }     from "../facets/uniswap-v3/IUniswapV3Controller.sol";
@@ -140,6 +142,9 @@ library BeaconConfig {
 
     /// @notice Integration identifier for the Superstate facet.
     bytes32 internal constant SUPERSTATE_INTEGRATION = "SUPERSTATE_FACET";
+
+    /// @notice Integration identifier for the Swap facet.
+    bytes32 internal constant SWAP_INTEGRATION = "SWAP_FACET";
 
     /// @notice Integration identifier for the Transfer Asset facet.
     bytes32 internal constant TRANSFER_ASSET_INTEGRATION = "TRANSFER_ASSET_FACET";
@@ -1515,6 +1520,61 @@ library BeaconConfig {
         });
 
         IBeacon(beacon).setIntegration(SUPERSTATE_INTEGRATION, config);
+    }
+
+    /**********************************************************************************************/
+    /*** Swap Integration                                                                       ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Configures the Swap facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed SwapFacet contract.
+     */
+    function setSwapIntegration(address beacon, address facet) internal {
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](7);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_approve.selector,
+            ISwapFacet.approve.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_setParValue.selector,
+            ISwapFacet.setParValue.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_swap.selector,
+            ISwapFacet.swap.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_getAmountOut.selector,
+            ISwapFacet.getAmountOut.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_getAssetParameters.selector,
+            ISwapFacet.getAssetParameters.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_getSwapRateLimitKey.selector,
+            ISwapFacet.getSwapRateLimitKey.selector
+        );
+
+        wires[6] = IEnumerableIntegrations.Wire(
+            ISwapController.swap_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config({
+            facet : facet,
+            wires : wires
+        });
+
+        IBeacon(beacon).setIntegration(SWAP_INTEGRATION, config);
     }
 
     /**********************************************************************************************/
