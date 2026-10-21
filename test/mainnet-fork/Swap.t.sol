@@ -511,7 +511,8 @@ contract MainnetController_Swap_Swap_Tests is Swap_TestBase {
         savingsController.swap_approve(Ethereum.USDS, address(almProxy), 10_000_000e18);
         vm.stopPrank();
 
-        deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
+        deal(Ethereum.USDT, address(almProxy),     1_000_000e6);
+        deal(Ethereum.USDS, address(savingsProxy), 1_000_000e18);
 
         // Refill of the untouched USDS -> USDT limit stays capped at its max amount.
         vm.prank(allocator);
@@ -519,6 +520,13 @@ contract MainnetController_Swap_Swap_Tests is Swap_TestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(usdsToUsdtKey), 5_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(usdtToUsdsKey), 4_000_000e6);
+
+        _assertBalances({
+            almProxyUsds     : 6_000_000e18 + 1,
+            almProxyUsdt     : 0,
+            savingsProxyUsds : 0,
+            savingsProxyUsdt : 6_000_000e6 + 1
+        });
     }
 
     function test_swap_unlimitedRateLimit() external {
