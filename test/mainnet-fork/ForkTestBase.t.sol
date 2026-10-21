@@ -43,6 +43,7 @@ import { PendleFacet }        from "../../src/facets/pendle/PendleFacet.sol";
 import { PSMFacet }           from "../../src/facets/psm/PSMFacet.sol";
 import { SparkVaultFacet }    from "../../src/facets/spark-vault/SparkVaultFacet.sol";
 import { SuperstateFacet }    from "../../src/facets/superstate/SuperstateFacet.sol";
+import { SwapFacet }          from "../../src/facets/swap/SwapFacet.sol";
 import { TransferAssetFacet } from "../../src/facets/transfer-asset/TransferAssetFacet.sol";
 import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 import { UniswapV4Facet }     from "../../src/facets/uniswap-v4/UniswapV4Facet.sol";
@@ -289,6 +290,7 @@ abstract contract ForkTestBase is DssTest {
         _onboardPSM();
         _onboardSparkVault();
         _onboardSuperstate();
+        _onboardSwap();
         _onboardTransferAsset();
         _onboardUniswapV3();
         _onboardUniswapV4();
@@ -315,7 +317,7 @@ abstract contract ForkTestBase is DssTest {
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        bytes32[] memory integrationIds = new bytes32[](28);
+        bytes32[] memory integrationIds = new bytes32[](29);
         integrationIds[0]  = "AAVE_FACET";
         integrationIds[1]  = "BASIN_FACET";
         integrationIds[2]  = "CCTP_FACET";
@@ -344,6 +346,7 @@ abstract contract ForkTestBase is DssTest {
         integrationIds[25] = "NFAT_HALO_FACET";
         integrationIds[26] = "NFAT_PRIME_FACET";
         integrationIds[27] = "AAVE_V4_FACET";
+        integrationIds[28] = "SWAP_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -562,6 +565,12 @@ abstract contract ForkTestBase is DssTest {
         address superstateFacet = address(new SuperstateFacet(Ethereum.USDC, Ethereum.USTB));
         vm.label(superstateFacet, "SuperstateFacet");
         BeaconConfig.setSuperstateIntegration(address(beacon), superstateFacet);
+    }
+
+    function _onboardSwap() internal {
+        address swapFacet = address(new SwapFacet());
+        vm.label(swapFacet, "SwapFacet");
+        BeaconConfig.setSwapIntegration(address(beacon), swapFacet);
     }
 
     function _onboardTransferAsset() internal {
