@@ -18,6 +18,7 @@ When assuming a compromised `ALLOCATOR`:
 
 1. **Value movement restrictions:** Smart contract logic must prevent movement of value outside the PAU system of contracts
     - Exception: Asynchronous integrations (e.g., BUIDL) where `transferAsset` sends funds to whitelisted addresses, with LP tokens minted asynchronously, or OTC trades.
+    - Exception: Atomic 1:1 asset swaps with whitelisted counterparty `ALMProxy` contracts via `SwapAssetFacet`.
 
 2. **Loss limitations:** Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits
 
@@ -69,6 +70,14 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 **Architecture Note:** Each Centrifuge cancel and claim-cancel path is gated by its own dedicated rate-limit key, each presence-checked via `_requireRateLimitExists`. Every key must be configured by governance before the corresponding path can be used.
 
 **Security Node:** If a cancel key is set but its matching claim-cancel key is not, `cancel*Request` will succeed and `claimCancel*Request` will then revert. Because Centrifuge requests use `REQUEST_ID = 0`, no new deposit or redeem request can be submitted while a cancellation is pending, so the integration stays stuck until governance configures the missing claim-cancel key.
+
+### Swap Asset Integration
+
+**Trust Assumption:** Counterparty `ALMProxy` contracts are whitelisted by governance per asset pair and direction via rate limit keys on each PAU.
+
+**Architecture Note:** `completeSwap` has no role check. It is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured `(assetOut, counterpartyProxy, assetIn)` key.
+
+**Security Note:** `initiateSwap` calls the allocator-supplied `counterpartyController`. The counterparty `ALMProxy` it returns must have a configured rate limit key, and the initiating Controller requires that exactly `amountOut` was sent and exactly the converted amount was received, so a malicious controller cannot extract value. Swaps are 1:1 with no oracle, so loss is bounded to depeg risk (see [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity)).
 
 ---
 
