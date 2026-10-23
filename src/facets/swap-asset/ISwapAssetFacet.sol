@@ -5,8 +5,9 @@ import { IFacet } from "../IFacet.sol";
 
 /**
  * @title  ISwapAssetFacet
- * @notice PAU facet for swapping ERC-20 assets between ALMProxy controllers.
- *         Rate limited per (counterparty-proxy, asset-out, asset-in) tuple.
+ * @notice PAU facet for swapping ERC-20 assets 1:1 between ALMProxy controllers, adjusting for
+ *         token decimals. Rate limited per (asset-out, counterparty-proxy, asset-in) tuple, in
+ *         units of the asset sent by the respective side.
  */
 interface ISwapAssetFacet is IFacet {
 
@@ -15,31 +16,19 @@ interface ISwapAssetFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Emitted when a completed ERC-20 asset swap was initiated from this controller.
+     * @notice Emitted when an ERC-20 asset swap is executed.
      * @param  counterpartyProxy Address of the ALMProxy counterparty.
      * @param  assetOut          Address of the asset token that was sent.
      * @param  assetIn           Address of the asset token that was received.
-     * @param  amount            Amount of each asset that was swapped (native token decimals).
+     * @param  amountOut         Amount of assetOut that was sent (assetOut decimals).
+     * @param  amountIn          Amount of assetIn that was received (assetIn decimals).
      */
-    event SwapAssetSwapInitiated(
+    event SwapAssetSwap(
         address indexed counterpartyProxy,
         address indexed assetOut,
         address indexed assetIn,
-        uint256         amount
-    );
-
-    /**
-     * @notice Emitted when a completed ERC-20 asset swap was completed at this controller.
-     * @param  counterpartyProxy Address of the ALMProxy counterparty.
-     * @param  assetOut          Address of the asset token that was sent.
-     * @param  assetIn           Address of the asset token that was received.
-     * @param  amount            Amount of each asset that was swapped (native token decimals).
-     */
-    event SwapAssetSwapCompleted(
-        address indexed counterpartyProxy,
-        address indexed assetOut,
-        address indexed assetIn,
-        uint256         amount
+        uint256         amountOut,
+        uint256         amountIn
     );
 
     /**********************************************************************************************/
@@ -47,27 +36,30 @@ interface ISwapAssetFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Initiates an ERC-20 asset swap.
+     * @notice Initiates an ERC-20 asset swap with the counterparty controller. The amount received
+     *         is amountOut converted to assetIn decimals. Decreases the rate limit by amountOut.
      * @param  counterpartyController Address of the counterparty's controller.
-     * @param  assetOut               Address of the asset token that was sent.
-     * @param  assetIn                Address of the asset token that was received.
-     * @param  amount                 Amount of each asset that was swapped (native token decimals).
+     * @param  assetOut               Address of the asset token to send.
+     * @param  assetIn                Address of the asset token to receive.
+     * @param  amountOut              Amount of assetOut to send (assetOut decimals).
      */
     function initiateSwap(
         address counterpartyController,
         address assetOut,
         address assetIn,
-        uint256 amount
+        uint256 amountOut
     )
         external;
 
     /**
-     * @notice Completes an ERC-20 asset swap. Called by the counterparty.
-     * @param  assetOut Address of the asset token that was sent.
-     * @param  assetIn  Address of the asset token that was received.
-     * @param  amount   Amount of each asset that was swapped (native token decimals).
+     * @notice Completes an ERC-20 asset swap. Called by the counterparty proxy, which is
+     *         permissioned through the rate limit key. The amount sent is amountIn converted to
+     *         assetOut decimals. Decreases the rate limit by the amount sent.
+     * @param  assetOut Address of the asset token to send.
+     * @param  assetIn  Address of the asset token to receive.
+     * @param  amountIn Amount of assetIn to receive (assetIn decimals).
      */
-    function completeSwap(address assetOut, address assetIn, uint256 amount) external;
+    function completeSwap(address assetOut, address assetIn, uint256 amountIn) external;
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/

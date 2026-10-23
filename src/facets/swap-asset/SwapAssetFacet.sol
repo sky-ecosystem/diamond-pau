@@ -15,7 +15,7 @@ import { ISwapAssetFacet } from "./ISwapAssetFacet.sol";
 
 interface IControllerLike {
 
-    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amount) external;
+    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountIn) external;
 
     function proxy() external view returns (address);
 
@@ -23,13 +23,13 @@ interface IControllerLike {
 
 interface IERC20Like {
 
+    function balanceOf(address owner) external view returns (uint256 balance);
+
+    function decimals() external view returns (uint8 decimals);
+
     function transfer(address to, uint256 amount) external returns (bool success);
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool success);
-
-    function approve(address to, uint256 amount) external returns (bool success);
-
-    function balanceOf(address owner) external view returns (uint256 balance);
 
 }
 
@@ -53,7 +53,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         address counterpartyController,
         address assetOut,
         address assetIn,
-        uint256 amount
+        uint256 amountOut
     )
         external
         override
@@ -62,44 +62,51 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     {
         address counterpartyProxy = IControllerLike(counterpartyController).proxy();
 
-        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amount);
+        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
+
+        uint256 expectedAmountIn = _convertAmount(assetOut, assetIn, amountOut);
 
         address proxy = _getSharedControllerStorage().proxy;
 
-        ApproveLib.approve(assetOut, proxy, counterpartyProxy, amount);
+        ApproveLib.approve(assetOut, proxy, counterpartyProxy, amountOut);
 
         uint256 startingAssetsOutBalance = IERC20Like(assetOut).balanceOf(proxy);
         uint256 startingAssetsInBalance  = IERC20Like(assetIn).balanceOf(proxy);
 
-        IALMProxy(_getSharedControllerStorage().proxy).doCall(
+        IALMProxy(proxy).doCall(
             counterpartyController,
-            abi.encodeCall(IControllerLike.swapAsset_completeSwap, (assetIn, assetOut, amount))
+            abi.encodeCall(IControllerLike.swapAsset_completeSwap, (assetIn, assetOut, amountOut))
         );
-
-        uint256 amountOut = startingAssetsOutBalance - IERC20Like(assetOut).balanceOf(proxy);
-        uint256 amountIn  = IERC20Like(assetIn).balanceOf(proxy) - startingAssetsInBalance;
 
         ApproveLib.approve(assetOut, proxy, counterpartyProxy, 0);
 
-        require(amountOut == amount, "SwapAssetFacet/amountOut-mismatch");
-        require(amountIn == amount,  "SwapAssetFacet/amountIn-mismatch");
+        uint256 amountOutSent    = startingAssetsOutBalance - IERC20Like(assetOut).balanceOf(proxy);
+        uint256 amountInReceived = IERC20Like(assetIn).balanceOf(proxy) - startingAssetsInBalance;
 
-        emit SwapAssetSwapInitiated(counterpartyProxy, assetOut, assetIn, amount);
+        require(amountOutSent    == amountOut,        "SwapAssetFacet/amountOut-mismatch");
+        require(amountInReceived == expectedAmountIn, "SwapAssetFacet/amountIn-mismatch");
+
+        emit SwapAssetSwap(counterpartyProxy, assetOut, assetIn, amountOutSent, amountInReceived);
     }
 
-    function completeSwap(address assetOut, address assetIn, uint256 amount)
+    /// @inheritdoc ISwapAssetFacet
+    function completeSwap(address assetOut, address assetIn, uint256 amountIn)
         external
         override
         nonReentrant
     {
         address counterpartyProxy = msg.sender;
 
-        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amount);
+        uint256 amountOut = _convertAmount(assetIn, assetOut, amountIn);
 
-        _transferFrom(assetIn, counterpartyProxy, amount);
-        _transfer(assetOut, counterpartyProxy, amount);
+        // Does not have a hasRole check, but is permissioned through rate limit key derivation
+        // as msg.sender has to be the counterparty proxy.
+        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
 
-        emit SwapAssetSwapCompleted(counterpartyProxy, assetOut, assetIn, amount);
+        _transferFrom(assetIn, counterpartyProxy, amountIn);
+        _transfer(assetOut,    counterpartyProxy, amountOut);
+
+        emit SwapAssetSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
     }
 
     /**********************************************************************************************/
@@ -117,7 +124,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     }
 
     /**********************************************************************************************/
-    /*** Internal Internal Functions                                                            ***/
+    /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
 
     function _transfer(address assetOut, address counterpartyProxy, uint256 amount) internal {
@@ -146,6 +153,29 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
             returnData.length == 0 || (returnData.length == 32 && abi.decode(returnData, (bool))),
             "SwapAssetFacet/transfer-from-failed"
         );
+    }
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    // Converts an amount of assetFrom to the equivalent 1:1 amount of assetTo, reverting if the
+    // precision would be lost.
+    function _convertAmount(address assetFrom, address assetTo, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 decimalsFrom = IERC20Like(assetFrom).decimals();
+        uint256 decimalsTo   = IERC20Like(assetTo).decimals();
+
+        if (decimalsFrom <= decimalsTo) return amount * 10 ** (decimalsTo - decimalsFrom);
+
+        uint256 scale = 10 ** (decimalsFrom - decimalsTo);
+
+        require(amount % scale == 0, "SwapAssetFacet/precision-loss");
+
+        return amount / scale;
     }
 
 }
