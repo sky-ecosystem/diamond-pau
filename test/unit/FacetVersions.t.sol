@@ -25,6 +25,7 @@ import { PSM3Facet }          from "../../src/facets/psm3/PSM3Facet.sol";
 import { PSMFacet }           from "../../src/facets/psm/PSMFacet.sol";
 import { SparkVaultFacet }    from "../../src/facets/spark-vault/SparkVaultFacet.sol";
 import { SuperstateFacet }    from "../../src/facets/superstate/SuperstateFacet.sol";
+import { SwapAssetFacet }     from "../../src/facets/swap-asset/SwapAssetFacet.sol";
 import { TransferAssetFacet } from "../../src/facets/transfer-asset/TransferAssetFacet.sol";
 import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 import { UniswapV4Facet }     from "../../src/facets/uniswap-v4/UniswapV4Facet.sol";
@@ -59,6 +60,7 @@ contract FacetVersions_Tests is Test {
     PSMFacet           internal psmFacet;
     SparkVaultFacet    internal sparkVaultFacet;
     SuperstateFacet    internal superstateFacet;
+    SwapAssetFacet     internal swapAssetFacet;
     TransferAssetFacet internal transferAssetFacet;
     UniswapV3Facet     internal uniswapV3Facet;
     UniswapV4Facet     internal uniswapV4Facet;
@@ -90,6 +92,7 @@ contract FacetVersions_Tests is Test {
         psmFacet           = new PSMFacet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
         sparkVaultFacet    = new SparkVaultFacet();
         superstateFacet    = new SuperstateFacet(MOCK_ADDRESS, MOCK_ADDRESS);
+        swapAssetFacet     = new SwapAssetFacet();
         transferAssetFacet = new TransferAssetFacet();
         uniswapV3Facet     = new UniswapV3Facet(MOCK_ADDRESS, MOCK_ADDRESS);
         uniswapV4Facet     = new UniswapV4Facet(MOCK_ADDRESS, MOCK_ADDRESS, MOCK_ADDRESS);
@@ -122,6 +125,7 @@ contract FacetVersions_Tests is Test {
         assertEq(psmFacet.VERSION(),           "1.0.0");
         assertEq(sparkVaultFacet.VERSION(),    "1.0.0");
         assertEq(superstateFacet.VERSION(),    "1.0.0");
+        assertEq(swapAssetFacet.VERSION(),     "1.0.0");
         assertEq(transferAssetFacet.VERSION(), "1.0.0");
         assertEq(uniswapV3Facet.VERSION(),     "1.0.0");
         assertEq(uniswapV4Facet.VERSION(),     "1.0.0");
