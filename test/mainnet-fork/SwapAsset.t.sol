@@ -139,6 +139,16 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
 
+    function test_initiateSwap_invalidCounterpartyController() external {
+        vm.startPrank(counterpartyAdmin);
+        counterpartyProxy.revokeRole(counterpartyProxy.CONTROLLER(), address(counterpartyController));
+        vm.stopPrank();
+
+        vm.expectRevert("SwapAssetFacet/invalid-counterparty-controller");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+    }
+
     function test_initiateSwap_precisionLossBoundary() external {
         deal(Ethereum.USDS, address(almProxy),          1_000_000e18 + 1e12);
         deal(Ethereum.USDT, address(counterpartyProxy), 1_000_000e6 + 1);

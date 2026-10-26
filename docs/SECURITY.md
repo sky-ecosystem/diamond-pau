@@ -77,7 +77,7 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 **Architecture Note:** `completeSwap` has no role check. It is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured `(assetOut, counterpartyProxy, assetIn)` key.
 
-**Security Note:** `initiateSwap` calls the allocator-supplied `counterpartyController`. The counterparty `ALMProxy` it returns must have a configured rate limit key, and the initiating Controller requires that exactly `amountOut` was sent and exactly the converted amount was received, so a malicious controller cannot extract value. Swaps are 1:1 with no oracle, so loss is bounded to depeg risk (see [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity)).
+**Security Note:** `initiateSwap` calls the allocator-supplied `counterpartyController`. The counterparty `ALMProxy` it returns must have a configured rate limit key, and `counterpartyController` must hold the `CONTROLLER` role on that `ALMProxy`, so the initiating `ALMProxy` only calls a Controller of a whitelisted counterparty. The role check runs after the rate limit decrease so that only whitelisted `ALMProxy` contracts are queried. The initiating Controller also requires that exactly `amountOut` was sent and exactly the converted amount was received, so a malicious controller cannot extract value. Swaps are 1:1 with no oracle, so loss is bounded to depeg risk (see [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity)).
 
 ---
 

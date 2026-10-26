@@ -208,7 +208,7 @@ The swap asset module (`SwapAssetFacet`) swaps two 1:1 assets between two PAUs i
 ### How It Works
 
 1. An allocator on the initiating PAU calls `initiateSwap(counterpartyController, assetOut, assetIn, amountOut)`
-2. The initiating Controller reads the counterparty `ALMProxy` from `counterpartyController.proxy()` and decreases its rate limit by `amountOut`
+2. The initiating Controller reads the counterparty `ALMProxy` from `counterpartyController.proxy()`, decreases its rate limit by `amountOut` and requires that `counterpartyController` holds the `CONTROLLER` role on that `ALMProxy`
 3. The initiating `ALMProxy` approves the counterparty `ALMProxy` for `amountOut` of `assetOut` and calls `completeSwap(assetIn, assetOut, amountOut)` on the counterparty Controller
 4. The counterparty Controller converts the amount to its outgoing asset's decimals, decreases its own rate limit by the converted amount, pulls the incoming asset from the initiating `ALMProxy` and sends the converted amount back
 5. The initiating Controller resets the approval to zero and requires that exactly `amountOut` was sent and exactly the converted amount was received
