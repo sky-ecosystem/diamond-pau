@@ -18,7 +18,6 @@ When assuming a compromised `ALLOCATOR`:
 
 1. **Value movement restrictions:** Smart contract logic must prevent movement of value outside the PAU system of contracts
     - Exception: Asynchronous integrations (e.g., BUIDL) where `transferAsset` sends funds to whitelisted addresses, with LP tokens minted asynchronously, or OTC trades.
-    - Exception: Atomic 1:1 asset swaps with whitelisted counterparty `ALMProxy` contracts via `SwapAssetFacet`.
 
 2. **Loss limitations:** Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits
 

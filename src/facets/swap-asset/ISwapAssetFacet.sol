@@ -6,7 +6,7 @@ import { IFacet } from "../IFacet.sol";
 /**
  * @title  ISwapAssetFacet
  * @notice PAU facet for swapping ERC-20 assets 1:1 between ALMProxy controllers, adjusting for
- *         token decimals. Rate limited per (asset-out, counterparty-proxy, asset-in) tuple, in
+ *         token decimals. Rate limited per (`assetOut`, `counterpartyProxy`, `assetIn`) tuple, in
  *         units of the asset sent by the respective side.
  */
 interface ISwapAssetFacet is IFacet {
@@ -20,8 +20,8 @@ interface ISwapAssetFacet is IFacet {
      * @param  counterpartyProxy Address of the ALMProxy counterparty.
      * @param  assetOut          Address of the asset token that was sent.
      * @param  assetIn           Address of the asset token that was received.
-     * @param  amountOut         Amount of assetOut that was sent (assetOut decimals).
-     * @param  amountIn          Amount of assetIn that was received (assetIn decimals).
+     * @param  amountOut         Amount of `assetOut` that was sent (`assetOut` decimals).
+     * @param  amountIn          Amount of `assetIn` that was received (`assetIn` decimals).
      */
     event SwapAssetSwap(
         address indexed counterpartyProxy,
@@ -37,11 +37,12 @@ interface ISwapAssetFacet is IFacet {
 
     /**
      * @notice Initiates an ERC-20 asset swap with the counterparty controller. The amount received
-     *         is amountOut converted to assetIn decimals. Decreases the rate limit by amountOut.
+     *         is `amountOut` converted to `assetIn` decimals. Decreases the rate limit by
+     *         `amountOut`.
      * @param  counterpartyController Address of the counterparty's controller.
      * @param  assetOut               Address of the asset token to send.
      * @param  assetIn                Address of the asset token to receive.
-     * @param  amountOut              Amount of assetOut to send (assetOut decimals).
+     * @param  amountOut              Amount of `assetOut` to send (`assetOut` decimals).
      */
     function initiateSwap(
         address counterpartyController,
@@ -53,13 +54,13 @@ interface ISwapAssetFacet is IFacet {
 
     /**
      * @notice Completes an ERC-20 asset swap. Called by the counterparty proxy, which is
-     *         permissioned through the rate limit key. The amount sent is amountIn converted to
-     *         assetOut decimals. Decreases the rate limit by the amount sent.
-     * @param  assetOut Address of the asset token to send.
-     * @param  assetIn  Address of the asset token to receive.
-     * @param  amountIn Amount of assetIn to receive (assetIn decimals).
+     *         permissioned through the rate limit key. The amount received is `amountOut` converted
+     *         to `assetIn` decimals. Decreases the rate limit by `amountOut`.
+     * @param  assetOut  Address of the asset token to send.
+     * @param  assetIn   Address of the asset token to receive.
+     * @param  amountOut Amount of `assetOut` to send (`assetOut` decimals).
      */
-    function completeSwap(address assetOut, address assetIn, uint256 amountIn) external;
+    function completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/

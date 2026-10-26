@@ -42,7 +42,6 @@ The system is designed with the assumption that an actor with `ALLOCATOR_ROLE` c
 
 1. **Value cannot leave the system** - All operations must keep funds within the PAU system of contracts
     - Exception: Asynchronous integrations (e.g., BUIDL, Ethena) where funds go to whitelisted addresses
-    - Exception: Atomic 1:1 asset swaps with whitelisted counterparty `ALMProxy` contracts (`SwapAssetFacet`)
 
 2. **Losses bounded by rate limits** - Any single attack is limited to the current rate limit capacity
 

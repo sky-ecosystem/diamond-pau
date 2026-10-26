@@ -13,7 +13,7 @@ interface ISwapAssetController {
     )
         external;
 
-    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountIn) external;
+    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
 
     function swapAsset_getSwapRateLimitKey(
         address assetOut,

@@ -15,7 +15,7 @@ import { ISwapAssetFacet } from "./ISwapAssetFacet.sol";
 
 interface IControllerLike {
 
-    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountIn) external;
+    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
 
     function proxy() external view returns (address);
 
@@ -23,13 +23,13 @@ interface IControllerLike {
 
 interface IERC20Like {
 
-    function balanceOf(address owner) external view returns (uint256 balance);
-
-    function decimals() external view returns (uint8 decimals);
-
     function transfer(address to, uint256 amount) external returns (bool success);
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool success);
+
+    function balanceOf(address owner) external view returns (uint256 balance);
+
+    function decimals() external view returns (uint8 decimals);
 
 }
 
@@ -72,7 +72,9 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
             "SwapAssetFacet/invalid-counterparty-controller"
         );
 
-        uint256 expectedAmountIn = _convertAmount(assetOut, assetIn, amountOut);
+        uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
+
+        _tryIncreaseRateLimit(getSwapRateLimitKey(assetIn, counterpartyProxy, assetOut), amountIn);
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -83,7 +85,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
 
         IALMProxy(proxy).doCall(
             counterpartyController,
-            abi.encodeCall(IControllerLike.swapAsset_completeSwap, (assetIn, assetOut, amountOut))
+            abi.encodeCall(IControllerLike.swapAsset_completeSwap, (assetIn, assetOut, amountIn))
         );
 
         ApproveLib.approve(assetOut, proxy, counterpartyProxy, 0);
@@ -91,25 +93,27 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         uint256 amountOutSent    = startingAssetsOutBalance - IERC20Like(assetOut).balanceOf(proxy);
         uint256 amountInReceived = IERC20Like(assetIn).balanceOf(proxy) - startingAssetsInBalance;
 
-        require(amountOutSent    == amountOut,        "SwapAssetFacet/amountOut-mismatch");
-        require(amountInReceived == expectedAmountIn, "SwapAssetFacet/amountIn-mismatch");
+        require(amountOutSent    == amountOut, "SwapAssetFacet/amountOut-mismatch");
+        require(amountInReceived == amountIn,  "SwapAssetFacet/amountIn-mismatch");
 
         emit SwapAssetSwap(counterpartyProxy, assetOut, assetIn, amountOutSent, amountInReceived);
     }
 
     /// @inheritdoc ISwapAssetFacet
-    function completeSwap(address assetOut, address assetIn, uint256 amountIn)
+    function completeSwap(address assetOut, address assetIn, uint256 amountOut)
         external
         override
         nonReentrant
     {
         address counterpartyProxy = msg.sender;
 
-        uint256 amountOut = _convertAmount(assetIn, assetOut, amountIn);
-
         // Does not have a hasRole check, but is permissioned through rate limit key derivation
         // as msg.sender has to be the counterparty proxy.
         _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
+
+        uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
+
+        _tryIncreaseRateLimit(getSwapRateLimitKey(assetIn, counterpartyProxy, assetOut), amountIn);
 
         _transferFrom(assetIn, counterpartyProxy, amountIn);
         _transfer(assetOut,    counterpartyProxy, amountOut);
