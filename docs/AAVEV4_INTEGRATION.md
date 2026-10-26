@@ -82,6 +82,8 @@ Sets how much outstanding deficit a deposit is willing to buy into, RAY-scaled i
 - The gate reads the reserve's current `(hub, assetId)`. A remapped reserve is judged by the tolerance of the asset it now points at, and separately loses its deposit budget because the key changes.
 - Unlike `maxSlippage`, the tolerance is not a per-market whitelist: leaving it at `0` does not block a deposit into a healthy asset.
 
+> Known Limitation: A zero `maxDeficit` still allows a deposit while dust collateral is hiding the shortfall. Aave marked [`TOB-AAVE-1`](https://github.com/trailofbits/publications/blob/master/reviews/2026-02-aave-v4-securityreview.pdf) as Risk Accepted, stating that the dust exclusion is intentional due to complexity and gas, and that liquidators can keep liquidating until one collateral remains, even when those liquidations are not profitable. Until that happens, a deposit with `maxDeficit == 0` still passes and the loss shows up later, when suppliers cannot fully exit.
+
 **Event:** `AaveV4MaxDeficitSet(hub, assetId, maxDeficit)`
 
 ### Set Max Slippage (admin)

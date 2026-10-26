@@ -50,6 +50,8 @@ interface IAaveV4HubLike {
 
     function getAssetDeficitRay(uint256 assetId) external view returns (uint256);
 
+    function getAssetUnderlyingAndDecimals(uint256 assetId) external view returns (address, uint8);
+
 }
 
 contract AaveV4Facet is IAaveV4Facet, Facet {
@@ -143,6 +145,14 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
 
         address underlying = reserve.underlying;
 
+        ( address hubUnderlying, ) =
+            IAaveV4HubLike(reserve.hub).getAssetUnderlyingAndDecimals(reserve.assetId);
+
+        require(
+            hubUnderlying == reserve.underlying,
+            "AaveV4Facet/hub-and-spoke-underlying-mismatch"
+        );
+
         // Cap the deficit a deposit is willing to buy into: supplying against unbacked debt buys
         // into the pool at par. The tolerance defaults to zero, so any deficit blocks the deposit
         // until governance opts into an amount for that Hub asset.
@@ -174,7 +184,7 @@ contract AaveV4Facet is IAaveV4Facet, Facet {
         uint256 amountReceived
             = IAaveV4SpokeLike(spoke).getUserSuppliedAssets(reserveId, proxy) - startingBalance;
 
-        require(amountReceived >= amount * maxSlippage / 1e18, "AaveV4Facet/slippage-too-high");
+        require(amountReceived * 1e18 >= amount * maxSlippage, "AaveV4Facet/slippage-too-high");
 
         // Clear the approval in case the spoke did not pull the full amount.
         ApproveLib.approve(underlying, proxy, spoke, 0);
