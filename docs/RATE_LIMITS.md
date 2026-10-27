@@ -122,9 +122,9 @@ Note that setting the rate limit data creates a boundary where the remaining rat
 - Pool dynamics are slower-moving compared to DEX liquidity
 - Lower risk of rapid value extraction
 
-#### Swap Asset Integration (No Cancellation)
+#### Swap Asset Integration
 
-**Decision:** Rate limits are **not** cancelled in the swap asset integration (SwapAssetFacet).
+**Decision:** Rate limits for the opposite swap direction are cancelled/increased in the swap asset integration (SwapAssetFacet).
 
 | Operation      | Rate Limit Behavior                                                                                                                                                                                   |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

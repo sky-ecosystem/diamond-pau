@@ -187,6 +187,16 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         mainnetController.swapAsset_initiateSwap(address(0), address(0), address(0), 0);
     }
 
+    function test_initiateSwap_invalidCounterpartyController() external {
+        vm.startPrank(counterpartyAdmin);
+        counterpartyProxy.revokeRole(counterpartyProxy.CONTROLLER(), address(counterpartyController));
+        vm.stopPrank();
+
+        vm.expectRevert("SwapAssetFacet/invalid-counterparty-controller");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+    }
+
     function test_initiateSwap_zeroMaxAmount() external {
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(usdsToUSDTKey, 0, 0);
@@ -207,16 +217,6 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         vm.prank(allocator);
         mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18 + 1);
 
-        vm.prank(allocator);
-        mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
-    }
-
-    function test_initiateSwap_invalidCounterpartyController() external {
-        vm.startPrank(counterpartyAdmin);
-        counterpartyProxy.revokeRole(counterpartyProxy.CONTROLLER(), address(counterpartyController));
-        vm.stopPrank();
-
-        vm.expectRevert("SwapAssetFacet/invalid-counterparty-controller");
         vm.prank(allocator);
         mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
@@ -363,6 +363,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         deal(Ethereum.USDT, address(counterpartyProxy), 3_000_000e6);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+        // `maxAmount = 10m`, `lastAmount = 5m` so we can see increases.
         rateLimits.setRateLimitData(usdsToUSDTKey, 10_000_000e18, 0, 5_000_000e18, vm.getBlockTimestamp());
         rateLimits.setRateLimitData(usdtToUSDSKey, 10_000_000e6,  0, 5_000_000e6,  vm.getBlockTimestamp());
         vm.stopPrank();
@@ -500,11 +501,15 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         deal(Ethereum.USDT, address(almProxy),          2_000_000e6);
         deal(Ethereum.USDS, address(counterpartyProxy), 3_000_000e18);
 
-        vm.prank(Ethereum.SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(usdtToUSDSKey, 10_000_000e6, 0, 5_000_000e6, vm.getBlockTimestamp());
+        rateLimits.setRateLimitData(usdsToUSDTKey, 0, 0);
+        vm.stopPrank();
 
-        vm.prank(counterpartyAdmin);
+        vm.startPrank(counterpartyAdmin);
         counterpartyRateLimits.setRateLimitData(counterpartyUSDSToUSDTKey, 10_000_000e18, 0, 5_000_000e18, vm.getBlockTimestamp());
+        counterpartyRateLimits.setRateLimitData(counterpartyUSDTToUSDSKey, 0, 0);
+        vm.stopPrank();
 
         assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
         assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
@@ -512,11 +517,11 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 3_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), type(uint256).max);
+        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(usdtToUSDSKey), 5_000_000e6);
 
         assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDSToUSDTKey), 5_000_000e18);
-        assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDTToUSDSKey), type(uint256).max);
+        assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDTToUSDSKey), 0);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
 
@@ -552,11 +557,11 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 2_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), type(uint256).max);
+        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(usdtToUSDSKey), 4_000_000e6);
 
         assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDSToUSDTKey), 4_000_000e18);
-        assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDTToUSDSKey), type(uint256).max);
+        assertEq(counterpartyRateLimits.getCurrentRateLimit(counterpartyUSDTToUSDSKey), 0);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
     }
@@ -709,6 +714,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         deal(Ethereum.USDT, address(counterpartyProxy), 3_000_000e6);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
+        // `maxAmount = 10m`, `lastAmount = 5m` so we can see increases.
         rateLimits.setRateLimitData(usdsToUSDTKey, 10_000_000e18, 0, 5_000_000e18, vm.getBlockTimestamp());
         rateLimits.setRateLimitData(usdtToUSDSKey, 10_000_000e6,  0, 5_000_000e6,  vm.getBlockTimestamp());
         vm.stopPrank();
@@ -802,8 +808,10 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         deal(Ethereum.USDS, address(counterpartyProxy), 2_000_000e18);
         deal(Ethereum.USDT, address(almProxy),          3_000_000e6);
 
-        vm.prank(Ethereum.SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(usdtToUSDSKey, 10_000_000e6, 0, 5_000_000e6, vm.getBlockTimestamp());
+        rateLimits.setRateLimitData(usdsToUSDTKey, 0, 0);
+        vm.stopPrank();
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 2_000_000e18);
@@ -811,7 +819,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(usdt.balanceOf(address(almProxy)),          3_000_000e6);
         assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), type(uint256).max);
+        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(usdtToUSDSKey), 5_000_000e6);
 
         vm.prank(address(counterpartyProxy));
@@ -839,7 +847,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
         assertEq(usdt.balanceOf(address(counterpartyProxy)), 1_000_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), type(uint256).max);
+        assertEq(rateLimits.getCurrentRateLimit(usdsToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(usdtToUSDSKey), 4_000_000e6);
     }
 

@@ -62,8 +62,6 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     {
         address counterpartyProxy = IControllerLike(counterpartyController).proxy();
 
-        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
-
         require(
             IALMProxy(counterpartyProxy).hasRole(
                 IALMProxy(counterpartyProxy).CONTROLLER(),
@@ -71,6 +69,8 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
             ),
             "SwapAssetFacet/invalid-counterparty-controller"
         );
+
+        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
 
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 

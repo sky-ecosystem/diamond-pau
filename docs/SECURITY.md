@@ -72,7 +72,7 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 ### Swap Asset Integration
 
-**Trust Assumption:** Counterparty `ALMProxy` contracts are whitelisted by governance per asset pair and direction via rate limit keys on each PAU.
+**Trust Assumption:** Counterparty `ALMProxy` contracts are whitelisted by governance per asset pair and direction via rate limit keys on each PAU. Since the counterparty controller directly trusts the ERC20 tokens to `transferFrom` and `transfer`, there is no additional security to be gained from per and post balance checks. Conversely, the controller initiating thr swap is trusting the counterparty controller with the ERC20 operations, and thus it uses per and post balance checks to mitigate the risk of a malicious counterparty controller.
 
 **Architecture Note:** `completeSwap` has no role check. It is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured `(assetOut, counterpartyProxy, assetIn)` key.
 
