@@ -43,6 +43,7 @@ import { PendleFacet }        from "../../src/facets/pendle/PendleFacet.sol";
 import { PSMFacet }           from "../../src/facets/psm/PSMFacet.sol";
 import { SparkVaultFacet }    from "../../src/facets/spark-vault/SparkVaultFacet.sol";
 import { SuperstateFacet }    from "../../src/facets/superstate/SuperstateFacet.sol";
+import { SwapAssetFacet }     from "../../src/facets/swap-asset/SwapAssetFacet.sol";
 import { TransferAssetFacet } from "../../src/facets/transfer-asset/TransferAssetFacet.sol";
 import { UniswapV3Facet }     from "../../src/facets/uniswap-v3/UniswapV3Facet.sol";
 import { UniswapV4Facet }     from "../../src/facets/uniswap-v4/UniswapV4Facet.sol";
@@ -289,6 +290,7 @@ abstract contract ForkTestBase is DssTest {
         _onboardPSM();
         _onboardSparkVault();
         _onboardSuperstate();
+        _onboardSwapAsset();
         _onboardTransferAsset();
         _onboardUniswapV3();
         _onboardUniswapV4();
@@ -315,7 +317,7 @@ abstract contract ForkTestBase is DssTest {
         //       logic that calls into AccessControls to perform grants and revocations.
         accessControls.setRoleAdmin(ALLOCATOR_ROLE, ALLOCATOR_ADMIN_ROLE);
 
-        bytes32[] memory integrationIds = new bytes32[](28);
+        bytes32[] memory integrationIds = new bytes32[](29);
         integrationIds[0]  = "AAVE_FACET";
         integrationIds[1]  = "BASIN_FACET";
         integrationIds[2]  = "CCTP_FACET";
@@ -333,17 +335,18 @@ abstract contract ForkTestBase is DssTest {
         integrationIds[14] = "PSM_FACET";
         integrationIds[15] = "SPARK_VAULT_FACET";
         integrationIds[16] = "SUPERSTATE_FACET";
-        integrationIds[17] = "TRANSFER_ASSET_FACET";
-        integrationIds[18] = "UNISWAP_V3_FACET";
-        integrationIds[19] = "UNISWAP_V4_FACET";
-        integrationIds[20] = "ETHENA_FACET";
-        integrationIds[21] = "USDS_FACET";
-        integrationIds[22] = "WEETH_FACET";
-        integrationIds[23] = "WRAP_PROXY_ETH_FACET";
-        integrationIds[24] = "WSTETH_FACET";
-        integrationIds[25] = "NFAT_HALO_FACET";
-        integrationIds[26] = "NFAT_PRIME_FACET";
-        integrationIds[27] = "AAVE_V4_FACET";
+        integrationIds[17] = "SWAP_ASSET_FACET";
+        integrationIds[18] = "TRANSFER_ASSET_FACET";
+        integrationIds[19] = "UNISWAP_V3_FACET";
+        integrationIds[20] = "UNISWAP_V4_FACET";
+        integrationIds[21] = "ETHENA_FACET";
+        integrationIds[22] = "USDS_FACET";
+        integrationIds[23] = "WEETH_FACET";
+        integrationIds[24] = "WRAP_PROXY_ETH_FACET";
+        integrationIds[25] = "WSTETH_FACET";
+        integrationIds[26] = "NFAT_HALO_FACET";
+        integrationIds[27] = "NFAT_PRIME_FACET";
+        integrationIds[28] = "AAVE_V4_FACET";
 
         mainnetController.updateIntegrations(integrationIds);
 
@@ -562,6 +565,12 @@ abstract contract ForkTestBase is DssTest {
         address superstateFacet = address(new SuperstateFacet(Ethereum.USDC, Ethereum.USTB));
         vm.label(superstateFacet, "SuperstateFacet");
         BeaconConfig.setSuperstateIntegration(address(beacon), superstateFacet);
+    }
+
+    function _onboardSwapAsset() internal {
+        address swapAssetFacet = address(new SwapAssetFacet());
+        vm.label(swapAssetFacet, "SwapAssetFacet");
+        BeaconConfig.setSwapAssetIntegration(address(beacon), swapAssetFacet);
     }
 
     function _onboardTransferAsset() internal {

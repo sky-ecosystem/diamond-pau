@@ -12,6 +12,7 @@ PAU performs liquidity operations across multiple venues:
 | **Uniswap V3** | Add/remove liquidity, swaps | Stablecoin LP positions and swaps via V3 pools |
 | **Uniswap V4** | Swaps, positions            | On-chain stablecoin swaps                      |
 | **OTC Desks**  | Offchain swaps              | High-volume institutional liquidity            |
+| **Swap Asset** | 1:1 swaps between PAUs      | Segregated balance sheets (e.g. SLL, Savings)  |
 
 ---
 
@@ -197,6 +198,42 @@ There are two PSM integrations with different rate limit behaviors:
 - PSM3 will be deprecated soon
 - The contract is immutable, limiting attack surface
 - Prices cannot be manipulated due to 1:1 swap design
+
+---
+
+## Swap Asset Integration
+
+The swap asset module (`SwapAssetFacet`) swaps two assets 1:1 between two PAUs in a single transaction. Each PAU has its own `ALMProxy`, `Controller` and `RateLimits`, and both must have `SwapAssetFacet` wired.
+
+### How It Works
+
+1. An allocator on the initiating PAU calls `initiateSwap(counterpartyController, assetOut, assetIn, amountOut)`.
+2. The initiating Controller reads the counterparty `ALMProxy` from `counterpartyController.proxy()`, decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), and requires that `counterpartyController` holds the `CONTROLLER` role on that `ALMProxy`.
+3. The initiating `ALMProxy` approves the counterparty `ALMProxy` for `amountOut` of `assetOut` and calls `completeSwap(assetOut, assetIn, amountOut)` on the counterparty Controller.
+4. The counterparty Controller, decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), pulls the incoming asset from the initiating `ALMProxy` and sends the `amountOut` back.
+5. The initiating Controller resets the approval to zero and requires that exactly `amountOut` was sent and exactly `amountIn` was received.
+
+Both Controllers emit `SwapAssetSwap`, each from its own perspective (`assetOut` is the asset that Controller's `ALMProxy` sent).
+
+### Decimal Conversion
+
+Amounts are converted 1:1 using each token's on-chain `decimals()`. Scaling up is always exact. Scaling down reverts with `SwapAssetFacet/precision-loss` unless the amount is a multiple of `10 ** (decimalsFrom - decimalsTo)`.
+
+| Swap        | Accepted amount sent           |
+| ----------- | ------------------------------ |
+| USDT → USDS | Any amount                     |
+| USDS → USDT | Multiples of `1e12` (USDS wei) |
+
+### Rate Limiting
+
+| Operation      | Rate Limit Key                                                    | Change                             |
+| -------------- | ----------------------------------------------------------------- | ---------------------------------- |
+| `initiateSwap` | `LIMIT_ASSET_SWAP` keyed `(assetOut, counterpartyProxy, assetIn)` | `-amountOut` (`assetOut` decimals) |
+| `initiateSwap` | `LIMIT_ASSET_SWAP` keyed `(assetIn, counterpartyProxy, assetOut)` | `+amountIn` (`assetIn` decimals)   |
+| `completeSwap` | `LIMIT_ASSET_SWAP` keyed `(assetOut, msg.sender, assetIn)`        | `-amountOut` (`assetOut` decimals) |
+| `completeSwap` | `LIMIT_ASSET_SWAP` keyed `(assetIn, msg.sender, assetOut)`        | `+amountIn` (`assetIn` decimals)   |
+
+Each direction and each counterparty has its own key on each PAU, so a swap consumes rate limit on both PAUs. `completeSwap` has no role check: it is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured key.
 
 ---
 

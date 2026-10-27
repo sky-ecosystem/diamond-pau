@@ -50,6 +50,8 @@ import { ISparkVaultController }    from "../facets/spark-vault/ISparkVaultContr
 import { ISparkVaultFacet }         from "../facets/spark-vault/ISparkVaultFacet.sol";
 import { ISuperstateController }    from "../facets/superstate/ISuperstateController.sol";
 import { ISuperstateFacet }         from "../facets/superstate/ISuperstateFacet.sol";
+import { ISwapAssetController }     from "../facets/swap-asset/ISwapAssetController.sol";
+import { ISwapAssetFacet }          from "../facets/swap-asset/ISwapAssetFacet.sol";
 import { ITransferAssetController } from "../facets/transfer-asset/ITransferAssetController.sol";
 import { ITransferAssetFacet }      from "../facets/transfer-asset/ITransferAssetFacet.sol";
 import { IUniswapV3Controller }     from "../facets/uniswap-v3/IUniswapV3Controller.sol";
@@ -140,6 +142,9 @@ library BeaconConfig {
 
     /// @notice Integration identifier for the Superstate facet.
     bytes32 internal constant SUPERSTATE_INTEGRATION = "SUPERSTATE_FACET";
+
+    /// @notice Integration identifier for the Swap Asset facet.
+    bytes32 internal constant SWAP_ASSET_INTEGRATION = "SWAP_ASSET_FACET";
 
     /// @notice Integration identifier for the Transfer Asset facet.
     bytes32 internal constant TRANSFER_ASSET_INTEGRATION = "TRANSFER_ASSET_FACET";
@@ -1767,6 +1772,57 @@ library BeaconConfig {
      */
     function setSuperstateIntegration(address beacon, address facet) internal {
         _setIntegration(beacon, buildSuperstateIntegration(facet));
+    }
+
+    /**********************************************************************************************/
+    /*** SwapAsset Integration                                                                  ***/
+    /**********************************************************************************************/
+
+    /**
+     * @notice Builds the SwapAsset facet integration to be set on the beacon.
+     * @param  facet       Address of the deployed SwapAssetFacet contract.
+     * @return integration The SwapAsset integration id and config.
+     */
+    function buildSwapAssetIntegration(address facet)
+        internal
+        pure
+        returns (IEnumerableIntegrations.Integration memory integration)
+    {
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+
+        wires[0] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_initiateSwap.selector,
+            ISwapAssetFacet.initiateSwap.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_completeSwap.selector,
+            ISwapAssetFacet.completeSwap.selector
+        );
+
+        wires[2] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_getSwapRateLimitKey.selector,
+            ISwapAssetFacet.getSwapRateLimitKey.selector
+        );
+
+        wires[3] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_VERSION.selector,
+            IFacet.VERSION.selector
+        );
+
+        integration = IEnumerableIntegrations.Integration({
+            id     : SWAP_ASSET_INTEGRATION,
+            config : IEnumerableIntegrations.Config({ facet : facet, wires : wires })
+        });
+    }
+
+    /**
+     * @notice Configures the SwapAsset facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
+     * @param  facet  Address of the deployed SwapAssetFacet contract.
+     */
+    function setSwapAssetIntegration(address beacon, address facet) internal {
+        _setIntegration(beacon, buildSwapAssetIntegration(facet));
     }
 
     /**********************************************************************************************/

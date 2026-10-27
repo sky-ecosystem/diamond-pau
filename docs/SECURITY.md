@@ -70,6 +70,14 @@ See [Liquidity Operations](./LIQUIDITY_OPERATIONS.md) for OTC mechanics.
 
 **Security Node:** If a cancel key is set but its matching claim-cancel key is not, `cancel*Request` will succeed and `claimCancel*Request` will then revert. Because Centrifuge requests use `REQUEST_ID = 0`, no new deposit or redeem request can be submitted while a cancellation is pending, so the integration stays stuck until governance configures the missing claim-cancel key.
 
+### Swap Asset Integration
+
+**Trust Assumption:** Counterparty `ALMProxy` contracts are whitelisted by governance per asset pair and direction via rate limit keys on each PAU. Since the counterparty controller directly trusts the ERC20 tokens to `transferFrom` and `transfer`, there is no additional security to be gained from pre and post balance checks. Conversely, the controller initiating the swap is trusting the counterparty controller with the ERC20 operations, and thus it uses pre and post balance checks to mitigate the risk of a malicious counterparty controller.
+
+**Architecture Note:** `completeSwap` has no role check. It is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured `(assetOut, counterpartyProxy, assetIn)` key.
+
+**Security Note:** `initiateSwap` calls the allocator-supplied `counterpartyController`. The counterparty `ALMProxy` it returns must have a configured rate limit key, and `counterpartyController` must hold the `CONTROLLER` role on that `ALMProxy`, so the initiating `ALMProxy` only calls a Controller of a whitelisted counterparty. The initiating Controller also requires that exactly `amountOut` was sent and exactly the converted amount was received, so a malicious controller cannot extract value. Swaps are 1:1 with no oracle, so loss is bounded to depeg risk (see [Threat Model](./THREAT_MODEL.md#core-assumption-11-asset-parity)).
+
 ---
 
 ## Governance and Emergency Controls
