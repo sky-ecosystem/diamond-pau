@@ -1767,6 +1767,7 @@ library BeaconConfig {
 
     /**
      * @notice Configures the Superstate facet integration on the beacon.
+     * @param  beacon Address of the Sky Diamond PAU Beacon.
      * @param  facet  Address of the deployed SuperstateFacet contract.
      */
     function setSuperstateIntegration(address beacon, address facet) internal {

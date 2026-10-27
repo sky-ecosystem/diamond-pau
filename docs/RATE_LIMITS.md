@@ -126,10 +126,10 @@ Note that setting the rate limit data creates a boundary where the remaining rat
 
 **Decision:** Rate limits are **not** cancelled in the swap asset integration (SwapAssetFacet).
 
-| Operation      | Rate Limit Behavior                                                                          |
-| -------------- | -------------------------------------------------------------------------------------------- |
-| `initiateSwap` | Decreases the initiating PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut`   |
-| `completeSwap` | Decreases the counterparty PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` |
+| Operation      | Rate Limit Behavior                                                                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initiateSwap` | Decreases the initiating PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the initiating PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`.     |
+| `completeSwap` | Decreases the counterparty PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the counterparty PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`. |
 
 **Rationale:**
 
