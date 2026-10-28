@@ -15,7 +15,16 @@ interface ISwapAssetController {
 
     function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
 
-    function swapAsset_getSwapRateLimitKey(
+    function swapAsset_getInitiateSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
+        external
+        pure
+        returns (bytes32 key);
+
+    function swapAsset_getCompleteSwapRateLimitKey(
         address assetOut,
         address counterpartyProxy,
         address assetIn

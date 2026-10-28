@@ -67,13 +67,33 @@ interface ISwapAssetFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Returns the swap rate limit key.
+     * @notice Returns the initiate swap rate limit key.
      * @param  assetOut          Address of the asset token that was sent.
      * @param  counterpartyProxy Address of the counterparty proxy.
      * @param  assetIn           Address of the asset token that was received.
      * @return key               Swap rate limit key.
      */
-    function getSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+    function getInitiateSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
+        external
+        pure
+        returns (bytes32 key);
+
+    /**
+     * @notice Returns the complete swap rate limit key.
+     * @param  assetOut          Address of the asset token that was sent.
+     * @param  counterpartyProxy Address of the counterparty proxy.
+     * @param  assetIn           Address of the asset token that was received.
+     * @return key               Swap rate limit key.
+     */
+    function getCompleteSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
         external
         pure
         returns (bytes32 key);

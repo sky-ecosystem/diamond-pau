@@ -226,12 +226,12 @@ Amounts are converted 1:1 using each token's on-chain `decimals()`. Scaling up i
 
 ### Rate Limiting
 
-| Operation      | Rate Limit Key                                                    | Change                             |
-| -------------- | ----------------------------------------------------------------- | ---------------------------------- |
-| `initiateSwap` | `LIMIT_ASSET_SWAP` keyed `(assetOut, counterpartyProxy, assetIn)` | `-amountOut` (`assetOut` decimals) |
-| `initiateSwap` | `LIMIT_ASSET_SWAP` keyed `(assetIn, counterpartyProxy, assetOut)` | `+amountIn` (`assetIn` decimals)   |
-| `completeSwap` | `LIMIT_ASSET_SWAP` keyed `(assetOut, msg.sender, assetIn)`        | `-amountOut` (`assetOut` decimals) |
-| `completeSwap` | `LIMIT_ASSET_SWAP` keyed `(assetIn, msg.sender, assetOut)`        | `+amountIn` (`assetIn` decimals)   |
+| Operation      | Rate Limit Key                                                             | Change                             |
+| -------------- | -------------------------------------------------------------------------- | ---------------------------------- |
+| `initiateSwap` | `LIMIT_INITIATE_ASSET_SWAP` keyed `(assetOut, counterpartyProxy, assetIn)` | `-amountOut` (`assetOut` decimals) |
+| `initiateSwap` | `LIMIT_INITIATE_ASSET_SWAP` keyed `(assetIn, counterpartyProxy, assetOut)` | `+amountIn` (`assetIn` decimals)   |
+| `completeSwap` | `LIMIT_COMPLETE_ASSET_SWAP` keyed `(assetOut, msg.sender, assetIn)`        | `-amountOut` (`assetOut` decimals) |
+| `completeSwap` | `LIMIT_COMPLETE_ASSET_SWAP` keyed `(assetIn, msg.sender, assetOut)`        | `+amountIn` (`assetIn` decimals)   |
 
 Each direction and each counterparty has its own key on each PAU, so a swap consumes rate limit on both PAUs. `completeSwap` has no role check: it is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured key.
 

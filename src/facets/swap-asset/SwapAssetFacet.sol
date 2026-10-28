@@ -39,7 +39,8 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_SWAP = keccak256("LIMIT_ASSET_SWAP");
+    bytes32 internal constant _LIMIT_INITIATE_ASSET_SWAP = keccak256("LIMIT_INITIATE_ASSET_SWAP");
+    bytes32 internal constant _LIMIT_COMPLETE_ASSET_SWAP = keccak256("LIMIT_COMPLETE_ASSET_SWAP");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -70,11 +71,17 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
             "SwapAssetFacet/invalid-counterparty-controller"
         );
 
-        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
+        _decreaseRateLimit(
+            getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            amountOut
+        );
 
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
-        _tryIncreaseRateLimit(getSwapRateLimitKey(assetIn, counterpartyProxy, assetOut), amountIn);
+        _tryIncreaseRateLimit(
+            getInitiateSwapRateLimitKey(assetIn, counterpartyProxy, assetOut),
+            amountIn
+        );
 
         address proxy = _getSharedControllerStorage().proxy;
 
@@ -109,11 +116,17 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
 
         // Does not have a hasRole check, but is permissioned through rate limit key derivation
         // as msg.sender has to be the counterparty proxy.
-        _decreaseRateLimit(getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn), amountOut);
+        _decreaseRateLimit(
+            getCompleteSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            amountOut
+        );
 
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
-        _tryIncreaseRateLimit(getSwapRateLimitKey(assetIn, counterpartyProxy, assetOut), amountIn);
+        _tryIncreaseRateLimit(
+            getCompleteSwapRateLimitKey(assetIn, counterpartyProxy, assetOut),
+            amountIn
+        );
 
         _transferFrom(assetIn, counterpartyProxy, amountIn);
         _transfer(assetOut,    counterpartyProxy, amountOut);
@@ -126,13 +139,41 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     /**********************************************************************************************/
 
     /// @inheritdoc ISwapAssetFacet
-    function getSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+    function getInitiateSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
         public
         pure
         override
         returns (bytes32)
     {
-        return makeAddressAddressAddressKey(_LIMIT_SWAP, assetOut, counterpartyProxy, assetIn);
+        return makeAddressAddressAddressKey(
+            _LIMIT_INITIATE_ASSET_SWAP,
+            assetOut,
+            counterpartyProxy,
+            assetIn
+        );
+    }
+
+    /// @inheritdoc ISwapAssetFacet
+    function getCompleteSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
+        public
+        pure
+        override
+        returns (bytes32)
+    {
+        return makeAddressAddressAddressKey(
+            _LIMIT_COMPLETE_ASSET_SWAP,
+            assetOut,
+            counterpartyProxy,
+            assetIn
+        );
     }
 
     /**********************************************************************************************/

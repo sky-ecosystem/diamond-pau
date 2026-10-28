@@ -108,7 +108,7 @@ Only 1:1 assets should be onboarded (e.g. USDS/USDT). Both assets must implement
 ### Onboarding Process
 
 1. Wire `SwapAssetFacet` on both PAUs.
-2. On each PAU, configure a `LIMIT_ASSET_SWAP` key for each swap direction, keyed `(assetOut, counterpartyProxy, assetIn)` on both the initiating and completing PAUs, from their perspective.
+2. On each PAU from which swaps are intended to be initiated, configure a `LIMIT_INITIATE_ASSET_SWAP` key for each swap asset pair and counterparty tuple, and on each PAU from which swaps are intended to be atomically completed, configure a `LIMIT_COMPLETE_ASSET_SWAP` key for each swap asset pair and the initiating PAU tuple.
 3. Set each key's `maxAmount` and `slope` in the native decimals of the asset that PAU sends (e.g. 18 decimals for USDS, 6 decimals for USDT).
 
 Amounts sent in the higher-decimals asset must be a multiple of `10 ** (decimalsFrom - decimalsTo)` (e.g.`1e12`for USDS → USDT), otherwise the swap reverts with `SwapAssetFacet/precision-loss`.

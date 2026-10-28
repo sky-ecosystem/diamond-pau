@@ -11,7 +11,15 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function getSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn) external pure returns (bytes32);
+    function getInitiateSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+        external
+        pure
+        returns (bytes32);
+
+    function getCompleteSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+        external
+        pure
+        returns (bytes32);
 
     function updateIntegrations(bytes32[] memory integrationIds) external;
 
@@ -28,11 +36,16 @@ contract Controller_SwapAssetFacet_Tests is Integration_TestBase {
 
         vm.label(facet, "SwapAssetFacet");
 
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](1);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](2);
 
         wires[0] = IEnumerableIntegrations.Wire(
-            IControllerLike.getSwapRateLimitKey.selector,
-            ISwapAssetFacet.getSwapRateLimitKey.selector
+            IControllerLike.getInitiateSwapRateLimitKey.selector,
+            ISwapAssetFacet.getInitiateSwapRateLimitKey.selector
+        );
+
+        wires[1] = IEnumerableIntegrations.Wire(
+            IControllerLike.getCompleteSwapRateLimitKey.selector,
+            ISwapAssetFacet.getCompleteSwapRateLimitKey.selector
         );
 
         IEnumerableIntegrations.Config memory config = IEnumerableIntegrations.Config(facet, wires);
@@ -48,17 +61,33 @@ contract Controller_SwapAssetFacet_Tests is Integration_TestBase {
     }
 
     /**********************************************************************************************/
-    /*** getSwapRateLimitKey Tests                                                              ***/
+    /*** getInitiateSwapRateLimitKey Tests                                                        ***/
     /**********************************************************************************************/
 
-    function test_getSwapRateLimitKey() external {
-        bytes32 keyPrefix         = keccak256("LIMIT_ASSET_SWAP");
+    function test_getInitiateSwapRateLimitKey() external {
+        bytes32 keyPrefix         = keccak256("LIMIT_INITIATE_ASSET_SWAP");
         address assetOut          = makeAddr("assetOut");
         address counterpartyProxy = makeAddr("counterpartyProxy");
         address assetIn           = makeAddr("assetIn");
 
         assertEq(
-            controller.getSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            controller.getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            makeAddressAddressAddressKey(keyPrefix, assetOut, counterpartyProxy, assetIn)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** getCompleteSwapRateLimitKey Tests                                                        ***/
+    /**********************************************************************************************/
+
+    function test_getCompleteSwapRateLimitKey() external {
+        bytes32 keyPrefix         = keccak256("LIMIT_COMPLETE_ASSET_SWAP");
+        address assetOut          = makeAddr("assetOut");
+        address counterpartyProxy = makeAddr("counterpartyProxy");
+        address assetIn           = makeAddr("assetIn");
+
+        assertEq(
+            controller.getCompleteSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
             makeAddressAddressAddressKey(keyPrefix, assetOut, counterpartyProxy, assetIn)
         );
     }

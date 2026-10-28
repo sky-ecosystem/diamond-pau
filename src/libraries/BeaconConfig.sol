@@ -1788,7 +1788,7 @@ library BeaconConfig {
         pure
         returns (IEnumerableIntegrations.Integration memory integration)
     {
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](4);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
 
         wires[0] = IEnumerableIntegrations.Wire(
             ISwapAssetController.swapAsset_initiateSwap.selector,
@@ -1801,11 +1801,16 @@ library BeaconConfig {
         );
 
         wires[2] = IEnumerableIntegrations.Wire(
-            ISwapAssetController.swapAsset_getSwapRateLimitKey.selector,
-            ISwapAssetFacet.getSwapRateLimitKey.selector
+            ISwapAssetController.swapAsset_getInitiateSwapRateLimitKey.selector,
+            ISwapAssetFacet.getInitiateSwapRateLimitKey.selector
         );
 
         wires[3] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_getCompleteSwapRateLimitKey.selector,
+            ISwapAssetFacet.getCompleteSwapRateLimitKey.selector
+        );
+
+        wires[4] = IEnumerableIntegrations.Wire(
             ISwapAssetController.swapAsset_VERSION.selector,
             IFacet.VERSION.selector
         );
