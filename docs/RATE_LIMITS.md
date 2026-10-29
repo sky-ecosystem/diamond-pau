@@ -126,10 +126,10 @@ Note that setting the rate limit data creates a boundary where the remaining rat
 
 **Decision:** Rate limits for the opposite swap direction are cancelled/increased in the swap asset integration (SwapAssetFacet).
 
-| Operation      | Rate Limit Behavior                                                                                                                                                                                   |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `initiateSwap` | Decreases the initiating PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the initiating PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`.     |
-| `completeSwap` | Decreases the counterparty PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the counterparty PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`. |
+| Operation      | Rate Limit Behavior                                                                                                                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initiateSwap` | Decreases the initiating PAU's `(LIMIT_INITIATE_ASSET_SWAP, assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the initiating PAU's `(LIMIT_INITIATE_ASSET_SWAP, assetIn, counterpartyProxy, assetOut)` key by `amountIn`.     |
+| `completeSwap` | Decreases the counterparty PAU's `(LIMIT_COMPLETE_ASSET_SWAP, assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the counterparty PAU's `(LIMIT_COMPLETE_ASSET_SWAP, assetIn, counterpartyProxy, assetOut)` key by `amountIn`. |
 
 **Rationale:**
 
