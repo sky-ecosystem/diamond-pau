@@ -15,7 +15,7 @@ Rate limit keys are constructed by hashing together a **function identifier** an
 - **Examples:**
     - Depositing liquidity to a specific Uniswap V4 pool requires the rate limit keys `keccak256(abi.encode(LIMIT_UNISWAP_V4_DEPOSIT, poolId))` and `keccak256(abi.encode(LIMIT_UNISWAP_V4_DEPOSIT, token, poolId))` to be set
     - Withdrawing an aToken from Aave requires the rate limit key `keccak256(abi.encode(LIMIT_AAVE_WITHDRAW, pool, aToken))` to be set
-    - Swapping USDS for USDT with a counterparty PAU requires the rate limit key `keccak256(abi.encode(LIMIT_ASSET_SWAP, USDS, counterpartyProxy, USDT))` on the initiating PAU and `keccak256(abi.encode(LIMIT_ASSET_SWAP, USDT, initiatingProxy, USDS))` on the counterparty PAU to be set
+    - Swapping USDS for USDT with a counterparty PAU requires the rate limit key `keccak256(abi.encode(LIMIT_INITIATE_ASSET_SWAP, USDS, counterpartyProxy, USDT))` on the initiating PAU and `keccak256(abi.encode(LIMIT_COMPLETE_ASSET_SWAP, USDT, initiatingProxy, USDS))` on the counterparty PAU to be set
 - **Security benefit:** Prevents allocators from interacting with arbitrary/malicious contracts - only governance-approved integrations have valid rate limit keys
 - **Operational benefit:** New integrations can be onboarded with lower rate limits to ease into use, and then increased to manage ongoing risk/exposure, and providing a clear audit trail
 
@@ -126,10 +126,10 @@ Note that setting the rate limit data creates a boundary where the remaining rat
 
 **Decision:** Rate limits for the opposite swap direction are cancelled/increased in the swap asset integration (SwapAssetFacet).
 
-| Operation      | Rate Limit Behavior                                                                                                                                                                                   |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `initiateSwap` | Decreases the initiating PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the initiating PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`.     |
-| `completeSwap` | Decreases the counterparty PAU's `(assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the counterparty PAU's `(assetIn, counterpartyProxy, assetOut)` key by `amountIn`. |
+| Operation      | Rate Limit Behavior                                                                                                                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initiateSwap` | Decreases the initiating PAU's `(LIMIT_INITIATE_ASSET_SWAP, assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the initiating PAU's `(LIMIT_INITIATE_ASSET_SWAP, assetIn, counterpartyProxy, assetOut)` key by `amountIn`.     |
+| `completeSwap` | Decreases the counterparty PAU's `(LIMIT_COMPLETE_ASSET_SWAP, assetOut, counterpartyProxy, assetIn)` key by `amountOut` and tries to increase the counterparty PAU's `(LIMIT_COMPLETE_ASSET_SWAP, assetIn, counterpartyProxy, assetOut)` key by `amountIn`. |
 
 **Rationale:**
 
