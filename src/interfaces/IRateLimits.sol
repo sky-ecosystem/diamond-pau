@@ -2,15 +2,15 @@
 pragma solidity ^0.8.34;
 
 import {
-    IAccessControl
-} from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+    IAccessControlEnumerable
+} from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
 /**
  * @title  IRateLimits
  * @notice Per-key rate limiting contract for the PAU system. Tracks time-based allowances
  *         that refill linearly and are consumed by controller operations.
  */
-interface IRateLimits is IAccessControl {
+interface IRateLimits is IAccessControlEnumerable {
 
     /**********************************************************************************************/
     /*** Structs                                                                                ***/

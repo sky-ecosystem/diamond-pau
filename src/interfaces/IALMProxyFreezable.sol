@@ -2,15 +2,15 @@
 pragma solidity ^0.8.34;
 
 import {
-    IAccessControl
-} from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+    IAccessControlEnumerable
+} from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
 /**
  * @title  IALMProxyFreezable
  * @notice Proxy contract with freezer and allocator roles. Allocators execute calls through the
  *         proxy, and freezers can revoke allocator access as an emergency measure.
  */
-interface IALMProxyFreezable is IAccessControl {
+interface IALMProxyFreezable is IAccessControlEnumerable {
 
     /**********************************************************************************************/
     /*** Events                                                                                 ***/

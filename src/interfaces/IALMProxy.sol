@@ -2,15 +2,15 @@
 pragma solidity ^0.8.34;
 
 import {
-    IAccessControl
-} from "../../lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+    IAccessControlEnumerable
+} from "../../lib/openzeppelin-contracts/contracts/access/extensions/IAccessControlEnumerable.sol";
 
 /**
  * @title  IALMProxy
  * @notice Proxy contract that executes calls, value calls, and delegate calls on behalf of the
  *         PAU system. Only accounts with the CONTROLLER role can invoke its functions.
  */
-interface IALMProxy is IAccessControl {
+interface IALMProxy is IAccessControlEnumerable {
 
     /**********************************************************************************************/
     /*** Custom Errors                                                                          ***/
