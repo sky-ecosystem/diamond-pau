@@ -210,7 +210,7 @@ The swap asset module (`SwapAssetFacet`) swaps two assets 1:1 with another compa
 1. If the initiating counterparty is a PAU:
     1. An allocator on the initiating PAU calls `initiateSwap(counterpartyController, assetOut, assetIn, amountOut)`.
     2. The initiating `Controller` reads the `counterpartyProxy` from `counterpartyController.proxy()`, decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), and requires that `counterpartyController` holds the `CONTROLLER` role on that `counterpartyProxy`.
-    3. The initiating `ALMProxy` is instructed by `Controller` to approve the `counterpartyProxy` for `amountOut` of `assetOut` and calls `swapAsset_completeSwap(assetOut, assetIn, amountOut)` on the counterparty controller.
+    3. The initiating `ALMProxy` is instructed by `Controller` to approve the `counterpartyProxy` for `amountOut` of `assetOut` and calls `swapAsset_completeSwap({ assetOut: assetIn, assetIn: assetOut, amountOut: amountIn})` on the counterparty controller.
 2. If the the completing counterparty is a PAU:
     1. The completing counterparty `Controller` decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion).
     2. The completing `ALMProxy` is instructed to pull the incoming asset from the initiating `counterpartyProxy` and send the `amountOut` back to the initiating `counterpartyProxy`.
@@ -232,12 +232,12 @@ Amounts are converted 1:1 using each token's on-chain `decimals()`. Scaling up i
 
 | Operation      | Rate Limit Key                                                                              | Change                             |
 | -------------- | ------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetOut, counterpartyProxy, counterpartyController, assetIn)` | `-amountOut` (`assetOut` decimals) |
-| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetIn, counterpartyProxy, counterpartyController, assetOut)` | `+amountIn` (`assetIn` decimals)   |
-| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetOut, msg.sender, assetIn)`                                | `-amountOut` (`assetOut` decimals) |
-| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetIn, msg.sender, assetOut)`                                | `+amountIn` (`assetIn` decimals)   |
+| `initiateSwap` | `(LIMIT_ASSET_SWAP_INITIATE, assetOut, counterpartyProxy, counterpartyController, assetIn)` | `-amountOut` (`assetOut` decimals) |
+| `initiateSwap` | `(LIMIT_ASSET_SWAP_INITIATE, assetIn, counterpartyProxy, counterpartyController, assetOut)` | `+amountIn` (`assetIn` decimals)   |
+| `completeSwap` | `(LIMIT_ASSET_SWAP_COMPLETE, assetOut, msg.sender, assetIn)`                                | `-amountOut` (`assetOut` decimals) |
+| `completeSwap` | `(LIMIT_ASSET_SWAP_COMPLETE, assetIn, msg.sender, assetOut)`                                | `+amountIn` (`assetIn` decimals)   |
 
-Each operation, direction, and counterparty has its own rate limit key on each PAU, so a swap consumes a rate limit on both PAUs, and optionally can increase the rate limit of the other direction. If a PAU will only ever initiate swaps, it does not need to set any `LIMIT_COMPLETE_ASSET_SWAP` keys, and conversely if a PAU will only ever complete swaps, it does not need to set any `LIMIT_INITIATE_ASSET_SWAP` keys.
+Each operation, direction, and counterparty has its own rate limit key on each PAU, so a swap consumes a rate limit on both PAUs, and optionally can increase the rate limit of the other direction. If a PAU will only ever initiate swaps, it does not need to set any `LIMIT_ASSET_SWAP_COMPLETE` keys, and conversely if a PAU will only ever complete swaps, it does not need to set any `LIMIT_ASSET_SWAP_INITIATE` keys.
 
 `completeSwap` has no role check: it is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured key.
 
