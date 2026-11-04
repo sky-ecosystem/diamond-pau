@@ -3,7 +3,10 @@ pragma solidity ^0.8.34;
 
 import { ApproveLib } from "../../libraries/ApproveLib.sol";
 
-import { makeAddressAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import {
+    makeAddressAddressAddressAddressKey,
+    makeAddressAddressAddressKey
+} from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -13,7 +16,15 @@ import { Facet } from "../Facet.sol";
 
 import { ISwapAssetFacet } from "./ISwapAssetFacet.sol";
 
-interface IControllerLike {
+interface ICounterpartyProxyLike {
+
+    function CONTROLLER() external view returns (bytes32);
+
+    function hasRole(bytes32 role, address account) external view returns (bool);
+
+}
+
+interface ICounterpartyControllerLike {
 
     function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
 
@@ -61,25 +72,35 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        address counterpartyProxy = IControllerLike(counterpartyController).proxy();
+        address counterpartyProxy = ICounterpartyControllerLike(counterpartyController).proxy();
 
         require(
-            IALMProxy(counterpartyProxy).hasRole(
-                IALMProxy(counterpartyProxy).CONTROLLER(),
+            ICounterpartyProxyLike(counterpartyProxy).hasRole(
+                ICounterpartyProxyLike(counterpartyProxy).CONTROLLER(),
                 counterpartyController
             ),
             "SwapAssetFacet/invalid-counterparty-controller"
         );
 
         _decreaseRateLimit(
-            getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            getInitiateSwapRateLimitKey(
+                assetOut,
+                counterpartyProxy,
+                counterpartyController,
+                assetIn
+            ),
             amountOut
         );
 
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
         _tryIncreaseRateLimit(
-            getInitiateSwapRateLimitKey(assetIn, counterpartyProxy, assetOut),
+            getInitiateSwapRateLimitKey(
+                assetIn,
+                counterpartyProxy,
+                counterpartyController,
+                assetOut
+            ),
             amountIn
         );
 
@@ -92,7 +113,10 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
 
         IALMProxy(proxy).doCall(
             counterpartyController,
-            abi.encodeCall(IControllerLike.swapAsset_completeSwap, (assetIn, assetOut, amountIn))
+            abi.encodeCall(
+                ICounterpartyControllerLike.swapAsset_completeSwap,
+                (assetIn, assetOut, amountIn)
+            )
         );
 
         ApproveLib.approve(assetOut, proxy, counterpartyProxy, 0);
@@ -103,7 +127,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         require(amountOutSent    == amountOut, "SwapAssetFacet/amountOut-mismatch");
         require(amountInReceived == amountIn,  "SwapAssetFacet/amountIn-mismatch");
 
-        emit SwapAssetSwap(counterpartyProxy, assetOut, assetIn, amountOutSent, amountInReceived);
+        emit SwapAssetInitiateSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
     }
 
     /// @inheritdoc ISwapAssetFacet
@@ -131,7 +155,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         _transferFrom(assetIn, counterpartyProxy, amountIn);
         _transfer(assetOut,    counterpartyProxy, amountOut);
 
-        emit SwapAssetSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
+        emit SwapAssetCompleteSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
     }
 
     /**********************************************************************************************/
@@ -142,6 +166,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     function getInitiateSwapRateLimitKey(
         address assetOut,
         address counterpartyProxy,
+        address counterpartyController,
         address assetIn
     )
         public
@@ -149,10 +174,11 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         override
         returns (bytes32)
     {
-        return makeAddressAddressAddressKey(
+        return makeAddressAddressAddressAddressKey(
             _LIMIT_INITIATE_ASSET_SWAP,
             assetOut,
             counterpartyProxy,
+            counterpartyController,
             assetIn
         );
     }
