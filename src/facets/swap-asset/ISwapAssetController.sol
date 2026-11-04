@@ -13,7 +13,16 @@ interface ISwapAssetController {
     )
         external;
 
-    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
+    function swapAsset_completeSwap(
+        address assetOut,
+        address assetIn,
+        uint256 amountOut,
+        address initiatorController,
+        bytes32 paymentId
+    )
+        external;
+
+    function swapAsset_settleSwap(bytes32 paymentId) external;
 
     function swapAsset_getInitiateSwapRateLimitKey(
         address assetOut,

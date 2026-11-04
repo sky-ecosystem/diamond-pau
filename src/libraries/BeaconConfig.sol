@@ -1788,7 +1788,7 @@ library BeaconConfig {
         pure
         returns (IEnumerableIntegrations.Integration memory integration)
     {
-        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](5);
+        IEnumerableIntegrations.Wire[] memory wires = new IEnumerableIntegrations.Wire[](6);
 
         wires[0] = IEnumerableIntegrations.Wire(
             ISwapAssetController.swapAsset_initiateSwap.selector,
@@ -1813,6 +1813,11 @@ library BeaconConfig {
         wires[4] = IEnumerableIntegrations.Wire(
             ISwapAssetController.swapAsset_VERSION.selector,
             IFacet.VERSION.selector
+        );
+
+        wires[5] = IEnumerableIntegrations.Wire(
+            ISwapAssetController.swapAsset_settleSwap.selector,
+            ISwapAssetFacet.settleSwap.selector
         );
 
         integration = IEnumerableIntegrations.Integration({

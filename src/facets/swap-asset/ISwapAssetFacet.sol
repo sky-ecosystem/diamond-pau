@@ -54,13 +54,33 @@ interface ISwapAssetFacet is IFacet {
 
     /**
      * @notice Completes an ERC-20 asset swap. Called by the counterparty proxy, which is
-     *         permissioned through the rate limit key. The amount received is `amountOut` converted
-     *         to `assetIn` decimals. Decreases the rate limit by `amountOut`.
-     * @param  assetOut  Address of the asset token to send.
-     * @param  assetIn   Address of the asset token to receive.
-     * @param  amountOut Amount of `assetOut` to send (`assetOut` decimals).
+     *         permissioned through the rate limit key. Pulls `amountIn` (`amountOut` converted to
+     *         `assetIn` decimals) from the counterparty proxy, then approves the counterparty proxy
+     *         for `amountOut` and calls back `initiatorController.settleSwap(paymentId)` so the
+     *         initiator can pull it. Reverts if the approval was not fully consumed. Decreases the
+     *         rate limit by `amountOut`.
+     * @param  assetOut            Address of the asset token to send.
+     * @param  assetIn             Address of the asset token to receive.
+     * @param  amountOut           Amount of `assetOut` to send (`assetOut` decimals).
+     * @param  initiatorController Controller of the counterparty proxy to call back for settlement.
+     * @param  paymentId           Settlement identifier issued by the initiator.
      */
-    function completeSwap(address assetOut, address assetIn, uint256 amountOut) external;
+    function completeSwap(
+        address assetOut,
+        address assetIn,
+        uint256 amountOut,
+        address initiatorController,
+        bytes32 paymentId
+    )
+        external;
+
+    /**
+     * @notice Settlement callback for a swap initiated by this Controller. Must be called by the
+     *         counterparty proxy of the pending swap, with its `paymentId`, while `initiateSwap`
+     *         is executing. Pulls the expected `amountIn` of `assetIn` from the counterparty proxy.
+     * @param  paymentId Settlement identifier issued by `initiateSwap`.
+     */
+    function settleSwap(bytes32 paymentId) external;
 
     /**********************************************************************************************/
     /*** View/Pure Functions                                                                    ***/
