@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { ISwapAssetFacet }              from "../../../src/facets/swap-asset/ISwapAssetFacet.sol";
-import { IEnumerableIntegrations }      from "../../../src/interfaces/IEnumerableIntegrations.sol";
-import { makeAddressAddressAddressKey } from "../../../src/libraries/RateLimitHelpers.sol";
+import { ISwapAssetFacet }         from "../../../src/facets/swap-asset/ISwapAssetFacet.sol";
+import { IEnumerableIntegrations } from "../../../src/interfaces/IEnumerableIntegrations.sol";
+
+import {
+    makeAddressAddressAddressAddressKey,
+    makeAddressAddressAddressKey
+} from "../../../src/libraries/RateLimitHelpers.sol";
 
 import { SwapAssetFacet } from "../../../src/facets/swap-asset/SwapAssetFacet.sol";
 
@@ -11,12 +15,21 @@ import { Integration_TestBase } from "../TestBase.t.sol";
 
 interface IControllerLike {
 
-    function getInitiateSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+    function getInitiateSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address counterpartyController,
+        address assetIn
+    )
         external
         pure
         returns (bytes32);
 
-    function getCompleteSwapRateLimitKey(address assetOut, address counterpartyProxy, address assetIn)
+    function getCompleteSwapRateLimitKey(
+        address assetOut,
+        address counterpartyProxy,
+        address assetIn
+    )
         external
         pure
         returns (bytes32);
@@ -65,14 +78,15 @@ contract Controller_SwapAssetFacet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getInitiateSwapRateLimitKey() external {
-        bytes32 keyPrefix         = keccak256("LIMIT_INITIATE_ASSET_SWAP");
-        address assetOut          = makeAddr("assetOut");
-        address counterpartyProxy = makeAddr("counterpartyProxy");
-        address assetIn           = makeAddr("assetIn");
+        bytes32 keyPrefix              = keccak256("LIMIT_INITIATE_ASSET_SWAP");
+        address assetOut               = makeAddr("assetOut");
+        address counterpartyProxy      = makeAddr("counterpartyProxy");
+        address counterpartyController = makeAddr("counterpartyController");
+        address assetIn                = makeAddr("assetIn");
 
         assertEq(
-            controller.getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
-            makeAddressAddressAddressKey(keyPrefix, assetOut, counterpartyProxy, assetIn)
+            controller.getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, counterpartyController, assetIn),
+            makeAddressAddressAddressAddressKey(keyPrefix, assetOut, counterpartyProxy, counterpartyController, assetIn)
         );
     }
 

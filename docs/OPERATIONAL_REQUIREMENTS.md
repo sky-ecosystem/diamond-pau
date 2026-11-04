@@ -105,7 +105,7 @@ Only pools with 1:1 assets should be onboarded:
 
 Only 1:1 assets should be onboarded (e.g. USDS/USDT). Both assets must implement `decimals()`.
 
-### Onboarding Process
+### Onboarding Process (where the counterpart is another PAU)
 
 1. Wire `SwapAssetFacet` on both PAUs.
 2. On each PAU from which swaps are intended to be initiated, configure a `LIMIT_INITIATE_ASSET_SWAP` key for each swap asset pair and counterparty tuple, and on each PAU from which swaps are intended to be atomically completed, configure a `LIMIT_COMPLETE_ASSET_SWAP` key for each swap asset pair and the initiating PAU tuple.
