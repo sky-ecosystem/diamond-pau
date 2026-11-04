@@ -18,6 +18,7 @@ interface ISwapAssetController {
     function swapAsset_getInitiateSwapRateLimitKey(
         address assetOut,
         address counterpartyProxy,
+        address counterpartyController,
         address assetIn
     )
         external
