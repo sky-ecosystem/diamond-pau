@@ -207,17 +207,11 @@ The swap asset module (`SwapAssetFacet`) swaps two assets 1:1 between two PAUs i
 
 ### How It Works
 
-Swaps settle explicitly: each side receives its asset through a `transferFrom` out of the other side's `ALMProxy`, so a swap can only be settled by the counterparty `ALMProxy` actually paying.
-
 1. An allocator on the initiating PAU calls `initiateSwap(counterpartyController, assetOut, assetIn, amountOut)`.
-2. The initiating Controller reads the counterparty `ALMProxy` from `counterpartyController.proxy()`, requires that `counterpartyController` holds the `CONTROLLER` role on that `ALMProxy`, decreases its rate limit by `amountOut`, and tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion).
-3. The initiating Controller records a pending settlement `{ paymentId, counterpartyProxy, assetIn, amountIn }` in transient storage.
-4. The initiating `ALMProxy` approves the counterparty `ALMProxy` for `amountOut` of `assetOut` and calls `completeSwap(assetOut, assetIn, amountOut, initiatorController, paymentId)` on the counterparty Controller.
-5. The counterparty Controller decreases its rate limit by `amountOut`, requires that `initiatorController` holds the `CONTROLLER` role on the initiating `ALMProxy`, tries to increase the rate limit of the opposite direction, and pulls the incoming asset from the initiating `ALMProxy`.
-6. The counterparty `ALMProxy` approves the initiating `ALMProxy` for its `amountOut` and calls `settleSwap(paymentId)` on the initiating Controller.
-7. `settleSwap` requires that the caller is the pending counterparty `ALMProxy`, that `paymentId` matches, and that it has not already been settled, then pulls exactly `amountIn` of `assetIn` from the counterparty `ALMProxy` and marks the payment as settled.
-8. The counterparty Controller requires that its approval was fully consumed.
-9. The initiating Controller requires that the payment was settled and that its approval was fully consumed (i.e. exactly `amountOut` was pulled), then clears the pending settlement.
+2. The initiating Controller reads the counterparty `ALMProxy` from `counterpartyController.proxy()`, decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), and requires that `counterpartyController` holds the `CONTROLLER` role on that `ALMProxy`.
+3. The initiating `ALMProxy` approves the counterparty `ALMProxy` for `amountOut` of `assetOut` and calls `completeSwap(assetOut, assetIn, amountOut)` on the counterparty Controller.
+4. The counterparty Controller decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), pulls the incoming asset from the initiating `ALMProxy` and approves the initiating `ALMProxy` for its `amountOut`.
+5. The initiating Controller resets its approval to zero, pulls `amountIn` of `assetIn` from the counterparty `ALMProxy`, and requires that exactly `amountOut` was sent and exactly `amountIn` was received.
 
 Both Controllers emit `SwapAssetSwap`, each from its own perspective (`assetOut` is the asset that Controller's `ALMProxy` sent).
 

@@ -24,17 +24,9 @@ interface IERC20Like {
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 
-    function allowance(address owner, address spender) external view returns (uint256);
-
     function balanceOf(address account) external view returns (uint256);
 
     function decimals() external view returns (uint8);
-
-}
-
-interface ISettleLike {
-
-    function swapAsset_settleSwap(bytes32 paymentId) external;
 
 }
 
@@ -44,44 +36,7 @@ interface IDealLike {
 
 }
 
-function _callToken(address token, bytes memory data) {
-    ( bool success, bytes memory returnData ) = token.call(data);
-
-    require(success && (returnData.length == 0 || abi.decode(returnData, (bool))), "token-call-failed");
-}
-
-function _convertAmount(address assetFrom, address assetTo, uint256 amount) view returns (uint256) {
-    uint256 decimalsFrom = IERC20Like(assetFrom).decimals();
-    uint256 decimalsTo   = IERC20Like(assetTo).decimals();
-
-    return decimalsFrom <= decimalsTo
-        ? amount * (10 ** (decimalsTo - decimalsFrom))
-        : amount / (10 ** (decimalsFrom - decimalsTo));
-}
-
-contract SettleRelay {
-
-    function settle(address controller, bytes32 paymentId) external {
-        ISettleLike(controller).swapAsset_settleSwap(paymentId);
-    }
-
-}
-
-/// @dev A (potentially malicious) counterparty Controller that is also its own proxy.
-contract MockCounterpartyController is StdCheats {
-
-    enum Mode { Honest, SkipSettle, WrongPaymentId, WrongSettler, SettleTwice, FundFromElsewhere }
-
-    Mode internal mode;
-
-    int256 internal pullOffset;     // Adjusts how much of the initiator's `assetOut` is pulled.
-    int256 internal approveOffset;  // Adjusts how much of the initiator's `assetIn` is approved.
-
-    SettleRelay internal relay = new SettleRelay();
-
-    function proxy() external view returns (address) {
-        return address(this);
-    }
+contract MockProxy {
 
     function CONTROLLER() external pure returns (bytes32) {
         return 0;
@@ -91,92 +46,68 @@ contract MockCounterpartyController is StdCheats {
         return true;
     }
 
-    function setMode(Mode mode_) external {
-        mode = mode_;
+    function approve(address token, address spender, uint256 amount) external {
+        IERC20Like(token).approve(spender, amount);
     }
 
-    function setPullOffset(int256 offset) external {
-        pullOffset = offset;
+}
+
+contract MockCounterpartyController is StdCheats {
+
+    address public proxy;
+
+    int256  internal transferFromOffset;
+    int256  internal approveOffset;
+    uint256 internal amountOutFromElsewhere;
+
+    constructor(address proxy_) {
+        proxy = proxy_;
+    }
+
+    function setTransferFromOffset(int256 offset) external {
+        transferFromOffset = offset;
     }
 
     function setApproveOffset(int256 offset) external {
         approveOffset = offset;
     }
 
-    // NOTE: `msg.sender` is the initiating proxy. `assetIn` is what it sends, `assetOut` what it gets.
-    function swapAsset_completeSwap(
-        address assetOut,
-        address assetIn,
-        uint256 amountOut,
-        address initiatorController,
-        bytes32 paymentId
-    )
-        external
-    {
+    // Amount of `assetOut` that is sent to the initiating proxy from a source other than this
+    // counterparty's proxy during the callback (simulating the attack in sky-review-261102#3).
+    function setAmountOutFromElsewhere(uint256 amount) external {
+        amountOutFromElsewhere = amount;
+    }
+
+    function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external {
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
-        _callToken(
-            assetIn,
-            abi.encodeCall(IERC20Like.transferFrom, (msg.sender, address(this), uint256(int256(amountIn) + pullOffset)))
-        );
+        uint256 startingCallerAssetInBalance  = IERC20Like(assetIn).balanceOf(msg.sender);
+        uint256 startingCallerAssetOutBalance = IERC20Like(assetOut).balanceOf(msg.sender);
 
-        if (mode == Mode.FundFromElsewhere) {
-            // Cantina sky-review-261102#3: rather than paying from this proxy, make the initiator's
-            // `assetOut` balance increase from some other source (e.g. a reentrant
-            // `sparkVault_take` / `otc_claim` through a sibling Controller of the initiating proxy).
-            deal(assetOut, msg.sender, IERC20Like(assetOut).balanceOf(msg.sender) + amountOut);
-            return;
-        }
+        // Simulate pulling `amountIn` from the initiating proxy.
+        deal(assetIn, msg.sender, uint256(int256(startingCallerAssetInBalance) - (int256(amountIn) + transferFromOffset)));
 
-        if (mode == Mode.SkipSettle) return;
+        // Fund this proxy and approve the initiating proxy, so it can pull `amountOut`.
+        uint256 approveAmount = uint256(int256(amountOut) + approveOffset);
 
-        _callToken(
-            assetOut,
-            abi.encodeCall(IERC20Like.approve, (msg.sender, uint256(int256(amountOut) + approveOffset)))
-        );
+        deal(assetOut, proxy, approveAmount);
+        MockProxy(proxy).approve(assetOut, msg.sender, approveAmount);
 
-        if (mode == Mode.WrongSettler) {
-            relay.settle(initiatorController, paymentId);
-            return;
-        }
-
-        ISettleLike(initiatorController).swapAsset_settleSwap(
-            mode == Mode.WrongPaymentId ? bytes32(uint256(paymentId) + 1) : paymentId
-        );
-
-        if (mode == Mode.SettleTwice) ISettleLike(initiatorController).swapAsset_settleSwap(paymentId);
+        // Any `assetOut` paid from elsewhere simply shows up in the initiating proxy.
+        deal(assetOut, msg.sender, startingCallerAssetOutBalance + amountOutFromElsewhere);
     }
 
-}
+    function _convertAmount(address assetFrom, address assetTo, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 decimalsFrom = IERC20Like(assetFrom).decimals();
+        uint256 decimalsTo   = IERC20Like(assetTo).decimals();
 
-/// @dev An initiating Controller (of `proxy`) that pulls whatever it was approved for on settlement.
-contract MockInitiatorController {
-
-    IALMProxy public proxy;
-
-    address internal asset;
-    int256  internal pullOffset;
-
-    bytes32 public lastPaymentId;
-
-    constructor(IALMProxy proxy_) {
-        proxy = proxy_;
-    }
-
-    function setAsset(address asset_) external {
-        asset = asset_;
-    }
-
-    function setPullOffset(int256 offset) external {
-        pullOffset = offset;
-    }
-
-    function swapAsset_settleSwap(bytes32 paymentId) external {
-        lastPaymentId = paymentId;
-
-        uint256 amount = uint256(int256(IERC20Like(asset).allowance(msg.sender, address(proxy))) + pullOffset);
-
-        proxy.doCall(asset, abi.encodeCall(IERC20Like.transferFrom, (msg.sender, address(proxy), amount)));
+        return decimalsFrom <= decimalsTo
+            ? amount * (10 ** (decimalsTo - decimalsFrom))
+            : amount / (10 ** (decimalsFrom - decimalsTo));
     }
 
 }
@@ -190,10 +121,6 @@ abstract contract SwapAsset_TestBase is ForkTestBase {
     IALMProxy              internal counterpartyProxy;
     IMainnetControllerFull internal counterpartyController;
     IRateLimits            internal counterpartyRateLimits;
-
-    MockInitiatorController internal mockInitiator;
-
-    bytes32 internal constant PAYMENT_ID = keccak256("PAYMENT_ID");
 
     bytes32 internal initiateUSDSToUSDTKey;
     bytes32 internal initiateUSDTToUSDSKey;
@@ -227,12 +154,6 @@ abstract contract SwapAsset_TestBase is ForkTestBase {
         counterpartyRateLimits.grantRole(counterpartyRateLimits.CONTROLLER(), address(counterpartyController));
 
         counterpartyAccessControls.grantRole(ALLOCATOR_ROLE, counterpartyAllocator);
-
-        // Stands in for the initiating Controller when `completeSwap` is called directly on the
-        // Mainnet PAU by `counterpartyProxy`.
-        mockInitiator = new MockInitiatorController(counterpartyProxy);
-
-        counterpartyProxy.grantRole(counterpartyProxy.CONTROLLER(), address(mockInitiator));
 
         bytes32[] memory integrationIds = new bytes32[](1);
         integrationIds[0] = "SWAP_ASSET_FACET";
@@ -364,110 +285,127 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         mainnetController.swapAsset_initiateSwap(address(mainnetController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
 
-    function test_initiateSwap_sameAsset() external {
-        vm.expectRevert("SwapAssetFacet/same-asset");
+    function test_initiateSwap_amountOutMismatchBoundary() external {
+        address mockCounterpartyProxy = address(new MockProxy());
+
+        MockCounterpartyController mockCounterpartyController = new MockCounterpartyController(mockCounterpartyProxy);
+
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
+            type(uint256).max,
+            0
+        );
+        vm.stopPrank();
+
+        mockCounterpartyController.setTransferFromOffset(-1);
+
+        vm.expectRevert("SwapAssetFacet/amountOut-mismatch");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+
+        mockCounterpartyController.setTransferFromOffset(1);
+
+        vm.expectRevert("SwapAssetFacet/amountOut-mismatch");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+
+        mockCounterpartyController.setTransferFromOffset(0);
+
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+    }
+
+    function test_initiateSwap_amountOutMismatch_sameAsset() external {
+        deal(Ethereum.USDS, address(almProxy),          1_000_000e18);
+        deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), address(counterpartyController), Ethereum.USDS),
+            1_000_000e18,
+            0
+        );
+        vm.stopPrank();
+
+        vm.startPrank(counterpartyAdmin);
+        counterpartyRateLimits.setRateLimitData(
+            counterpartyController.swapAsset_getCompleteSwapRateLimitKey(Ethereum.USDS, address(almProxy), Ethereum.USDS),
+            1_000_000e18,
+            0
+        );
+        vm.stopPrank();
+
+        vm.expectRevert("SwapAssetFacet/amountOut-mismatch");
         vm.prank(allocator);
         mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDS, 1_000_000e18);
     }
 
-    function test_initiateSwap_amountOutMismatchBoundary() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
+    function test_initiateSwap_amountInMismatchBoundary() external {
+        address mockCounterpartyProxy = address(new MockProxy());
 
-        // Counterparty pulls less than `amountOut`, leaving allowance behind.
-        mock.setPullOffset(-1);
+        MockCounterpartyController mockCounterpartyController = new MockCounterpartyController(mockCounterpartyProxy);
 
-        vm.expectRevert("SwapAssetFacet/amountOut-mismatch");
-        _initiateWithMock(mock);
+        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
 
-        // Counterparty tries to pull more than `amountOut`, exceeding the allowance.
-        mock.setPullOffset(1);
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
+            type(uint256).max,
+            0
+        );
+        vm.stopPrank();
 
-        vm.expectRevert();
-        _initiateWithMock(mock);
-
-        mock.setPullOffset(0);
-
-        _initiateWithMock(mock);
-    }
-
-    function test_initiateSwap_amountInNotApprovedBoundary() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
-
-        // Counterparty approves less than `amountIn`, so the initiator's pull fails.
-        mock.setApproveOffset(-1);
+        // Counterparty approves one less than `amountIn`: the pull from its proxy fails.
+        mockCounterpartyController.setApproveOffset(-1);
 
         vm.expectRevert();
-        _initiateWithMock(mock);
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
 
-        // Counterparty over-approves, but the initiator only ever pulls exactly `amountIn`.
-        mock.setApproveOffset(1);
+        // Counterparty pays in full, but an extra unit also arrives from elsewhere.
+        mockCounterpartyController.setApproveOffset(0);
+        mockCounterpartyController.setAmountOutFromElsewhere(1);
 
-        _initiateWithMock(mock);
+        vm.expectRevert("SwapAssetFacet/amountIn-mismatch");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
 
-        assertEq(usdt.balanceOf(address(almProxy)), 1_000_000e6);
-        assertEq(usdt.balanceOf(address(mock)),     1_000_000e6);
+        mockCounterpartyController.setAmountOutFromElsewhere(0);
+
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
 
-    function test_initiateSwap_notSettled() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
+    // The counterparty does not pay from its own proxy, but instead causes `amountIn` to arrive in
+    // the initiating proxy from another source during the callback (sky-review-261102#3). The
+    // balance checks alone would pass; the explicit pull from the counterparty proxy fails.
+    function test_initiateSwap_amountInNotFromCounterpartyProxy() external {
+        address mockCounterpartyProxy = address(new MockProxy());
 
-        mock.setMode(MockCounterpartyController.Mode.SkipSettle);
+        MockCounterpartyController mockCounterpartyController = new MockCounterpartyController(mockCounterpartyProxy);
 
-        vm.expectRevert("SwapAssetFacet/not-settled");
-        _initiateWithMock(mock);
-    }
+        deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
-    // Cantina sky-review-261102#3: the initiating proxy's `assetIn` balance increases by exactly
-    // `amountIn` and its `assetOut` balance decreases by exactly `amountOut`, which would have
-    // passed the previous balance-delta checks, but the counterparty proxy never paid.
-    function test_initiateSwap_fundedFromElsewhere() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
+            type(uint256).max,
+            0
+        );
+        vm.stopPrank();
 
-        mock.setMode(MockCounterpartyController.Mode.FundFromElsewhere);
+        mockCounterpartyController.setApproveOffset(-1_000_000e6);
+        mockCounterpartyController.setAmountOutFromElsewhere(1_000_000e6);
 
-        vm.expectRevert("SwapAssetFacet/not-settled");
-        _initiateWithMock(mock);
-    }
-
-    function test_initiateSwap_invalidPaymentId() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
-
-        mock.setMode(MockCounterpartyController.Mode.WrongPaymentId);
-
-        vm.expectRevert("SwapAssetFacet/invalid-payment-id");
-        _initiateWithMock(mock);
-    }
-
-    function test_initiateSwap_invalidSettler() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
-
-        mock.setMode(MockCounterpartyController.Mode.WrongSettler);
-
-        vm.expectRevert("SwapAssetFacet/invalid-settler");
-        _initiateWithMock(mock);
-    }
-
-    function test_initiateSwap_alreadySettled() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
-
-        mock.setMode(MockCounterpartyController.Mode.SettleTwice);
-
-        vm.expectRevert("SwapAssetFacet/already-settled");
-        _initiateWithMock(mock);
-    }
-
-    function test_initiateSwap_mockCounterparty() external {
-        MockCounterpartyController mock = _setUpMockCounterparty();
-
-        _initiateWithMock(mock);
+        vm.expectRevert();
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
 
         assertEq(usds.balanceOf(address(almProxy)), 1_000_000e18);
-        assertEq(usds.balanceOf(address(mock)),     1_000_000e18);
-
-        assertEq(usdt.balanceOf(address(almProxy)), 1_000_000e6);
-        assertEq(usdt.balanceOf(address(mock)),     1_000_000e6);
-
-        assertEq(usds.allowance(address(almProxy), address(mock)), 0);
+        assertEq(usdt.balanceOf(address(almProxy)), 0);
     }
 
     function test_initiateSwap_usdsToUSDT() external {
@@ -537,7 +475,8 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDSToUSDTKey), 6_000_000e18);
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 4_000_000e6);
 
-        assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(almProxy),          address(counterpartyProxy)), 0);
+        assertEq(usdt.allowance(address(counterpartyProxy), address(almProxy)),          0);
     }
 
     function test_initiateSwap_usdtToUSDS() external {
@@ -606,7 +545,8 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDSToUSDTKey), 4_000_000e18);
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 6_000_000e6);
 
-        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usdt.allowance(address(almProxy),          address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)),          0);
     }
 
     function test_initiateSwap_usdtToUSDS_skipIncreaseRateLimit() external {
@@ -675,7 +615,8 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDSToUSDTKey), 4_000_000e18);
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 0);
 
-        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usdt.allowance(address(almProxy),          address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)),          0);
     }
 
     /**********************************************************************************************/
@@ -685,12 +626,10 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
     function test_completeSwap_reentrancy() external {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        mainnetController.swapAsset_completeSwap(address(0), address(0), 0, address(0), bytes32(0));
+        mainnetController.swapAsset_completeSwap(address(0), address(0), 0);
     }
 
     function test_completeSwap_precisionLossBoundary() external {
-        mockInitiator.setAsset(Ethereum.USDS);
-
         deal(Ethereum.USDS, address(almProxy),          1_000_000e18 + 1e12);
         deal(Ethereum.USDT, address(counterpartyProxy), 1_000_000e6 + 1);
 
@@ -699,30 +638,26 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.expectRevert("SwapAssetFacet/precision-loss");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18 + 1e12 - 1, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18 + 1e12 - 1);
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18 + 1e12, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18 + 1e12);
     }
 
     function test_completeSwap_zeroMaxAmount() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(unauthorized);
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
 
         vm.prank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(completeUSDTToUSDSKey, 0, 0);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
     function test_completeSwap_rateLimitBoundary() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18 + 1e12);
         deal(Ethereum.USDT, address(almProxy),          1_000_000e6 + 1);
 
@@ -734,15 +669,13 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6 + 1, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6 + 1);
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
     function test_completeSwap_transferFromFailedOnReturnFalse() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         vm.mockCall(
             Ethereum.USDS,
             abi.encodeCall(IERC20Like.transferFrom, (address(counterpartyProxy), address(almProxy), 1_000_000e18)),
@@ -751,12 +684,10 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.expectRevert("SwapAssetFacet/transfer-from-failed");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
     function test_completeSwap_transferFromFailedOnNonStandardReturnData() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         vm.mockCall(
             Ethereum.USDS,
             abi.encodeCall(IERC20Like.transferFrom, (address(counterpartyProxy), address(almProxy), 1_000_000e18)),
@@ -765,12 +696,10 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.expectRevert("SwapAssetFacet/transfer-from-failed");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
     function test_completeSwap_transferFromSuccessNoReturnData() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         deal(Ethereum.USDT, address(almProxy), 1_000_000e6);
 
         vm.mockCall(
@@ -780,51 +709,27 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         );
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
-    function test_completeSwap_invalidInitiatorController() external {
-        vm.expectRevert("SwapAssetFacet/invalid-initiator-controller");
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, makeAddr("notController"), PAYMENT_ID);
-    }
-
-    function test_completeSwap_notPulledBoundary() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
+    function test_completeSwap_approveFailed() external {
         deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
-        deal(Ethereum.USDT, address(almProxy),          1_000_000e6 + 1);
 
         vm.prank(address(counterpartyProxy));
         usds.approve(address(almProxy), 1_000_000e18);
 
-        // Initiator pulls less than approved, leaving allowance behind.
-        mockInitiator.setPullOffset(-1);
+        vm.mockCall(
+            Ethereum.USDT,
+            abi.encodeCall(IERC20Like.approve, (address(counterpartyProxy), 1_000_000e6)),
+            abi.encode(false)
+        );
 
-        vm.expectRevert("SwapAssetFacet/not-pulled");
+        vm.expectRevert("ApproveLib/approve-failed");
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
-
-        // Initiator tries to pull more than approved.
-        mockInitiator.setPullOffset(1);
-
-        vm.expectRevert();
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
-
-        mockInitiator.setPullOffset(0);
-
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
-
-        assertEq(mockInitiator.lastPaymentId(), PAYMENT_ID);
-
-        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
     function test_completeSwap_usdsToUSDT() external {
-        mockInitiator.setAsset(Ethereum.USDS);
-
         deal(Ethereum.USDS, address(almProxy),          2_000_000e18);
         deal(Ethereum.USDT, address(counterpartyProxy), 3_000_000e6);
 
@@ -858,23 +763,23 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         );
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
-        assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),          2_000_000e18);
+        assertEq(usds.balanceOf(address(counterpartyProxy)), 0);
 
         assertEq(usdt.balanceOf(address(almProxy)),          1_000_000e6);
         assertEq(usdt.balanceOf(address(counterpartyProxy)), 2_000_000e6);
+
+        assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 4_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 6_000_000e6);
     }
 
     function test_completeSwap_usdtToUSDS() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         deal(Ethereum.USDS, address(counterpartyProxy), 2_000_000e18);
         deal(Ethereum.USDT, address(almProxy),          3_000_000e6);
 
@@ -907,23 +812,23 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         );
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
 
-        assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
-        assertEq(usdt.balanceOf(address(counterpartyProxy)), 1_000_000e6);
+        assertEq(usdt.balanceOf(address(almProxy)),          3_000_000e6);
+        assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
+
+        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 6_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 4_000_000e6);
     }
 
     function test_completeSwap_usdtToUSDS_skipIncreaseRateLimit() external {
-        mockInitiator.setAsset(Ethereum.USDT);
-
         deal(Ethereum.USDS, address(counterpartyProxy), 2_000_000e18);
         deal(Ethereum.USDT, address(almProxy),          3_000_000e6);
 
@@ -956,55 +861,20 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         );
 
         vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6, address(mockInitiator), PAYMENT_ID);
+        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
 
         _assertReentrancyGuardWrittenToTwice();
 
         assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
 
-        assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
-        assertEq(usdt.balanceOf(address(counterpartyProxy)), 1_000_000e6);
+        assertEq(usdt.balanceOf(address(almProxy)),          3_000_000e6);
+        assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
+
+        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 4_000_000e6);
-    }
-
-    /**********************************************************************************************/
-    /*** settleSwap Tests                                                                       ***/
-    /**********************************************************************************************/
-
-    function test_settleSwap_noPendingSettlement() external {
-        vm.expectRevert("SwapAssetFacet/invalid-payment-id");
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_settleSwap(bytes32(0));
-
-        vm.expectRevert("SwapAssetFacet/invalid-payment-id");
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_settleSwap(PAYMENT_ID);
-    }
-
-    /**********************************************************************************************/
-    /*** Helpers                                                                                ***/
-    /**********************************************************************************************/
-
-    function _setUpMockCounterparty() internal returns (MockCounterpartyController mock) {
-        mock = new MockCounterpartyController();
-
-        vm.label(address(mock), "Mock CP Controller/Proxy");
-
-        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
-        deal(Ethereum.USDT, address(mock),     2_000_000e6);
-
-        bytes32 key = mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mock), address(mock), Ethereum.USDT);
-
-        vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(key, type(uint256).max, 0);
-    }
-
-    function _initiateWithMock(MockCounterpartyController mock) internal {
-        vm.prank(allocator);
-        mainnetController.swapAsset_initiateSwap(address(mock), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
 
 }
