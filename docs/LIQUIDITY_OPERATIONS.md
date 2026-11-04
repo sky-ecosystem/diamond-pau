@@ -226,12 +226,12 @@ Amounts are converted 1:1 using each token's on-chain `decimals()`. Scaling up i
 
 ### Rate Limiting
 
-| Operation      | Rate Limit Key                                                      | Change                             |
-| -------------- | ------------------------------------------------------------------- | ---------------------------------- |
-| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetOut, counterpartyProxy, assetIn)` | `-amountOut` (`assetOut` decimals) |
-| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetIn, counterpartyProxy, assetOut)` | `+amountIn` (`assetIn` decimals)   |
-| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetOut, msg.sender, assetIn)`        | `-amountOut` (`assetOut` decimals) |
-| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetIn, msg.sender, assetOut)`        | `+amountIn` (`assetIn` decimals)   |
+| Operation      | Rate Limit Key                                                                              | Change                             |
+| -------------- | ------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetOut, counterpartyProxy, counterpartyController, assetIn)` | `-amountOut` (`assetOut` decimals) |
+| `initiateSwap` | `(LIMIT_INITIATE_ASSET_SWAP, assetIn, counterpartyProxy, counterpartyController, assetOut)` | `+amountIn` (`assetIn` decimals)   |
+| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetOut, msg.sender, assetIn)`                                | `-amountOut` (`assetOut` decimals) |
+| `completeSwap` | `(LIMIT_COMPLETE_ASSET_SWAP, assetIn, msg.sender, assetOut)`                                | `+amountIn` (`assetIn` decimals)   |
 
 Each operation, direction, and counterparty has its own rate limit key on each PAU, so a swap consumes a rate limit on both PAUs, and optionally can increase the rate limit of the other direction. If a PAU will only ever initiate swaps, it does not need to set any `LIMIT_COMPLETE_ASSET_SWAP` keys, and conversely if a PAU will only ever complete swaps, it does not need to set any `LIMIT_INITIATE_ASSET_SWAP` keys.
 

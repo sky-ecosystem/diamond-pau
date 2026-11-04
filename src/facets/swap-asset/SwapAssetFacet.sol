@@ -3,7 +3,10 @@ pragma solidity ^0.8.34;
 
 import { ApproveLib } from "../../libraries/ApproveLib.sol";
 
-import { makeAddressAddressAddressKey } from "../../libraries/RateLimitHelpers.sol";
+import {
+    makeAddressAddressAddressAddressKey,
+    makeAddressAddressAddressKey
+} from "../../libraries/RateLimitHelpers.sol";
 
 import { IALMProxy } from "../../interfaces/IALMProxy.sol";
 
@@ -72,14 +75,24 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         );
 
         _decreaseRateLimit(
-            getInitiateSwapRateLimitKey(assetOut, counterpartyProxy, assetIn),
+            getInitiateSwapRateLimitKey(
+                assetOut,
+                counterpartyProxy,
+                counterpartyController,
+                assetIn
+            ),
             amountOut
         );
 
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
         _tryIncreaseRateLimit(
-            getInitiateSwapRateLimitKey(assetIn, counterpartyProxy, assetOut),
+            getInitiateSwapRateLimitKey(
+                assetIn,
+                counterpartyProxy,
+                counterpartyController,
+                assetOut
+            ),
             amountIn
         );
 
@@ -142,6 +155,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     function getInitiateSwapRateLimitKey(
         address assetOut,
         address counterpartyProxy,
+        address counterpartyController,
         address assetIn
     )
         public
@@ -149,10 +163,11 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         override
         returns (bytes32)
     {
-        return makeAddressAddressAddressKey(
+        return makeAddressAddressAddressAddressKey(
             _LIMIT_INITIATE_ASSET_SWAP,
             assetOut,
             counterpartyProxy,
+            counterpartyController,
             assetIn
         );
     }

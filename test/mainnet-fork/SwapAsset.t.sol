@@ -144,8 +144,8 @@ abstract contract SwapAsset_TestBase is ForkTestBase {
 
         // Set Rate Limits on Mainnet PAU to allow swaps with the Counterparty PAU (in assetOut decimals)
 
-        initiateUSDSToUSDTKey = mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), Ethereum.USDT);
-        initiateUSDTToUSDSKey = mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDT, address(counterpartyProxy), Ethereum.USDS);
+        initiateUSDSToUSDTKey = mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), address(counterpartyController), Ethereum.USDT);
+        initiateUSDTToUSDSKey = mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDT, address(counterpartyProxy), address(counterpartyController), Ethereum.USDS);
         completeUSDSToUSDTKey = mainnetController.swapAsset_getCompleteSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), Ethereum.USDT);
         completeUSDTToUSDSKey = mainnetController.swapAsset_getCompleteSwapRateLimitKey(Ethereum.USDT, address(counterpartyProxy), Ethereum.USDS);
 
@@ -247,7 +247,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(almProxy), Ethereum.USDT),
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(almProxy), address(mainnetController), Ethereum.USDT),
             type(uint256).max,
             0
         );
@@ -274,7 +274,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), Ethereum.USDT),
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
             type(uint256).max,
             0
         );
@@ -304,7 +304,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), Ethereum.USDS),
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), address(counterpartyController), Ethereum.USDS),
             1_000_000e18,
             0
         );
@@ -332,7 +332,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), Ethereum.USDT),
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
             type(uint256).max,
             0
         );
