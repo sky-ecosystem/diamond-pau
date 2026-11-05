@@ -109,6 +109,8 @@ abstract contract ForkTestBase is DssTest {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant DEPLOYMENT_SALT = keccak256("MAINNET_FORK_TEST_BASE");
+
     address internal constant UNISWAP_V3_ROUTER           = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address internal constant UNISWAP_V3_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
 
@@ -251,13 +253,11 @@ abstract contract ForkTestBase is DssTest {
         beacon  = new Beacon(Ethereum.PAUSE_PROXY);
         factory = new PAUFactory(address(beacon));
 
-        rateLimits     = IRateLimits(factory.deployRateLimits(Ethereum.SPARK_PROXY));
-        accessControls = IAccessControls(factory.deployAccessControls(Ethereum.SPARK_PROXY));
-        almProxy       = IALMProxy(factory.deployALMProxy(Ethereum.SPARK_PROXY));
+        mainnetController = IMainnetControllerFull(factory.deployPAU(Ethereum.SPARK_PROXY, DEPLOYMENT_SALT));
 
-        mainnetController = IMainnetControllerFull(
-            payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))
-        );
+        rateLimits     = IRateLimits(mainnetController.rateLimits());
+        accessControls = IAccessControls(mainnetController.accessControls());
+        almProxy       = IALMProxy(mainnetController.proxy());
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 

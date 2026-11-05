@@ -94,6 +94,8 @@ contract MockCounterpartyController is StdCheats {
 
 abstract contract SwapAsset_TestBase is ForkTestBase {
 
+    bytes32 internal constant COUNTERPARTY_DEPLOYMENT_SALT = keccak256("Counterparty_SwapAsset_Test");
+
     address internal counterpartyAdmin     = makeAddr("counterpartyAdmin");
     address internal counterpartyAllocator = makeAddr("counterpartyAllocator");
     address internal unauthorized          = makeAddr("unauthorized");
@@ -115,15 +117,12 @@ abstract contract SwapAsset_TestBase is ForkTestBase {
 
         // Deploy and Configure the Counterparty PAU
 
-        IAccessControls counterpartyAccessControls = IAccessControls(factory.deployAccessControls(counterpartyAdmin));
+        counterpartyController = IMainnetControllerFull(factory.deployPAU(counterpartyAdmin, COUNTERPARTY_DEPLOYMENT_SALT));
 
-        counterpartyRateLimits = IRateLimits(factory.deployRateLimits(counterpartyAdmin));
+        IAccessControls counterpartyAccessControls = IAccessControls(counterpartyController.accessControls());
 
-        counterpartyProxy = IALMProxy(factory.deployALMProxy(counterpartyAdmin));
-
-        counterpartyController = IMainnetControllerFull(
-            payable(factory.deployController(address(counterpartyAccessControls), address(counterpartyProxy), address(counterpartyRateLimits)))
-        );
+        counterpartyRateLimits = IRateLimits(counterpartyController.rateLimits());
+        counterpartyProxy      = IALMProxy(counterpartyController.proxy());
 
         vm.startPrank(counterpartyAdmin);
 

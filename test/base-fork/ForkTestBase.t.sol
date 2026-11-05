@@ -47,6 +47,8 @@ abstract contract ForkTestBase is Test {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant DEPLOYMENT_SALT = keccak256("BASE_FORK_TEST_BASE");
+
     address internal constant UNISWAP_V3_ROUTER           = 0x2626664c2603336E57B271c5C0b26F421741e481;
     address internal constant UNISWAP_V3_POSITION_MANAGER = 0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1;
 
@@ -125,13 +127,11 @@ abstract contract ForkTestBase is Test {
         beacon  = new Beacon(skyAdmin);
         factory = new PAUFactory(address(beacon));
 
-        rateLimits     = IRateLimits(factory.deployRateLimits(SPARK_EXECUTOR));
-        accessControls = IAccessControls(factory.deployAccessControls(SPARK_EXECUTOR));
-        almProxy       = IALMProxy(factory.deployALMProxy(SPARK_EXECUTOR));
+        foreignController = IForeignControllerFull(factory.deployPAU(SPARK_EXECUTOR, DEPLOYMENT_SALT));
 
-        foreignController = IForeignControllerFull(
-            payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))
-        );
+        rateLimits     = IRateLimits(foreignController.rateLimits());
+        accessControls = IAccessControls(foreignController.accessControls());
+        almProxy       = IALMProxy(foreignController.proxy());
 
         vm.startPrank(SPARK_EXECUTOR);
 

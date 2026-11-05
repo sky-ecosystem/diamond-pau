@@ -70,6 +70,8 @@ contract GovernanceHarness {
 
 contract PAUInit_Integration_Tests is Test {
 
+    bytes32 internal constant DEPLOYMENT_SALT = keccak256("PAU_INIT_INTEGRATION");
+
     bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
@@ -98,10 +100,10 @@ contract PAUInit_Integration_Tests is Test {
     // Deploy a fresh stack owned solely by `admin`, WITHOUT the CONTROLLER grants — granting those
     // is exactly what PAUInit.init performs.
     function _deployStack(address admin) internal returns (PAUInstance memory inst) {
-        inst.accessControls = factory.deployAccessControls(admin);
-        inst.almProxy       = factory.deployALMProxy(admin);
-        inst.rateLimits     = factory.deployRateLimits(admin);
-        inst.controller     = factory.deployController(inst.accessControls, inst.almProxy, inst.rateLimits);
+        inst.controller     = factory.deployPAU(admin, DEPLOYMENT_SALT);
+        inst.accessControls = IController(inst.controller).accessControls();
+        inst.almProxy       = IController(inst.controller).proxy();
+        inst.rateLimits     = IController(inst.controller).rateLimits();
         inst.beacon         = address(beacon);
     }
 
@@ -115,10 +117,10 @@ contract PAUInit_Integration_Tests is Test {
         internal
         returns (PAUInstance memory inst)
     {
-        inst.accessControls = factory.deployAccessControls(accessControlsAdmin);
-        inst.almProxy       = factory.deployALMProxy(almProxyAdmin);
-        inst.rateLimits     = factory.deployRateLimits(rateLimitsAdmin);
-        inst.controller     = factory.deployController(inst.accessControls, inst.almProxy, inst.rateLimits);
+        inst.accessControls = factory.deployAccessControls(accessControlsAdmin, DEPLOYMENT_SALT);
+        inst.almProxy       = factory.deployALMProxy(almProxyAdmin, DEPLOYMENT_SALT);
+        inst.rateLimits     = factory.deployRateLimits(rateLimitsAdmin, DEPLOYMENT_SALT);
+        inst.controller     = factory.deployController(inst.accessControls, inst.almProxy, inst.rateLimits, DEPLOYMENT_SALT);
         inst.beacon         = address(beacon);
     }
 

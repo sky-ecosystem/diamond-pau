@@ -18,6 +18,8 @@ abstract contract Integration_TestBase is Test {
     /*** Declarations                                                                           ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant DEPLOYMENT_SALT = keccak256("INTEGRATION_TEST_BASE");
+
     bytes32 internal constant ALLOCATOR_ROLE       = keccak256("ALLOCATOR_ROLE");
     bytes32 internal constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
     bytes32 internal constant DEFAULT_ADMIN_ROLE   = 0x00;
@@ -44,11 +46,11 @@ abstract contract Integration_TestBase is Test {
         beacon  = new Beacon(beaconAdmin);
         factory = new PAUFactory(address(beacon));
 
-        IRateLimits     rateLimits     = IRateLimits(factory.deployRateLimits(admin));
-        IAccessControls accessControls = IAccessControls(factory.deployAccessControls(admin));
-        IALMProxy       almProxy       = IALMProxy(factory.deployALMProxy(admin));
+        controller = factory.deployPAU(admin, DEPLOYMENT_SALT);
 
-        controller = factory.deployController(address(accessControls), address(almProxy), address(rateLimits));
+        IRateLimits     rateLimits     = IRateLimits(IController(controller).rateLimits());
+        IAccessControls accessControls = IAccessControls(IController(controller).accessControls());
+        IALMProxy       almProxy       = IALMProxy(IController(controller).proxy());
 
         vm.startPrank(admin);
 
@@ -64,14 +66,14 @@ abstract contract Integration_TestBase is Test {
 
         vm.stopPrank();
 
-        vm.label(address(beacon),                               "Beacon");
-        vm.label(address(factory),                              "Factory");
-        vm.label(address(accessControls),                       "AccessControls");
-        vm.label(admin,                                         "Admin");
-        vm.label(controller,                                    "Controller");
-        vm.label(IController(payable(controller)).proxy(),      "Proxy");
-        vm.label(IController(payable(controller)).rateLimits(), "RateLimits");
-        vm.label(unauthorized,                                  "Unauthorized");
+        vm.label(address(beacon),                      "Beacon");
+        vm.label(address(factory),                     "Factory");
+        vm.label(address(accessControls),              "AccessControls");
+        vm.label(admin,                                "Admin");
+        vm.label(controller,                           "Controller");
+        vm.label(IController(controller).proxy(),      "Proxy");
+        vm.label(IController(controller).rateLimits(), "RateLimits");
+        vm.label(unauthorized,                         "Unauthorized");
     }
 
     /**********************************************************************************************/
