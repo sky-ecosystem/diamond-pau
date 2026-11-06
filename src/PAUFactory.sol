@@ -18,13 +18,9 @@ contract PAUFactory is IPAUFactory {
     address public immutable override beacon;
 
     mapping (address instance => bool isInstance) public override isAccessControls;
-
     mapping (address instance => bool isInstance) public override isALMProxy;
-
     mapping (address instance => bool isInstance) public override isALMProxyFreezable;
-
     mapping (address instance => bool isInstance) public override isController;
-
     mapping (address instance => bool isInstance) public override isRateLimits;
 
     /**********************************************************************************************/
@@ -44,7 +40,7 @@ contract PAUFactory is IPAUFactory {
         override
         returns (address accessControls)
     {
-        accessControls = address(new AccessControls{salt: _getSalt(msg.sender, salt)}(admin));
+        accessControls = address(new AccessControls{ salt: _getSalt(msg.sender, salt) }(admin));
 
         isAccessControls[accessControls] = true;
 
@@ -63,7 +59,7 @@ contract PAUFactory is IPAUFactory {
     {
         controller =
             address(
-                new Controller{salt: _getSalt(msg.sender, salt)}(
+                new Controller{ salt: _getSalt(msg.sender, salt) }(
                     accessControls,
                     beacon,
                     proxy,
@@ -81,7 +77,7 @@ contract PAUFactory is IPAUFactory {
         override
         returns (address almProxy)
     {
-        almProxy = address(new ALMProxy{salt: _getSalt(msg.sender, salt)}(admin));
+        almProxy = address(new ALMProxy{ salt: _getSalt(msg.sender, salt) }(admin));
 
         isALMProxy[almProxy] = true;
 
@@ -93,7 +89,8 @@ contract PAUFactory is IPAUFactory {
         override
         returns (address almProxyFreezable)
     {
-        almProxyFreezable = address(new ALMProxyFreezable{salt: _getSalt(msg.sender, salt)}(admin));
+        almProxyFreezable =
+            address(new ALMProxyFreezable{ salt: _getSalt(msg.sender, salt) }(admin));
 
         isALMProxyFreezable[almProxyFreezable] = true;
 
@@ -105,7 +102,7 @@ contract PAUFactory is IPAUFactory {
         override
         returns (address rateLimits)
     {
-        rateLimits = address(new RateLimits{salt: _getSalt(msg.sender, salt)}(admin));
+        rateLimits = address(new RateLimits{ salt: _getSalt(msg.sender, salt) }(admin));
 
         isRateLimits[rateLimits] = true;
 
@@ -114,8 +111,8 @@ contract PAUFactory is IPAUFactory {
 
     function deployPAU(address admin, bytes32 salt) external override returns (address controller) {
         address accessControls = deployAccessControls(admin, salt);
-        address almProxy = deployALMProxy(admin, salt);
-        address rateLimits = deployRateLimits(admin, salt);
+        address almProxy       = deployALMProxy(admin, salt);
+        address rateLimits     = deployRateLimits(admin, salt);
 
         controller = deployController(accessControls, almProxy, rateLimits, salt);
 

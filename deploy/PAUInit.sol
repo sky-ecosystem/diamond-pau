@@ -3,9 +3,9 @@ pragma solidity ^0.8.34;
 
 interface IAccessControlLike {
 
-    function getRoleMemberCount(bytes32 role) external view returns (uint256);
-
     function grantRole(bytes32 role, address account) external;
+
+    function getRoleMemberCount(bytes32 role) external view returns (uint256);
 
     function hasRole(bytes32 role, address account) external view returns (bool);
 
@@ -15,9 +15,15 @@ interface IALMProxyLike {
 
     function CONTROLLER() external view returns (bytes32);
 
+    function getRoleMemberCount(bytes32 role) external view returns (uint256);
+
 }
 
 interface IControllerLike {
+
+    function removeIntegrations(bytes32[] calldata ids) external;
+
+    function updateIntegrations(bytes32[] calldata ids) external;
 
     function accessControls() external view returns (address);
 
@@ -27,15 +33,13 @@ interface IControllerLike {
 
     function rateLimits() external view returns (address);
 
-    function removeIntegrations(bytes32[] calldata ids) external;
-
-    function updateIntegrations(bytes32[] calldata ids) external;
-
 }
 
 interface IRateLimitsLike {
 
     function CONTROLLER() external view returns (bytes32);
+
+    function getRoleMemberCount(bytes32 role) external view returns (uint256);
 
 }
 
@@ -86,6 +90,7 @@ library PAUInit {
             controller.accessControls() == inst.accessControls,
             "PAUInit/controller-access-controls-mismatch"
         );
+
         require(controller.proxy()      == inst.almProxy,   "PAUInit/controller-proxy-mismatch");
         require(controller.beacon()     == inst.beacon,     "PAUInit/controller-beacon-mismatch");
         require(controller.rateLimits() == inst.rateLimits, "PAUInit/controller-rate-limits-mismatch");
@@ -95,25 +100,37 @@ library PAUInit {
             IAccessControlLike(inst.accessControls).hasRole(DEFAULT_ADMIN_ROLE, address(this)),
             "PAUInit/not-access-controls-admin"
         );
-        // AccessControls is the sole enumerable component (ALMProxy/RateLimits use non-enumerable
-        // AccessControl), so this is the one place we can assert governance is the *only* admin.
-        require(
-            IAccessControlLike(inst.accessControls).getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 1,
-            "PAUInit/access-controls-not-sole-admin"
-        );
+
         require(
             IAccessControlLike(inst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, address(this)),
             "PAUInit/not-alm-proxy-admin"
         );
+
         require(
             IAccessControlLike(inst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, address(this)),
             "PAUInit/not-rate-limits-admin"
         );
 
-        // Check that no allocator agents have been added to the AccessControls.
+        // Assert that governance is the *only* admin of AccessControls, ALMProxy, and RateLimits.
+        require(
+            IAccessControlLike(inst.accessControls).getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 1,
+            "PAUInit/access-controls-not-sole-admin"
+        );
+
+        require(
+            IALMProxyLike(inst.almProxy).getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 1,
+            "PAUInit/alm-proxy-not-sole-admin"
+        );
+
+        require(
+            IRateLimitsLike(inst.rateLimits).getRoleMemberCount(DEFAULT_ADMIN_ROLE) == 1,
+            "PAUInit/rate-limits-not-sole-admin"
+        );
+
+        // Check that no allocators have been added to the AccessControls.
         require(
             IAccessControlLike(inst.accessControls).getRoleMemberCount(ALLOCATOR_ROLE) == 0,
-            "PAUInit/allocator-agents-present"
+            "PAUInit/allocators-present"
         );
 
         // Structural wiring: the Controller is CONTROLLER on the ALMProxy and on its RateLimits.
@@ -127,7 +144,9 @@ library PAUInit {
             inst.controller
         );
 
-        if (integrationIds.length > 0) controller.updateIntegrations(integrationIds);
+        if (integrationIds.length > 0) {
+            controller.updateIntegrations(integrationIds);
+        }
     }
 
     /**
