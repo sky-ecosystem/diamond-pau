@@ -250,7 +250,7 @@ contract PAUInit_Integration_Tests is Test {
         vm.prank(address(governance));
         IAccessControlLike(inst.accessControls).grantRole(ALLOCATOR_ROLE, makeAddr("allocatorAgent"));
 
-        vm.expectRevert(bytes("PAUInit/allocator-agents-present"));
+        vm.expectRevert(bytes("PAUInit/allocators-present"));
         governance.initPAU(inst, new bytes32[](0));
     }
 

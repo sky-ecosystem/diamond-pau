@@ -124,7 +124,8 @@ interface IPAUFactory {
      *         ALMProxy and RateLimits contracts.
      * @param  admin      Address that will be granted admin over the deployed contracts.
      * @param  salt       Salt to use for the deployments.
-     * @return controller Address of the deployed Controller contract.
+     * @return controller Address of the deployed Controller contract, from which the
+     *                    AccessControls, ALMProxy, and RateLimits contracts may be queried.
      */
     function deployPAU(address admin, bytes32 salt) external returns (address controller);
 
