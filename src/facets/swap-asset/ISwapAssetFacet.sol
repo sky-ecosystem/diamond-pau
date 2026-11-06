@@ -5,9 +5,9 @@ import { IFacet } from "../IFacet.sol";
 
 /**
  * @title  ISwapAssetFacet
- * @notice PAU facet for swapping ERC-20 assets 1:1 between ALMProxy controllers, adjusting for
- *         token decimals. Rate limited per (`assetOut`, `counterpartyProxy`, `assetIn`) tuple, in
- *         units of the asset sent by the respective side.
+ * @notice PAU facet for swapping ERC-20 assets 1:1 atomically between counterparties, adjusting for
+ *         token decimals. Rate limited per asset pair and counterparty tuple tuple, in units of the
+ *         asset sent by the respective side.
  */
 interface ISwapAssetFacet is IFacet {
 
