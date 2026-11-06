@@ -15,7 +15,7 @@ contract DeployPAU is Script {
 
         require(block.chainid == chainId, "DeployPAU/chain-id-mismatch");
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         address controller = IPAUFactory(factory).deployPAU(admin, salt);
 
