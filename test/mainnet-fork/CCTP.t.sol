@@ -335,6 +335,8 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant BASE_DEPLOYMENT_SALT = keccak256("Base_CCTP_Test");
+
     IERC20Like internal constant BASE_USDC = IERC20Like(Base.USDC);
 
     address internal skyAdmin = makeAddr("skyAdmin");
@@ -375,14 +377,12 @@ abstract contract BaseChain_CCTP_TestBase is ForkTestBase {
 
         PAUFactory foreignFactory = new PAUFactory(address(foreignBeacon));
 
-        IAccessControls foreignAccessControls = IAccessControls(foreignFactory.deployAccessControls(Base.SPARK_EXECUTOR));
+        foreignController = IForeignControllerFull(foreignFactory.deployPAU(Base.SPARK_EXECUTOR, BASE_DEPLOYMENT_SALT));
 
-        foreignRateLimits = IRateLimits(foreignFactory.deployRateLimits(Base.SPARK_EXECUTOR));
-        foreignAlmProxy   = IALMProxy(foreignFactory.deployALMProxy(Base.SPARK_EXECUTOR));
+        IAccessControls foreignAccessControls = IAccessControls(foreignController.accessControls());
 
-        foreignController = IForeignControllerFull(
-            payable(foreignFactory.deployController(address(foreignAccessControls), address(foreignAlmProxy), address(foreignRateLimits)))
-        );
+        foreignRateLimits = IRateLimits(foreignController.rateLimits());
+        foreignAlmProxy   = IALMProxy(foreignController.proxy());
 
         vm.startPrank(Base.SPARK_EXECUTOR);
 

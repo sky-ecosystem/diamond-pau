@@ -45,6 +45,8 @@ contract ForkTestBase is Test {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant DEPLOYMENT_SALT = keccak256("AVALANCHE_FORK_TEST_BASE");
+
     bytes32 constant ALLOCATOR_ROLE       = keccak256("ALLOCATOR_ROLE");
     bytes32 constant ALLOCATOR_ADMIN_ROLE = keccak256("ALLOCATOR_ADMIN_ROLE");
     bytes32 constant DEFAULT_ADMIN_ROLE   = 0x00;
@@ -120,13 +122,11 @@ contract ForkTestBase is Test {
         beacon  = new Beacon(skyAdmin);
         factory = new PAUFactory(address(beacon));
 
-        rateLimits     = IRateLimits(factory.deployRateLimits(GROVE_EXECUTOR));
-        accessControls = IAccessControls(factory.deployAccessControls(GROVE_EXECUTOR));
-        almProxy       = IALMProxy(factory.deployALMProxy(GROVE_EXECUTOR));
+        foreignController = IForeignControllerFull(factory.deployPAU(GROVE_EXECUTOR, DEPLOYMENT_SALT));
 
-        foreignController = IForeignControllerFull(
-            payable(factory.deployController(address(accessControls), address(almProxy), address(rateLimits)))
-        );
+        rateLimits     = IRateLimits(foreignController.rateLimits());
+        accessControls = IAccessControls(foreignController.accessControls());
+        almProxy       = IALMProxy(foreignController.proxy());
 
         vm.startPrank(GROVE_EXECUTOR);
 
