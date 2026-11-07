@@ -34,8 +34,6 @@ interface ICounterpartyControllerLike {
 
 interface IERC20Like {
 
-    function transfer(address to, uint256 amount) external returns (bool success);
-
     function transferFrom(address from, address to, uint256 amount) external returns (bool success);
 
     function balanceOf(address owner) external view returns (uint256 balance);
@@ -72,6 +70,8 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
+        require(assetOut != assetIn, "SwapAssetFacet/same-asset");
+
         address counterpartyProxy = ICounterpartyControllerLike(counterpartyController).proxy();
 
         require(
@@ -109,7 +109,6 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         ApproveLib.approve(assetOut, proxy, counterpartyProxy, amountOut);
 
         uint256 startingAssetsOutBalance = IERC20Like(assetOut).balanceOf(proxy);
-        uint256 startingAssetsInBalance  = IERC20Like(assetIn).balanceOf(proxy);
 
         IALMProxy(proxy).doCall(
             counterpartyController,
@@ -119,13 +118,18 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
             )
         );
 
+        uint256 amountOutSent = startingAssetsOutBalance - IERC20Like(assetOut).balanceOf(proxy);
+
+        require(amountOutSent == amountOut, "SwapAssetFacet/amountOut-mismatch");
+
         ApproveLib.approve(assetOut, proxy, counterpartyProxy, 0);
 
-        uint256 amountOutSent    = startingAssetsOutBalance - IERC20Like(assetOut).balanceOf(proxy);
-        uint256 amountInReceived = IERC20Like(assetIn).balanceOf(proxy) - startingAssetsInBalance;
-
-        require(amountOutSent    == amountOut, "SwapAssetFacet/amountOut-mismatch");
-        require(amountInReceived == amountIn,  "SwapAssetFacet/amountIn-mismatch");
+        // Pull `assetIn` from the counterparty proxy using the approval it granted in
+        // `completeSwap()`. Pulling, rather than checking the balance change of this proxy,
+        // guarantees that the swap is paid with the counterparty's own funds and not with funds
+        // that reach this proxy from elsewhere during the call (e.g. a relayed bridge transfer or a
+        // second swap through another Controller of this proxy).
+        _transferFrom(assetIn, counterpartyProxy, amountIn);
 
         emit SwapAssetInitiateSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
     }
@@ -136,6 +140,8 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         override
         nonReentrant
     {
+        require(assetOut != assetIn, "SwapAssetFacet/same-asset");
+
         address counterpartyProxy = msg.sender;
 
         // Does not have a hasRole check, but is permissioned through rate limit key derivation
@@ -153,7 +159,16 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         );
 
         _transferFrom(assetIn, counterpartyProxy, amountIn);
-        _transfer(assetOut,    counterpartyProxy, amountOut);
+
+        // `assetOut` is not pushed to the counterparty proxy. It is approved instead, so that the
+        // counterparty proxy pulls exactly `amountOut` in the same transaction and can verify that
+        // the funds come from this proxy. The pull consumes the approval.
+        ApproveLib.approve(
+            assetOut,
+            _getSharedControllerStorage().proxy,
+            counterpartyProxy,
+            amountOut
+        );
 
         emit SwapAssetCompleteSwap(counterpartyProxy, assetOut, assetIn, amountOut, amountIn);
     }
@@ -205,20 +220,6 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     /**********************************************************************************************/
     /*** Internal Interactive Functions                                                         ***/
     /**********************************************************************************************/
-
-    function _transfer(address assetOut, address counterpartyProxy, uint256 amount) internal {
-        address proxy = _getSharedControllerStorage().proxy;
-
-        bytes memory returnData = IALMProxy(proxy).doCall(
-            assetOut,
-            abi.encodeCall(IERC20Like.transfer, (counterpartyProxy, amount))
-        );
-
-        require(
-            returnData.length == 0 || (returnData.length == 32 && abi.decode(returnData, (bool))),
-            "SwapAssetFacet/transfer-failed"
-        );
-    }
 
     function _transferFrom(address assetIn, address counterpartyProxy, uint256 amount) internal {
         address proxy = _getSharedControllerStorage().proxy;

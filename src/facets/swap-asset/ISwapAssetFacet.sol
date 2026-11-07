@@ -54,7 +54,9 @@ interface ISwapAssetFacet is IFacet {
     /**
      * @notice Initiates an ERC-20 asset swap with the counterparty controller. The amount received
      *         is `amountOut` converted to `assetIn` decimals. Decreases the rate limit by
-     *         `amountOut`.
+     *         `amountOut`. Approves the counterparty proxy for `amountOut` of `assetOut` for the
+     *         duration of the call, requires that exactly `amountOut` was pulled, and then pulls
+     *         `amountIn` of `assetIn` from the counterparty proxy.
      * @param  counterpartyController Address of the counterparty's controller.
      * @param  assetOut               Address of the asset token to send.
      * @param  assetIn                Address of the asset token to receive.
@@ -71,7 +73,9 @@ interface ISwapAssetFacet is IFacet {
     /**
      * @notice Completes an ERC-20 asset swap. Called by the counterparty proxy, which is
      *         permissioned through the rate limit key. The amount received is `amountOut` converted
-     *         to `assetIn` decimals. Decreases the rate limit by `amountOut`.
+     *         to `assetIn` decimals. Decreases the rate limit by `amountOut`. Pulls `amountIn` of
+     *         `assetIn` from the counterparty proxy and approves the counterparty proxy for
+     *         `amountOut` of `assetOut`, which the counterparty pulls in the same transaction.
      * @param  assetOut  Address of the asset token to send.
      * @param  assetIn   Address of the asset token to receive.
      * @param  amountOut Amount of `assetOut` to send (`assetOut` decimals).

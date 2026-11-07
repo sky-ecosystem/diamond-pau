@@ -213,11 +213,12 @@ The swap asset module (`SwapAssetFacet`) swaps two assets 1:1 with another compa
     3. The initiating `ALMProxy` is instructed by `Controller` to approve the `counterpartyProxy` for `amountOut` of `assetOut` and calls `swapAsset_completeSwap(assetOut, assetIn, amountOut)` on the counterparty controller.
 2. If the the completing counterparty is a PAU:
     1. The completing counterparty `Controller` decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion).
-    2. The completing `ALMProxy` is instructed to pull the incoming asset from the initiating `counterpartyProxy` and send the `amountOut` back to the initiating `counterpartyProxy`.
+    2. The completing `ALMProxy` is instructed to pull the incoming asset from the initiating `counterpartyProxy` and to approve the initiating `counterpartyProxy` for `amountOut` of the outgoing asset. The outgoing asset is not pushed, so that the initiating side can verify where it comes from.
     3. The completing counterparty `Controller` emits `SwapAssetCompleteSwap` with the arguments from its own perspective.
 3. If the initiating counterparty is a PAU:
-    1. The initiating `Controller` resets the approval to zero and requires that exactly `amountOut` was sent and exactly `amountIn` was received.
-    2. The initiating `Controller` emits `SwapAssetInitiateSwap` with the arguments from its own perspective.
+    1. The initiating `Controller` requires that exactly `amountOut` was pulled from the initiating `ALMProxy` and resets its approval to zero.
+    2. The initiating `ALMProxy` is instructed to pull `amountIn` of `assetIn` from the `counterpartyProxy`, consuming the approval granted in step 2.2. Pulling guarantees that the swap is paid with the counterparty's own funds and not with funds that reach the initiating `ALMProxy` from elsewhere during the call (e.g. a relayed bridge transfer or a second swap through another `Controller` of the same `ALMProxy`).
+    3. The initiating `Controller` emits `SwapAssetInitiateSwap` with the arguments from its own perspective.
 
 ### Decimal Conversion
 

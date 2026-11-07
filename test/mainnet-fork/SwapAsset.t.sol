@@ -46,14 +46,20 @@ contract MockProxy {
         return true;
     }
 
+    function approve(address token, address spender, uint256 amount) external {
+        IERC20Like(token).approve(spender, amount);
+    }
+
 }
 
 contract MockCounterpartyController is StdCheats {
 
     address public proxy;
 
-    int256 internal transferFromOffset;
-    int256 internal transferOffset;
+    int256 internal transferFromOffset;  // Offset on the amount pulled from the initiating proxy.
+    int256 internal approveOffset;       // Offset on the amount approved to the initiating proxy.
+
+    bool internal payWithInitiatorFunds;  // Credit the initiating proxy directly instead of approving it.
 
     constructor(address proxy_) {
         proxy = proxy_;
@@ -63,18 +69,37 @@ contract MockCounterpartyController is StdCheats {
         transferFromOffset = offset;
     }
 
-    function setTransferOffset(int256 offset) external {
-        transferOffset = offset;
+    function setApproveOffset(int256 offset) external {
+        approveOffset = offset;
+    }
+
+    function setPayWithInitiatorFunds(bool value) external {
+        payWithInitiatorFunds = value;
     }
 
     function swapAsset_completeSwap(address assetOut, address assetIn, uint256 amountOut) external {
         uint256 amountIn = _convertAmount(assetOut, assetIn, amountOut);
 
-        uint256 startingCallerAssetInBalance  = IERC20Like(assetIn).balanceOf(msg.sender);
-        uint256 startingCallerAssetOutBalance = IERC20Like(assetOut).balanceOf(msg.sender);
+        // Simulate pulling `assetIn` from the initiating proxy.
+        uint256 startingCallerAssetInBalance = IERC20Like(assetIn).balanceOf(msg.sender);
 
-        deal(assetIn,  msg.sender, uint256(int256(startingCallerAssetInBalance) - (int256(amountIn) + transferFromOffset)));
-        deal(assetOut, msg.sender, uint256(int256(startingCallerAssetOutBalance) + (int256(amountOut) + transferOffset)));
+        deal(assetIn, msg.sender, uint256(int256(startingCallerAssetInBalance) - (int256(amountIn) + transferFromOffset)));
+
+        if (payWithInitiatorFunds) {
+            // Simulate `assetOut` reaching the initiating proxy from elsewhere during the call
+            // (e.g. a relayed bridge transfer of its own funds) while this proxy, although funded,
+            // pays nothing.
+            deal(assetOut, proxy,      amountOut);
+            deal(assetOut, msg.sender, IERC20Like(assetOut).balanceOf(msg.sender) + amountOut);
+            return;
+        }
+
+        // Approve the initiating proxy to pull `assetOut`.
+        uint256 amountToApprove = uint256(int256(amountOut) + approveOffset);
+
+        deal(assetOut, proxy, amountOut);
+
+        MockProxy(proxy).approve(assetOut, msg.sender, amountToApprove);
     }
 
     function _convertAmount(address assetFrom, address assetTo, uint256 amount)
@@ -297,62 +322,71 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
     }
 
-    function test_initiateSwap_amountOutMismatch_sameAsset() external {
-        deal(Ethereum.USDS, address(almProxy),          1_000_000e18);
-        deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(counterpartyProxy), address(counterpartyController), Ethereum.USDS),
-            1_000_000e18,
-            0
-        );
-        vm.stopPrank();
-
-        vm.startPrank(counterpartyAdmin);
-        counterpartyRateLimits.setRateLimitData(
-            counterpartyController.swapAsset_getCompleteSwapRateLimitKey(Ethereum.USDS, address(almProxy), Ethereum.USDS),
-            1_000_000e18,
-            0
-        );
-        vm.stopPrank();
-
-        vm.expectRevert("SwapAssetFacet/amountOut-mismatch");
+    function test_initiateSwap_sameAsset() external {
+        vm.expectRevert("SwapAssetFacet/same-asset");
         vm.prank(allocator);
         mainnetController.swapAsset_initiateSwap(address(counterpartyController), Ethereum.USDS, Ethereum.USDS, 1_000_000e18);
     }
 
-    function test_initiateSwap_amountInMismatchBoundary() external {
+    function test_initiateSwap_counterpartyApprovalBoundary() external {
         address mockCounterpartyProxy = address(new MockProxy());
 
         MockCounterpartyController mockCounterpartyController = new MockCounterpartyController(mockCounterpartyProxy);
 
-        deal(Ethereum.USDS, address(almProxy), 2_000_000e18);
+        deal(Ethereum.USDT, address(almProxy), 2_000_000e6);
 
         vm.startPrank(Ethereum.SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDS, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDT),
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDT, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDS),
             type(uint256).max,
             0
         );
         vm.stopPrank();
 
-        mockCounterpartyController.setTransferOffset(-1);
+        mockCounterpartyController.setApproveOffset(-1);
 
-        vm.expectRevert("SwapAssetFacet/amountIn-mismatch");
+        vm.expectRevert("Usds/insufficient-allowance");
         vm.prank(allocator);
-        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
 
-        mockCounterpartyController.setTransferOffset(1);
-
-        vm.expectRevert("SwapAssetFacet/amountIn-mismatch");
-        vm.prank(allocator);
-        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
-
-        mockCounterpartyController.setTransferOffset(0);
+        mockCounterpartyController.setApproveOffset(0);
 
         vm.prank(allocator);
-        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDS, Ethereum.USDT, 1_000_000e18);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
+
+        assertEq(usds.balanceOf(address(almProxy)),             1_000_000e18);
+        assertEq(usds.balanceOf(address(mockCounterpartyProxy)), 0);
+
+        assertEq(usds.allowance(address(mockCounterpartyProxy), address(almProxy)), 0);
+    }
+
+    // CS #001: a counterparty that makes `assetIn` arrive at the initiating proxy from another
+    // source (e.g. by relaying a pending bridge transfer of the initiator's own funds) must not be
+    // able to satisfy the swap without paying. The initiating proxy pulls `assetIn` from the
+    // counterparty proxy, which has not approved anything here, so the swap reverts.
+    function test_initiateSwap_counterpartyPaysWithInitiatorFunds() external {
+        address mockCounterpartyProxy = address(new MockProxy());
+
+        MockCounterpartyController mockCounterpartyController = new MockCounterpartyController(mockCounterpartyProxy);
+
+        deal(Ethereum.USDT, address(almProxy), 2_000_000e6);
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.swapAsset_getInitiateSwapRateLimitKey(Ethereum.USDT, address(mockCounterpartyProxy), address(mockCounterpartyController), Ethereum.USDS),
+            type(uint256).max,
+            0
+        );
+        vm.stopPrank();
+
+        mockCounterpartyController.setPayWithInitiatorFunds(true);
+
+        vm.expectRevert("Usds/insufficient-allowance");
+        vm.prank(allocator);
+        mainnetController.swapAsset_initiateSwap(address(mockCounterpartyController), Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
+
+        assertEq(usdt.balanceOf(address(almProxy)), 2_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)), 0);
     }
 
     function test_initiateSwap_usdsToUSDT() external {
@@ -383,6 +417,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 5_000_000e6);
 
         assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usdt.allowance(address(counterpartyProxy), address(almProxy)), 0);
 
         vm.record();
 
@@ -423,6 +458,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 4_000_000e6);
 
         assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usdt.allowance(address(counterpartyProxy), address(almProxy)), 0);
     }
 
     function test_initiateSwap_usdtToUSDS() external {
@@ -452,6 +488,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 5_000_000e6);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)), 0);
 
         vm.record();
 
@@ -492,6 +529,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 6_000_000e6);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)), 0);
     }
 
     function test_initiateSwap_usdtToUSDS_skipIncreaseRateLimit() external {
@@ -521,6 +559,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 0);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)), 0);
 
         vm.record();
 
@@ -561,6 +600,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         assertEq(counterpartyRateLimits.getCurrentRateLimit(completeCounterpartyUSDTToUSDSKey), 0);
 
         assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 0);
+        assertEq(usds.allowance(address(counterpartyProxy), address(almProxy)), 0);
     }
 
     /**********************************************************************************************/
@@ -571,6 +611,12 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         _setControllerEntered();
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         mainnetController.swapAsset_completeSwap(address(0), address(0), 0);
+    }
+
+    function test_completeSwap_sameAsset() external {
+        vm.expectRevert("SwapAssetFacet/same-asset");
+        vm.prank(address(counterpartyProxy));
+        mainnetController.swapAsset_completeSwap(Ethereum.USDS, Ethereum.USDS, 1_000_000e18);
     }
 
     function test_completeSwap_precisionLossBoundary() external {
@@ -656,7 +702,7 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
         mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
 
-    function test_completeSwap_transferFailedOnReturnFalse() external {
+    function test_completeSwap_approveFailed() external {
         deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
 
         vm.prank(address(counterpartyProxy));
@@ -664,44 +710,11 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         vm.mockCall(
             Ethereum.USDT,
-            abi.encodeCall(IERC20Like.transfer, (address(counterpartyProxy), 1_000_000e6)),
+            abi.encodeWithSignature("approve(address,uint256)", address(counterpartyProxy), 1_000_000e6),
             abi.encode(false)
         );
 
-        vm.expectRevert("SwapAssetFacet/transfer-failed");
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
-    }
-
-    function test_completeSwap_transferFailedOnNonStandardReturnData() external {
-        deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
-
-        vm.prank(address(counterpartyProxy));
-        usds.approve(address(almProxy), 1_000_000e18);
-
-        vm.mockCall(
-            Ethereum.USDT,
-            abi.encodeCall(IERC20Like.transfer, (address(counterpartyProxy), 1_000_000e6)),
-            abi.encode(bytes32(0), bytes32(0))
-        );
-
-        vm.expectRevert("SwapAssetFacet/transfer-failed");
-        vm.prank(address(counterpartyProxy));
-        mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
-    }
-
-    function test_completeSwap_transferSuccessNoReturnData() external {
-        deal(Ethereum.USDS, address(counterpartyProxy), 1_000_000e18);
-
-        vm.prank(address(counterpartyProxy));
-        usds.approve(address(almProxy), 1_000_000e18);
-
-        vm.mockCall(
-            Ethereum.USDT,
-            abi.encodeCall(IERC20Like.transfer, (address(counterpartyProxy), 1_000_000e6)),
-            ""
-        );
-
+        vm.expectRevert("ApproveLib/approve-failed");
         vm.prank(address(counterpartyProxy));
         mainnetController.swapAsset_completeSwap(Ethereum.USDT, Ethereum.USDS, 1_000_000e6);
     }
@@ -744,14 +757,26 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
-        assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
-        assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
+        // `assetOut` is approved to the counterparty proxy, not pushed.
+        assertEq(usds.balanceOf(address(almProxy)),          2_000_000e18);
+        assertEq(usds.balanceOf(address(counterpartyProxy)), 0);
 
         assertEq(usdt.balanceOf(address(almProxy)),          1_000_000e6);
         assertEq(usdt.balanceOf(address(counterpartyProxy)), 2_000_000e6);
 
+        assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e18);
+
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 4_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 6_000_000e6);
+
+        // The counterparty proxy pulls `amountOut` with the approval.
+        vm.prank(address(counterpartyProxy));
+        usds.transferFrom(address(almProxy), address(counterpartyProxy), 1_000_000e18);
+
+        assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
+        assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
+
+        assertEq(usds.allowance(address(almProxy), address(counterpartyProxy)), 0);
     }
 
     function test_completeSwap_usdtToUSDS() external {
@@ -791,14 +816,19 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
+        // `assetOut` is approved to the counterparty proxy, not pushed.
         assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
 
-        assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
-        assertEq(usdt.balanceOf(address(counterpartyProxy)), 1_000_000e6);
+        assertEq(usdt.balanceOf(address(almProxy)),          3_000_000e6);
+        assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
+
+        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 6_000_000e18);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 4_000_000e6);
+
+        _pullUSDT(address(counterpartyProxy), address(almProxy), 1_000_000e6);
     }
 
     function test_completeSwap_usdtToUSDS_skipIncreaseRateLimit() external {
@@ -838,14 +868,42 @@ contract MainnetController_SwapAsset_Tests is SwapAsset_TestBase {
 
         _assertReentrancyGuardWrittenToTwice();
 
+        // `assetOut` is approved to the counterparty proxy, not pushed.
         assertEq(usds.balanceOf(address(almProxy)),          1_000_000e18);
         assertEq(usds.balanceOf(address(counterpartyProxy)), 1_000_000e18);
 
-        assertEq(usdt.balanceOf(address(almProxy)),          2_000_000e6);
-        assertEq(usdt.balanceOf(address(counterpartyProxy)), 1_000_000e6);
+        assertEq(usdt.balanceOf(address(almProxy)),          3_000_000e6);
+        assertEq(usdt.balanceOf(address(counterpartyProxy)), 0);
+
+        assertEq(usdt.allowance(address(almProxy), address(counterpartyProxy)), 1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(completeUSDSToUSDTKey), 0);
         assertEq(rateLimits.getCurrentRateLimit(completeUSDTToUSDSKey), 4_000_000e6);
+
+        _pullUSDT(address(counterpartyProxy), address(almProxy), 1_000_000e6);
+    }
+
+    /**********************************************************************************************/
+    /*** Helpers                                                                                ***/
+    /**********************************************************************************************/
+
+    // The counterparty proxy pulls `amount` of USDT from `from` with the approval granted by
+    // `completeSwap`. USDT returns no data on `transferFrom`, so a low-level call is used.
+    function _pullUSDT(address puller, address from, uint256 amount) internal {
+        uint256 startingFromBalance   = usdt.balanceOf(from);
+        uint256 startingPullerBalance = usdt.balanceOf(puller);
+
+        vm.prank(puller);
+        ( bool success, ) = Ethereum.USDT.call(
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", from, puller, amount)
+        );
+
+        assertTrue(success);
+
+        assertEq(usdt.balanceOf(from),   startingFromBalance   - amount);
+        assertEq(usdt.balanceOf(puller), startingPullerBalance + amount);
+
+        assertEq(usdt.allowance(from, puller), 0);
     }
 
 }
