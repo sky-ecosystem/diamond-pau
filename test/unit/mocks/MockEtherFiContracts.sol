@@ -36,6 +36,8 @@ contract MockWithdrawRequestNFT {
     mapping(uint256 => bool) public isValid;
     mapping(uint256 => bool) public isFinalized;
 
+    mapping(uint256 => address) internal _owners;
+
     function __setIsValid(uint256 requestId, bool value) external {
         isValid[requestId] = value;
     }
@@ -44,8 +46,26 @@ contract MockWithdrawRequestNFT {
         isFinalized[requestId] = value;
     }
 
-    function claimWithdraw(uint256) external {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+    function __setOwner(uint256 requestId, address owner) external {
+        _owners[requestId] = owner;
+    }
+
+    // Mirrors ERC721: reverts for a request that does not exist (never minted or burned).
+    function ownerOf(uint256 requestId) external view returns (address) {
+        require(_owners[requestId] != address(0), "ERC721: invalid token ID");
+        return _owners[requestId];
+    }
+
+    // Mirrors EtherFi: any account can settle a request, the ETH is paid to the owner and the
+    // request is burned.
+    function claimWithdraw(uint256 requestId) external {
+        address owner = _owners[requestId];
+
+        require(owner != address(0), "ERC721: invalid token ID");
+
+        delete _owners[requestId];
+
+        (bool success, ) = owner.call{value: address(this).balance}("");
         require(success, "MockWithdrawRequestNFT/claimWithdraw-failed");
     }
 

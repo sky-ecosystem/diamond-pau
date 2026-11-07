@@ -51,6 +51,8 @@ interface IWithdrawRequestNFTLike {
 
     function isValid(uint256 requestId) external view returns (bool);
 
+    function ownerOf(uint256 requestId) external view returns (address);
+
 }
 
 // NOTE: This contract is specifically for Mainnet Ethereum.
@@ -125,17 +127,29 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
         address liquidityPool      = IEETHLike(eeth).liquidityPool();
         address withdrawRequestNFT = ILiquidityPoolLike(liquidityPool).withdrawRequestNFT();
 
-        require(
-            IWithdrawRequestNFTLike(withdrawRequestNFT).isValid(requestId),
-            "WEETHModule/invalid-request-id"
-        );
+        // NOTE: Any account can settle a finalized request on the WithdrawRequestNFT. The ETH is
+        //       paid to the NFT owner (this module) and the NFT is burned, so `ownerOf()` reverts
+        //       afterwards. A request that still exists is claimed here. A request that was
+        //       already settled by a third party has its ETH sitting in this module, so the claim
+        //       is skipped and the balance is swept below instead of reverting.
+        if (_requestExists(withdrawRequestNFT, requestId)) {
+            require(
+                IWithdrawRequestNFTLike(withdrawRequestNFT).ownerOf(requestId) == address(this),
+                "WEETHModule/not-request-owner"
+            );
 
-        require(
-            IWithdrawRequestNFTLike(withdrawRequestNFT).isFinalized(requestId),
-            "WEETHModule/request-not-finalized"
-        );
+            require(
+                IWithdrawRequestNFTLike(withdrawRequestNFT).isValid(requestId),
+                "WEETHModule/invalid-request-id"
+            );
 
-        IWithdrawRequestNFTLike(withdrawRequestNFT).claimWithdraw(requestId);
+            require(
+                IWithdrawRequestNFTLike(withdrawRequestNFT).isFinalized(requestId),
+                "WEETHModule/request-not-finalized"
+            );
+
+            IWithdrawRequestNFTLike(withdrawRequestNFT).claimWithdraw(requestId);
+        }
 
         // Sweep all ETH.
         ethReceived = address(this).balance;
@@ -145,6 +159,8 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
 
         // Sweep all WETH.
         ethReceived = IERC20Like(weth).balanceOf(address(this));
+
+        require(ethReceived != 0, "WEETHModule/nothing-to-claim");
 
         // No need for SafeERC20 as we are transferring WETH with an expected transfer function.
         IERC20Like(weth).transfer(msg.sender, ethReceived);
@@ -197,5 +213,23 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
 
     // Only DEFAULT_ADMIN_ROLE can upgrade the implementation
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /**********************************************************************************************/
+    /*** Internal View/Pure Functions                                                           ***/
+    /**********************************************************************************************/
+
+    // The WithdrawRequestNFT has no `exists()` view and both `ownerOf()` and `isValid()` revert for
+    // a burned (claimed) request, so existence is derived from `ownerOf()` succeeding.
+    function _requestExists(address withdrawRequestNFT, uint256 requestId)
+        internal
+        view
+        returns (bool)
+    {
+        ( bool success, bytes memory data ) = withdrawRequestNFT.staticcall(
+            abi.encodeCall(IWithdrawRequestNFTLike.ownerOf, (requestId))
+        );
+
+        return success && data.length == 32;
+    }
 
 }
