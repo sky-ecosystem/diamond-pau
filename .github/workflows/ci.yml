@@ -19,7 +19,7 @@ jobs:
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
-               version: v1.7.1
+                  version: v1.7.1
 
             - name: Build contracts
               run: |
@@ -34,7 +34,7 @@ jobs:
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
-               version: v1.7.1
+                  version: v1.7.1
 
             - name: Run tests
               env:
@@ -54,7 +54,7 @@ jobs:
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
-               version: v1.7.1
+                  version: v1.7.1
 
             - name: Run coverage
               env:
@@ -71,12 +71,17 @@ jobs:
             # to include coverage in all directories, comment out this step. Note that because this
             # filtering applies to the lcov file, the summary table generated in the previous step will
             # still include all files and directories.
-            # The `--rc lcov_branch_coverage=1` part keeps branch info in the filtered report, since lcov
-            # defaults to removing branch info.
+            # The `--rc branch_coverage=1` part keeps branch info in the filtered report, since lcov
+            # defaults to removing branch info. lcov 2.x runs strict consistency checks that reject
+            # the branch data Forge emits (a line can be hit while none of its branches are
+            # evaluated). The `~/.lcovrc` written here disables those checks for every lcov and
+            # genhtml invocation in this job, including the ones run by the actions below, which
+            # do not expose a way to pass `--ignore-errors`.
             - name: Filter directories
               run: |
                   sudo apt update && sudo apt install -y lcov
-                  lcov --remove lcov.info 'test/*' --output-file lcov.info --rc lcov_branch_coverage=1
+                  echo "check_data_consistency = 0" > ~/.lcovrc
+                  lcov --remove lcov.info 'test/*' --output-file lcov.info --rc branch_coverage=1
 
             # This step posts a detailed coverage report as a comment and deletes previous comments on
             # each push. The below step is used to fail coverage if the specified coverage threshold is
