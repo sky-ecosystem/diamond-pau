@@ -62,7 +62,11 @@ See [BEACON.md](./BEACON.md) for data structures, integration lifecycle, hardcod
 
 ### PAUFactory
 
-Factory contract for deploying individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode. Note that a deployed `Controller` cannot immediately be used to interact with other PAU system components as it needs to be granted the `CONTROLLER` role on the `ALMProxy` and `RateLimits` contracts.
+Factory contract for deploying individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode. `deployPAU(admin, salt)` deploys a full PAU (`AccessControls`, `ALMProxy`, `RateLimits`, and a `Controller` wired to them) in a single call and returns the `Controller`, from which the other component addresses can be queried.
+
+All deployments use `CREATE2` with the salt `keccak256(abi.encode(msg.sender, salt))`, so addresses are deterministic per deployer and salt (and reproducible across chains), while namespacing by `msg.sender` prevents other accounts from front-running or squatting a deployer's addresses. The factory records every instance it deploys, exposed via `isAccessControls`, `isALMProxy`, `isALMProxyFreezable`, `isController`, and `isRateLimits`, so anyone can verify that a contract was deployed by the factory.
+
+Note that a deployed `Controller` cannot immediately be used to interact with other PAU system components as it needs to be granted the `CONTROLLER` role on the `ALMProxy` and `RateLimits` contracts (performed by `PAUInit.init`).
 
 ### AccessControls
 
