@@ -211,7 +211,7 @@ The swap asset module (`SwapAssetFacet`) swaps two assets 1:1 with another compa
     1. An allocator on the initiating PAU calls `initiateSwap(counterpartyController, assetOut, assetIn, amountOut)`.
     2. The initiating `Controller` reads the `counterpartyProxy` from `counterpartyController.proxy()`, decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion), and requires that `counterpartyController` holds the `CONTROLLER` role on that `counterpartyProxy`.
     3. The initiating `ALMProxy` is instructed by `Controller` to approve the `counterpartyProxy` for `amountOut` of `assetOut` and calls `swapAsset_completeSwap({ assetOut: assetIn, assetIn: assetOut, amountOut: amountIn})` on the counterparty controller.
-2. If the the completing counterparty is a PAU:
+2. If the completing counterparty is a PAU:
     1. The completing counterparty `Controller` decreases its rate limit by `amountOut`, tries to increase the rate limit of the opposite direction of the swap by `amountIn` (which is derived from a conversion).
     2. The completing `ALMProxy` is instructed to pull the incoming asset from the initiating `counterpartyProxy` and send the `amountOut` back to the initiating `counterpartyProxy`.
     3. The completing counterparty `Controller` emits `SwapAssetCompleteSwap` with the arguments from its own perspective.
