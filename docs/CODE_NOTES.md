@@ -93,6 +93,7 @@ Additionally, some core contracts use Solidity custom errors (not string-prefix 
 | `MapleFacet/`         | Maple redemption operations         |
 | `OTCFacet/`           | OTC swap operations                 |
 | `PendleFacet/`        | Pendle PT redemption operations     |
+| `SwapAssetFacet/`     | Asset swap operations               |
 | `TransferAssetFacet/` | Generic asset transfer operations   |
 | `UniswapV3Facet/`     | Uniswap V3 operations               |
 | `UniswapV4Facet/`     | Uniswap V4 operations               |

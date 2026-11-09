@@ -89,6 +89,7 @@ Rate limit keys (hash of function identifier + address) act as an implicit white
 | **OTC Desks** | Assumed to complete trades; max loss bounded by single swap amount                                                                                                                                                                              |
 | **Maple**     | Permissioned pools with slower dynamics                                                                                                                                                                                                         |
 | **Aave V4**   | All spoke/hub contracts are proxies upgradeable by Aave governance; withdrawals blockable via reserve pause or hub-side spoke halt/deactivation; hub reinvestment controller can deploy idle liquidity, reducing immediately withdrawable funds |
+| **Swap**      | There is no explicit ACL check for `SwapAssetFacet.completeSwap` so it can be called by any account that is enabled as a counterpart for a swap direction, via rate limits.                                                                     |
 
 ### External Protocol Risks
 

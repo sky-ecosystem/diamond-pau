@@ -162,6 +162,12 @@ contract MainnetController_AaveV4_Attack_Tests is AaveV4_TestBase {
 
         vm.mockCall(
             reserve.hub,
+            abi.encodeWithSignature("getAssetUnderlyingAndDecimals(uint256)", reserve.assetId),
+            abi.encode(reserve.underlying, reserve.decimals)
+        );
+
+        vm.mockCall(
+            reserve.hub,
             abi.encodeWithSignature("getAssetDeficitRay(uint256)", reserve.assetId),
             abi.encode(uint256(0))
         );
@@ -736,4 +742,3 @@ contract MainnetController_WEETH_Attack_Tests is WEETH_TestBase {
     }
 
 }
-

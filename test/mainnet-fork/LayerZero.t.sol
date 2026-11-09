@@ -378,6 +378,8 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
+    bytes32 internal constant ARBITRUM_DEPLOYMENT_SALT = keccak256("Arbitrum_LayerZero_Test");
+
     address internal pocket   = makeAddr("pocket");
     address internal skyAdmin = makeAddr("skyAdmin");
 
@@ -446,14 +448,12 @@ abstract contract ArbitrumChain_LayerZero_TestBase is ForkTestBase {
 
         PAUFactory foreignFactory = new PAUFactory(address(foreignBeacon));
 
-        IAccessControls foreignAccessControls = IAccessControls(foreignFactory.deployAccessControls(SPARK_EXECUTOR));
+        foreignController = IForeignControllerFull(foreignFactory.deployPAU(SPARK_EXECUTOR, ARBITRUM_DEPLOYMENT_SALT));
 
-        foreignRateLimits = IRateLimits(foreignFactory.deployRateLimits(SPARK_EXECUTOR));
-        foreignAlmProxy   = IALMProxy(foreignFactory.deployALMProxy(SPARK_EXECUTOR));
+        IAccessControls foreignAccessControls = IAccessControls(foreignController.accessControls());
 
-        foreignController = IForeignControllerFull(
-            payable(foreignFactory.deployController(address(foreignAccessControls), address(foreignAlmProxy), address(foreignRateLimits)))
-        );
+        foreignRateLimits = IRateLimits(foreignController.rateLimits());
+        foreignAlmProxy   = IALMProxy(foreignController.proxy());
 
         vm.startPrank(SPARK_EXECUTOR);
 

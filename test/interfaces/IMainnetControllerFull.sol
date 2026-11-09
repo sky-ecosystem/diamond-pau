@@ -24,6 +24,7 @@ import { IPendleController }        from "../../src/facets/pendle/IPendleControl
 import { IPSMController }           from "../../src/facets/psm/IPSMController.sol";
 import { ISparkVaultController }    from "../../src/facets/spark-vault/ISparkVaultController.sol";
 import { ISuperstateController }    from "../../src/facets/superstate/ISuperstateController.sol";
+import { ISwapAssetController }     from "../../src/facets/swap-asset/ISwapAssetController.sol";
 import { ITransferAssetController } from "../../src/facets/transfer-asset/ITransferAssetController.sol";
 import { IUniswapV3Controller }     from "../../src/facets/uniswap-v3/IUniswapV3Controller.sol";
 import { IUniswapV4Controller }     from "../../src/facets/uniswap-v4/IUniswapV4Controller.sol";
@@ -55,6 +56,7 @@ interface IMainnetControllerFull is
     IPSMController,
     ISparkVaultController,
     ISuperstateController,
+    ISwapAssetController,
     ITransferAssetController,
     IUniswapV3Controller,
     IUniswapV4Controller,

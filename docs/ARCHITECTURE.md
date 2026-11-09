@@ -158,6 +158,7 @@ The system uses a facet-based architecture where each protocol integration is en
 | `PSMFacet`           | Mainnet PSM USDS/USDC swaps                    |
 | `SparkVaultFacet`    | Spark Vault asset withdrawals                  |
 | `SuperstateFacet`    | Superstate USTB subscriptions                  |
+| `SwapAssetFacet`     | 1:1 ERC-20 swaps between ALMProxies            |
 | `TransferAssetFacet` | Generic ERC-20 transfers                       |
 | `UniswapV3Facet`     | Uniswap V3 positions and swaps                 |
 | `UniswapV4Facet`     | Uniswap V4 positions and swaps                 |

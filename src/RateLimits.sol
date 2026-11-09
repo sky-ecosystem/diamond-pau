@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { AccessControl } from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
+import {
+    AccessControlEnumerable
+} from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-contract RateLimits is IRateLimits, AccessControl {
+contract RateLimits is IRateLimits, AccessControlEnumerable {
 
     /**********************************************************************************************/
     /*** Constants                                                                              ***/

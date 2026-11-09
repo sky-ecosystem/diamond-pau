@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.34;
 
-import { AccessControl } from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
-import { Address }       from "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
+import {
+    AccessControlEnumerable
+} from "../lib/openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
+
+import { Address } from "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
 import { IALMProxyFreezable } from "./interfaces/IALMProxyFreezable.sol";
 
-contract ALMProxyFreezable is IALMProxyFreezable, AccessControl {
+contract ALMProxyFreezable is IALMProxyFreezable, AccessControlEnumerable {
 
     using Address for address;
 
