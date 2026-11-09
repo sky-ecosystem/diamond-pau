@@ -76,7 +76,11 @@ library PAUInit {
 
     /**
      * @notice Initializes a PAU stack: grants the Controller its CONTROLLER role on the ALMProxy
-     *         and on its RateLimits, and optionally syncs integrations.
+     *         and on its RateLimits, and optionally syncs integrations. Intended to be used in
+     *         a spell executing as the governance contract (PauseProxy or SubProxy) that holds
+     *         DEFAULT_ADMIN_ROLE on every component. THIS IS NOT INTENDED TO BE AN EXHAUSTIVE LIST
+     *         OF SANITY CHECKS. All deployments must be reviewed comprehensively to ensure that
+     *         they have not been tampered with/compromised prior to onboarding.
      * @dev    When `integrationIds` is empty the `updateIntegrations` call is skipped (the
      *         Controller reverts on an empty array).
      * @param  inst           The PAU stack.
@@ -131,6 +135,17 @@ library PAUInit {
         require(
             IAccessControlLike(inst.accessControls).getRoleMemberCount(ALLOCATOR_ROLE) == 0,
             "PAUInit/allocators-present"
+        );
+
+        // Check no addresses have been granted the CONTROLLER role on the ALMProxy or RateLimits.
+        require(
+            IAccessControlLike(inst.almProxy).getRoleMemberCount(IALMProxyLike(inst.almProxy).CONTROLLER()) == 0,
+            "PAUInit/controller-present-on-alm-proxy"
+        );
+
+        require(
+            IAccessControlLike(inst.rateLimits).getRoleMemberCount(IRateLimitsLike(inst.rateLimits).CONTROLLER()) == 0,
+            "PAUInit/controller-present-on-rate-limits"
         );
 
         // Structural wiring: the Controller is CONTROLLER on the ALMProxy and on its RateLimits.

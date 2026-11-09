@@ -50,8 +50,8 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
     /*** Constants                                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 internal constant _LIMIT_INITIATE_ASSET_SWAP = keccak256("LIMIT_INITIATE_ASSET_SWAP");
-    bytes32 internal constant _LIMIT_COMPLETE_ASSET_SWAP = keccak256("LIMIT_COMPLETE_ASSET_SWAP");
+    bytes32 internal constant _LIMIT_SWAP_INITIATE = keccak256("LIMIT_ASSET_SWAP_INITIATE");
+    bytes32 internal constant _LIMIT_SWAP_COMPLETE = keccak256("LIMIT_ASSET_SWAP_COMPLETE");
 
     /// @inheritdoc IFacet
     string public constant override VERSION = "1.0.0";
@@ -175,7 +175,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         returns (bytes32)
     {
         return makeAddressAddressAddressAddressKey(
-            _LIMIT_INITIATE_ASSET_SWAP,
+            _LIMIT_SWAP_INITIATE,
             assetOut,
             counterpartyProxy,
             counterpartyController,
@@ -195,7 +195,7 @@ contract SwapAssetFacet is ISwapAssetFacet, Facet {
         returns (bytes32)
     {
         return makeAddressAddressAddressKey(
-            _LIMIT_COMPLETE_ASSET_SWAP,
+            _LIMIT_SWAP_COMPLETE,
             assetOut,
             counterpartyProxy,
             assetIn

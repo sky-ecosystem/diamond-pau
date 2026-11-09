@@ -73,6 +73,7 @@ contract PAUInit_Integration_Tests is Test {
     bytes32 internal constant DEPLOYMENT_SALT = keccak256("PAU_INIT_INTEGRATION");
 
     bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
+    bytes32 internal constant CONTROLLER_ROLE    = keccak256("CONTROLLER");
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
     GovernanceHarness internal governance;
@@ -206,18 +207,6 @@ contract PAUInit_Integration_Tests is Test {
         governance.initPAU(inst, new bytes32[](0));
     }
 
-    function test_init_accessControlsNotSoleAdmin() external {
-        PAUInstance memory inst = _deployStack(address(governance));
-
-        // Governance is admin, but a second DEFAULT_ADMIN_ROLE holder means it is not the *sole*
-        // admin, so init must reject the stack.
-        vm.prank(address(governance));
-        IAccessControlLike(inst.accessControls).grantRole(DEFAULT_ADMIN_ROLE, makeAddr("secondAdmin"));
-
-        vm.expectRevert(bytes("PAUInit/access-controls-not-sole-admin"));
-        governance.initPAU(inst, new bytes32[](0));
-    }
-
     function test_init_notAlmProxyAdmin() external {
         // Admin on AccessControls but not on the ALMProxy: the second admin check must catch it.
         PAUInstance memory inst = _deployStackWithAdmins(
@@ -242,6 +231,42 @@ contract PAUInit_Integration_Tests is Test {
         governance.initPAU(inst, new bytes32[](0));
     }
 
+    function test_init_accessControlsNotSoleAdmin() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        // Governance is admin, but a second DEFAULT_ADMIN_ROLE holder means it is not the *sole*
+        // admin, so init must reject the stack.
+        vm.prank(address(governance));
+        IAccessControlLike(inst.accessControls).grantRole(DEFAULT_ADMIN_ROLE, makeAddr("secondAdmin"));
+
+        vm.expectRevert(bytes("PAUInit/access-controls-not-sole-admin"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_almProxyNotSoleAdmin() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        // Governance is admin, but a second DEFAULT_ADMIN_ROLE holder on the ALMProxy means it is
+        // not the *sole* admin, so init must reject the stack.
+        vm.prank(address(governance));
+        IAccessControlLike(inst.almProxy).grantRole(DEFAULT_ADMIN_ROLE, makeAddr("secondAdmin"));
+
+        vm.expectRevert(bytes("PAUInit/alm-proxy-not-sole-admin"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_rateLimitsNotSoleAdmin() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        // Governance is admin, but a second DEFAULT_ADMIN_ROLE holder on the RateLimits means it is
+        // not the *sole* admin, so init must reject the stack.
+        vm.prank(address(governance));
+        IAccessControlLike(inst.rateLimits).grantRole(DEFAULT_ADMIN_ROLE, makeAddr("secondAdmin"));
+
+        vm.expectRevert(bytes("PAUInit/rate-limits-not-sole-admin"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
     function test_init_allocatorAgentsPresent() external {
         PAUInstance memory inst = _deployStack(address(governance));
 
@@ -251,6 +276,26 @@ contract PAUInit_Integration_Tests is Test {
         IAccessControlLike(inst.accessControls).grantRole(ALLOCATOR_ROLE, makeAddr("allocatorAgent"));
 
         vm.expectRevert(bytes("PAUInit/allocators-present"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_controllerPresentOnALMProxy() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.almProxy).grantRole(CONTROLLER_ROLE, makeAddr("controller"));
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-alm-proxy"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_controllerPresentOnRateLimits() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.rateLimits).grantRole(CONTROLLER_ROLE, makeAddr("controller"));
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-rate-limits"));
         governance.initPAU(inst, new bytes32[](0));
     }
 

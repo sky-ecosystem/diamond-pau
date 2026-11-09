@@ -19,7 +19,9 @@ contract ALMProxy_Constructor_Tests is UnitTestBase {
     function test_constructor() external {
         ALMProxy newAlmProxy = new ALMProxy(admin);
 
-        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),     true);
+        assertEq(newAlmProxy.getRoleMember(DEFAULT_ADMIN_ROLE, 0),   admin);
+        assertEq(newAlmProxy.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
     }
 
 }
@@ -34,7 +36,9 @@ contract ALMProxyFreezable_Constructor_Tests is UnitTestBase {
     function test_constructor() external {
         ALMProxyFreezable newAlmProxyFreezable = new ALMProxyFreezable(admin);
 
-        assertEq(newAlmProxyFreezable.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(newAlmProxyFreezable.hasRole(DEFAULT_ADMIN_ROLE, admin),     true);
+        assertEq(newAlmProxyFreezable.getRoleMember(DEFAULT_ADMIN_ROLE, 0),   admin);
+        assertEq(newAlmProxyFreezable.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
     }
 
 }
