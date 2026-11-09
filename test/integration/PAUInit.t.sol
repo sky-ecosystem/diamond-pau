@@ -254,6 +254,26 @@ contract PAUInit_Integration_Tests is Test {
         governance.initPAU(inst, new bytes32[](0));
     }
 
+    function test_init_controllerPresentOnALMProxy() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.almProxy).grantRole(IALMProxyLike(inst.almProxy).CONTROLLER(), inst.controller);
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-alm-proxy"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_controllerPresentOnRateLimits() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.rateLimits).grantRole(IRateLimitsLike(inst.rateLimits).CONTROLLER(), inst.controller);
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-rate-limits"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
     function test_init_wiresControllerRoles() external {
         PAUInstance memory inst = _deployStack(address(governance));
 
