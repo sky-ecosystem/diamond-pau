@@ -206,11 +206,15 @@ contract PAUFactory_IntegrationTests is Test {
         assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE,       admin), true);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE,     admin), true);
 
-        // Only one admin member on IAccessControls (ALMProxy and RateLimits ACL is not enumerable).
+        // Only one admin member on all three.
 
         assertEq(accessControls.getRoleMember(DEFAULT_ADMIN_ROLE, 0), admin);
+        assertEq(almProxy.getRoleMember(DEFAULT_ADMIN_ROLE,       0), admin);
+        assertEq(rateLimits.getRoleMember(DEFAULT_ADMIN_ROLE,     0), admin);
 
         assertEq(accessControls.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
+        assertEq(almProxy.getRoleMemberCount(DEFAULT_ADMIN_ROLE),       1);
+        assertEq(rateLimits.getRoleMemberCount(DEFAULT_ADMIN_ROLE),     1);
 
         // Factory has NO DEFAULT_ADMIN_ROLE on any contract.
 
