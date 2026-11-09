@@ -76,6 +76,9 @@ contract RateLimits_Constructor_Tests is RateLimits_TestBase {
 
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),         true);
+
+        assertEq(rateLimits.getRoleMember(DEFAULT_ADMIN_ROLE, 0),   admin);
+        assertEq(rateLimits.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
     }
 
 }

@@ -51,7 +51,7 @@ See [Development Guide](./docs/DEVELOPMENT.md) for detailed instructions.
 
 ## Architecture Overview
 
-The Beacon holds all integration configurations (facet addresses and selector wiring). The PAUFactory can deploy individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`) with expected bytecode. The Controller is the entry point for all allocator calls. It syncs configs from the Beacon and dispatches to the appropriate facet, which checks rate limits and executes logic, performing calls to the ALMProxy atomically.
+The Beacon holds all integration configurations (facet addresses and selector wiring). The PAUFactory deploys individual PAU system components (`ALMProxy`, `ALMProxyFreezable`, `RateLimits`, `AccessControls`, and `Controller`), or a full PAU in a single call via `deployPAU`, at deterministic `CREATE2` addresses with expected bytecode. The Controller is the entry point for all allocator calls. It syncs configs from the Beacon and dispatches to the appropriate facet, which checks rate limits and executes logic, performing calls to the ALMProxy atomically.
 
 ![PAU Architecture](docs/contract_interaction.png)
 
