@@ -1,20 +1,16 @@
 // ALMProxyBase.spec
 //
-// Rules shared by ALMProxy and ALMProxyFreezable: AccessControl, the two call forwarders and
-// receive. The forwarders are gated by a different role in each contract, given by `callerRole`,
-// which every importing spec overrides. Rules are only verified where they are `use`d.
+// Rules shared by ALMProxy and ALMProxyFreezable: AccessControlEnumerable (imported), the two call
+// forwarders and receive. The forwarders are gated by a different role in each contract, given by
+// `callerRole`, which every importing spec overrides. Rules are only verified where they are `use`d.
+
+import "AccessControlEnumerableBase.spec";
 
 using MockCallTarget as callTarget;
 
 // --- Methods block ---
 
 methods {
-    // AccessControl
-    function DEFAULT_ADMIN_ROLE()      external returns (bytes32) envfree;
-    function hasRole(bytes32, address) external returns (bool)    envfree;
-    function getRoleAdmin(bytes32)     external returns (bytes32) envfree;
-    function supportsInterface(bytes4) external returns (bool)    envfree;
-
     // doCall and doCallWithValue forward an arbitrary call. A call to the mock target is dispatched
     // to it, so its effects are observed; a call to any other address is modelled as having no
     // effect on the proxy (no reentrancy into the proxy).
@@ -31,127 +27,12 @@ methods {
 // The role that gates doCall and doCallWithValue, overridden by every importing spec
 definition callerRole() returns bytes32 = to_bytes32(0);
 
-// ERC-165 interface ids: IAccessControl, IERC165
-definition IACCESS_CONTROL_ID() returns bytes4 = to_bytes4(0x7965db0b);
-definition IERC165_ID()         returns bytes4 = to_bytes4(0x01ffc9a7);
-
-// AccessControl._roles[role].hasRole[account] / .adminRole
-definition roleHas(bytes32 role, address account) returns bool    = currentContract._roles[role].hasRole[account];
-definition roleAdmin(bytes32 role)                returns bytes32 = currentContract._roles[role].adminRole;
-
 // MockCallTarget storage
 definition targetShouldRevert() returns bool    = callTarget.shouldRevert;
 definition targetCalls()        returns uint256 = callTarget.calls;
 definition targetLastSender()   returns address = callTarget.lastSender;
 definition targetLastValue()    returns uint256 = callTarget.lastValue;
 definition targetLastDataHash() returns bytes32 = callTarget.lastDataHash;
-
-// --- View function correctness ---
-
-rule constants() {
-    assert DEFAULT_ADMIN_ROLE() == to_bytes32(0);
-}
-
-rule hasRole_correctness(bytes32 role, address account) {
-    assert hasRole(role, account) == roleHas(role, account);
-}
-
-rule getRoleAdmin_correctness(bytes32 role) {
-    assert getRoleAdmin(role) == roleAdmin(role);
-}
-
-rule supportsInterface_correctness(bytes4 interfaceId) {
-    assert supportsInterface(interfaceId) <=> interfaceId == IACCESS_CONTROL_ID() || interfaceId == IERC165_ID();
-}
-
-
-// --- Access control functions: grantRole ---
-
-rule grantRole(bytes32 role, address account) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != account;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    grantRole(e, role, account);
-
-    assert roleHas(role, account);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule grantRole_revert(bytes32 role, address account) {
-    env e;
-
-    bool senderIsRoleAdmin = roleHas(roleAdmin(role), e.msg.sender);
-
-    grantRole@withrevert(e, role, account);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = !senderIsRoleAdmin;
-
-    assert lastReverted <=> revert1 || revert2;
-}
-
-// --- Access control functions: revokeRole ---
-
-rule revokeRole(bytes32 role, address account) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != account;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    revokeRole(e, role, account);
-
-    assert !roleHas(role, account);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule revokeRole_revert(bytes32 role, address account) {
-    env e;
-
-    bool senderIsRoleAdmin = roleHas(roleAdmin(role), e.msg.sender);
-
-    revokeRole@withrevert(e, role, account);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = !senderIsRoleAdmin;
-
-    assert lastReverted <=> revert1 || revert2;
-}
-
-// --- Access control functions: renounceRole ---
-
-rule renounceRole(bytes32 role, address callerConfirmation) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != e.msg.sender;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    renounceRole(e, role, callerConfirmation);
-
-    assert !roleHas(role, e.msg.sender);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule renounceRole_revert(bytes32 role, address callerConfirmation) {
-    env e;
-
-    renounceRole@withrevert(e, role, callerConfirmation);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = callerConfirmation != e.msg.sender;
-
-    assert lastReverted <=> revert1 || revert2;
-}
 
 // --- Proxy calls: doCall ---
 

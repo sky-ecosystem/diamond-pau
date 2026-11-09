@@ -1,30 +1,16 @@
 // RateLimits.spec
 
+import "AccessControlEnumerableBase.spec";
+
 // --- Methods block ---
 
 methods {
-    // AccessControl
-    function DEFAULT_ADMIN_ROLE()      external returns (bytes32) envfree;
-    function hasRole(bytes32, address) external returns (bool)    envfree;
-    function getRoleAdmin(bytes32)     external returns (bytes32) envfree;
-    function supportsInterface(bytes4) external returns (bool)    envfree;
-
     // RateLimits
     function CONTROLLER()              external returns (bytes32)                   envfree;
     function getRateLimitData(bytes32) external returns (IRateLimits.RateLimitData) envfree;
 }
 
-// --- Definitions ---
-
-// ERC-165 interface ids: IAccessControl, IERC165
-definition IACCESS_CONTROL_ID() returns bytes4 = to_bytes4(0x7965db0b);
-definition IERC165_ID()         returns bytes4 = to_bytes4(0x01ffc9a7);
-
 // --- Storage accessors (direct storage access) ---
-
-// AccessControl._roles[role].hasRole[account] / .adminRole
-definition roleHas(bytes32 role, address account) returns bool    = currentContract._roles[role].hasRole[account];
-definition roleAdmin(bytes32 role)                returns bytes32 = currentContract._roles[role].adminRole;
 
 // RateLimits._data[key]
 definition maxAmountOf(bytes32 key)   returns uint256 = currentContract._data[key].maxAmount;
@@ -52,6 +38,29 @@ definition currentLimitReverts(bytes32 key, uint256 timestamp) returns bool =
         regenerated(key, timestamp) > max_uint256
     );
 
+// --- Shared rules ---
+
+use invariant roleMembershipConsistency;
+use invariant roleMemberIsAddress;
+use invariant roleMemberAtIsMember;
+use invariant roleMemberPosIndexed;
+
+use rule DEFAULT_ADMIN_ROLE_correctness;
+use rule hasRole_correctness;
+use rule getRoleAdmin_correctness;
+use rule getRoleMemberCount_correctness;
+use rule getRoleMember_correctness;
+use rule getRoleMember_revert;
+use rule supportsInterface_correctness;
+use rule grantRole;
+use rule grantRole_revert;
+use rule revokeRole;
+use rule revokeRole_notMember;
+use rule revokeRole_revert;
+use rule renounceRole;
+use rule renounceRole_notMember;
+use rule renounceRole_revert;
+
 // --- Storage Affected Rule ---
 
 rule storageAffected(method f) filtered { f -> !f.isView } {
@@ -61,20 +70,46 @@ rule storageAffected(method f) filtered { f -> !f.isView } {
     bytes32 anyRole;
     address anyAccount;
     bytes32 anyKey;
+    bytes32 anyValue;
+    uint256 anyMemberIdx;
 
-    bool    hasRoleBefore     = roleHas(anyRole, anyAccount);
-    bytes32 roleAdminBefore   = roleAdmin(anyRole);
-    uint256 maxAmountBefore   = maxAmountOf(anyKey);
-    uint256 slopeBefore       = slopeOf(anyKey);
-    uint256 lastAmountBefore  = lastAmountOf(anyKey);
-    uint256 lastUpdatedBefore = lastUpdatedOf(anyKey);
+    // Element reads are pinned inside the array
+    require anyMemberIdx < roleMemberCount(anyRole);
+
+    bool    hasRoleBefore         = roleHas(anyRole, anyAccount);
+    bytes32 roleAdminBefore       = roleAdmin(anyRole);
+    uint256 roleMemberCountBefore = roleMemberCount(anyRole);
+    bytes32 roleMemberAtBefore    = roleMemberAt(anyRole, anyMemberIdx);
+    uint256 roleMemberPosBefore   = roleMemberPosRaw(anyRole, anyValue);
+    uint256 maxAmountBefore       = maxAmountOf(anyKey);
+    uint256 slopeBefore           = slopeOf(anyKey);
+    uint256 lastAmountBefore      = lastAmountOf(anyKey);
+    uint256 lastUpdatedBefore     = lastUpdatedOf(anyKey);
 
     f(e, args);
+
+    uint256 roleMemberCountAfter = roleMemberCount(anyRole);
+
+    // Element reads after the call are only meaningful while still in range
+    bytes32 roleMemberAtAfter = anyMemberIdx < roleMemberCountAfter ? roleMemberAt(anyRole, anyMemberIdx) : roleMemberAtBefore;
 
     // Role admins are never changed
     assert roleAdmin(anyRole) == roleAdminBefore;
 
+    // Roles and role sets only change through the AccessControl functions
     assert roleHas(anyRole, anyAccount) != hasRoleBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector;
+    assert roleMemberCountAfter != roleMemberCountBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector;
+    assert roleMemberAtAfter != roleMemberAtBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector;
+    assert roleMemberPosRaw(anyRole, anyValue) != roleMemberPosBefore =>
         f.selector == sig:grantRole(bytes32, address).selector ||
         f.selector == sig:revokeRole(bytes32, address).selector ||
         f.selector == sig:renounceRole(bytes32, address).selector;
@@ -106,22 +141,6 @@ rule storageAffected(method f) filtered { f -> !f.isView } {
 
 // --- View function correctness ---
 
-rule constants() {
-    assert DEFAULT_ADMIN_ROLE() == to_bytes32(0);
-}
-
-rule hasRole_correctness(bytes32 role, address account) {
-    assert hasRole(role, account) == roleHas(role, account);
-}
-
-rule getRoleAdmin_correctness(bytes32 role) {
-    assert getRoleAdmin(role) == roleAdmin(role);
-}
-
-rule supportsInterface_correctness(bytes4 interfaceId) {
-    assert supportsInterface(interfaceId) <=> interfaceId == IACCESS_CONTROL_ID() || interfaceId == IERC165_ID();
-}
-
 rule getRateLimitData_correctness(bytes32 key) {
     IRateLimits.RateLimitData data = getRateLimitData(key);
 
@@ -146,94 +165,6 @@ rule getCurrentRateLimit_revert(bytes32 key) {
 
     bool revert1 = e.msg.value > 0;
     bool revert2 = reverts;
-
-    assert lastReverted <=> revert1 || revert2;
-}
-
-// --- Access control functions: grantRole ---
-
-rule grantRole(bytes32 role, address account) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != account;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    grantRole(e, role, account);
-
-    assert roleHas(role, account);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule grantRole_revert(bytes32 role, address account) {
-    env e;
-
-    bool senderIsRoleAdmin = roleHas(roleAdmin(role), e.msg.sender);
-
-    grantRole@withrevert(e, role, account);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = !senderIsRoleAdmin;
-
-    assert lastReverted <=> revert1 || revert2;
-}
-
-// --- Access control functions: revokeRole ---
-
-rule revokeRole(bytes32 role, address account) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != account;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    revokeRole(e, role, account);
-
-    assert !roleHas(role, account);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule revokeRole_revert(bytes32 role, address account) {
-    env e;
-
-    bool senderIsRoleAdmin = roleHas(roleAdmin(role), e.msg.sender);
-
-    revokeRole@withrevert(e, role, account);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = !senderIsRoleAdmin;
-
-    assert lastReverted <=> revert1 || revert2;
-}
-
-// --- Access control functions: renounceRole ---
-
-rule renounceRole(bytes32 role, address callerConfirmation) {
-    env e;
-
-    bytes32 otherRole;
-    address otherAccount;
-    require otherRole != role || otherAccount != e.msg.sender;
-
-    bool otherHasRoleBefore = roleHas(otherRole, otherAccount);
-
-    renounceRole(e, role, callerConfirmation);
-
-    assert !roleHas(role, e.msg.sender);
-    assert roleHas(otherRole, otherAccount) == otherHasRoleBefore;
-}
-
-rule renounceRole_revert(bytes32 role, address callerConfirmation) {
-    env e;
-
-    renounceRole@withrevert(e, role, callerConfirmation);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = callerConfirmation != e.msg.sender;
 
     assert lastReverted <=> revert1 || revert2;
 }

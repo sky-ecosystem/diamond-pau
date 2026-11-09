@@ -14,18 +14,34 @@ methods {
 // doCall and doCallWithValue are gated by CONTROLLER
 override definition callerRole() returns bytes32 = CONTROLLER();
 
-// --- Shared rules ---
+// --- Shared rules: AccessControlEnumerableBase.spec ---
 
-use rule constants;
+// doDelegateCall runs the target with the proxy's storage and can rewrite the role sets: the set
+// invariants are proven for every other function, and hold across doDelegateCall only as long as
+// the CONTROLLER delegatecalls targets that leave them alone (a trust assumption on the controller)
+use invariant roleMembershipConsistency filtered { f -> f.selector != sig:doDelegateCall(address, bytes).selector }
+use invariant roleMemberIsAddress       filtered { f -> f.selector != sig:doDelegateCall(address, bytes).selector }
+use invariant roleMemberAtIsMember      filtered { f -> f.selector != sig:doDelegateCall(address, bytes).selector }
+use invariant roleMemberPosIndexed      filtered { f -> f.selector != sig:doDelegateCall(address, bytes).selector }
+
+use rule DEFAULT_ADMIN_ROLE_correctness;
 use rule hasRole_correctness;
 use rule getRoleAdmin_correctness;
+use rule getRoleMemberCount_correctness;
+use rule getRoleMember_correctness;
+use rule getRoleMember_revert;
 use rule supportsInterface_correctness;
 use rule grantRole;
 use rule grantRole_revert;
 use rule revokeRole;
+use rule revokeRole_notMember;
 use rule revokeRole_revert;
 use rule renounceRole;
+use rule renounceRole_notMember;
 use rule renounceRole_revert;
+
+// --- Shared rules: ALMProxyBase.spec ---
+
 use rule doCall;
 use rule doCall_revert;
 use rule doCallWithValue;
@@ -49,26 +65,55 @@ hook DELEGATECALL(uint g, address addr, uint argsOffset, uint argsLength, uint r
 
 // --- Storage Affected Rule ---
 
-// Roles only change through the AccessControl functions, or through doDelegateCall, whose target
-// runs with the proxy's storage and can rewrite anything
+// Roles and role sets only change through the AccessControl functions, or through doDelegateCall,
+// whose target runs with the proxy's storage and can rewrite anything
 rule storageAffected(method f) filtered { f -> !f.isView } {
     env e;
     calldataarg args;
 
     bytes32 anyRole;
     address anyAccount;
+    bytes32 anyValue;
+    uint256 anyMemberIdx;
 
-    bool    hasRoleBefore   = roleHas(anyRole, anyAccount);
-    bytes32 roleAdminBefore = roleAdmin(anyRole);
+    // Element reads are pinned inside the array
+    require anyMemberIdx < roleMemberCount(anyRole);
+
+    bool    hasRoleBefore         = roleHas(anyRole, anyAccount);
+    bytes32 roleAdminBefore       = roleAdmin(anyRole);
+    uint256 roleMemberCountBefore = roleMemberCount(anyRole);
+    bytes32 roleMemberAtBefore    = roleMemberAt(anyRole, anyMemberIdx);
+    uint256 roleMemberPosBefore   = roleMemberPosRaw(anyRole, anyValue);
 
     f(e, args);
+
+    uint256 roleMemberCountAfter = roleMemberCount(anyRole);
+
+    // Element reads after the call are only meaningful while still in range
+    bytes32 roleMemberAtAfter = anyMemberIdx < roleMemberCountAfter ? roleMemberAt(anyRole, anyMemberIdx) : roleMemberAtBefore;
+
+    assert roleAdmin(anyRole) != roleAdminBefore =>
+        f.selector == sig:doDelegateCall(address, bytes).selector;
 
     assert roleHas(anyRole, anyAccount) != hasRoleBefore =>
         f.selector == sig:grantRole(bytes32, address).selector ||
         f.selector == sig:revokeRole(bytes32, address).selector ||
         f.selector == sig:renounceRole(bytes32, address).selector ||
         f.selector == sig:doDelegateCall(address, bytes).selector;
-    assert roleAdmin(anyRole) != roleAdminBefore =>
+    assert roleMemberCountAfter != roleMemberCountBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector ||
+        f.selector == sig:doDelegateCall(address, bytes).selector;
+    assert roleMemberAtAfter != roleMemberAtBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector ||
+        f.selector == sig:doDelegateCall(address, bytes).selector;
+    assert roleMemberPosRaw(anyRole, anyValue) != roleMemberPosBefore =>
+        f.selector == sig:grantRole(bytes32, address).selector ||
+        f.selector == sig:revokeRole(bytes32, address).selector ||
+        f.selector == sig:renounceRole(bytes32, address).selector ||
         f.selector == sig:doDelegateCall(address, bytes).selector;
 }
 
