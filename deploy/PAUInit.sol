@@ -138,7 +138,7 @@ library PAUInit {
             "PAUInit/allocators-present"
         );
 
-        // Check that the Controller is not already granted the CONTROLLER role on the ALMProxy or RateLimits.
+        // Check no addresses have been granted the CONTROLLER role on the ALMProxy or RateLimits.
         require(
             IAccessControlLike(inst.almProxy).getRoleMemberCount(CONTROLLER_ROLE) == 0,
             "PAUInit/controller-present-on-alm-proxy"
