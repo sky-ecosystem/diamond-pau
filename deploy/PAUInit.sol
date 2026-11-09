@@ -72,7 +72,6 @@ struct PAUInstance {
 library PAUInit {
 
     bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
-    bytes32 internal constant CONTROLLER_ROLE    = keccak256("CONTROLLER");
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
     /**
@@ -140,12 +139,12 @@ library PAUInit {
 
         // Check no addresses have been granted the CONTROLLER role on the ALMProxy or RateLimits.
         require(
-            IAccessControlLike(inst.almProxy).getRoleMemberCount(CONTROLLER_ROLE) == 0,
+            IAccessControlLike(inst.almProxy).getRoleMemberCount(IALMProxyLike(inst.almProxy).CONTROLLER()) == 0,
             "PAUInit/controller-present-on-alm-proxy"
         );
 
         require(
-            IAccessControlLike(inst.rateLimits).getRoleMemberCount(CONTROLLER_ROLE) == 0,
+            IAccessControlLike(inst.rateLimits).getRoleMemberCount(IRateLimitsLike(inst.rateLimits).CONTROLLER()) == 0,
             "PAUInit/controller-present-on-rate-limits"
         );
 
