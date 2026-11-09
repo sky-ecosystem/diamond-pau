@@ -40,6 +40,9 @@ abstract contract WEETHModule_TestBase is UnitTestBase {
             implementation, abi.encodeCall(WEETHModule.initialize,(admin, proxy))
         )));
 
+        // Clear any ETH already at the module's address (e.g. dust when run against a fork).
+        deal(address(weethModule), 0);
+
         _mockEtherFiContracts();
     }
 
@@ -58,12 +61,20 @@ abstract contract WEETHModule_TestBase is UnitTestBase {
         mockWeth = MockWETH(payable(Ethereum.WETH));
 
         // Set the request to be valid and finalized.
-        withdrawRequestNFT.__setIsValid(1,     true);
+        withdrawRequestNFT.__setRequest(1,     address(weethModule), 1, true);
         withdrawRequestNFT.__setIsFinalized(1, true);
 
         // Set the request to be valid but not finalized.
-        withdrawRequestNFT.__setIsValid(2,     true);
+        withdrawRequestNFT.__setRequest(2,     address(weethModule), 1, true);
         withdrawRequestNFT.__setIsFinalized(2, false);
+
+        // Set the request to be invalidated.
+        withdrawRequestNFT.__setRequest(3,     address(weethModule), 1, false);
+        withdrawRequestNFT.__setIsFinalized(3, true);
+
+        // Set the request to be valid and finalized, but owned by someone else.
+        withdrawRequestNFT.__setRequest(4,     makeAddr("otherOwner"), 1, true);
+        withdrawRequestNFT.__setIsFinalized(4, true);
 
         // Fund withdrawRequestNFT with 1 ETH to simulate the ETH received from claimWithdraw.
         deal(address(withdrawRequestNFT), 1 ether);
@@ -163,10 +174,16 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
         weethModule.claimWithdrawal(0);
     }
 
+    function test_claimWithdrawal_notRequestOwner() external {
+        vm.expectRevert("WEETHModule/not-request-owner");
+        vm.prank(proxy);
+        weethModule.claimWithdrawal(4);
+    }
+
     function test_claimWithdrawal_invalidRequestId() external {
         vm.expectRevert("WEETHModule/invalid-request-id");
         vm.prank(proxy);
-        weethModule.claimWithdrawal(0);
+        weethModule.claimWithdrawal(3);
     }
 
     function test_claimWithdrawal_requestNotFinalized() external {
@@ -175,19 +192,56 @@ contract WEETHModule_UnitTests is WEETHModule_TestBase {
         weethModule.claimWithdrawal(2);
     }
 
+    function test_claimWithdrawal_nothingToClaim() external {
+        // Request 0 does not exist and the module holds no ETH or WETH.
+        vm.expectRevert("WEETHModule/nothing-to-claim");
+        vm.prank(proxy);
+        weethModule.claimWithdrawal(0);
+    }
+
+    function test_claimWithdrawal_failsOnClaimingTwice() external {
+        vm.prank(proxy);
+        weethModule.claimWithdrawal(1);
+
+        vm.expectRevert("WEETHModule/nothing-to-claim");
+        vm.prank(proxy);
+        weethModule.claimWithdrawal(1);
+    }
+
     function test_claimWithdrawal() external {
         deal(address(weethModule), 0.5 ether); // Pre-existing ETH on the module.
 
-        assertEq(address(proxy).balance,       0);
-        assertEq(mockWeth.balanceOf(proxy),    0);
-        assertEq(address(weethModule).balance, 0.5 ether);
+        assertEq(address(proxy).balance,                       0);
+        assertEq(mockWeth.balanceOf(proxy),                    0);
+        assertEq(address(weethModule).balance,                 0.5 ether);
+        assertEq(withdrawRequestNFT.getRequest(1).shareOfEEth, 1);
 
         vm.prank(proxy);
         uint256 ethReceived = weethModule.claimWithdrawal(1);
 
-        assertEq(address(proxy).balance,       0);
-        assertEq(ethReceived,                  1.5 ether);
-        assertEq(mockWeth.balanceOf(proxy),    ethReceived);
+        assertEq(address(proxy).balance,                       0);
+        assertEq(ethReceived,                                  1.5 ether);
+        assertEq(mockWeth.balanceOf(proxy),                    ethReceived);
+        assertEq(address(weethModule).balance,                 0);
+        assertEq(withdrawRequestNFT.getRequest(1).shareOfEEth, 0);
+    }
+
+    function test_claimWithdrawal_settledByThirdParty() external {
+        assertEq(address(weethModule).balance, 0);
+
+        // Any account can settle a finalized request, paying the ETH to the module.
+        vm.prank(makeAddr("thirdParty"));
+        withdrawRequestNFT.claimWithdraw(1);
+
+        assertEq(address(weethModule).balance,                 1 ether);
+        assertEq(mockWeth.balanceOf(proxy),                    0);
+        assertEq(withdrawRequestNFT.getRequest(1).shareOfEEth, 0);
+
+        vm.prank(proxy);
+        uint256 ethReceived = weethModule.claimWithdrawal(1);
+
+        assertEq(ethReceived,                  1 ether);
+        assertEq(mockWeth.balanceOf(proxy),    1 ether);
         assertEq(address(weethModule).balance, 0);
     }
 

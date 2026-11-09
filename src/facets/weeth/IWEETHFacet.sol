@@ -19,7 +19,8 @@ interface IWEETHFacet is IFacet {
      * @notice Emitted when a withdrawal is claimed from a weETH module.
      * @param  weethModule Address of the weETH withdrawal module.
      * @param  requestId   ID of the withdrawal request being claimed.
-     * @param  ethReceived Amount of ETH received from the claim.
+     * @param  ethReceived Amount of ETH received from the claim, including any ETH from requests
+     *                     already settled by a third party.
      */
     event WEETHClaimWithdrawal(
         address indexed weethModule,
@@ -54,7 +55,8 @@ interface IWEETHFacet is IFacet {
     /**********************************************************************************************/
 
     /**
-     * @notice Claims a completed withdrawal from a weETH module.
+     * @notice Claims a completed withdrawal from a weETH module. If the request was already settled
+     *         by a third party, the ETH held by the module is swept instead.
      * @param  weethModule Address of the weETH withdrawal module.
      * @param  requestId   ID of the withdrawal request to claim.
      * @return ethReceived Amount of ETH received.

@@ -107,11 +107,12 @@ Withdraw: weETH → eETH → WithdrawRequestNFT → (wait) → ETH → WETH
 **Flow:**
 
 1. ALMProxy calls `WEETHModule.claimWithdrawal(requestId)`
-2. WEETHModule verifies the request is valid and finalized
-3. WEETHModule calls `WithdrawRequestNFT.claimWithdraw(requestId)`
-4. WEETHModule receives ETH
-5. WEETHModule wraps ETH to WETH
-6. WEETHModule transfers WETH to ALMProxy
+2. If the request was already settled by a third party (see [Third-Party Settlement](#third-party-settlement)), its ETH is already held by WEETHModule and steps 3 to 5 are skipped
+3. WEETHModule verifies it owns the request and that the request is valid and finalized
+4. WEETHModule calls `WithdrawRequestNFT.claimWithdraw(requestId)`
+5. WEETHModule receives ETH
+6. WEETHModule wraps all ETH it holds to WETH
+7. WEETHModule transfers all WETH to ALMProxy, reverting if there is nothing to transfer
 
 **Rate Limit:** None decremented. Uses the [gate-check pattern](./RATE_LIMITS.md#gate-check-pattern) on `LIMIT_WEETH_CLAIM_WITHDRAW` keyed by `weETHModule` via `makeAddressKey(LIMIT_WEETH_CLAIM_WITHDRAW, weETHModule)`.
 
@@ -135,16 +136,17 @@ function claimWithdrawal(uint256 requestId) external returns (uint256 ethReceive
 
 **Access:** Only callable by the configured `almProxy`
 
-**Checks:**
+**Checks (only if the request was not already settled):**
 
-- Request must be valid (not already claimed, not invalidated)
+- Request must be owned by the module
+- Request must be valid (not invalidated)
 - Request must be finalized (EtherFi has processed it)
 
 **Actions:**
 
-1. Claims the withdrawal from the NFT contract
-2. Wraps received ETH to WETH
-3. Transfers WETH to caller (ALMProxy)
+1. Claims the withdrawal from the NFT contract, unless the request was already settled by a third party
+2. Wraps all ETH held to WETH
+3. Transfers all WETH held to caller (ALMProxy), reverting with `WEETHModule/nothing-to-claim` if there is none
 
 ### ERC-721 Receiver
 
@@ -179,6 +181,12 @@ The withdrawal rate limit keys embed addresses to lock down the integration:
 
 The `eETH` address is sourced from `IWEETHLike(weeth).eETH()` and `liquidityPool` from `IEETHLike(eETH).liquidityPool()` at call time. Embedding these addresses prevents an unauthorized `weETHModule` from being used and locks the request-withdraw key to the configured `eETH` token and liquidity pool. The claim path uses a dedicated key keyed by `weETHModule` only.
 
+### Third-Party Settlement
+
+Since EtherFi's `WithdrawRequestNFT` upgrade of 2026-07-14, any account (including EtherFi's claim keeper) can settle a finalized request. The ETH is paid to the NFT owner, i.e. the WEETHModule, and the request is burned and deleted. The module accepts the ETH through `receive()`, and `claimWithdrawal(requestId)` for that request detects the deleted request (`getRequest(requestId).shareOfEEth == 0`), skips the claim and sweeps the ETH to the ALMProxy instead of reverting.
+
+Because the module sweeps its whole balance, the `WEETHClaimWithdrawal` event reports all ETH held under the `requestId` that was passed. If several requests were settled by third parties before a claim, the first claim reports their combined amount and later claims for the others revert with `WEETHModule/nothing-to-claim`.
+
 ### EtherFi Admin Risk
 
 **Risk:** EtherFi admins can invalidate withdrawal requests without returning funds.
@@ -191,7 +199,7 @@ The WEETHModule:
 
 - Only holds NFTs temporarily (between request and claim)
 - Immediately converts and transfers WETH on claim
-- Cannot accumulate ETH or WETH
+- Only holds ETH between a third-party settlement and the next `claimWithdrawal` call, which sweeps it
 
 ---
 
