@@ -73,6 +73,7 @@ contract PAUInit_Integration_Tests is Test {
     bytes32 internal constant DEPLOYMENT_SALT = keccak256("PAU_INIT_INTEGRATION");
 
     bytes32 internal constant ALLOCATOR_ROLE     = keccak256("ALLOCATOR_ROLE");
+    bytes32 internal constant CONTROLLER_ROLE    = keccak256("CONTROLLER");
     bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
 
     GovernanceHarness internal governance;
@@ -275,6 +276,26 @@ contract PAUInit_Integration_Tests is Test {
         IAccessControlLike(inst.accessControls).grantRole(ALLOCATOR_ROLE, makeAddr("allocatorAgent"));
 
         vm.expectRevert(bytes("PAUInit/allocators-present"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_controllerPresentOnALMProxy() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.almProxy).grantRole(CONTROLLER_ROLE, makeAddr("controller"));
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-alm-proxy"));
+        governance.initPAU(inst, new bytes32[](0));
+    }
+
+    function test_init_controllerPresentOnRateLimits() external {
+        PAUInstance memory inst = _deployStack(address(governance));
+
+        vm.prank(address(governance));
+        IAccessControlLike(inst.rateLimits).grantRole(CONTROLLER_ROLE, makeAddr("controller"));
+
+        vm.expectRevert(bytes("PAUInit/controller-present-on-rate-limits"));
         governance.initPAU(inst, new bytes32[](0));
     }
 
