@@ -282,7 +282,7 @@ contract PAUInit_Integration_Tests is Test {
         PAUInstance memory inst = _deployStack(address(governance));
 
         vm.prank(address(governance));
-        IAccessControlLike(inst.almProxy).grantRole(IALMProxyLike(inst.almProxy).CONTROLLER(), inst.controller);
+        IAccessControlLike(inst.almProxy).grantRole(IALMProxyLike(inst.almProxy).CONTROLLER(), makeAddr("controller"));
 
         vm.expectRevert(bytes("PAUInit/controller-present-on-alm-proxy"));
         governance.initPAU(inst, new bytes32[](0));
@@ -292,7 +292,7 @@ contract PAUInit_Integration_Tests is Test {
         PAUInstance memory inst = _deployStack(address(governance));
 
         vm.prank(address(governance));
-        IAccessControlLike(inst.rateLimits).grantRole(IRateLimitsLike(inst.rateLimits).CONTROLLER(), inst.controller);
+        IAccessControlLike(inst.rateLimits).grantRole(IRateLimitsLike(inst.rateLimits).CONTROLLER(), makeAddr("controller"));
 
         vm.expectRevert(bytes("PAUInit/controller-present-on-rate-limits"));
         governance.initPAU(inst, new bytes32[](0));
