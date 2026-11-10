@@ -45,11 +45,20 @@ interface IWETHLike {
 
 interface IWithdrawRequestNFTLike {
 
+    struct WithdrawRequest {
+        uint96 amountOfEEth;
+        uint96 shareOfEEth;
+        bool   isValid;
+        uint32 feeGwei;
+    }
+
     function claimWithdraw(uint256 requestId) external;
+
+    function getRequest(uint256 requestId) external view returns (WithdrawRequest memory);
 
     function isFinalized(uint256 requestId) external view returns (bool);
 
-    function isValid(uint256 requestId) external view returns (bool);
+    function ownerOf(uint256 requestId) external view returns (address);
 
 }
 
@@ -121,33 +130,33 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
     function claimWithdrawal(uint256 requestId) external override returns (uint256 ethReceived) {
         require(msg.sender == _getWEETHModuleStorage().proxy, "WEETHModule/invalid-sender");
 
-        address eeth               = IWEETHLike(weeth).eETH();
-        address liquidityPool      = IEETHLike(eeth).liquidityPool();
-        address withdrawRequestNFT = ILiquidityPoolLike(liquidityPool).withdrawRequestNFT();
+        address eeth          = IWEETHLike(weeth).eETH();
+        address liquidityPool = IEETHLike(eeth).liquidityPool();
 
+        IWithdrawRequestNFTLike withdrawRequestNFT =
+            IWithdrawRequestNFTLike(ILiquidityPoolLike(liquidityPool).withdrawRequestNFT());
+
+        IWithdrawRequestNFTLike.WithdrawRequest memory request =
+            withdrawRequestNFT.getRequest(requestId);
+
+        // NOTE: Any account can settle a finalized request, which pays the ETH to the NFT owner
+        //       (this module) and deletes the request. A request with no shares was already
+        //       settled (or never existed), so there is nothing to claim and the ETH already held
+        //       by this module is swept instead.
+        if (request.shareOfEEth == 0) return _sweepWETH(msg.sender);
+
+        // NOTE: `ownerOf` also reverts if the request does not exist.
         require(
-            IWithdrawRequestNFTLike(withdrawRequestNFT).isValid(requestId),
-            "WEETHModule/invalid-request-id"
+            withdrawRequestNFT.ownerOf(requestId) == address(this),
+            "WEETHModule/not-request-owner"
         );
 
-        require(
-            IWithdrawRequestNFTLike(withdrawRequestNFT).isFinalized(requestId),
-            "WEETHModule/request-not-finalized"
-        );
+        require(request.isValid,                           "WEETHModule/invalid-request-id");
+        require(withdrawRequestNFT.isFinalized(requestId), "WEETHModule/request-not-finalized");
 
-        IWithdrawRequestNFTLike(withdrawRequestNFT).claimWithdraw(requestId);
+        withdrawRequestNFT.claimWithdraw(requestId);
 
-        // Sweep all ETH.
-        ethReceived = address(this).balance;
-
-        // Wrap ETH to WETH.
-        IWETHLike(weth).deposit{value: ethReceived}();
-
-        // Sweep all WETH.
-        ethReceived = IERC20Like(weth).balanceOf(address(this));
-
-        // No need for SafeERC20 as we are transferring WETH with an expected transfer function.
-        IERC20Like(weth).transfer(msg.sender, ethReceived);
+        return _sweepWETH(msg.sender);
     }
 
     /**********************************************************************************************/
@@ -197,5 +206,17 @@ contract WEETHModule is IWEETHModule, AccessControlEnumerableUpgradeable, UUPSUp
 
     // Only DEFAULT_ADMIN_ROLE can upgrade the implementation
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    // Wraps all ETH held by this module into WETH and transfers all WETH to `receiver`.
+    function _sweepWETH(address receiver) internal returns (uint256 wethSwept) {
+        IWETHLike(weth).deposit{value: address(this).balance}();
+
+        wethSwept = IERC20Like(weth).balanceOf(address(this));
+
+        require(wethSwept != 0, "WEETHModule/nothing-to-claim");
+
+        // No need for SafeERC20 as we are transferring WETH with an expected transfer function.
+        IERC20Like(weth).transfer(receiver, wethSwept);
+    }
 
 }

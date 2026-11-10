@@ -12,9 +12,12 @@ interface IWEETHModule is IAccessControlEnumerable {
     /**********************************************************************************************/
 
     /**
-     * @notice Claims a withdrawal.
+     * @notice Claims a finalized withdrawal request owned by the module, wraps all ETH held into
+     *         WETH and transfers all WETH to the ALMProxy. A request already settled by any
+     *         account is not claimed again, and the ETH it paid to the module is swept instead.
+     *         Reverts if there is nothing to transfer.
      * @param  requestId   Request ID.
-     * @return ethReceived Amount of ETH received.
+     * @return ethReceived Amount of WETH transferred to the ALMProxy.
      */
     function claimWithdrawal(uint256 requestId) external returns (uint256 ethReceived);
 

@@ -33,20 +33,49 @@ contract MockLiquidityPool {
 
 contract MockWithdrawRequestNFT {
 
-    mapping(uint256 => bool) public isValid;
+    struct WithdrawRequest {
+        uint96 amountOfEEth;
+        uint96 shareOfEEth;
+        bool   isValid;
+        uint32 feeGwei;
+    }
+
     mapping(uint256 => bool) public isFinalized;
 
-    function __setIsValid(uint256 requestId, bool value) external {
-        isValid[requestId] = value;
+    mapping(uint256 => address)         internal _owners;
+    mapping(uint256 => WithdrawRequest) internal _requests;
+
+    function __setRequest(uint256 requestId, address owner, uint96 shareOfEEth, bool isValid) external {
+        _owners[requestId]   = owner;
+        _requests[requestId] = WithdrawRequest(shareOfEEth, shareOfEEth, isValid, 0);
     }
 
     function __setIsFinalized(uint256 requestId, bool value) external {
         isFinalized[requestId] = value;
     }
 
-    function claimWithdraw(uint256) external {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+    // Mirrors EtherFi: any account can settle a request, the ETH is paid to the owner and the
+    // request is burned and deleted.
+    function claimWithdraw(uint256 requestId) external {
+        address owner = ownerOf(requestId);
+
+        delete _owners[requestId];
+        delete _requests[requestId];
+
+        ( bool success, ) = owner.call{ value: address(this).balance }("");
+
         require(success, "MockWithdrawRequestNFT/claimWithdraw-failed");
+    }
+
+    function getRequest(uint256 requestId) external view returns (WithdrawRequest memory) {
+        return _requests[requestId];
+    }
+
+    // Mirrors ERC721: reverts for a request that does not exist (never minted or burned).
+    function ownerOf(uint256 requestId) public view returns (address) {
+        require(_owners[requestId] != address(0), "ERC721: invalid token ID");
+
+        return _owners[requestId];
     }
 
 }

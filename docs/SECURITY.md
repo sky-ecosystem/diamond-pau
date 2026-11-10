@@ -54,6 +54,8 @@ For comprehensive threat modeling, attack vectors, and trust assumptions, see [T
 
 **Risk:** Withdrawal requests can be invalidated by EtherFi admin without returning funds, but can also be revalidated.
 
+**Risk:** Finalized requests can be settled by any account, paying the ETH to the `WEETHModule`. The next `claimWithdrawal` sweeps all ETH held by the module and reports it under the request ID passed, so the reported amount can include ETH from other settled requests. See [Third-Party Settlement](./WEETH_INTEGRATION.md#third-party-settlement).
+
 **Architecture Note:** The weETH integration requires a dedicated `WEETHModule` contract to handle withdrawal NFTs and ETH conversion. See [weETH Integration](./WEETH_INTEGRATION.md) for details.
 
 ### OTC Desk Integration
