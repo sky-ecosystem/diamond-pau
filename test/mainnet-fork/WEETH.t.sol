@@ -23,6 +23,8 @@ interface ILiquidityPoolLike {
 
 interface IWithdrawRequestNFTLike {
 
+    function claimWithdraw(uint256 requestId) external;
+
     function finalizeRequests(uint256 requestId) external;
 
     function getClaimableAmount(uint256 requestId) external view returns (uint256);
@@ -90,7 +92,7 @@ abstract contract WEETH_TestBase is ForkTestBase {
         );
     }
 
-    function _getBlock() internal pure override returns (uint256) {
+    function _getBlock() internal pure virtual override returns (uint256) {
         return 23469772; //  September 29, 2025
     }
 
@@ -434,10 +436,37 @@ contract MainnetController_WEETH_ClaimWithdrawal_Tests is WEETH_TestBase {
         vm.prank(allocator);
         mainnetController.weeth_claimWithdrawal(weethModule, requestId);
 
-        // Cannot claim withdrawal again.
-        vm.expectRevert("Request does not exist");
+        // Cannot claim withdrawal again: the request was burned and the module holds no ETH.
+        vm.expectRevert("WEETHModule/nothing-to-claim");
         vm.prank(allocator);
         mainnetController.weeth_claimWithdrawal(weethModule, requestId);
+    }
+
+    function test_claimWithdrawalFromWEETH_notRequestOwner() external {
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(depositKey,         1_000e18, uint256(1_000e18) / 1 days);
+        rateLimits.setRateLimitData(requestWithdrawKey, 1_000e18, uint256(1_000e18) / 1 days);
+        vm.stopPrank();
+
+        deal(Ethereum.WETH, address(almProxy), 1_000e18);
+
+        uint256 minSharesOut = _getMinSharesOut(1_000e18);
+
+        vm.prank(allocator);
+        mainnetController.weeth_deposit(1_000e18, minSharesOut);
+
+        vm.prank(allocator);
+        uint256 requestId = mainnetController.weeth_requestWithdraw(weethModule, 500e18, 0);
+
+        IWithdrawRequestNFTLike withdrawRequestNFT = IWithdrawRequestNFTLike(liquidityPool.withdrawRequestNFT());
+
+        vm.prank(WITHDRAW_REQUEST_NFT_ADMIN);
+        IWithdrawRequestNFTLike(withdrawRequestNFT).finalizeRequests(requestId);
+
+        // A finalized request owned by someone else cannot be claimed through the module.
+        vm.expectRevert("WEETHModule/not-request-owner");
+        vm.prank(allocator);
+        mainnetController.weeth_claimWithdrawal(weethModule, requestId - 1);
     }
 
     function test_claimWithdrawalFromWEETH_invalidRequest() external {
@@ -541,6 +570,89 @@ contract MainnetController_WEETH_ClaimWithdrawal_Tests is WEETH_TestBase {
         assertEq(weethModule.balance,               0);
         assertEq(WETH.balanceOf(weethModule),       0);
         assertEq(wethReceived,                      eethAmount);
+    }
+
+}
+
+// CS #002: since EtherFi's WithdrawRequestNFT upgrade (2026-07-14) any account can settle a
+// finalized request, paying the ETH to the NFT owner and burning the NFT. The fork block predates
+// the upgrade, so the settlement is performed from the module's own address, which leaves the
+// exact state a third-party settlement leaves on the live contract: ETH in the module and no NFT.
+contract MainnetController_WEETH_ThirdPartySettlement_Tests is WEETH_TestBase {
+
+    IWithdrawRequestNFTLike internal withdrawRequestNFT;
+
+    bytes32 internal depositKey;
+    bytes32 internal requestWithdrawKey;
+    bytes32 internal claimWithdrawKey;
+
+    uint256 internal requestId;
+
+    function setUp() public override {
+        super.setUp();
+
+        withdrawRequestNFT = IWithdrawRequestNFTLike(liquidityPool.withdrawRequestNFT());
+
+        depositKey         = mainnetController.weeth_getDepositRateLimitKey(address(eeth), address(liquidityPool));
+        requestWithdrawKey = mainnetController.weeth_getRequestWithdrawRateLimitKey(weethModule, address(eeth), address(liquidityPool));
+        claimWithdrawKey   = mainnetController.weeth_getClaimWithdrawRateLimitKey(weethModule);
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(depositKey,         1_000e18, uint256(1_000e18) / 1 days);
+        rateLimits.setRateLimitData(requestWithdrawKey, 1_000e18, uint256(1_000e18) / 1 days);
+        rateLimits.setRateLimitData(claimWithdrawKey,   type(uint256).max, 0);
+        vm.stopPrank();
+
+        deal(Ethereum.WETH, address(almProxy), 1_000e18);
+
+        uint256 minSharesOut = _getMinSharesOut(1_000e18);
+
+        vm.prank(allocator);
+        mainnetController.weeth_deposit(1_000e18, minSharesOut);
+
+        vm.prank(allocator);
+        requestId = mainnetController.weeth_requestWithdraw(weethModule, 500e18, 0);
+
+        vm.prank(WITHDRAW_REQUEST_NFT_ADMIN);
+        withdrawRequestNFT.finalizeRequests(requestId);
+    }
+
+    function test_claimWithdrawalFromWEETH_settledByThirdParty() external {
+        uint256 claimableAmount = withdrawRequestNFT.getClaimableAmount(requestId);
+
+        assertGt(claimableAmount, 0);
+
+        assertEq(withdrawRequestNFT.ownerOf(requestId), weethModule);
+
+        assertEq(weethModule.balance,               0);
+        assertEq(WETH.balanceOf(address(almProxy)), 0);
+
+        // The request is settled outside of the module: the ETH is paid to the module and the
+        // request is burned.
+        vm.prank(weethModule);
+        withdrawRequestNFT.claimWithdraw(requestId);
+
+        assertEq(weethModule.balance, claimableAmount);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        withdrawRequestNFT.ownerOf(requestId);
+
+        // The allocator's claim for that request sweeps the ETH instead of reverting.
+        vm.expectEmit(address(mainnetController));
+        emit IWEETHFacet.WEETHClaimWithdrawal(weethModule, requestId, claimableAmount);
+
+        vm.prank(allocator);
+        uint256 wethReceived = mainnetController.weeth_claimWithdrawal(weethModule, requestId);
+
+        assertEq(wethReceived,                      claimableAmount);
+        assertEq(weethModule.balance,               0);
+        assertEq(WETH.balanceOf(weethModule),       0);
+        assertEq(WETH.balanceOf(address(almProxy)), claimableAmount);
+
+        // Nothing is left to claim for that request.
+        vm.expectRevert("WEETHModule/nothing-to-claim");
+        vm.prank(allocator);
+        mainnetController.weeth_claimWithdrawal(weethModule, requestId);
     }
 
 }
