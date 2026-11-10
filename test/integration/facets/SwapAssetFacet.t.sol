@@ -78,7 +78,7 @@ contract Controller_SwapAssetFacet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getInitiateSwapRateLimitKey() external {
-        bytes32 keyPrefix              = keccak256("LIMIT_ASSET_SWAP_INITIATE");
+        bytes32 keyPrefix              = keccak256("LIMIT_SWAP_ASSET_INITIATE");
         address assetOut               = makeAddr("assetOut");
         address counterpartyProxy      = makeAddr("counterpartyProxy");
         address counterpartyController = makeAddr("counterpartyController");
@@ -95,7 +95,7 @@ contract Controller_SwapAssetFacet_Tests is Integration_TestBase {
     /**********************************************************************************************/
 
     function test_getCompleteSwapRateLimitKey() external {
-        bytes32 keyPrefix         = keccak256("LIMIT_ASSET_SWAP_COMPLETE");
+        bytes32 keyPrefix         = keccak256("LIMIT_SWAP_ASSET_COMPLETE");
         address assetOut          = makeAddr("assetOut");
         address counterpartyProxy = makeAddr("counterpartyProxy");
         address assetIn           = makeAddr("assetIn");

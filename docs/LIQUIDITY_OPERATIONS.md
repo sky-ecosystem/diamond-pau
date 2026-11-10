@@ -232,12 +232,12 @@ Amounts are converted 1:1 using each token's on-chain `decimals()`. Scaling up i
 
 | Operation      | Rate Limit Key                                                                              | Change                             |
 | -------------- | ------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `initiateSwap` | `(LIMIT_ASSET_SWAP_INITIATE, assetOut, counterpartyProxy, counterpartyController, assetIn)` | `-amountOut` (`assetOut` decimals) |
-| `initiateSwap` | `(LIMIT_ASSET_SWAP_INITIATE, assetIn, counterpartyProxy, counterpartyController, assetOut)` | `+amountIn` (`assetIn` decimals)   |
-| `completeSwap` | `(LIMIT_ASSET_SWAP_COMPLETE, assetOut, msg.sender, assetIn)`                                | `-amountOut` (`assetOut` decimals) |
-| `completeSwap` | `(LIMIT_ASSET_SWAP_COMPLETE, assetIn, msg.sender, assetOut)`                                | `+amountIn` (`assetIn` decimals)   |
+| `initiateSwap` | `(LIMIT_SWAP_ASSET_INITIATE, assetOut, counterpartyProxy, counterpartyController, assetIn)` | `-amountOut` (`assetOut` decimals) |
+| `initiateSwap` | `(LIMIT_SWAP_ASSET_INITIATE, assetIn, counterpartyProxy, counterpartyController, assetOut)` | `+amountIn` (`assetIn` decimals)   |
+| `completeSwap` | `(LIMIT_SWAP_ASSET_COMPLETE, assetOut, msg.sender, assetIn)`                                | `-amountOut` (`assetOut` decimals) |
+| `completeSwap` | `(LIMIT_SWAP_ASSET_COMPLETE, assetIn, msg.sender, assetOut)`                                | `+amountIn` (`assetIn` decimals)   |
 
-Each operation, direction, and counterparty has its own rate limit key on each PAU, so a swap consumes a rate limit on both PAUs, and optionally can increase the rate limit of the other direction. If a PAU will only ever initiate swaps, it does not need to set any `LIMIT_ASSET_SWAP_COMPLETE` keys, and conversely if a PAU will only ever complete swaps, it does not need to set any `LIMIT_ASSET_SWAP_INITIATE` keys.
+Each operation, direction, and counterparty has its own rate limit key on each PAU, so a swap consumes a rate limit on both PAUs, and optionally can increase the rate limit of the other direction. If a PAU will only ever initiate swaps, it does not need to set any `LIMIT_SWAP_ASSET_COMPLETE` keys, and conversely if a PAU will only ever complete swaps, it does not need to set any `LIMIT_SWAP_ASSET_INITIATE` keys.
 
 `completeSwap` has no role check: it is permissioned through the rate limit key, as `msg.sender` must be a counterparty `ALMProxy` with a configured key.
 
