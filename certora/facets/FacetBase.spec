@@ -13,8 +13,10 @@ methods {
     function ALLOCATOR_ROLE()     external returns (bytes32) envfree;
 
     // AccessControls: the address lives in shared namespaced storage and cannot be linked, so its
-    // answer is modelled by a ghost, which keeps every role combination reachable.
-    function _.hasRole(bytes32 role, address account) external => hasRoleGhost(role, account) expect bool;
+    // answer is modelled by a ghost, which keeps every role combination reachable. The ghost is
+    // keyed by the called contract, so that a hasRole asked of another contract (e.g. a
+    // counterparty proxy) is independent of the facet's own AccessControls.
+    function _.hasRole(bytes32 role, address account) external => hasRoleGhost(calledContract, role, account) expect bool;
 
     // RateLimits: every interaction is recorded. The configured maxAmount of a key is a ghost so
     // that a rule can consider the state in which no rate limit is configured at all.
@@ -33,7 +35,7 @@ methods {
 
 // --- Ghosts ---
 
-persistent ghost hasRoleGhost(bytes32, address) returns bool;
+persistent ghost hasRoleGhost(address, bytes32, address) returns bool;
 
 // Configured maxAmount per rate limit key
 persistent ghost rateLimitMaxAmount(bytes32) returns uint256;
@@ -180,13 +182,15 @@ definition accessControlsSlot() returns address = currentContract.ext_sky_pau_st
 definition proxySlot()          returns address = currentContract.ext_sky_pau_storage_SharedController.proxy;
 definition rateLimitsSlot()     returns address = currentContract.ext_sky_pau_storage_SharedController.rateLimits;
 
-definition isAdmin(address account)     returns bool = hasRoleGhost(DEFAULT_ADMIN_ROLE(), account);
-definition isAllocator(address account) returns bool = hasRoleGhost(ALLOCATOR_ROLE(), account);
+definition isAdmin(address account)     returns bool = hasRoleGhost(accessControlsSlot(), DEFAULT_ADMIN_ROLE(), account);
+definition isAllocator(address account) returns bool = hasRoleGhost(accessControlsSlot(), ALLOCATOR_ROLE(), account);
 
 // --- Access control ---
 
-// Every non-view function is gated by DEFAULT_ADMIN_ROLE or ALLOCATOR_ROLE
-rule roleGated(method f) filtered { f -> !f.isView } {
+// Every non-view function is gated by DEFAULT_ADMIN_ROLE or ALLOCATOR_ROLE. The body is a CVL
+// function so that a facet spec with a function permissioned otherwise can re-run the same check
+// over every other function and cover that one with a rule of its own.
+function checkRoleGated(method f) {
     env e;
     calldataarg args;
 
@@ -197,9 +201,14 @@ rule roleGated(method f) filtered { f -> !f.isView } {
     assert lastReverted;
 }
 
+rule roleGated(method f) filtered { f -> !f.isView } {
+    checkRoleGated(f);
+}
+
 // Admin functions only configure the facet: they make no external call other than reads (static
-// calls), so they neither touch the rate limits nor move value (see rateLimitCallsAreFacetCalls)
-rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
+// calls), so they neither touch the rate limits nor move value (see rateLimitCallsAreFacetCalls).
+// The body is a CVL function for the same reason as checkRoleGated.
+function checkAdminIsConfigurationOnly(method f) {
     env e;
     calldataarg args;
 
@@ -212,6 +221,10 @@ rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
     f@withrevert(e, args);
 
     assert !lastReverted => facetCalls == 0;
+}
+
+rule adminIsConfigurationOnly(method f) filtered { f -> !f.isView } {
+    checkAdminIsConfigurationOnly(f);
 }
 
 // --- Rate limits ---

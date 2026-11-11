@@ -38,6 +38,7 @@ jobs:
           - facet-psm3
           - facet-spark-vault
           - facet-superstate
+          - facet-swap-asset
           - facet-transfer-asset
           - facet-uniswap-v3
           - facet-uniswap-v4
