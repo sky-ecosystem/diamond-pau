@@ -97,12 +97,48 @@ Particularly for the UniswapV4 integration, since the pools being interacted wit
 
 ### Audits
 
-Audit reports are available in the [`audits/`](./audits/) directory. The system has been audited by:
+Audit reports are hosted on the auditors' public portfolio pages:
 
-- Cantina
-- Certora
-- ChainSecurity
-- Unvariant
+Diamond PAU was forked from the Spark ALM Controller; the v1.0.0 to v1.10.0 reports below were performed on the Spark ALM Controller codebase.
+
+| Auditor | Report | Version | Date |
+| --- | --- | --- | --- |
+| ChainSecurity | [Sky Diamond PAU v1.15](https://www.chainsecurity.com/security-audit/sky-diamond-pau-v1-15/) | - | 2026-11-02 |
+| Cantina | [Sky: Diamond Pau v1.15.0](https://cantina.xyz/portfolio/c8a13c2b-60ef-43c4-ad38-9584c03aa15c) | - | 2026-10-06 |
+| ChainSecurity | [Sky Diamond PAU v1.14](https://www.chainsecurity.com/security-audit/sky-diamond-pau-v1-14/) | v1.14.0 | 2026-07-06 |
+| Cantina | [Sky: PAU NFAT Facet](https://cantina.xyz/portfolio/2db00e28-838f-4769-bc9f-8b0624f172d2) | v1.14.0 | 2026-06-25 |
+| ChainSecurity | [Sky Diamond PAU v1.13](https://www.chainsecurity.com/security-audit/diamond-pau-v1-13/) | v1.13.0 | 2026-06-04 |
+| ChainSecurity | [Diamond PAU v1.12](https://www.chainsecurity.com/security-audit/diamond-pau-v1-12/) | v1.12.0 | 2026-06-03 |
+| Cantina | [Sky: PAU Factory Update](https://cantina.xyz/portfolio/bf7950aa-a53b-4688-b281-e25c2d6e7fef) | v1.13.0 | 2026-05-29 |
+| Cantina | [Sky: Diamond Pau](https://cantina.xyz/portfolio/d1185899-3e3b-4cbc-b596-60c00ce61d07) | v1.12.0 | 2026-04-26 |
+| ChainSecurity | [Sky Diamond PAU](https://www.chainsecurity.com/security-audit/sky-diamond-pau/) | v1.11.0 | 2026-03-17 |
+| Cantina | [Sky: Diamond PAU v1.11.0](https://cantina.xyz/portfolio/15cf9a53-3671-4b68-88ee-13570a5ebd03) | v1.11.0 | 2026-03-10 |
+| ChainSecurity | [Spark ALM Controller Diff Audit](https://www.chainsecurity.com/security-audit/spark-alm-controller-diff-audit/) | v1.10.0 | 2026-02-17 |
+| Cantina | [Sky: Spark ALM Controller](https://cantina.xyz/portfolio/9a0dd836-1a9d-4e1b-98af-9d6238185e02) | v1.10.0 | 2026-02-09 |
+| Cantina | [Sky: Spark ALM Controller v1.8](https://cantina.xyz/portfolio/f5d91713-c9bd-4ed3-966e-f933d4c2f70d) | v1.8.0 | 2025-10-22 |
+| ChainSecurity | [Spark ALM Controller](https://www.chainsecurity.com/security-audit/spark-alm-controller/) | v1.0.0, v1.1.0, v1.3.0, v1.4.0, v1.5.0, v1.6.0, v1.7.0 | 2025-09-11 |
+| Cantina | [Sky Spark ALM Controller](https://cantina.xyz/portfolio/288f500d-3cd1-43af-9690-7690273f3e80) | v1.7.0 | 2025-09-01 |
+| Cantina | [Spark ALM Controller](https://cantina.xyz/portfolio/95632465-f6a2-43c2-8729-d26a718e6b9a) | v1.6.0 | 2025-08-08 |
+| Cantina | [spark-alm-controller v1.5.0-beta.0](https://cantina.xyz/portfolio/af3b40b6-840a-45ef-93dd-b3f0e0ec2dac) | v1.5.0 | 2025-07-07 |
+| Cantina | [Spark ALM Curve Controller Audit for MakerDAO](https://cantina.xyz/portfolio/c5408301-e8d5-4d84-b758-ac8d1f4d987f) | v1.4.0 | 2025-03-21 |
+| Cantina | [MakerDAO Spark ALM Init Script Audit](https://cantina.xyz/portfolio/ba3e40ff-baf9-4def-8ae0-21f4a9473184) | v1.0.0 | 2024-10-18 |
+| Cantina | [Spark ALM CCTP & Swap Logic Audit](https://cantina.xyz/portfolio/6e9c7968-9565-4b05-a8f2-f41ddc64ec27) | v1.0.0 | 2024-09-19 |
+
+ChainSecurity reports are cumulative: each portfolio page hosts the latest version of the report, which covers all previously reviewed versions.
+
+#### Other reports
+
+The following reports are not available on an auditor portfolio page and are kept in this repository:
+
+- [Cantina v1.1.0](./audits/v110-cantina-audit.pdf)
+- [Unvariant v1.11.0](./audits/v1110-unvariant-audit.pdf)
+- [Certora v1.12.0](./audits/v1120-certora-audit.pdf)
+- [Octane v1.12.0](./audits/v1120-octane-audit.pdf)
+- [Unvariant v1.12.0](./audits/v1120-unvariant_audit.pdf)
+- [Cantina v1.3.0](./audits/v130-cantina-audit.pdf)
+- [Certora v1.8.0](./audits/v180-certora-audit.pdf)
+- [Cantina v1.9.0](./audits/v190-cantina-audit.pdf)
+- [Certora v1.9.0](./audits/v190-certora-audit.pdf)
 
 ---
 
