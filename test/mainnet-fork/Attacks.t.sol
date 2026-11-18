@@ -654,7 +654,7 @@ contract MainnetController_UniswapV4_Attack_Tests is UniswapV4_USDC_USDT_TestBas
 
     function _setV4MintConfig() internal {
         vm.startPrank(SPARK_PROXY);
-        mainnetController.uniswapV4_setTickLimits(_POOL_ID, -60, 60, 20);
+        mainnetController.uniswapV4_setTickLimits(_POOL_ID, -60, 60, 20, 0, type(uint256).max);
         rateLimits.setRateLimitData(_aggregateDepositLimitKey, 5_000_000e18, uint256(5_000_000e18) / 1 days);
         rateLimits.setRateLimitData(_token0DepositLimitKey,    5_000_000e6,  uint256(5_000_000e6)  / 1 days);
         rateLimits.setRateLimitData(_token1DepositLimitKey,    5_000_000e6,  uint256(5_000_000e6)  / 1 days);

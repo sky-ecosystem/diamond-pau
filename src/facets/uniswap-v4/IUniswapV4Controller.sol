@@ -17,7 +17,9 @@ interface IUniswapV4Controller {
         bytes32 poolId,
         int24   tickLowerMin,
         int24   tickUpperMax,
-        uint24  maxTickSpacing
+        uint24  maxTickSpacing,
+        uint256 tickLowerMinUsdPrice,
+        uint256 tickUpperMaxUsdPrice
     )
         external;
 
@@ -77,7 +79,13 @@ interface IUniswapV4Controller {
     function uniswapV4_getTickLimits(bytes32 poolId)
         external
         view
-        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+        returns (
+            int24   tickLowerMin,
+            int24   tickUpperMax,
+            uint24  maxTickSpacing,
+            uint256 tickLowerMinUsdPrice,
+            uint256 tickUpperMaxUsdPrice
+        );
 
     function uniswapV4_getAggregateWithdrawRateLimitKey(bytes32 poolId)
         external

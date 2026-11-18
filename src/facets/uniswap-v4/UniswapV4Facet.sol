@@ -5,6 +5,9 @@ import { Currency } from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/type
 import { PoolId }   from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolId.sol";
 import { PoolKey }  from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/types/PoolKey.sol";
 
+import { FullMath } from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/libraries/FullMath.sol";
+import { TickMath } from "../../../lib/uniswap-v4-periphery/lib/v4-core/src/libraries/TickMath.sol";
+
 import { IV4Router } from "../../../lib/uniswap-v4-periphery/src/interfaces/IV4Router.sol";
 import { Actions }   from "../../../lib/uniswap-v4-periphery/src/libraries/Actions.sol";
 
@@ -30,6 +33,14 @@ interface IERC20Like {
     function balanceOf(address account) external view returns (uint256);
 
     function decimals() external view returns (uint8);
+
+}
+
+interface IERC4626Like {
+
+    function asset() external view returns (address);
+
+    function convertToAssets(uint256 shares) external view returns (uint256 assets);
 
 }
 
@@ -145,7 +156,9 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         bytes32 poolId,
         int24   tickLowerMin,
         int24   tickUpperMax,
-        uint24  maxTickSpacing
+        uint24  maxTickSpacing,
+        uint256 tickLowerMinUsdPrice,
+        uint256 tickUpperMaxUsdPrice
     )
         external
         override
@@ -155,18 +168,37 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         require(poolId != bytes32(0), "UniswapV4Facet/zero-pool-id");
 
         require(
-            ((tickLowerMin == 0) && (tickUpperMax == 0) && (maxTickSpacing == 0)) ||
-            ((maxTickSpacing > 0) && (tickLowerMin < tickUpperMax)),
+            (
+                (tickLowerMin         == 0) &&
+                (tickUpperMax         == 0) &&
+                (maxTickSpacing       == 0) &&
+                (tickLowerMinUsdPrice == 0) &&
+                (tickUpperMaxUsdPrice == 0)
+            ) ||
+            (
+                (maxTickSpacing       > 0)            &&
+                (tickLowerMin         < tickUpperMax) &&
+                (tickLowerMinUsdPrice < tickUpperMaxUsdPrice)
+            ),
             "UniswapV4Facet/invalid-ticks"
         );
 
         _getFacetStorage().tickLimits[poolId] = TickLimits({
-            tickLowerMin   : tickLowerMin,
-            tickUpperMax   : tickUpperMax,
-            maxTickSpacing : maxTickSpacing
+            tickLowerMin         : tickLowerMin,
+            tickUpperMax         : tickUpperMax,
+            maxTickSpacing       : maxTickSpacing,
+            tickLowerMinUsdPrice : tickLowerMinUsdPrice,
+            tickUpperMaxUsdPrice : tickUpperMaxUsdPrice
         });
 
-        emit UniswapV4TickLimitsSet(poolId, tickLowerMin, tickUpperMax, maxTickSpacing);
+        emit UniswapV4TickLimitsSet(
+            poolId,
+            tickLowerMin,
+            tickUpperMax,
+            maxTickSpacing,
+            tickLowerMinUsdPrice,
+            tickUpperMaxUsdPrice
+        );
     }
 
     /**********************************************************************************************/
@@ -187,11 +219,11 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         nonReentrant
         onlyRole(ALLOCATOR_ROLE)
     {
-        _checkTickLimits(poolId, tickLower, tickUpper);
-
         PoolKey memory poolKey = _getPoolKeyFromPoolId(poolId);
 
         _requirePoolIdMatch(poolId, poolKey);
+
+        _checkTickLimits(poolId, poolKey, tickLower, tickUpper);
 
         bytes memory callData = _getMintCalldata({
             poolKey    : poolKey,
@@ -249,7 +281,7 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         // Since funds are being added to the position, the ticks of the position need to be checked
         // against the current constraints, since it's possible the position was minted under
         // outdated tick limits, or was transferred to the proxy.
-        _checkTickLimits(poolId, info.tickLower(), info.tickUpper());
+        _checkTickLimits(poolId, poolKey, info.tickLower(), info.tickUpper());
 
         bytes memory callData = _getIncreaseLiquidityCallData({
             poolKey           : poolKey,
@@ -337,9 +369,11 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             ? Currency.unwrap(poolKey.currency1)
             : Currency.unwrap(poolKey.currency0);
 
+        // NOTE: Both sides are compared in USD terms, so that ERC4626 share tokens are valued at
+        //       their underlying asset value (e.g. 1 sUSDS = 1.05 USDS = 1.05 USD).
         require(
-            _getNormalizedBalance(tokenOut, amountOutMin) * 1e18 >=
-            _getNormalizedBalance(tokenIn, amountIn) * maxSlippage,
+            _getUsdValue(tokenOut, amountOutMin) * 1e18 >=
+            _getUsdValue(tokenIn, amountIn) * maxSlippage,
             "UniswapV4Facet/amountOutMin-too-low"
         );
 
@@ -408,11 +442,23 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         external
         view
         override
-        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing)
+        returns (
+            int24   tickLowerMin,
+            int24   tickUpperMax,
+            uint24  maxTickSpacing,
+            uint256 tickLowerMinUsdPrice,
+            uint256 tickUpperMaxUsdPrice
+        )
     {
         TickLimits storage tickLimits = _getFacetStorage().tickLimits[poolId];
 
-        return (tickLimits.tickLowerMin, tickLimits.tickUpperMax, tickLimits.maxTickSpacing);
+        return (
+            tickLimits.tickLowerMin,
+            tickLimits.tickUpperMax,
+            tickLimits.maxTickSpacing,
+            tickLimits.tickLowerMinUsdPrice,
+            tickLimits.tickUpperMaxUsdPrice
+        );
     }
 
     /// @inheritdoc IUniswapV4Facet
@@ -483,13 +529,12 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         // Account for the theoretical possibility of receiving tokens when adding liquidity by
         // using a clamped subtraction.
         // NOTE: The aggregate amount is used for aggregate deposit rate limit decrease, which makes
-        //       the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
+        //       the assumption that the tokens (or their underlying assets, for ERC4626 tokens) are
+        //       pegged and valued equally.
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS = 1 USD).
         uint256 aggregateAmount = _clampedSub(
-            _getNormalizedBalance(token0, startingBalance0) +
-            _getNormalizedBalance(token1, startingBalance1),
-            _getNormalizedBalance(token0, endingBalance0) +
-            _getNormalizedBalance(token1, endingBalance1)
+            _getUsdValue(token0, startingBalance0) + _getUsdValue(token1, startingBalance1),
+            _getUsdValue(token0, endingBalance0)   + _getUsdValue(token1, endingBalance1)
         );
 
         // NOTE: Rate limit decrease is net of any token0 or token1 received due to fees.
@@ -527,11 +572,10 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         amount1 = uint128(_getProxyBalance(token1) - startingBalance1);
 
         // NOTE: The aggregate amount is used for aggregate withdrawal rate limit decrease, which
-        //       makes the assumption that the tokens are pegged and valued equally.
-        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS).
-        uint256 aggregateAmount =
-            _getNormalizedBalance(token0, amount0) +
-            _getNormalizedBalance(token1, amount1);
+        //       makes the assumption that the tokens (or their underlying assets, for ERC4626
+        //       tokens) are pegged and valued equally.
+        //       (i.e. 1.000000 USDT = 1.000000000000000000 USDS = 1 USD).
+        uint256 aggregateAmount = _getUsdValue(token0, amount0) + _getUsdValue(token1, amount1);
 
         // NOTE: Rate limit decrease includes any token0 or token1 received due to fees.
         _decreaseRateLimit(getAggregateWithdrawRateLimitKey(poolId),     aggregateAmount);
@@ -566,7 +610,12 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
     /*** Internal View/Pure Functions                                                           ***/
     /**********************************************************************************************/
 
-    function _checkTickLimits(bytes32 poolId, int24 tickLower, int24 tickUpper)
+    function _checkTickLimits(
+        bytes32        poolId,
+        PoolKey memory poolKey,
+        int24          tickLower,
+        int24          tickUpper
+    )
         internal
         view
     {
@@ -580,6 +629,26 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         require(
             uint256(int256(tickUpper) - int256(tickLower)) <= tickLimits.maxTickSpacing,
             "UniswapV4Facet/tickSpacing-too-wide"
+        );
+
+        // The raw tick limits above are intended to be wide, static sanity bounds expressed in the
+        // pool's own denomination (e.g. sUSDS per sUSDT), protecting against a manipulated
+        // `convertToAssets`. The USD price limits below are the tight bounds, checked against the
+        // position's ticks converted into USD terms (e.g. USDS per USDT) at current vault rates,
+        // so that they do not need to be updated as yield accrues.
+        // NOTE: No USD-denominated width limit is needed, as the conversion scales both prices by
+        //       the same factor, so `maxTickSpacing` bounds the relative width in both terms.
+        address token0 = Currency.unwrap(poolKey.currency0);
+        address token1 = Currency.unwrap(poolKey.currency1);
+
+        require(
+            _getUsdPriceAtTick(token0, token1, tickLower) >= tickLimits.tickLowerMinUsdPrice,
+            "UniswapV4Facet/tickLower-usd-price-too-low"
+        );
+
+        require(
+            _getUsdPriceAtTick(token0, token1, tickUpper) <= tickLimits.tickUpperMaxUsdPrice,
+            "UniswapV4Facet/tickUpper-usd-price-too-high"
         );
     }
 
@@ -756,6 +825,46 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         returns (uint256 normalizedBalance)
     {
         return balance * 1e18 / (10 ** IERC20Like(token).decimals());
+    }
+
+    /// @dev Returns the price at `tick` in USD terms with 1e18 precision, i.e. the USD value of
+    ///      token1 received per 1 USD of token0 (1e18 = both sides valued equally).
+    ///      The raw tick price (token1 base units per token0 base unit) is scaled by the ratio of
+    ///      the USD values of one base unit of each token, which accounts for both decimals and
+    ///      ERC4626 exchange rates:
+    ///
+    ///        usdPrice = rawPrice * (usdValue1 / 10^decimals1) / (usdValue0 / 10^decimals0)
+    ///
+    ///      where `usdValueN` is the USD value of one whole tokenN.
+    function _getUsdPriceAtTick(address token0, address token1, int24 tick)
+        internal
+        view
+        returns (uint256 usdPrice)
+    {
+        uint256 unit0 = 10 ** IERC20Like(token0).decimals();
+        uint256 unit1 = 10 ** IERC20Like(token1).decimals();
+
+        uint256 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(tick);
+
+        // Raw price in Q96 precision (at most 224 bits).
+        uint256 rawPriceX96 = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, 1 << 96);
+
+        return FullMath.mulDiv(
+            rawPriceX96,
+            _getUsdValue(token1, unit1) * unit0 * 1e18,
+            (_getUsdValue(token0, unit0) * unit1) << 96
+        );
+    }
+
+    /// @dev Returns the USD value of `amount` of `token` with 1e18 precision, under the assumption
+    ///      that `token` is either a USD-pegged token, or an ERC4626 vault with a USD-pegged
+    ///      underlying asset. Tokens that do not implement `convertToAssets` are valued at par.
+    function _getUsdValue(address token, uint256 amount) internal view returns (uint256 usdValue) {
+        try IERC4626Like(token).convertToAssets(amount) returns (uint256 assets) {
+            return _getNormalizedBalance(IERC4626Like(token).asset(), assets);
+        } catch {
+            return _getNormalizedBalance(token, amount);
+        }
     }
 
     function _getPoolKeyAndPositionInfo(uint256 tokenId)
