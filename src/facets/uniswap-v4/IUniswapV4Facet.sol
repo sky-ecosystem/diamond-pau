@@ -15,9 +15,11 @@ interface IUniswapV4Facet is IFacet {
     /**********************************************************************************************/
 
     struct TickLimits {
-        int24  tickLowerMin;
-        int24  tickUpperMax;
-        uint24 maxTickSpacing;
+        int24   tickLowerMin;
+        int24   tickUpperMax;
+        uint24  maxTickSpacing;
+        uint256 tickLowerMinUsdPrice;
+        uint256 tickUpperMaxUsdPrice;
     }
 
     /**********************************************************************************************/
@@ -101,16 +103,20 @@ interface IUniswapV4Facet is IFacet {
 
     /**
      * @notice Emitted when tick limits for a pool are updated.
-     * @param  poolId         Uniswap V4 pool identifier.
-     * @param  tickLowerMin   Minimum allowed lower tick for positions.
-     * @param  tickUpperMax   Maximum allowed upper tick for positions.
-     * @param  maxTickSpacing Maximum allowed tick spacing between lower and upper.
+     * @param  poolId               Uniswap V4 pool identifier.
+     * @param  tickLowerMin         Minimum allowed lower tick for positions.
+     * @param  tickUpperMax         Maximum allowed upper tick for positions.
+     * @param  maxTickSpacing       Maximum allowed tick spacing between lower and upper.
+     * @param  tickLowerMinUsdPrice Minimum allowed USD price (1e18 precision) at the lower tick.
+     * @param  tickUpperMaxUsdPrice Maximum allowed USD price (1e18 precision) at the upper tick.
      */
     event UniswapV4TickLimitsSet(
         bytes32 indexed poolId,
         int24           tickLowerMin,
         int24           tickUpperMax,
-        uint24          maxTickSpacing
+        uint24          maxTickSpacing,
+        uint256         tickLowerMinUsdPrice,
+        uint256         tickUpperMaxUsdPrice
     );
 
     /**********************************************************************************************/
@@ -179,16 +185,29 @@ interface IUniswapV4Facet is IFacet {
 
     /**
      * @notice Sets the tick limits for liquidity positions on a pool.
-     * @param  poolId         Uniswap V4 pool identifier.
-     * @param  tickLowerMin   Minimum allowed lower tick.
-     * @param  tickUpperMax   Maximum allowed upper tick.
-     * @param  maxTickSpacing Maximum allowed tick spacing between bounds.
+     * @dev    Two sets of bounds are enforced on the ticks of a position:
+     *         - `tickLowerMin` and `tickUpperMax` are raw pool ticks (token1 per token0, e.g. sUSDS
+     *           per sUSDT). They are static, and are intended to be wide sanity bounds that hold
+     *           even if a vault's `convertToAssets` is manipulated.
+     *         - `tickLowerMinUsdPrice` and `tickUpperMaxUsdPrice` are prices in USD terms (USD
+     *           value of token1 per 1 USD of token0, e.g. USDS per USDT, 1e18 = peg). The ticks of
+     *           a position are converted into USD terms using the decimals of the tokens and, for
+     *           ERC4626 tokens, `convertToAssets`. They are intended to be the tight bounds.
+     *         Pass all zeros to clear the limits, which disables minting and increasing positions.
+     * @param  poolId               Uniswap V4 pool identifier.
+     * @param  tickLowerMin         Minimum allowed lower tick.
+     * @param  tickUpperMax         Maximum allowed upper tick.
+     * @param  maxTickSpacing       Maximum allowed tick spacing between bounds.
+     * @param  tickLowerMinUsdPrice Minimum allowed USD price (1e18 precision) at the lower tick.
+     * @param  tickUpperMaxUsdPrice Maximum allowed USD price (1e18 precision) at the upper tick.
      */
     function setTickLimits(
         bytes32 poolId,
         int24   tickLowerMin,
         int24   tickUpperMax,
-        uint24  maxTickSpacing
+        uint24  maxTickSpacing,
+        uint256 tickLowerMinUsdPrice,
+        uint256 tickUpperMaxUsdPrice
     )
         external;
 
@@ -253,15 +272,23 @@ interface IUniswapV4Facet is IFacet {
 
     /**
      * @notice Returns the configured tick limits for a Uniswap V4 pool.
-     * @param  poolId         Uniswap V4 pool identifier.
-     * @return tickLowerMin   Minimum allowed lower tick.
-     * @return tickUpperMax   Maximum allowed upper tick.
-     * @return maxTickSpacing Maximum allowed tick spacing.
+     * @param  poolId               Uniswap V4 pool identifier.
+     * @return tickLowerMin         Minimum allowed lower tick.
+     * @return tickUpperMax         Maximum allowed upper tick.
+     * @return maxTickSpacing       Maximum allowed tick spacing.
+     * @return tickLowerMinUsdPrice Minimum allowed USD price (1e18 precision) at the lower tick.
+     * @return tickUpperMaxUsdPrice Maximum allowed USD price (1e18 precision) at the upper tick.
      */
     function getTickLimits(bytes32 poolId)
         external
         view
-        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+        returns (
+            int24   tickLowerMin,
+            int24   tickUpperMax,
+            uint24  maxTickSpacing,
+            uint256 tickLowerMinUsdPrice,
+            uint256 tickUpperMaxUsdPrice
+        );
 
     /**
      * @notice Returns the derived aggregate withdraw rate limit key for a pool.

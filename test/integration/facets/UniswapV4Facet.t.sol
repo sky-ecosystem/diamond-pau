@@ -20,7 +20,9 @@ interface IControllerLike {
         bytes32 poolId,
         int24   tickLowerMin,
         int24   tickUpperMax,
-        uint24  maxTickSpacing
+        uint24  maxTickSpacing,
+        uint256 tickLowerMinUsdPrice,
+        uint256 tickUpperMaxUsdPrice
     ) external;
 
     function getMaxSlippage(bytes32 poolId) external view returns (uint256);
@@ -28,7 +30,13 @@ interface IControllerLike {
     function getTickLimits(bytes32 poolId)
         external
         view
-        returns (int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing);
+        returns (
+            int24   tickLowerMin,
+            int24   tickUpperMax,
+            uint24  maxTickSpacing,
+            uint256 tickLowerMinUsdPrice,
+            uint256 tickUpperMaxUsdPrice
+        );
 
     function getAggregateDepositRateLimitKey(bytes32 poolId) external pure returns (bytes32);
 
@@ -243,7 +251,7 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
     function test_setTickLimits_reentrancy() external {
         _setEntered(address(controller));
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        controller.setTickLimits(bytes32(0), 0, 0, 0);
+        controller.setTickLimits(bytes32(0), 0, 0, 0, 0, 0);
     }
 
     function test_setTickLimits_notAdmin() external {
@@ -256,7 +264,7 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         );
 
         vm.prank(unauthorized);
-        controller.setTickLimits(bytes32(0), 0, 0, 0);
+        controller.setTickLimits(bytes32(0), 0, 0, 0, 0, 0);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -267,51 +275,73 @@ contract Controller_UniswapV4Facet_Tests is Integration_TestBase {
         );
 
         vm.prank(allocator);
-        controller.setTickLimits(bytes32(0), 0, 0, 0);
+        controller.setTickLimits(bytes32(0), 0, 0, 0, 0, 0);
     }
 
     function test_setTickLimits_zeroPoolId() external {
         vm.expectRevert("UniswapV4Facet/zero-pool-id");
         vm.prank(admin);
-        controller.setTickLimits(bytes32(0), 0, 0, 0);
+        controller.setTickLimits(bytes32(0), 0, 0, 0, 0, 0);
     }
 
     function test_setTickLimits_invalidTicks() external {
         vm.expectRevert("UniswapV4Facet/invalid-ticks");
         vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, 1, 1, 1); // Reverts when lower >= upper
+        controller.setTickLimits(_POOL_ID, 1, 1, 1, 0.99e18, 1.01e18); // Reverts when lower >= upper
 
         vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, 0, 1, 1); // lower must be less than upper
-
-        vm.expectRevert("UniswapV4Facet/invalid-ticks");
-        vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, 0, 1, 0); // Reverts when maxTickSpacing is zero
+        controller.setTickLimits(_POOL_ID, 0, 1, 1, 0.99e18, 1.01e18); // lower must be less than upper
 
         vm.expectRevert("UniswapV4Facet/invalid-ticks");
         vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, 0, 0, 1); // Reverts: zero ticks only disable limits when maxTickSpacing is also zero
+        controller.setTickLimits(_POOL_ID, 0, 1, 0, 0.99e18, 1.01e18); // Reverts when maxTickSpacing is zero
+
+        vm.expectRevert("UniswapV4Facet/invalid-ticks");
+        vm.prank(admin);
+        controller.setTickLimits(_POOL_ID, 0, 0, 1, 0, 0); // Reverts: zero ticks only disable limits when maxTickSpacing is also zero
+
+        vm.expectRevert("UniswapV4Facet/invalid-ticks");
+        vm.prank(admin);
+        controller.setTickLimits(_POOL_ID, 0, 0, 0, 0, 1); // Reverts: limits are only disabled when the USD prices are also zero
+
+        vm.expectRevert("UniswapV4Facet/invalid-ticks");
+        vm.prank(admin);
+        controller.setTickLimits(_POOL_ID, 0, 1, 1, 1e18, 1e18); // Reverts when lower USD price >= upper USD price
 
         vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, 1, 2, 1);
+        controller.setTickLimits(_POOL_ID, 0, 1, 1, 1e18, 1e18 + 1); // lower USD price must be less than upper USD price
+
+        vm.prank(admin);
+        controller.setTickLimits(_POOL_ID, 1, 2, 1, 0, 1);
+
+        vm.prank(admin);
+        controller.setTickLimits(_POOL_ID, 0, 0, 0, 0, 0);
     }
 
     function test_setTickLimits() external {
         vm.expectEmit(address(controller));
-        emit IUniswapV4Facet.UniswapV4TickLimitsSet(_POOL_ID, -60, 60, 20);
+        emit IUniswapV4Facet.UniswapV4TickLimitsSet(_POOL_ID, -60, 60, 20, 0.999e18, 1.001e18);
 
         vm.record();
 
         vm.prank(admin);
-        controller.setTickLimits(_POOL_ID, -60, 60, 20);
+        controller.setTickLimits(_POOL_ID, -60, 60, 20, 0.999e18, 1.001e18);
 
         _assertReentrancyGuardWrittenToTwice(address(controller));
 
-        ( int24 tickLowerMin, int24 tickUpperMax, uint24 maxTickSpacing ) = controller.getTickLimits(_POOL_ID);
+        (
+            int24   tickLowerMin,
+            int24   tickUpperMax,
+            uint24  maxTickSpacing,
+            uint256 tickLowerMinUsdPrice,
+            uint256 tickUpperMaxUsdPrice
+        ) = controller.getTickLimits(_POOL_ID);
 
-        assertEq(tickLowerMin,   -60);
-        assertEq(tickUpperMax,   60);
-        assertEq(maxTickSpacing, 20);
+        assertEq(tickLowerMin,         -60);
+        assertEq(tickUpperMax,         60);
+        assertEq(maxTickSpacing,       20);
+        assertEq(tickLowerMinUsdPrice, 0.999e18);
+        assertEq(tickUpperMaxUsdPrice, 1.001e18);
     }
 
     /**********************************************************************************************/

@@ -43,6 +43,6 @@ Both facets are `Facet` implementations with isolated ERC-7201 storage (`VERSION
 | Purpose                   | UniswapV3Facet                                              | UniswapV4Facet                                                                                |
 | ------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Max slippage (1e18 scale) | `setMaxSlippage(address pool, uint256)`                     | `setMaxSlippage(bytes32 poolId, uint256)`                                                     |
-| Liquidity tick bounds     | `setLiquidityLowerTickBound` / `setLiquidityUpperTickBound` | `setTickLimits(poolId, tickLowerMin, tickUpperMax, maxTickSpacing)` — pass all zeros to clear |
+| Liquidity tick bounds     | `setLiquidityLowerTickBound` / `setLiquidityUpperTickBound` | `setTickLimits(poolId, tickLowerMin, tickUpperMax, maxTickSpacing, tickLowerMinUsdPrice, tickUpperMaxUsdPrice)` — pass all zeros to clear |
 | Swap tick guard           | `setMaxTickDelta(pool, uint24)`                             | —                                                                                             |
 | TWAP lookback             | `setTWAPSecondsAgo(pool, uint32)`                           | —                                                                                             |
