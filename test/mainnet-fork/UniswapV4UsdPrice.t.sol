@@ -59,6 +59,12 @@ abstract contract UniswapV4_UsdPrice_TestBase is UniswapV4_TestBase {
     // Tick at which 1 USD of token0 is worth 1 USD of token1, at the time of the setup.
     int24 internal _fairTick;
 
+    // Lowest and highest ticks that satisfy the USD price limits at the fork block. These are
+    // derived offchain from `1.0001^tick`, the token decimals and the vault rates at the fork
+    // block, so that the expected boundaries do not depend on the helpers in this file.
+    int24 internal _expectedTickLower;
+    int24 internal _expectedTickUpper;
+
     // Liquidity amount that corresponds to roughly 100k USD of each token over a 20 tick range.
     uint128 internal _liquidity;
 
@@ -325,12 +331,12 @@ abstract contract UniswapV4_UsdPrice_TestBase is UniswapV4_TestBase {
     }
 
     function test_uniswapV4_mintPosition_usdPriceBoundaries() external {
-        int24 tickLower = _getLowestTickAbove(_USD_PRICE_MIN);
-        int24 tickUpper = _getHighestTickBelow(_USD_PRICE_MAX);
+        int24 tickLower = _expectedTickLower;
+        int24 tickUpper = _expectedTickUpper;
 
-        // 0.999 to 1.001 is roughly 10 ticks on each side of the fair tick.
-        assertApproxEqAbs(tickLower, _fairTick - 10, 1);
-        assertApproxEqAbs(tickUpper, _fairTick + 10, 1);
+        // The helpers agree with the offchain derived boundaries.
+        assertEq(_getLowestTickAbove(_USD_PRICE_MIN),  tickLower);
+        assertEq(_getHighestTickBelow(_USD_PRICE_MAX), tickUpper);
 
         vm.expectRevert("UniswapV4Facet/tickLower-usd-price-too-low");
         this.externalMint(tickLower - 1, tickUpper);
@@ -414,7 +420,10 @@ abstract contract UniswapV4_YieldBearing_Tests is UniswapV4_UsdPrice_TestBase {
         assertGt(amount0, 0);
         assertGt(amount1, 0);
 
-        uint256 usdValue = _getUsdValue(_token0, amount0) + _getUsdValue(_token1, amount1);
+        // USD value of the balances before, less the USD value of the balances after.
+        uint256 usdValue =
+            _getUsdValue(_token0, balance0)           + _getUsdValue(_token1, balance1) -
+            _getUsdValue(_token0, balance0 - amount0) - _getUsdValue(_token1, balance1 - amount1);
 
         // Vault shares are valued at more than 1 USD each.
         assertGt(
@@ -422,12 +431,11 @@ abstract contract UniswapV4_YieldBearing_Tests is UniswapV4_UsdPrice_TestBase {
             _toNormalizedAmount(_token0, amount0) + _toNormalizedAmount(_token1, amount1)
         );
 
-        // Aggregate rate limit is charged in USD value (up to the rounding of `convertToAssets`),
-        // per-asset rate limits are charged in token amounts.
-        assertApproxEqAbs(
+        // Aggregate rate limit is charged in USD value, per-asset rate limits are charged in token
+        // amounts.
+        assertEq(
             100_000_000e18 - rateLimits.getCurrentRateLimit(_aggregateDepositLimitKey),
-            usdValue,
-            2e12
+            usdValue
         );
 
         assertEq(100_000_000 * _unit0 - rateLimits.getCurrentRateLimit(_token0DepositLimitKey), amount0);
@@ -445,10 +453,9 @@ abstract contract UniswapV4_YieldBearing_Tests is UniswapV4_UsdPrice_TestBase {
         assertGt(amount0, 0);
         assertGt(amount1, 0);
 
-        assertApproxEqAbs(
+        assertEq(
             100_000_000e18 - rateLimits.getCurrentRateLimit(_aggregateWithdrawLimitKey),
-            _getUsdValue(_token0, amount0) + _getUsdValue(_token1, amount1),
-            2e12
+            _getUsdValue(_token0, amount0) + _getUsdValue(_token1, amount1)
         );
 
         assertEq(100_000_000 * _unit0 - rateLimits.getCurrentRateLimit(_token0WithdrawLimitKey), amount0);
@@ -510,6 +517,10 @@ contract MainnetController_UniswapV4_UsdPrice_USDT_USDS_Tests is UniswapV4_UsdPr
 
         _setUpTokens(Ethereum.USDT, false, Ethereum.USDS, false);
 
+        // 1.0001^tick / 1e12 is within [0.999, 1.001].
+        _expectedTickLower = 276_315;
+        _expectedTickUpper = 276_334;
+
         _setUpExistingPool(0xb54ece65cc2ddd3eaec0ad18657470fb043097220273d87368a062c7d4e59180);
     }
 
@@ -530,6 +541,10 @@ contract MainnetController_UniswapV4_UsdPrice_SUSDS_USDT_Tests is UniswapV4_Yiel
         super.setUp();
 
         _setUpTokens(Ethereum.SUSDS, true, Ethereum.USDT, false);
+
+        // 1.0001^tick * 1e12 / 1.069417356159315121 (USDS per sUSDS) is within [0.999, 1.001].
+        _expectedTickLower = -275_662;
+        _expectedTickUpper = -275_643;
 
         _setUpNewPool();
     }
@@ -616,6 +631,11 @@ contract MainnetController_UniswapV4_UsdPrice_SUSDS_SUSDC_Tests is UniswapV4_Yie
         super.setUp();
 
         _setUpTokens(Ethereum.SUSDS, true, Ethereum.SUSDC, true);
+
+        // 1.0001^tick * 1.069417 (USDC per sUSDC) / 1.069417356159315121 (USDS per sUSDS) is
+        // within [0.999, 1.001].
+        _expectedTickLower = -10;
+        _expectedTickUpper = 9;
 
         _setUpNewPool();
     }

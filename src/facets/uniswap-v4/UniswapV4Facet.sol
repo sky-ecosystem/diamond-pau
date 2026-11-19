@@ -631,13 +631,13 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
             "UniswapV4Facet/tickSpacing-too-wide"
         );
 
-        // The raw tick limits above are intended to be wide, static sanity bounds expressed in the
-        // pool's own denomination (e.g. sUSDS per sUSDT), protecting against a manipulated
-        // `convertToAssets`. The USD price limits below are the tight bounds, checked against the
-        // position's ticks converted into USD terms (e.g. USDS per USDT) at current vault rates,
-        // so that they do not need to be updated as yield accrues.
-        // NOTE: No USD-denominated width limit is needed, as the conversion scales both prices by
-        //       the same factor, so `maxTickSpacing` bounds the relative width in both terms.
+        // NOTE: The raw tick limits above are wide, static bounds in the pool's own denomination
+        //       (e.g. sUSDS per sUSDT), which hold even if `convertToAssets` is manipulated. The
+        //       USD price limits below are the tight bounds, checked against the position's ticks
+        //       converted into USD terms (e.g. USDS per USDT) at the current vault rates, so they
+        //       do not need to be updated as yield accrues.
+        // NOTE: No USD-denominated width limit is needed, as the conversion scales the prices at
+        //       both ticks by the same factor, so `maxTickSpacing` bounds the width in both terms.
         address token0 = Currency.unwrap(poolKey.currency0);
         address token1 = Currency.unwrap(poolKey.currency1);
 
@@ -827,26 +827,26 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         return balance * 1e18 / (10 ** IERC20Like(token).decimals());
     }
 
-    /// @dev Returns the price at `tick` in USD terms with 1e18 precision, i.e. the USD value of
-    ///      token1 received per 1 USD of token0 (1e18 = both sides valued equally).
-    ///      The raw tick price (token1 base units per token0 base unit) is scaled by the ratio of
-    ///      the USD values of one base unit of each token, which accounts for both decimals and
-    ///      ERC4626 exchange rates:
-    ///
-    ///        usdPrice = rawPrice * (usdValue1 / 10^decimals1) / (usdValue0 / 10^decimals0)
-    ///
-    ///      where `usdValueN` is the USD value of one whole tokenN.
     function _getUsdPriceAtTick(address token0, address token1, int24 tick)
         internal
         view
         returns (uint256 usdPrice)
     {
+        // NOTE: The price at `tick` in USD terms with 1e18 precision is the USD value of token1 per
+        //       1 USD of token0 (1e18 = both sides valued equally). The raw tick price (token1 base
+        //       units per token0 base unit) is scaled by the ratio of the USD values of one base
+        //       unit of each token, which accounts for both decimals and ERC4626 exchange rates:
+        //
+        //         usdPrice = rawPrice * (usdValue1 / unit1) / (usdValue0 / unit0)
+        //
+        //       where `unitN` is one whole tokenN and `usdValueN` is its USD value.
         uint256 unit0 = 10 ** IERC20Like(token0).decimals();
         uint256 unit1 = 10 ** IERC20Like(token1).decimals();
 
         uint256 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(tick);
 
-        // Raw price in Q96 precision (at most 224 bits).
+        // NOTE: `sqrtPriceX96` is at most 160 bits, so the raw price in Q96 precision is at most
+        //       224 bits. Both results round down.
         uint256 rawPriceX96 = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, 1 << 96);
 
         return FullMath.mulDiv(
@@ -856,10 +856,10 @@ contract UniswapV4Facet is IUniswapV4Facet, Facet {
         );
     }
 
-    /// @dev Returns the USD value of `amount` of `token` with 1e18 precision, under the assumption
-    ///      that `token` is either a USD-pegged token, or an ERC4626 vault with a USD-pegged
-    ///      underlying asset. Tokens that do not implement `convertToAssets` are valued at par.
     function _getUsdValue(address token, uint256 amount) internal view returns (uint256 usdValue) {
+        // NOTE: The USD value has 1e18 precision and assumes that `token` is either a USD-pegged
+        //       token, or an ERC4626 vault with a USD-pegged underlying asset (nested vaults are
+        //       not supported). Any token on which `convertToAssets` reverts is valued at par.
         try IERC4626Like(token).convertToAssets(amount) returns (uint256 assets) {
             return _getNormalizedBalance(IERC4626Like(token).asset(), assets);
         } catch {

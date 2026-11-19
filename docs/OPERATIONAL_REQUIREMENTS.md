@@ -89,12 +89,18 @@ Only pools with 1:1 assets should be onboarded:
 - USDC/ETH ✗ (different underlying)
 - USDC/WBTC ✗ (different underlying)
 
+Uniswap V4 pools may also contain ERC-4626 vaults with a USD-pegged underlying asset (e.g. sUSDS/USDT, sUSDS/sUSDC), which the `UniswapV4Facet` values through `convertToAssets`:
+
+- The underlying asset of the vault must itself be a 1:1 stablecoin. Nested vaults are not supported.
+- The vault's `convertToAssets` rate must not be cheaply movable (e.g. by donation), since the swap max slippage check and the aggregate rate limits rely on it directly.
+- Any token that exposes `convertToAssets` is valued through it, so a pool token must not expose that function unless it is intended to be valued as a vault.
+
 ### Onboarding Process
 
 1. Verify pool contains only whitelisted 1:1 stablecoins
 2. Verify pool does not have dangerous hooks
 3. Configure rate limits for the specific pool
-4. Configure pool parameters (e.g. tick limits, TWAP seconds, etc.) for the specific pool
+4. Configure pool parameters (e.g. tick limits, TWAP seconds, etc.) for the specific pool. For Uniswap V4, both the raw tick limits and the USD price limits must be set. The raw tick limits are static, so for pools with a vault they must be wide enough to cover expected yield accrual and be reviewed periodically
 5. Set appropriate slippage parameters
 
 ---

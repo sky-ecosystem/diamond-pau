@@ -90,7 +90,7 @@ See [UNIV3_UNIV4_COMPARISON.md](./UNIV3_UNIV4_COMPARISON.md) for a detailed comp
 
 ### Supported Operations
 
-- **Swaps:** Exchange between stablecoins via Uniswap V4 pools
+- **Swaps:** Exchange between stablecoins, and/or ERC-4626 vaults of stablecoins, via Uniswap V4 pools
 - **Mint Positions:** Create liquidity positions (if applicable)
 - **Increase Positions:** Deposit adfditional liquidity into an existing position
 - **Decrease Positions:** Withdraw some or al the liquidity of an existing position
@@ -99,23 +99,44 @@ See [UNIV3_UNIV4_COMPARISON.md](./UNIV3_UNIV4_COMPARISON.md) for a detailed comp
 
 Uniswap V4 operations use several rate limit keys per pool:
 
-- **Aggregate deposit rate limit:** Controls the value deposited into pools
+- **Aggregate deposit rate limit:** Controls the USD value deposited into pools
 - **Asset deposit rate limits:** Controls the value deposited into pools for a specific token
 - **Asset Swap rate limits:** Controls the implicit swap value when deposits are imbalanced for a specific token
-- **Aggregate withdraw rate limit:** Controls the value withdrawn from pools
+- **Aggregate withdraw rate limit:** Controls the USD value withdrawn from pools
 - **Asset withdraw rate limits:** Controls the value withdrawn from pools for a specific token
+
+The aggregate limits are charged in USD value with 1e18 precision. The asset and swap limits are charged in token amounts.
+
+### USD Valuation
+
+Pools may hold USD-pegged tokens and ERC-4626 vaults whose underlying asset is USD-pegged (USD / USD, USD / ERC-4626 and ERC-4626 / ERC-4626).
+
+- A token on which `convertToAssets(amount)` succeeds is valued at the returned amount, normalized by the decimals of `asset()`.
+- Any other token is valued at par, normalized by its own decimals.
+
+This valuation is used by the `swap` max slippage check, the aggregate deposit and withdraw rate limits, and the USD price tick limits.
 
 ### Slippage Protection
 
 Uniswap V4 operations use different slippage models depending on the operation:
 
-- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the caller-supplied `amountOutMin`, normalized to 18 decimals, is no less than the normalized `amountIn` scaled by `maxSlippage`. This relies on the 1:1 equal-value assumption between the pool's tokens.
-- **`mintPosition`, `increasePosition`, `decreasePosition`:** Do not check `maxSlippage`. They rely on caller-supplied `amount0Max` / `amount1Max` (mint and increase) or `amount0Min` / `amount1Min` (decrease) as boundaries enforced by the position manager, together with the per-pool tick limits (`tickLowerMin`, `tickUpperMax`, `maxTickSpacing`) on `mintPosition` and `increasePosition`.
+- **`swap`:** Requires the per-pool `maxSlippage` to be configured (cannot be zero). Validates that the USD value of the caller-supplied `amountOutMin` is no less than the USD value of `amountIn` scaled by `maxSlippage`, in both swap directions. This relies on the assumption that the pool's tokens (or the underlying assets of its vaults) are worth 1 USD each.
+- **`mintPosition`, `increasePosition`, `decreasePosition`:** Do not check `maxSlippage`. They rely on caller-supplied `amount0Max` / `amount1Max` (mint and increase) or `amount0Min` / `amount1Min` (decrease) as boundaries enforced by the position manager, together with the per-pool tick limits on `mintPosition` and `increasePosition`.
+
+### Tick Limits
+
+Two sets of limits are set together with `setTickLimits`, and both are enforced on `mintPosition` and `increasePosition`:
+
+- **Raw tick limits (`tickLowerMin`, `tickUpperMax`):** Static bounds in the pool's own denomination (e.g. sUSDS per USDT). They do not read any vault rate, so they are the only backstop for liquidity provision if `convertToAssets` is manipulated. They should be wide enough to cover expected yield accrual (about 1 tick per 1bp of difference in accrued yield between the two tokens) and be reviewed periodically.
+- **USD price limits (`tickLowerMinUsdPrice`, `tickUpperMaxUsdPrice`):** The tight bounds, with 1e18 precision, expressed as the USD value of token1 per 1 USD of token0 (1e18 = peg). The ticks of the position are converted into USD prices using the token decimals and the current vault rates, so the allowed raw range follows yield accrual without governance updates.
+
+`maxTickSpacing` bounds the width of a position in both denominations, since the USD conversion scales the prices at both ticks by the same factor. Passing all zeros clears the limits, which disables `mintPosition` and `increasePosition`.
 
 ### Requirements
 
-- Onboarded pools should be limited to those with 1:1 stablecoin pairs.
-- Tick limits must be configured for `mintPosition` and `increasePosition`
+- Onboarded pools should be limited to those where each token is either a USD-pegged stablecoin, or an ERC-4626 vault with a USD-pegged underlying asset. Nested vaults (a vault of a vault) are not supported.
+- Only vaults whose `convertToAssets` rate cannot be moved cheaply (e.g. by donation) should be onboarded. The `swap` max slippage check and the aggregate rate limits rely on `convertToAssets` directly.
+- Tick limits (both raw and USD price) must be configured for `mintPosition` and `increasePosition`
 - `maxSlippage` must be configured per pool for `swap`
 - Only hookless pools can be onboarded. Rate limit decreases are calculated from token balance differences before and after pool interactions, and empty `hookData` is passed. Pool hooks (if present) could manipulate token balances during the call to bypass the rate limit decrease.
 
